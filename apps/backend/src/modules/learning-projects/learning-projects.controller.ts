@@ -29,6 +29,7 @@ import {
   resubmitMyLearningProjectSubmissionById,
   saveLearningProjectById,
   startProjectBuildById,
+  startProjectBuildAgainById,
   submitLearningProjectForReview,
   submitMyLearningProjectDraftById,
   unlikeLearningProjectById,
@@ -183,7 +184,9 @@ export const getMyProjectBuild = async (
   res: Response,
 ): Promise<void> => {
   const { id } = readValidatedParams<{ id: string }>(req);
-  const build = await getMyProjectBuildById(id, req.auth!.sub);
+  const buildId =
+    typeof req.query.buildId === 'string' ? req.query.buildId : undefined;
+  const build = await getMyProjectBuildById(id, req.auth!.sub, buildId);
 
   res.json(successResponse('Project build fetched successfully', build));
 };
@@ -223,6 +226,16 @@ export const startProjectBuild = async (
   const build = await startProjectBuildById(id, req.auth!.sub);
 
   res.json(successResponse('Project build ready', build));
+};
+
+export const startProjectBuildAgain = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const build = await startProjectBuildAgainById(id, req.auth!.sub);
+
+  res.json(successResponse('New project build attempt started', build));
 };
 
 export const updateProjectBuildItem = async (

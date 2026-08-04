@@ -49,21 +49,26 @@ export const buildContinuableProjectBuildWhere = (
   learnerId: string,
 ): Prisma.ProjectBuildWhereInput => ({
   learnerId,
-  status: 'IN_PROGRESS',
   project: PUBLIC_CONTINUE_PROJECT_WHERE,
   OR: [
-    { items: { none: {} } },
+    { status: 'PAUSED' },
     {
-      items: {
-        some: {
-          NOT: {
-            OR: [
-              { status: { in: [...CONTINUE_BUILD_READY_ITEM_STATUSES] } },
-              { linkedReservation: { is: { status: 'COMPLETED' } } },
-            ],
+      status: 'IN_PROGRESS',
+      OR: [
+        { items: { none: {} } },
+        {
+          items: {
+            some: {
+              NOT: {
+                OR: [
+                  { status: { in: [...CONTINUE_BUILD_READY_ITEM_STATUSES] } },
+                  { linkedReservation: { is: { status: 'COMPLETED' } } },
+                ],
+              },
+            },
           },
         },
-      },
+      ],
     },
   ],
 });

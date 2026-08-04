@@ -30,6 +30,7 @@ import {
   resubmitMyLearningProjectSubmission,
   saveLearningProject,
   startProjectBuild,
+  startProjectBuildAgain,
   submitLearningProject,
   submitMyLearningProjectDraft,
   unlikeLearningProject,
@@ -181,6 +182,14 @@ learningProjectsRouter.post(
   requireRoles('LEARNER'),
   validate(learningProjectIdParamSchema, 'params'),
   asyncHandler(startProjectBuild),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/again',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  asyncHandler(startProjectBuildAgain),
 );
 
 learningProjectsRouter.patch(

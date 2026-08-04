@@ -405,6 +405,7 @@ enum ProjectLinkType {
 
 enum ProjectBuildStatus {
   IN_PROGRESS
+  PAUSED
   COMPLETED
   ARCHIVED
 }
@@ -494,84 +495,84 @@ enum CommentStatus {
 }
 
 model User {
-  id                            String                     @id @default(cuid())
-  displayName                   String                     @map("display_name")
-  email                         String                     @unique
-  phone                         String?                    @unique
-  passwordHash                  String                     @map("password_hash")
-  accountStatus                 AccountStatus              @default(PENDING_VERIFICATION) @map("account_status")
-  recommendationEvidenceEligibility RecommendationEvidenceEligibility @default(ELIGIBLE) @map("recommendation_evidence_eligibility")
-  profileImageUrl               String?                    @map("profile_image_url")
-  emailVerifiedAt               DateTime?                  @map("email_verified_at")
-  phoneVerifiedAt               DateTime?                  @map("phone_verified_at")
-  lastLoginAt                   DateTime?                  @map("last_login_at")
-  activeRole                    UserRole?                  @map("active_role")
-  suspensionReason              String?                    @map("suspension_reason")
-  suspendedAt                   DateTime?                  @map("suspended_at")
-  suspendedById                 String?                    @map("suspended_by_id")
-  reactivatedAt                 DateTime?                  @map("reactivated_at")
-  reactivatedById               String?                    @map("reactivated_by_id")
-  createdAt                     DateTime                   @default(now()) @map("created_at")
-  updatedAt                     DateTime                   @updatedAt @map("updated_at")
-  roles                         UserRoleAssignment[]
-  authTokens                    AuthToken[]
-  learnerProfile                LearnerProfile?
-  supplierProfile               SupplierProfile?
-  driverProfile                 DriverProfile?
-  invitedRoles                  RoleInvitation[]           @relation("RoleInvitationInvitedBy")
-  usedInvitations               RoleInvitation[]           @relation("RoleInvitationUsedByUser")
-  assignedRoles                 UserRoleAssignment[]       @relation("UserRoleAssignedBy")
-  ownedMaterials                Material[]                 @relation("MaterialOwner")
-  ownedReservationsAsOwner      Reservation[]              @relation("ReservationOwner")
-  ownedReservationsAsRequester  Reservation[]              @relation("ReservationRequester")
-  deliveryGroupsAsLearner       DeliveryGroup[]            @relation("DeliveryGroupLearner")
-  reservationStatusChanges      ReservationStatusHistory[] @relation("ReservationStatusChangedBy")
-  requestedDeliveries           Delivery[]                 @relation("DeliveryRequestedBy")
-  deliveryAssignmentsMade       DeliveryAssignment[]       @relation("DeliveryAssignedBy")
-  deliveryStatusChanges         DeliveryStatusHistory[]    @relation("DeliveryStatusChangedBy")
-  idempotencyRecords            IdempotencyRecord[]
-  notifications                 Notification[]
-  reviewsGiven                  Review[]                   @relation("ReviewReviewer")
-  reviewsReceived               Review[]                   @relation("ReviewReviewedUser")
-  createdLearningProjects       LearningProject[]          @relation("LearningProjectCreatedBy")
-  reviewedLearningProjects      LearningProject[]          @relation("LearningProjectReviewedBy")
-  supplierVerificationsReviewed SupplierProfile[]          @relation("SupplierVerificationReviewedBy")
-  approvedProjectSteps          ProjectStep[]              @relation("ProjectStepApprovedBy")
-  priceRuleRequests             PriceRuleRequest[]
-  categoryRequests              CategoryRequest[]
-  materialReportsSubmitted      MaterialReport[]           @relation("MaterialReportReporter")
-  materialReportsReviewed       MaterialReport[]           @relation("MaterialReportReviewedBy")
-  reservationMessagesSent       ReservationMessage[]       @relation("ReservationMessageSender")
-  noShowReportsSubmitted        NoShowReport[]             @relation("NoShowReportReporter")
-  noShowReportsTargeted         NoShowReport[]             @relation("NoShowReportTarget")
-  noShowReportsReviewed         NoShowReport[]             @relation("NoShowReportReviewedBy")
-  moderatedMaterials            Material[]                 @relation("MaterialModeratedBy")
-  supplierFollows               SupplierFollower[]         @relation("SupplierFollowerUser")
-  materialLikes                 MaterialLike[]             @relation("MaterialLikeUser")
-  materialViews                 MaterialView[]             @relation("MaterialViewUser")
-  projectLikes                  ProjectLike[]              @relation("ProjectLikeUser")
-  projectSaves                  ProjectSave[]              @relation("ProjectSaveUser")
-  projectFollows                ProjectFollow[]            @relation("ProjectFollowUser")
-  projectReviews                ProjectUserReview[]        @relation("ProjectUserReviewUser")
-  projectBuilds                 ProjectBuild[]             @relation("ProjectBuildLearner")
-  savedLocations                UserSavedLocation[]
-  suspendedBy                   User?                      @relation("UserSuspendedBy", fields: [suspendedById], references: [id], onDelete: SetNull)
-  accountsSuspended             User[]                     @relation("UserSuspendedBy")
-  reactivatedBy                 User?                      @relation("UserReactivatedBy", fields: [reactivatedById], references: [id], onDelete: SetNull)
-  accountsReactivated           User[]                     @relation("UserReactivatedBy")
-  adminActivityLogs             AdminActivityLog[]
-  aiConversations               AiConversation[]
+  id                                     String                            @id @default(cuid())
+  displayName                            String                            @map("display_name")
+  email                                  String                            @unique
+  phone                                  String?                           @unique
+  passwordHash                           String                            @map("password_hash")
+  accountStatus                          AccountStatus                     @default(PENDING_VERIFICATION) @map("account_status")
+  recommendationEvidenceEligibility      RecommendationEvidenceEligibility @default(ELIGIBLE) @map("recommendation_evidence_eligibility")
+  profileImageUrl                        String?                           @map("profile_image_url")
+  emailVerifiedAt                        DateTime?                         @map("email_verified_at")
+  phoneVerifiedAt                        DateTime?                         @map("phone_verified_at")
+  lastLoginAt                            DateTime?                         @map("last_login_at")
+  activeRole                             UserRole?                         @map("active_role")
+  suspensionReason                       String?                           @map("suspension_reason")
+  suspendedAt                            DateTime?                         @map("suspended_at")
+  suspendedById                          String?                           @map("suspended_by_id")
+  reactivatedAt                          DateTime?                         @map("reactivated_at")
+  reactivatedById                        String?                           @map("reactivated_by_id")
+  createdAt                              DateTime                          @default(now()) @map("created_at")
+  updatedAt                              DateTime                          @updatedAt @map("updated_at")
+  roles                                  UserRoleAssignment[]
+  authTokens                             AuthToken[]
+  learnerProfile                         LearnerProfile?
+  supplierProfile                        SupplierProfile?
+  driverProfile                          DriverProfile?
+  invitedRoles                           RoleInvitation[]                  @relation("RoleInvitationInvitedBy")
+  usedInvitations                        RoleInvitation[]                  @relation("RoleInvitationUsedByUser")
+  assignedRoles                          UserRoleAssignment[]              @relation("UserRoleAssignedBy")
+  ownedMaterials                         Material[]                        @relation("MaterialOwner")
+  ownedReservationsAsOwner               Reservation[]                     @relation("ReservationOwner")
+  ownedReservationsAsRequester           Reservation[]                     @relation("ReservationRequester")
+  deliveryGroupsAsLearner                DeliveryGroup[]                   @relation("DeliveryGroupLearner")
+  reservationStatusChanges               ReservationStatusHistory[]        @relation("ReservationStatusChangedBy")
+  requestedDeliveries                    Delivery[]                        @relation("DeliveryRequestedBy")
+  deliveryAssignmentsMade                DeliveryAssignment[]              @relation("DeliveryAssignedBy")
+  deliveryStatusChanges                  DeliveryStatusHistory[]           @relation("DeliveryStatusChangedBy")
+  idempotencyRecords                     IdempotencyRecord[]
+  notifications                          Notification[]
+  reviewsGiven                           Review[]                          @relation("ReviewReviewer")
+  reviewsReceived                        Review[]                          @relation("ReviewReviewedUser")
+  createdLearningProjects                LearningProject[]                 @relation("LearningProjectCreatedBy")
+  reviewedLearningProjects               LearningProject[]                 @relation("LearningProjectReviewedBy")
+  supplierVerificationsReviewed          SupplierProfile[]                 @relation("SupplierVerificationReviewedBy")
+  approvedProjectSteps                   ProjectStep[]                     @relation("ProjectStepApprovedBy")
+  priceRuleRequests                      PriceRuleRequest[]
+  categoryRequests                       CategoryRequest[]
+  materialReportsSubmitted               MaterialReport[]                  @relation("MaterialReportReporter")
+  materialReportsReviewed                MaterialReport[]                  @relation("MaterialReportReviewedBy")
+  reservationMessagesSent                ReservationMessage[]              @relation("ReservationMessageSender")
+  noShowReportsSubmitted                 NoShowReport[]                    @relation("NoShowReportReporter")
+  noShowReportsTargeted                  NoShowReport[]                    @relation("NoShowReportTarget")
+  noShowReportsReviewed                  NoShowReport[]                    @relation("NoShowReportReviewedBy")
+  moderatedMaterials                     Material[]                        @relation("MaterialModeratedBy")
+  supplierFollows                        SupplierFollower[]                @relation("SupplierFollowerUser")
+  materialLikes                          MaterialLike[]                    @relation("MaterialLikeUser")
+  materialViews                          MaterialView[]                    @relation("MaterialViewUser")
+  projectLikes                           ProjectLike[]                     @relation("ProjectLikeUser")
+  projectSaves                           ProjectSave[]                     @relation("ProjectSaveUser")
+  projectFollows                         ProjectFollow[]                   @relation("ProjectFollowUser")
+  projectReviews                         ProjectUserReview[]               @relation("ProjectUserReviewUser")
+  projectBuilds                          ProjectBuild[]                    @relation("ProjectBuildLearner")
+  savedLocations                         UserSavedLocation[]
+  suspendedBy                            User?                             @relation("UserSuspendedBy", fields: [suspendedById], references: [id], onDelete: SetNull)
+  accountsSuspended                      User[]                            @relation("UserSuspendedBy")
+  reactivatedBy                          User?                             @relation("UserReactivatedBy", fields: [reactivatedById], references: [id], onDelete: SetNull)
+  accountsReactivated                    User[]                            @relation("UserReactivatedBy")
+  adminActivityLogs                      AdminActivityLog[]
+  aiConversations                        AiConversation[]
   projectAuthoringSessions               ProjectAuthoringSession[]
   aiPendingActions                       AiPendingAction[]
-  generatedAdminLearningProjectAiReviews LearningProjectAdminAiReview[] @relation("LearningProjectAdminAiReviewGeneratedBy")
-  recommendationGenerations    RecommendationGeneration[]
-  recommendationRequests       RecommendationRequest[]
-  recommendationImpressions    RecommendationImpression[]
-  recommendationActions        RecommendationAction[]
-  comments                     Comment[]                   @relation("CommentAuthor")
-  commentsDeleted              Comment[]                   @relation("CommentDeletedBy")
-  learnerMaterialRequests      LearnerMaterialRequest[]    @relation("LearnerMaterialRequestLearner")
-  learnerMaterialRequestMatches LearnerMaterialRequestMatch[] @relation("LearnerMaterialRequestMatchSupplier")
+  generatedAdminLearningProjectAiReviews LearningProjectAdminAiReview[]    @relation("LearningProjectAdminAiReviewGeneratedBy")
+  recommendationGenerations              RecommendationGeneration[]
+  recommendationRequests                 RecommendationRequest[]
+  recommendationImpressions              RecommendationImpression[]
+  recommendationActions                  RecommendationAction[]
+  comments                               Comment[]                         @relation("CommentAuthor")
+  commentsDeleted                        Comment[]                         @relation("CommentDeletedBy")
+  learnerMaterialRequests                LearnerMaterialRequest[]          @relation("LearnerMaterialRequestLearner")
+  learnerMaterialRequestMatches          LearnerMaterialRequestMatch[]     @relation("LearnerMaterialRequestMatchSupplier")
 
   @@index([suspendedById])
   @@index([reactivatedById])
@@ -790,15 +791,15 @@ model Location {
 }
 
 model UserSavedLocation {
-  id         String   @id @default(cuid())
-  userId     String   @map("user_id")
-  locationId String   @map("location_id")
-  label      String
-  isDefault  Boolean  @default(false) @map("is_default")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  id                      String                   @id @default(cuid())
+  userId                  String                   @map("user_id")
+  locationId              String                   @map("location_id")
+  label                   String
+  isDefault               Boolean                  @default(false) @map("is_default")
+  createdAt               DateTime                 @default(now()) @map("created_at")
+  updatedAt               DateTime                 @updatedAt @map("updated_at")
+  user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location                Location                 @relation(fields: [locationId], references: [id], onDelete: Cascade)
   learnerMaterialRequests LearnerMaterialRequest[] @relation("LearnerMaterialRequestSourceSavedLocation")
 
   @@index([userId])
@@ -838,35 +839,35 @@ model Category {
 }
 
 model LearningProject {
-  id                       String                     @id @default(uuid())
-  categoryId               String                     @map("category_id")
-  createdBy                String                     @map("created_by")
+  id                       String                         @id @default(uuid())
+  categoryId               String                         @map("category_id")
+  createdBy                String                         @map("created_by")
   title                    String
-  shortDescription         String                     @map("short_description")
+  shortDescription         String                         @map("short_description")
   description              String
   difficulty               ProjectDifficulty
-  estimatedDurationMinutes Int?                       @map("estimated_duration_minutes")
-  coverImageUrl            String?                    @map("cover_image_url")
-  status                   LearningProjectStatus      @default(DRAFT)
-  submittedAt              DateTime?                  @map("submitted_at")
-  reviewedBy               String?                    @map("reviewed_by")
-  reviewedAt               DateTime?                  @map("reviewed_at")
-  reviewNote               String?                    @map("review_note")
-  rejectionReason          String?                    @map("rejection_reason")
-  changesRequestedReason   String?                    @map("changes_requested_reason")
-  hiddenAt                 DateTime?                  @map("hidden_at")
-  hiddenBy                 String?                    @map("hidden_by")
-  hiddenReason             String?                    @map("hidden_reason")
-  archivedAt               DateTime?                  @map("archived_at")
-  archivedBy               String?                    @map("archived_by")
-  archivedReason           String?                    @map("archived_reason")
-  stepsGeneratedByAi       Boolean                    @default(false) @map("steps_generated_by_ai")
-  aiStepsGeneratedAt       DateTime?                  @map("ai_steps_generated_at")
-  createdAt                DateTime                   @default(now()) @map("created_at")
-  updatedAt                DateTime                   @updatedAt @map("updated_at")
-  category                 Category                   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  createdByUser            User                       @relation("LearningProjectCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
-  reviewedByUser           User?                      @relation("LearningProjectReviewedBy", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  estimatedDurationMinutes Int?                           @map("estimated_duration_minutes")
+  coverImageUrl            String?                        @map("cover_image_url")
+  status                   LearningProjectStatus          @default(DRAFT)
+  submittedAt              DateTime?                      @map("submitted_at")
+  reviewedBy               String?                        @map("reviewed_by")
+  reviewedAt               DateTime?                      @map("reviewed_at")
+  reviewNote               String?                        @map("review_note")
+  rejectionReason          String?                        @map("rejection_reason")
+  changesRequestedReason   String?                        @map("changes_requested_reason")
+  hiddenAt                 DateTime?                      @map("hidden_at")
+  hiddenBy                 String?                        @map("hidden_by")
+  hiddenReason             String?                        @map("hidden_reason")
+  archivedAt               DateTime?                      @map("archived_at")
+  archivedBy               String?                        @map("archived_by")
+  archivedReason           String?                        @map("archived_reason")
+  stepsGeneratedByAi       Boolean                        @default(false) @map("steps_generated_by_ai")
+  aiStepsGeneratedAt       DateTime?                      @map("ai_steps_generated_at")
+  createdAt                DateTime                       @default(now()) @map("created_at")
+  updatedAt                DateTime                       @updatedAt @map("updated_at")
+  category                 Category                       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  createdByUser            User                           @relation("LearningProjectCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  reviewedByUser           User?                          @relation("LearningProjectReviewedBy", fields: [reviewedBy], references: [id], onDelete: SetNull)
   images                   ProjectImage[]
   requiredComponents       ProjectRequiredComponent[]
   steps                    ProjectStep[]
@@ -877,7 +878,7 @@ model LearningProject {
   follows                  ProjectFollow[]
   userReviews              ProjectUserReview[]
   builds                   ProjectBuild[]
-  authoringConversation    AiConversation?            @relation("ProjectAuthoringConversation")
+  authoringConversation    AiConversation?                @relation("ProjectAuthoringConversation")
   projectAuthoringSession  ProjectAuthoringSession?
   adminAiReviews           LearningProjectAdminAiReview[] @relation("LearningProjectAdminAiReviews")
   taxonomyConcepts         LearningProjectConcept[]
@@ -927,26 +928,26 @@ model ProjectImage {
 }
 
 model ProjectRequiredComponent {
-  id                       String               @id @default(uuid())
-  projectId                String               @map("project_id")
-  categoryId               String?              @map("category_id")
-  componentName            String               @map("component_name")
-  materialType             String               @map("material_type")
-  quantity                 Decimal              @db.Decimal(12, 3)
+  id                       String                    @id @default(uuid())
+  projectId                String                    @map("project_id")
+  categoryId               String?                   @map("category_id")
+  componentName            String                    @map("component_name")
+  materialType             String                    @map("material_type")
+  quantity                 Decimal                   @db.Decimal(12, 3)
   unit                     String
-  componentRole            ProjectComponentRole @map("component_role")
-  isRequired               Boolean              @default(true) @map("is_required")
-  canBeSubstituted         Boolean              @default(false) @map("can_be_substituted")
-  searchKeywords           Json?                @map("search_keywords")
-  alternativeKeywords      Json?                @map("alternative_keywords")
-  providedByUser           Boolean              @default(false) @map("provided_by_user")
-  confirmedByUser          Boolean              @default(false) @map("confirmed_by_user")
-  generatedOrSuggestedByAi Boolean              @default(false) @map("generated_or_suggested_by_ai")
-  reviewStatus             ProjectReviewStatus  @default(PENDING_REVIEW) @map("review_status")
+  componentRole            ProjectComponentRole      @map("component_role")
+  isRequired               Boolean                   @default(true) @map("is_required")
+  canBeSubstituted         Boolean                   @default(false) @map("can_be_substituted")
+  searchKeywords           Json?                     @map("search_keywords")
+  alternativeKeywords      Json?                     @map("alternative_keywords")
+  providedByUser           Boolean                   @default(false) @map("provided_by_user")
+  confirmedByUser          Boolean                   @default(false) @map("confirmed_by_user")
+  generatedOrSuggestedByAi Boolean                   @default(false) @map("generated_or_suggested_by_ai")
+  reviewStatus             ProjectReviewStatus       @default(PENDING_REVIEW) @map("review_status")
   notes                    String?
-  createdAt                DateTime             @default(now()) @map("created_at")
-  project                  LearningProject      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  category                 Category?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt                DateTime                  @default(now()) @map("created_at")
+  project                  LearningProject           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category                 Category?                 @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   buildItems               ProjectBuildItem[]
   taxonomyConcepts         ProjectComponentConcept[]
 
@@ -1007,26 +1008,26 @@ model ProjectTag {
 }
 
 model TaxonomyConcept {
-  id                String                    @id @default(cuid())
-  canonicalKey      String                    @unique @map("canonical_key")
-  conceptType       TaxonomyConceptType       @map("concept_type")
-  labelEn           String                    @map("label_en")
-  labelAr           String                    @map("label_ar")
-  status            TaxonomyConceptStatus     @default(ACTIVE)
-  parentId          String?                   @map("parent_id")
-  createdAt         DateTime                  @default(now()) @map("created_at")
-  updatedAt         DateTime                  @updatedAt @map("updated_at")
-  parent            TaxonomyConcept?          @relation("TaxonomyConceptHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children          TaxonomyConcept[]         @relation("TaxonomyConceptHierarchy")
-  aliases           TaxonomyAlias[]
-  learnerInterests  LearnerInterestConcept[]
-  materials         MaterialConcept[]
-  projects          LearningProjectConcept[]
-  projectComponents ProjectComponentConcept[]
-  outgoingRelations TaxonomyConceptRelation[]  @relation("TaxonomyConceptRelationSource")
-  incomingRelations TaxonomyConceptRelation[]  @relation("TaxonomyConceptRelationTarget")
-  materialFamilyCategories Category[]                  @relation("CategoryMaterialFamilyConcept")
-  projectTopicCategories   Category[]                  @relation("CategoryProjectTopicConcept")
+  id                       String                    @id @default(cuid())
+  canonicalKey             String                    @unique @map("canonical_key")
+  conceptType              TaxonomyConceptType       @map("concept_type")
+  labelEn                  String                    @map("label_en")
+  labelAr                  String                    @map("label_ar")
+  status                   TaxonomyConceptStatus     @default(ACTIVE)
+  parentId                 String?                   @map("parent_id")
+  createdAt                DateTime                  @default(now()) @map("created_at")
+  updatedAt                DateTime                  @updatedAt @map("updated_at")
+  parent                   TaxonomyConcept?          @relation("TaxonomyConceptHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children                 TaxonomyConcept[]         @relation("TaxonomyConceptHierarchy")
+  aliases                  TaxonomyAlias[]
+  learnerInterests         LearnerInterestConcept[]
+  materials                MaterialConcept[]
+  projects                 LearningProjectConcept[]
+  projectComponents        ProjectComponentConcept[]
+  outgoingRelations        TaxonomyConceptRelation[] @relation("TaxonomyConceptRelationSource")
+  incomingRelations        TaxonomyConceptRelation[] @relation("TaxonomyConceptRelationTarget")
+  materialFamilyCategories Category[]                @relation("CategoryMaterialFamilyConcept")
+  projectTopicCategories   Category[]                @relation("CategoryProjectTopicConcept")
 
   @@unique([id, conceptType], map: "taxonomy_concepts_id_concept_type_key")
   @@index([conceptType, status])
@@ -1185,26 +1186,71 @@ model ProjectUserReview {
 }
 
 model ProjectBuild {
-  id                 String                     @id @default(cuid())
-  projectId          String                     @map("project_id")
-  learnerId          String                     @map("learner_id")
-  status             ProjectBuildStatus         @default(IN_PROGRESS)
-  startedAt          DateTime                   @default(now()) @map("started_at")
-  completedAt        DateTime?                  @map("completed_at")
-  createdAt          DateTime                   @default(now()) @map("created_at")
-  updatedAt          DateTime                   @updatedAt @map("updated_at")
-  project            LearningProject            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  learner            User                       @relation("ProjectBuildLearner", fields: [learnerId], references: [id], onDelete: Cascade)
-  items              ProjectBuildItem[]
-  stepProgress       ProjectBuildStepProgress[]
-  guideConversations AiConversation[]           @relation("BuildGuideConversation")
+  id                      String                          @id @default(cuid())
+  projectId               String                          @map("project_id")
+  learnerId               String                          @map("learner_id")
+  attemptNumber           Int                             @default(1) @map("attempt_number")
+  status                  ProjectBuildStatus              @default(IN_PROGRESS)
+  startedAt               DateTime                        @default(now()) @map("started_at")
+  completedAt             DateTime?                       @map("completed_at")
+  pausedAt                DateTime?                       @map("paused_at")
+  archivedAt              DateTime?                       @map("archived_at")
+  createdAt               DateTime                        @default(now()) @map("created_at")
+  updatedAt               DateTime                        @updatedAt @map("updated_at")
+  project                 LearningProject                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  learner                 User                            @relation("ProjectBuildLearner", fields: [learnerId], references: [id], onDelete: Cascade)
+  items                   ProjectBuildItem[]
+  stepProgress            ProjectBuildStepProgress[]
+  guideConversations      AiConversation[]                @relation("BuildGuideConversation")
   learnerMaterialRequests LearnerMaterialRequest[]
+  completionStory         ProjectBuildCompletionStory?
+  completionSnapshot      ProjectBuildCompletionSnapshot?
 
-  @@unique([projectId, learnerId])
+  @@unique([projectId, learnerId, attemptNumber])
   @@index([learnerId])
   @@index([projectId])
   @@index([status])
+  @@index([learnerId, status, updatedAt(sort: Desc)])
+  @@index([learnerId, status, completedAt(sort: Desc)])
+  @@index([learnerId, status, archivedAt(sort: Desc)])
   @@map("project_builds")
+}
+
+model ProjectBuildCompletionStory {
+  id         String                        @id @default(cuid())
+  buildId    String                        @unique @map("build_id")
+  reflection String?                       @db.Text
+  caption    String?                       @db.VarChar(120)
+  createdAt  DateTime                      @default(now()) @map("created_at")
+  updatedAt  DateTime                      @updatedAt @map("updated_at")
+  build      ProjectBuild                  @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  photos     ProjectBuildCompletionPhoto[]
+
+  @@map("project_build_completion_stories")
+}
+
+model ProjectBuildCompletionPhoto {
+  id        String                      @id @default(cuid())
+  storyId   String                      @map("story_id")
+  imageUrl  String                      @map("image_url")
+  caption   String?                     @db.VarChar(120)
+  sortOrder Int                         @default(0) @map("sort_order")
+  createdAt DateTime                    @default(now()) @map("created_at")
+  updatedAt DateTime                    @updatedAt @map("updated_at")
+  story     ProjectBuildCompletionStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@index([storyId, sortOrder])
+  @@map("project_build_completion_photos")
+}
+
+model ProjectBuildCompletionSnapshot {
+  id        String       @id @default(cuid())
+  buildId   String       @unique @map("build_id")
+  snapshot  Json
+  createdAt DateTime     @default(now()) @map("created_at")
+  build     ProjectBuild @relation(fields: [buildId], references: [id], onDelete: Cascade)
+
+  @@map("project_build_completion_snapshots")
 }
 
 model ProjectBuildStepProgress {
@@ -1225,22 +1271,22 @@ model ProjectBuildStepProgress {
 }
 
 model ProjectBuildItem {
-  id                  String                   @id @default(cuid())
-  buildId             String                   @map("build_id")
-  requiredComponentId String                   @map("required_component_id")
-  status              ProjectBuildItemStatus   @default(MISSING)
-  learnerNote         String?                  @map("learner_note")
-  linkedMaterialId              String?                  @map("linked_material_id")
-  linkedReservationId           String?                  @map("linked_reservation_id")
-  linkedMaterialAt              DateTime?                @map("linked_material_at")
-  dismissedAcquiredReservationId String?                 @map("dismissed_acquired_reservation_id")
-  createdAt           DateTime                 @default(now()) @map("created_at")
-  updatedAt           DateTime                 @updatedAt @map("updated_at")
-  build               ProjectBuild             @relation(fields: [buildId], references: [id], onDelete: Cascade)
-  requiredComponent   ProjectRequiredComponent @relation(fields: [requiredComponentId], references: [id], onDelete: Cascade)
-  linkedMaterial      Material?                @relation("ProjectBuildLinkedMaterial", fields: [linkedMaterialId], references: [id], onDelete: SetNull)
-  linkedReservation   Reservation?             @relation("ProjectBuildLinkedReservation", fields: [linkedReservationId], references: [id], onDelete: SetNull)
-  learnerMaterialRequests LearnerMaterialRequest[]
+  id                             String                   @id @default(cuid())
+  buildId                        String                   @map("build_id")
+  requiredComponentId            String                   @map("required_component_id")
+  status                         ProjectBuildItemStatus   @default(MISSING)
+  learnerNote                    String?                  @map("learner_note")
+  linkedMaterialId               String?                  @map("linked_material_id")
+  linkedReservationId            String?                  @map("linked_reservation_id")
+  linkedMaterialAt               DateTime?                @map("linked_material_at")
+  dismissedAcquiredReservationId String?                  @map("dismissed_acquired_reservation_id")
+  createdAt                      DateTime                 @default(now()) @map("created_at")
+  updatedAt                      DateTime                 @updatedAt @map("updated_at")
+  build                          ProjectBuild             @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  requiredComponent              ProjectRequiredComponent @relation(fields: [requiredComponentId], references: [id], onDelete: Cascade)
+  linkedMaterial                 Material?                @relation("ProjectBuildLinkedMaterial", fields: [linkedMaterialId], references: [id], onDelete: SetNull)
+  linkedReservation              Reservation?             @relation("ProjectBuildLinkedReservation", fields: [linkedReservationId], references: [id], onDelete: SetNull)
+  learnerMaterialRequests        LearnerMaterialRequest[]
 
   @@unique([buildId, requiredComponentId])
   @@index([buildId])
@@ -1252,56 +1298,56 @@ model ProjectBuildItem {
 }
 
 model Material {
-  id                            String             @id @default(cuid())
-  ownerId                       String             @map("owner_id")
-  supplierProfileId             String?            @map("supplier_profile_id")
-  categoryId                    String             @map("category_id")
+  id                            String                        @id @default(cuid())
+  ownerId                       String                        @map("owner_id")
+  supplierProfileId             String?                       @map("supplier_profile_id")
+  categoryId                    String                        @map("category_id")
   title                         String
   description                   String
-  materialType                  String             @map("material_type")
-  materialTypeId                String?            @map("material_type_id")
-  customMaterialType            String?            @map("custom_material_type")
-  priceRuleId                   String?            @map("price_rule_id")
-  priceCheckedAt                DateTime?          @map("price_checked_at")
-  maxAllowedPriceAtCheck        Decimal?           @map("max_allowed_price_at_check") @db.Decimal(12, 2)
-  quantity                      Decimal            @db.Decimal(12, 3)
+  materialType                  String                        @map("material_type")
+  materialTypeId                String?                       @map("material_type_id")
+  customMaterialType            String?                       @map("custom_material_type")
+  priceRuleId                   String?                       @map("price_rule_id")
+  priceCheckedAt                DateTime?                     @map("price_checked_at")
+  maxAllowedPriceAtCheck        Decimal?                      @map("max_allowed_price_at_check") @db.Decimal(12, 2)
+  quantity                      Decimal                       @db.Decimal(12, 3)
   unit                          String
   condition                     MaterialCondition
-  sourceType                    MaterialSourceType @map("source_type")
-  status                        MaterialStatus     @default(AVAILABLE)
-  isFree                        Boolean            @default(true) @map("is_free")
-  price                         Decimal?           @db.Decimal(12, 2)
-  currency                      String             @default("NIS")
-  locationId                    String             @map("location_id")
-  pickupAllowed                 Boolean            @default(true) @map("pickup_allowed")
-  deliveryAllowed               Boolean            @default(false) @map("delivery_allowed")
-  pickupNotes                   String?            @map("pickup_notes")
-  suggestedUses                 String?            @map("suggested_uses")
-  viewsCount                    Int                @default(0) @map("views_count")
-  reusedAt                      DateTime?          @map("reused_at")
-  reusedByReservationId         String?            @unique @map("reused_by_reservation_id")
-  moderationReason              String?            @map("moderation_reason")
-  moderatedAt                   DateTime?          @map("moderated_at")
-  moderatedById                 String?            @map("moderated_by_id")
-  createdAt                     DateTime           @default(now()) @map("created_at")
-  updatedAt                     DateTime           @updatedAt @map("updated_at")
-  owner                         User               @relation("MaterialOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  moderatedBy                   User?              @relation("MaterialModeratedBy", fields: [moderatedById], references: [id], onDelete: SetNull)
-  supplierProfile               SupplierProfile?   @relation(fields: [supplierProfileId], references: [id], onDelete: SetNull)
-  category                      Category           @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  approvedMaterialType          MaterialType?      @relation(fields: [materialTypeId], references: [id], onDelete: SetNull)
-  priceRule                     MaterialPriceRule? @relation(fields: [priceRuleId], references: [id], onDelete: SetNull)
-  location                      Location           @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  sourceType                    MaterialSourceType            @map("source_type")
+  status                        MaterialStatus                @default(AVAILABLE)
+  isFree                        Boolean                       @default(true) @map("is_free")
+  price                         Decimal?                      @db.Decimal(12, 2)
+  currency                      String                        @default("NIS")
+  locationId                    String                        @map("location_id")
+  pickupAllowed                 Boolean                       @default(true) @map("pickup_allowed")
+  deliveryAllowed               Boolean                       @default(false) @map("delivery_allowed")
+  pickupNotes                   String?                       @map("pickup_notes")
+  suggestedUses                 String?                       @map("suggested_uses")
+  viewsCount                    Int                           @default(0) @map("views_count")
+  reusedAt                      DateTime?                     @map("reused_at")
+  reusedByReservationId         String?                       @unique @map("reused_by_reservation_id")
+  moderationReason              String?                       @map("moderation_reason")
+  moderatedAt                   DateTime?                     @map("moderated_at")
+  moderatedById                 String?                       @map("moderated_by_id")
+  createdAt                     DateTime                      @default(now()) @map("created_at")
+  updatedAt                     DateTime                      @updatedAt @map("updated_at")
+  owner                         User                          @relation("MaterialOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  moderatedBy                   User?                         @relation("MaterialModeratedBy", fields: [moderatedById], references: [id], onDelete: SetNull)
+  supplierProfile               SupplierProfile?              @relation(fields: [supplierProfileId], references: [id], onDelete: SetNull)
+  category                      Category                      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  approvedMaterialType          MaterialType?                 @relation(fields: [materialTypeId], references: [id], onDelete: SetNull)
+  priceRule                     MaterialPriceRule?            @relation(fields: [priceRuleId], references: [id], onDelete: SetNull)
+  location                      Location                      @relation(fields: [locationId], references: [id], onDelete: Restrict)
   images                        MaterialImage[]
   tags                          MaterialTag[]
   reservations                  Reservation[]
-  reusedByReservation           Reservation?       @relation("MaterialReusedByReservation", fields: [reusedByReservationId], references: [id], onDelete: SetNull)
-  publishedFromCategoryRequest  CategoryRequest?   @relation("CategoryRequestPublishedMaterial")
-  publishedFromPriceRuleRequest PriceRuleRequest?  @relation("PriceRuleRequestPublishedMaterial")
+  reusedByReservation           Reservation?                  @relation("MaterialReusedByReservation", fields: [reusedByReservationId], references: [id], onDelete: SetNull)
+  publishedFromCategoryRequest  CategoryRequest?              @relation("CategoryRequestPublishedMaterial")
+  publishedFromPriceRuleRequest PriceRuleRequest?             @relation("PriceRuleRequestPublishedMaterial")
   reports                       MaterialReport[]
   likes                         MaterialLike[]
   views                         MaterialView[]
-  linkedFromProjectBuildItems   ProjectBuildItem[] @relation("ProjectBuildLinkedMaterial")
+  linkedFromProjectBuildItems   ProjectBuildItem[]            @relation("ProjectBuildLinkedMaterial")
   taxonomyConcepts              MaterialConcept[]
   comments                      Comment[]
   learnerMaterialRequestMatches LearnerMaterialRequestMatch[]
@@ -1377,9 +1423,9 @@ model MaterialView {
   material     Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
   viewerUser   User?    @relation("MaterialViewUser", fields: [viewerUserId], references: [id], onDelete: SetNull)
 
+  @@unique([materialId, operationKey])
   @@index([materialId])
   @@index([viewerUserId])
-  @@unique([materialId, operationKey])
   @@map("material_views")
 }
 
@@ -1433,65 +1479,65 @@ model MaterialTag {
 }
 
 model Reservation {
-  id                                String                       @id @default(cuid())
-  materialId                        String                       @map("material_id")
-  requesterId                       String                       @map("requester_id")
-  ownerId                           String                       @map("owner_id")
-  quantityRequested                 Decimal                      @map("quantity_requested") @db.Decimal(12, 3)
+  id                                String                        @id @default(cuid())
+  materialId                        String                        @map("material_id")
+  requesterId                       String                        @map("requester_id")
+  ownerId                           String                        @map("owner_id")
+  quantityRequested                 Decimal                       @map("quantity_requested") @db.Decimal(12, 3)
   message                           String?
-  fulfillmentMethod                 ReservationFulfillmentMethod @default(PICKUP) @map("fulfillment_method")
-  learnerPreferredPickupWindows     Json?                        @map("learner_preferred_pickup_windows")
-  learnerPreferredDeliveryWindows   Json?                        @map("learner_preferred_delivery_windows")
-  deliveryAddressText               String?                      @map("delivery_address_text")
-  safeDropoffAllowed                Boolean?                     @map("safe_dropoff_allowed")
-  deliveryNote                      String?                      @map("delivery_note")
-  status                            ReservationStatus            @default(PENDING)
-  pickupWindowStart                 DateTime?                    @map("pickup_window_start")
-  pickupWindowEnd                   DateTime?                    @map("pickup_window_end")
-  supplierProposedPickupWindowStart DateTime?                    @map("supplier_proposed_pickup_window_start")
-  supplierProposedPickupWindowEnd   DateTime?                    @map("supplier_proposed_pickup_window_end")
-  learnerProposedPickupWindowStart  DateTime?                    @map("learner_proposed_pickup_window_start")
-  learnerProposedPickupWindowEnd    DateTime?                    @map("learner_proposed_pickup_window_end")
-  pendingRescheduleRequestedBy      RescheduleRequestedBy?       @map("pending_reschedule_requested_by")
-  pendingRescheduleReason           String?                      @map("pending_reschedule_reason")
-  pendingRescheduleNote             String?                      @map("pending_reschedule_note")
-  supplierPickupWindowStart         DateTime?                    @map("supplier_pickup_window_start")
-  supplierPickupWindowEnd           DateTime?                    @map("supplier_pickup_window_end")
-  confirmedDeliveryWindowStart      DateTime?                    @map("confirmed_delivery_window_start")
-  confirmedDeliveryWindowEnd        DateTime?                    @map("confirmed_delivery_window_end")
-  earliestDeliveryStart             DateTime?                    @map("earliest_delivery_start")
-  schedulingConflictReason          String?                      @map("scheduling_conflict_reason")
-  supplierNote                      String?                      @map("supplier_note")
-  rejectionReason                   String?                      @map("rejection_reason")
-  acceptedAt                        DateTime?                    @map("accepted_at")
-  rejectedAt                        DateTime?                    @map("rejected_at")
-  cancelledAt                       DateTime?                    @map("cancelled_at")
-  completedAt                       DateTime?                    @map("completed_at")
-  selfPickupCodeHash                String?                      @map("self_pickup_code_hash")
-  selfPickupCodeGeneratedAt         DateTime?                    @map("self_pickup_code_generated_at")
-  createdAt                         DateTime                     @default(now()) @map("created_at")
-  updatedAt                         DateTime                     @updatedAt @map("updated_at")
-  material                          Material                     @relation(fields: [materialId], references: [id], onDelete: Cascade)
-  requester                         User                         @relation("ReservationRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  owner                             User                         @relation("ReservationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  reusedMaterial                    Material?                    @relation("MaterialReusedByReservation")
+  fulfillmentMethod                 ReservationFulfillmentMethod  @default(PICKUP) @map("fulfillment_method")
+  learnerPreferredPickupWindows     Json?                         @map("learner_preferred_pickup_windows")
+  learnerPreferredDeliveryWindows   Json?                         @map("learner_preferred_delivery_windows")
+  deliveryAddressText               String?                       @map("delivery_address_text")
+  safeDropoffAllowed                Boolean?                      @map("safe_dropoff_allowed")
+  deliveryNote                      String?                       @map("delivery_note")
+  status                            ReservationStatus             @default(PENDING)
+  pickupWindowStart                 DateTime?                     @map("pickup_window_start")
+  pickupWindowEnd                   DateTime?                     @map("pickup_window_end")
+  supplierProposedPickupWindowStart DateTime?                     @map("supplier_proposed_pickup_window_start")
+  supplierProposedPickupWindowEnd   DateTime?                     @map("supplier_proposed_pickup_window_end")
+  learnerProposedPickupWindowStart  DateTime?                     @map("learner_proposed_pickup_window_start")
+  learnerProposedPickupWindowEnd    DateTime?                     @map("learner_proposed_pickup_window_end")
+  pendingRescheduleRequestedBy      RescheduleRequestedBy?        @map("pending_reschedule_requested_by")
+  pendingRescheduleReason           String?                       @map("pending_reschedule_reason")
+  pendingRescheduleNote             String?                       @map("pending_reschedule_note")
+  supplierPickupWindowStart         DateTime?                     @map("supplier_pickup_window_start")
+  supplierPickupWindowEnd           DateTime?                     @map("supplier_pickup_window_end")
+  confirmedDeliveryWindowStart      DateTime?                     @map("confirmed_delivery_window_start")
+  confirmedDeliveryWindowEnd        DateTime?                     @map("confirmed_delivery_window_end")
+  earliestDeliveryStart             DateTime?                     @map("earliest_delivery_start")
+  schedulingConflictReason          String?                       @map("scheduling_conflict_reason")
+  supplierNote                      String?                       @map("supplier_note")
+  rejectionReason                   String?                       @map("rejection_reason")
+  acceptedAt                        DateTime?                     @map("accepted_at")
+  rejectedAt                        DateTime?                     @map("rejected_at")
+  cancelledAt                       DateTime?                     @map("cancelled_at")
+  completedAt                       DateTime?                     @map("completed_at")
+  selfPickupCodeHash                String?                       @map("self_pickup_code_hash")
+  selfPickupCodeGeneratedAt         DateTime?                     @map("self_pickup_code_generated_at")
+  createdAt                         DateTime                      @default(now()) @map("created_at")
+  updatedAt                         DateTime                      @updatedAt @map("updated_at")
+  material                          Material                      @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  requester                         User                          @relation("ReservationRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  owner                             User                          @relation("ReservationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  reusedMaterial                    Material?                     @relation("MaterialReusedByReservation")
   deliveries                        Delivery[]
   reviews                           Review[]
   statusHistory                     ReservationStatusHistory[]
   messages                          ReservationMessage[]
   noShowReports                     NoShowReport[]
-  linkedFromProjectBuildItems       ProjectBuildItem[]           @relation("ProjectBuildLinkedReservation")
+  linkedFromProjectBuildItems       ProjectBuildItem[]            @relation("ProjectBuildLinkedReservation")
   learnerMaterialRequestMatches     LearnerMaterialRequestMatch[] @relation("LearnerMaterialRequestMatchReservation")
-  unitPriceAtReservation            Decimal?                     @map("unit_price_at_reservation") @db.Decimal(12, 2)
-  materialSubtotal                  Decimal?                     @map("material_subtotal") @db.Decimal(12, 2)
-  deliveryFee                       Decimal?                     @map("delivery_fee") @db.Decimal(12, 2)
-  totalAmount                       Decimal?                     @map("total_amount") @db.Decimal(12, 2)
-  pricingCurrency                   String?                      @default("NIS") @map("pricing_currency")
-  deliveryZone                      DeliveryZone?                @map("delivery_zone")
-  dropoffCity                       String?                      @map("dropoff_city")
-  dropoffArea                       String?                      @map("dropoff_area")
-  deliveryGroupId                   String?                      @map("delivery_group_id")
-  deliveryGroup                     DeliveryGroup?               @relation(fields: [deliveryGroupId], references: [id], onDelete: SetNull)
+  unitPriceAtReservation            Decimal?                      @map("unit_price_at_reservation") @db.Decimal(12, 2)
+  materialSubtotal                  Decimal?                      @map("material_subtotal") @db.Decimal(12, 2)
+  deliveryFee                       Decimal?                      @map("delivery_fee") @db.Decimal(12, 2)
+  totalAmount                       Decimal?                      @map("total_amount") @db.Decimal(12, 2)
+  pricingCurrency                   String?                       @default("NIS") @map("pricing_currency")
+  deliveryZone                      DeliveryZone?                 @map("delivery_zone")
+  dropoffCity                       String?                       @map("dropoff_city")
+  dropoffArea                       String?                       @map("dropoff_area")
+  deliveryGroupId                   String?                       @map("delivery_group_id")
+  deliveryGroup                     DeliveryGroup?                @relation(fields: [deliveryGroupId], references: [id], onDelete: SetNull)
 
   @@index([ownerId])
   @@index([requesterId])
@@ -1688,34 +1734,34 @@ model ReservationMessage {
 }
 
 model NoShowReport {
-  id                String                 @id @default(cuid())
-  reservationId     String                 @map("reservation_id")
-  deliveryId        String?                @map("delivery_id")
-  reporterUserId    String                 @map("reporter_user_id")
-  targetUserId      String?                @map("target_user_id")
-  targetRole        NoShowReportTargetRole @map("target_role")
-  reasonCode        NoShowReportReason     @map("reason_code")
-  note              String?
-  reporterReasonDetail String?             @map("reporter_reason_detail")
-  reporterNote      String?                @map("reporter_note")
-  pickupWindowStart DateTime?              @map("pickup_window_start")
-  pickupWindowEnd   DateTime?              @map("pickup_window_end")
-  status            NoShowReportStatus     @default(PENDING_REVIEW)
-  reviewedById      String?                @map("reviewed_by_id")
-  reviewedAt        DateTime?              @map("reviewed_at")
-  reviewNote        String?                @map("review_note")
-  recoveryAction    String?                @map("recovery_action")
-  recoveryActionAt  DateTime?              @map("recovery_action_at")
-  recoveryDeliveryId String?               @map("recovery_delivery_id")
-  recoveryDeliveryGroupId String?          @map("recovery_delivery_group_id")
-  recoveryCompletedAt DateTime?            @map("recovery_completed_at")
-  holdReleasedAt    DateTime?              @map("hold_released_at")
-  createdAt         DateTime               @default(now()) @map("created_at")
-  reservation       Reservation            @relation(fields: [reservationId], references: [id], onDelete: Cascade)
-  delivery          Delivery?              @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
-  reporter          User                   @relation("NoShowReportReporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
-  target            User?                  @relation("NoShowReportTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
-  reviewedBy        User?                  @relation("NoShowReportReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  id                      String                 @id @default(cuid())
+  reservationId           String                 @map("reservation_id")
+  deliveryId              String?                @map("delivery_id")
+  reporterUserId          String                 @map("reporter_user_id")
+  targetUserId            String?                @map("target_user_id")
+  targetRole              NoShowReportTargetRole @map("target_role")
+  reasonCode              NoShowReportReason     @map("reason_code")
+  note                    String?
+  reporterReasonDetail    String?                @map("reporter_reason_detail")
+  reporterNote            String?                @map("reporter_note")
+  pickupWindowStart       DateTime?              @map("pickup_window_start")
+  pickupWindowEnd         DateTime?              @map("pickup_window_end")
+  status                  NoShowReportStatus     @default(PENDING_REVIEW)
+  reviewedById            String?                @map("reviewed_by_id")
+  reviewedAt              DateTime?              @map("reviewed_at")
+  reviewNote              String?                @map("review_note")
+  recoveryAction          String?                @map("recovery_action")
+  recoveryActionAt        DateTime?              @map("recovery_action_at")
+  recoveryDeliveryId      String?                @map("recovery_delivery_id")
+  recoveryDeliveryGroupId String?                @map("recovery_delivery_group_id")
+  recoveryCompletedAt     DateTime?              @map("recovery_completed_at")
+  holdReleasedAt          DateTime?              @map("hold_released_at")
+  createdAt               DateTime               @default(now()) @map("created_at")
+  reservation             Reservation            @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  delivery                Delivery?              @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+  reporter                User                   @relation("NoShowReportReporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+  target                  User?                  @relation("NoShowReportTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  reviewedBy              User?                  @relation("NoShowReportReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt(sort: Desc)])
   @@index([targetUserId, status])
@@ -1744,24 +1790,24 @@ model Review {
 }
 
 model Notification {
-  id                String   @id @default(cuid())
-  userId            String   @map("user_id")
-  notificationType  String   @map("notification_type")
+  id                String    @id @default(cuid())
+  userId            String    @map("user_id")
+  notificationType  String    @map("notification_type")
   title             String
   body              String
-  relatedEntityType String?  @map("related_entity_type")
-  relatedEntityId   String?  @map("related_entity_id")
+  relatedEntityType String?   @map("related_entity_type")
+  relatedEntityId   String?   @map("related_entity_id")
   readAt            DateTime? @map("read_at")
-  eventKey          String?  @unique @map("event_key")
-  entityType        String?  @map("entity_type")
-  entityId          String?  @map("entity_id")
-  actionType        String?  @map("action_type")
+  eventKey          String?   @unique @map("event_key")
+  entityType        String?   @map("entity_type")
+  entityId          String?   @map("entity_id")
+  actionType        String?   @map("action_type")
   metadata          Json?
   resolvedAt        DateTime? @map("resolved_at")
-  actorId           String?  @map("actor_id")
-  isRead            Boolean  @default(false) @map("is_read")
-  createdAt         DateTime @default(now()) @map("created_at")
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actorId           String?   @map("actor_id")
+  isRead            Boolean   @default(false) @map("is_read")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
   @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
@@ -1894,35 +1940,35 @@ model CategoryRequest {
 }
 
 model LearnerMaterialRequest {
-  id                          String                       @id @default(cuid())
-  learnerId                   String                       @map("learner_id")
-  categoryId                  String                       @map("category_id")
-  requestedItemName           String                       @map("requested_item_name")
-  normalizedRequestedItemName String                       @map("normalized_requested_item_name")
+  id                          String                        @id @default(cuid())
+  learnerId                   String                        @map("learner_id")
+  categoryId                  String                        @map("category_id")
+  requestedItemName           String                        @map("requested_item_name")
+  normalizedRequestedItemName String                        @map("normalized_requested_item_name")
   description                 String?
-  quantity                    Decimal                      @db.Decimal(12, 3)
+  quantity                    Decimal                       @db.Decimal(12, 3)
   unit                        String
-  alternativesAllowed         Boolean                      @default(true) @map("alternatives_allowed")
-  locationCountry             String                       @map("location_country")
-  locationCity                String                       @map("location_city")
-  locationArea                String?                      @map("location_area")
-  sourceSavedLocationId       String?                      @map("source_saved_location_id")
-  projectId                   String?                      @map("project_id")
-  projectBuildId              String?                      @map("project_build_id")
-  projectBuildItemId          String?                      @map("project_build_item_id")
-  status                      LearnerMaterialRequestStatus @default(OPEN)
-  neededBy                    DateTime?                    @map("needed_by")
-  expiresAt                   DateTime                     @map("expires_at")
-  fulfilledAt                 DateTime?                    @map("fulfilled_at")
-  cancelledAt                 DateTime?                    @map("cancelled_at")
-  createdAt                   DateTime                     @default(now()) @map("created_at")
-  updatedAt                   DateTime                     @updatedAt @map("updated_at")
-  learner                     User                         @relation("LearnerMaterialRequestLearner", fields: [learnerId], references: [id], onDelete: Cascade)
-  category                    Category                     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  sourceSavedLocation         UserSavedLocation?           @relation("LearnerMaterialRequestSourceSavedLocation", fields: [sourceSavedLocationId], references: [id], onDelete: SetNull)
-  project                     LearningProject?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  projectBuild                ProjectBuild?                @relation(fields: [projectBuildId], references: [id], onDelete: SetNull)
-  projectBuildItem            ProjectBuildItem?            @relation(fields: [projectBuildItemId], references: [id], onDelete: SetNull)
+  alternativesAllowed         Boolean                       @default(true) @map("alternatives_allowed")
+  locationCountry             String                        @map("location_country")
+  locationCity                String                        @map("location_city")
+  locationArea                String?                       @map("location_area")
+  sourceSavedLocationId       String?                       @map("source_saved_location_id")
+  projectId                   String?                       @map("project_id")
+  projectBuildId              String?                       @map("project_build_id")
+  projectBuildItemId          String?                       @map("project_build_item_id")
+  status                      LearnerMaterialRequestStatus  @default(OPEN)
+  neededBy                    DateTime?                     @map("needed_by")
+  expiresAt                   DateTime                      @map("expires_at")
+  fulfilledAt                 DateTime?                     @map("fulfilled_at")
+  cancelledAt                 DateTime?                     @map("cancelled_at")
+  createdAt                   DateTime                      @default(now()) @map("created_at")
+  updatedAt                   DateTime                      @updatedAt @map("updated_at")
+  learner                     User                          @relation("LearnerMaterialRequestLearner", fields: [learnerId], references: [id], onDelete: Cascade)
+  category                    Category                      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  sourceSavedLocation         UserSavedLocation?            @relation("LearnerMaterialRequestSourceSavedLocation", fields: [sourceSavedLocationId], references: [id], onDelete: SetNull)
+  project                     LearningProject?              @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  projectBuild                ProjectBuild?                 @relation(fields: [projectBuildId], references: [id], onDelete: SetNull)
+  projectBuildItem            ProjectBuildItem?             @relation(fields: [projectBuildItemId], references: [id], onDelete: SetNull)
   matches                     LearnerMaterialRequestMatch[]
 
   @@index([learnerId, status])
@@ -2175,6 +2221,7 @@ model ProjectAuthoringTurn {
   @@index([sessionId, status])
   @@map("project_authoring_turns")
 }
+
 model RecommendationGeneration {
   id                   String                         @id @default(cuid())
   generationKey        String                         @unique @map("generation_key")
@@ -2201,22 +2248,22 @@ model RecommendationGeneration {
 }
 
 model RecommendationRequest {
-  id                   String                    @id @default(cuid())
-  learnerId            String                    @map("learner_id")
-  generationId         String                    @map("generation_id")
+  id                   String                     @id @default(cuid())
+  learnerId            String                     @map("learner_id")
+  generationId         String                     @map("generation_id")
   surface              String
-  algorithmName        String                    @map("algorithm_name")
-  algorithmVersion     String                    @map("algorithm_version")
-  policyVersion        String                    @map("policy_version")
-  cacheState           RecommendationCacheState  @map("cache_state")
-  correlationId        String?                   @map("correlation_id")
-  candidateCount       Int                       @map("candidate_count")
-  shownItemCount       Int                       @map("shown_item_count")
-  generationDurationMs Int                       @map("generation_duration_ms")
-  eventSource          RecommendationEventSource @map("event_source")
-  createdAt            DateTime                  @default(now()) @map("created_at")
-  learner              User                      @relation(fields: [learnerId], references: [id], onDelete: Cascade)
-  generation           RecommendationGeneration  @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  algorithmName        String                     @map("algorithm_name")
+  algorithmVersion     String                     @map("algorithm_version")
+  policyVersion        String                     @map("policy_version")
+  cacheState           RecommendationCacheState   @map("cache_state")
+  correlationId        String?                    @map("correlation_id")
+  candidateCount       Int                        @map("candidate_count")
+  shownItemCount       Int                        @map("shown_item_count")
+  generationDurationMs Int                        @map("generation_duration_ms")
+  eventSource          RecommendationEventSource  @map("event_source")
+  createdAt            DateTime                   @default(now()) @map("created_at")
+  learner              User                       @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  generation           RecommendationGeneration   @relation(fields: [generationId], references: [id], onDelete: Cascade)
   impressions          RecommendationImpression[]
 
   @@index([learnerId, createdAt(sort: Desc)])
@@ -2226,22 +2273,22 @@ model RecommendationRequest {
 }
 
 model RecommendationCandidateTrace {
-  id                  String                           @id @default(cuid())
-  generationId        String                           @map("generation_id")
+  id                  String                          @id @default(cuid())
+  generationId        String                          @map("generation_id")
   entityType          RecommendationEntityType        @map("entity_type")
-  entityId            String                           @map("entity_id")
+  entityId            String                          @map("entity_id")
   surface             String
-  sectionKey          String?                          @map("section_key")
-  candidateSource     String                           @map("candidate_source")
+  sectionKey          String?                         @map("section_key")
+  candidateSource     String                          @map("candidate_source")
   eligibilityResult   RecommendationEligibilityResult @map("eligibility_result")
   rankBeforeSelection Int?                            @map("rank_before_selection")
   finalScore          Float?                          @map("final_score")
   scoreComponents     Json?                           @map("score_components")
-  exclusionReason     String?                          @map("exclusion_reason")
+  exclusionReason     String?                         @map("exclusion_reason")
   selected            Boolean                         @default(false)
   eventSource         RecommendationEventSource       @map("event_source")
   createdAt           DateTime                        @default(now()) @map("created_at")
-  generation          RecommendationGeneration       @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  generation          RecommendationGeneration        @relation(fields: [generationId], references: [id], onDelete: Cascade)
 
   @@index([generationId, sectionKey])
   @@index([entityType, entityId, createdAt(sort: Desc)])
@@ -2249,23 +2296,23 @@ model RecommendationCandidateTrace {
 }
 
 model RecommendationImpression {
-  id                String                    @id @default(cuid())
-  requestId         String                    @map("request_id")
-  learnerId         String                    @map("learner_id")
-  entityType        RecommendationEntityType @map("entity_type")
-  entityId          String                    @map("entity_id")
-  surface           String
-  sectionKey        String                    @map("section_key")
-  position          Int
-  score             Float
-  reasonCode        String                    @map("reason_code")
-  algorithmName     String                    @map("algorithm_name")
-  algorithmVersion  String                    @map("algorithm_version")
-  shownAt           DateTime                  @default(now()) @map("shown_at")
-  eventSource       RecommendationEventSource @map("event_source")
-  request           RecommendationRequest     @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  learner           User                      @relation(fields: [learnerId], references: [id], onDelete: Cascade)
-  actions           RecommendationAction[]
+  id               String                    @id @default(cuid())
+  requestId        String                    @map("request_id")
+  learnerId        String                    @map("learner_id")
+  entityType       RecommendationEntityType  @map("entity_type")
+  entityId         String                    @map("entity_id")
+  surface          String
+  sectionKey       String                    @map("section_key")
+  position         Int
+  score            Float
+  reasonCode       String                    @map("reason_code")
+  algorithmName    String                    @map("algorithm_name")
+  algorithmVersion String                    @map("algorithm_version")
+  shownAt          DateTime                  @default(now()) @map("shown_at")
+  eventSource      RecommendationEventSource @map("event_source")
+  request          RecommendationRequest     @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  learner          User                      @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  actions          RecommendationAction[]
 
   @@unique([requestId, entityType, entityId, sectionKey, position])
   @@index([learnerId, surface, shownAt(sort: Desc)])
@@ -2275,19 +2322,19 @@ model RecommendationImpression {
 }
 
 model RecommendationAction {
-  id                String                         @id @default(cuid())
-  impressionId      String                         @map("impression_id")
-  learnerId         String                         @map("learner_id")
+  id                String                        @id @default(cuid())
+  impressionId      String                        @map("impression_id")
+  learnerId         String                        @map("learner_id")
   entityType        RecommendationEntityType      @map("entity_type")
-  entityId          String                         @map("entity_id")
+  entityId          String                        @map("entity_id")
   actionType        RecommendationActionType      @map("action_type")
   attributionType   RecommendationAttributionType @map("attribution_type")
-  actionAt          DateTime                       @default(now()) @map("action_at")
-  sourceOperationId String?                        @map("source_operation_id")
-  eventSource       RecommendationEventSource      @map("event_source")
-  createdAt         DateTime                       @default(now()) @map("created_at")
-  impression        RecommendationImpression       @relation(fields: [impressionId], references: [id], onDelete: Cascade)
-  learner           User                           @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  actionAt          DateTime                      @default(now()) @map("action_at")
+  sourceOperationId String?                       @map("source_operation_id")
+  eventSource       RecommendationEventSource     @map("event_source")
+  createdAt         DateTime                      @default(now()) @map("created_at")
+  impression        RecommendationImpression      @relation(fields: [impressionId], references: [id], onDelete: Cascade)
+  learner           User                          @relation(fields: [learnerId], references: [id], onDelete: Cascade)
 
   @@index([impressionId])
   @@index([learnerId, actionAt(sort: Desc)])
@@ -2297,21 +2344,21 @@ model RecommendationAction {
 }
 
 model RecommendationEventOutbox {
-  id                String                       @id @default(cuid())
-  eventKind         RecommendationOutboxEventKind @map("event_kind")
-  schemaVersion     String                       @map("schema_version")
-  deduplicationKey  String                       @unique @map("deduplication_key")
-  payload           Json
-  status            RecommendationOutboxStatus   @default(PENDING)
-  attemptCount      Int                          @default(0) @map("attempt_count")
-  availableAt       DateTime                     @default(now()) @map("available_at")
-  lockedAt          DateTime?                    @map("locked_at")
-  lockToken         String?                      @map("lock_token")
-  processedAt       DateTime?                    @map("processed_at")
-  lastErrorCode     String?                      @map("last_error_code")
-  lastErrorSummary  String?                      @map("last_error_summary")
-  createdAt         DateTime                     @default(now()) @map("created_at")
-  updatedAt         DateTime                     @updatedAt @map("updated_at")
+  id               String                        @id @default(cuid())
+  eventKind        RecommendationOutboxEventKind @map("event_kind")
+  schemaVersion    String                        @map("schema_version")
+  deduplicationKey String                        @unique @map("deduplication_key")
+  payload          Json
+  status           RecommendationOutboxStatus    @default(PENDING)
+  attemptCount     Int                           @default(0) @map("attempt_count")
+  availableAt      DateTime                      @default(now()) @map("available_at")
+  lockedAt         DateTime?                     @map("locked_at")
+  lockToken        String?                       @map("lock_token")
+  processedAt      DateTime?                     @map("processed_at")
+  lastErrorCode    String?                       @map("last_error_code")
+  lastErrorSummary String?                       @map("last_error_summary")
+  createdAt        DateTime                      @default(now()) @map("created_at")
+  updatedAt        DateTime                      @updatedAt @map("updated_at")
 
   @@index([status, availableAt, createdAt])
   @@index([lockedAt])

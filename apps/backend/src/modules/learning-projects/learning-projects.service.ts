@@ -629,9 +629,13 @@ const mapProjectBuild = async (build: ProjectBuildRecord) => {
     id: build.id,
     projectId: build.projectId,
     learnerId: build.learnerId,
+    attemptNumber: build.attemptNumber,
     status: build.status,
+    isReadOnly: build.status === 'COMPLETED' || build.status === 'ARCHIVED',
     startedAt: build.startedAt.toISOString(),
     completedAt: build.completedAt?.toISOString() ?? null,
+    pausedAt: build.pausedAt?.toISOString() ?? null,
+    archivedAt: build.archivedAt?.toISOString() ?? null,
     createdAt: build.createdAt.toISOString(),
     updatedAt: build.updatedAt.toISOString(),
     project: {
@@ -656,6 +660,20 @@ const mapProjectBuild = async (build: ProjectBuildRecord) => {
       steps: stepViews.steps,
     },
     items: mappedItems,
+    completionStory: build.completionStory
+      ? {
+          reflection: build.completionStory.reflection,
+          caption: build.completionStory.caption,
+          updatedAt: build.completionStory.updatedAt.toISOString(),
+          photos: build.completionStory.photos.map((photo) => ({
+            id: photo.id,
+            imageUrl: photo.imageUrl,
+            caption: photo.caption,
+            sortOrder: photo.sortOrder,
+          })),
+        }
+      : null,
+    impactSummary: build.completionSnapshot?.snapshot ?? null,
   };
 };
 
@@ -674,6 +692,8 @@ const hydrateLearnerProjectBuild = async (
     guideConversationId: guideConversation?.id ?? null,
   };
 };
+
+export const hydrateLearnerProjectBuildFromRecord = hydrateLearnerProjectBuild;
 
 export const getLearningProjects = async (
   query: LearningProjectsQuery,
@@ -1298,6 +1318,7 @@ export const getLearningProjectById = async (
 export const getMyProjectBuildById = async (
   id: string,
   userId: string,
+  buildId?: string,
 ) => {
   const project = await learningProjectsRepository.findPublicLearningProjectById(
     id,
@@ -1307,7 +1328,7 @@ export const getMyProjectBuildById = async (
     throw new AppError('Learning project not found', 404, 'NOT_FOUND');
   }
 
-  let build = await learningProjectsRepository.findProjectBuild(id, userId);
+  let build = await learningProjectsRepository.findProjectBuild(id, userId, buildId);
 
   if (build) {
     const { reconcileProjectBuildMaterialRequestSync } = await import(
@@ -1379,6 +1400,20 @@ export const startProjectBuildById = async (
     invalidateLearnerHomeCache(userId);
   }
 
+  return hydrateLearnerProjectBuild(build, userId);
+};
+
+export const startProjectBuildAgainById = async (
+  id: string,
+  userId: string,
+) => {
+  const build = await learningProjectsRepository.startProjectBuildAgain(id, userId);
+
+  if (!build) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  invalidateLearnerHomeCache(userId);
   return hydrateLearnerProjectBuild(build, userId);
 };
 
@@ -1924,7 +1959,7 @@ export const completeProjectBuildStepById = async (
     stepId,
   });
 
-  const build = await learningProjectsRepository.findProjectBuild(
+  let build = await learningProjectsRepository.findProjectBuild(
     projectId,
     userId,
   );
@@ -1935,6 +1970,13 @@ export const completeProjectBuildStepById = async (
 
   if (!result.noOp) {
     invalidateLearnerHomeCache(userId);
+  }
+
+  if ('completed' in result && result.completed) {
+    await learningProjectsRepository.finalizeCompletedBuildSnapshot(result.buildId);
+    build =
+      (await learningProjectsRepository.findProjectBuild(projectId, userId)) ??
+      build;
   }
 
   return hydrateLearnerProjectBuild(build, userId);
