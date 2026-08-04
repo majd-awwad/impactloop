@@ -182,6 +182,20 @@ export const scoreMaterialComponentRelevance = (
   return score;
 };
 
+export const hasAlternativeKeywordEvidence = (
+  material: BuildCandidateMaterialInput,
+  alternativeKeywords: readonly string[],
+) => {
+  if (alternativeKeywords.length === 0) {
+    return false;
+  }
+
+  const haystack = haystackForMaterial(material);
+  return alternativeKeywords.some((keyword) =>
+    haystack.includes(normalizeText(keyword)),
+  );
+};
+
 export const deriveMaterialComponentMatchReasonCodes = (input: {
   material: BuildCandidateMaterialInput;
   component: BuildCandidateComponentInput;

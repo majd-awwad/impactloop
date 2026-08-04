@@ -14,6 +14,7 @@ import {
   getMaterial,
   getMaterialViewerStateHandler,
   getRelatedMaterialsHandler,
+  getMaterialRelatedProjectsHandler,
   recordMaterialViewHandler,
   likeMaterial,
   listLikedMaterials,
@@ -27,6 +28,7 @@ import {
   likedMaterialsQuerySchema,
   materialsQuerySchema,
   relatedMaterialsQuerySchema,
+  materialRelatedProjectsQuerySchema,
   priceCheckSchema,
 } from './materials.validation.js';
 import { submitMaterialReportSchema } from '../admin-materials/admin-materials.validation.js';
@@ -98,6 +100,14 @@ materialsRouter.post(
   optionalAuthMiddleware,
   validate(materialIdParamSchema, 'params'),
   asyncHandler(recordMaterialViewHandler),
+);
+
+materialsRouter.get(
+  '/:id/related-projects',
+  optionalAuthMiddleware,
+  validate(materialIdParamSchema, 'params'),
+  validate(materialRelatedProjectsQuerySchema, 'query'),
+  asyncHandler(getMaterialRelatedProjectsHandler),
 );
 
 materialsRouter.get(
