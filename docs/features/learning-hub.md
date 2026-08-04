@@ -1,140 +1,182 @@
 # Learning Hub Feature
 
-**Last updated:** LH-04 core journey closure
-**Sources:** `apps/frontend/lib/features/learning_hub/`, `apps/backend/src/modules/learning-projects/`, learner material requests, reservations, supplier material requests
+**Last updated:** LH-10–13 build lifecycle, portfolio, completion story
+**Sources:** `apps/frontend/lib/features/learning_hub/`, `apps/frontend/lib/features/learner_builds/`, `apps/backend/src/modules/learning-projects/`, `apps/backend/src/modules/learner-builds/`, learner material requests, reservations
 
 ## Purpose
 
-Browse published learning projects, start or continue a persisted build checklist, link platform materials, create material requests, reserve suggested materials, track acquisition readiness, complete build steps, and finish the project build.
+Browse published learning projects, start or continue a persisted build checklist, link platform materials, create material requests, reserve suggested materials, track acquisition readiness, complete build steps, pause/resume/archive builds, add an optional completion story, and review completed work in a private portfolio.
 
-## Core learner journey (implemented)
+## Build lifecycle (LH-10–13)
 
-1. **Discover** — `/learning` lists published projects with search, category, difficulty, tag filters, and pagination. Learners can switch Saved/Followed tabs. Learner Home spotlight and continuation cards reuse the same APIs.
-2. **Project details** — `/learning/:id` shows components, steps, engagement, reviews, and **Start build** / **Continue checklist**.
-3. **Build checklist** — `/learning/:id/build` persists per-learner progress. Each required component exposes canonical acquisition state (Missing, Selected, Reserved, Needs attention, Acquired, Already owned) plus allocation detail (sufficient, insufficient quantity, incompatible unit).
-4. **Material selection** — Browse ranked candidates, manually link a material, or create a **Material Request** from the build item.
-5. **Supplier suggestion** — Supplier suggests an owned material on the request. Learner sees it on the request detail and can reserve using `materialRequestMatchId`.
-6. **Reservation** — Creating a reservation with `buildItemId` links `project_build_items.linked_reservation_id`. Active reservations show Reserved/In progress. Terminal failures clear stale reservation links and release capacity.
-7. **Completion** — When reservation is `COMPLETED`, fulfilled material requests sync to the build item. Quantity-safe readiness marks the item ready only when acquired quantity and units are sufficient/compatible.
-8. **Acquired access** — Learners can open non-public acquired materials via authenticated `GET /api/materials/:id` (reservation-based fallback).
-9. **Remove allocation** — `POST .../remove-acquired-allocation` clears build links without deleting reservation/request history; reconciliation will not re-link dismissed allocations.
-10. **Step unlock** — Build steps unlock from the same canonical readiness result as item cards and progress.
-11. **Build completion** — Completing all required steps sets `ProjectBuild.status = COMPLETED`. Completed builds are excluded from Learner Home **Continue project** (`status = IN_PROGRESS` only).
+| Status | Meaning |
+|--------|---------|
+| `IN_PROGRESS` | Active build; polling and mutations allowed |
+| `PAUSED` | Learner paused; progress preserved; **reservation deadlines continue**; no build polling while inactive |
+| `COMPLETED` | All required steps done; core build data read-only; completion story editable |
+| `ARCHIVED` | Learner stopped an unfinished build; read-only history preserved |
 
-## Build item states
+### Pause / resume
 
-| State | Meaning |
+- Pause allowed only from `IN_PROGRESS` (idempotent if already paused).
+- Resume allowed only from `PAUSED` (idempotent if already in progress).
+- Pausing does **not** cancel reservations, unlink materials, or reset steps.
+
+### Archive blockers
+
+Archive is rejected (`BUILD_ARCHIVE_BLOCKED`) when linked workflows remain open:
+
+- Active reservations (`PENDING`, `ACCEPTED`, etc.)
+- `AWAITING_RESOLUTION`
+- Open build-linked material requests (`status = OPEN`)
+
+Terminal reservations and fulfilled requests do not block archival.
+
+### Multiple attempts
+
+- At most one `IN_PROGRESS` or `PAUSED` build per learner + project.
+- `POST .../builds/start` returns the active attempt (including paused).
+- `POST .../builds/again` starts a new attempt after `COMPLETED` or `ARCHIVED`.
+- `attemptNumber` is stable per learner/project.
+
+### Completion story (optional)
+
+- Reflection (max 3000 chars), caption (max 120), up to 6 photos (JPG/PNG/WebP).
+- Editable after completion; does not change build readiness or completion date.
+- Photos stored under `/uploads/build-completion/` (local dev).
+
+### Impact summary
+
+Snapshot at completion uses persisted data only:
+
+- Required/ready component counts, already-owned count, acquired-via-ImpactLoop count, step counts, elapsed calendar time.
+- No CO₂, weight, or money estimates.
+
+### My Builds & Portfolio
+
+| Route | Purpose |
 |-------|---------|
-| Missing | No linked material and no acquisition source |
-| Selected | Material linked but not yet acquired |
-| Reserved | Active linked reservation in progress |
-| Needs attention | Linked reservation requires resolution |
-| Acquired | Completed reservation exists |
-| Already owned | Manual learner-owned status (separate from Acquired) |
+| `/learner/builds` | Tabs: Active, Paused, Completed, Archived |
+| `/learner/portfolio` | Completed builds as achievements (private) |
 
-Readiness requires `acquisitionState = acquired`, `allocationResult = sufficient`, compatible units, and no allocation conflict. Partial or incompatible acquisitions remain visible but not ready.
+Public portfolio sharing is **not** implemented.
 
-## Automatic refresh
+## Core learner journey (LH-01–09 preserved)
 
-- Flutter polls the current build only while pending acquisition states exist (`projectBuildRefreshInterval`, 10s).
-- Polling stops when no item needs active refresh.
-- Build fetch runs bounded material-request reconciliation (max 20 fulfilled requests per build) and terminal reservation repair; already-synced reads do not write.
+1. **Discover** — `/learning` with filters, coverage, sort (LH-07–09).
+2. **Project details** — Start / Continue / Resume / View completed / Build again.
+3. **Build checklist** — acquisition states, material linking, requests, reservations.
+4. **Step unlock** — canonical readiness rules unchanged.
+5. **Build completion** — all required steps → `COMPLETED` + snapshot.
+6. **Learner Home** — continues `IN_PROGRESS` and `PAUSED` only (not completed/archived).
 
-## API endpoints (core journey)
+## API endpoints
+
+### Learning projects (existing + new)
 
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/api/learning-projects` | Public browse |
-| GET | `/api/learning-projects/:id` | Public detail |
-| POST | `/api/learning-projects/:id/builds/start` | Start/continue build |
-| GET | `/api/learning-projects/:id/builds/me` | Build checklist + reconciliation on read |
-| GET | `.../material-candidates` | Ranked candidates (max 10) |
-| POST | `.../link-material` | Manual link |
-| DELETE | `.../link-material` | Unlink selected material |
-| POST | `.../remove-acquired-allocation` | Remove completed allocation from component |
-| POST | `.../link-reservation` | Repair link for existing reservation |
-| POST | `.../steps/:stepId/complete` | Complete build step |
-| POST | `/api/learner/material-requests` | Create request (optional build linkage) |
-| POST | `/api/supplier/material-requests/:id/suggest` | Supplier suggestion |
-| POST | `/api/reservations` | Create reservation (`buildItemId`, `materialRequestMatchId`) |
-| GET | `/api/materials/:id` | Public detail; optional auth enables acquired fallback |
+| POST | `/api/learning-projects/:id/builds/start` | Start or return active attempt |
+| POST | `/api/learning-projects/:id/builds/again` | New attempt after completed/archived |
+| GET | `/api/learning-projects/:id/builds/me?buildId=` | Build detail (optional historical attempt) |
+| POST | `.../steps/:stepId/complete` | Complete step; creates snapshot when finished |
+
+### Learner builds (LH-10–13)
+
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/api/learner/builds` | Paginated list (`status=ACTIVE\|IN_PROGRESS\|PAUSED\|COMPLETED\|ARCHIVED`) |
+| GET | `/api/learner/portfolio` | Completed builds only |
+| GET | `/api/learner/builds/:buildId` | Owner-scoped detail |
+| POST | `/api/learner/builds/:buildId/pause` | Pause build |
+| POST | `/api/learner/builds/:buildId/resume` | Resume build |
+| POST | `/api/learner/builds/:buildId/archive` | Archive with blocker checks |
+| PATCH | `/api/learner/builds/:buildId/completion-story` | Update reflection/caption |
+| POST | `/api/learner/builds/:buildId/completion-story/photos` | Upload photo |
+| DELETE | `/api/learner/builds/:buildId/completion-story/photos/:photoId` | Remove photo |
+
+## Migration
+
+`20260804180000_project_build_lifecycle`:
+
+- Adds `PAUSED`, `attemptNumber`, `pausedAt`, `archivedAt`
+- Replaces single-build unique with `(projectId, learnerId, attemptNumber)`
+- Partial unique index: one active build per learner/project
+- Completion story, photos, snapshot tables
 
 ## Verification commands
 
-### Backend (targeted)
+### Backend (focused)
 
 ```bash
+cd apps/backend
+npx prisma format && npx prisma validate && npx prisma migrate deploy && npx prisma generate
+
 node --import tsx --test \
-  src/modules/learning-projects/learning-projects.core-journey.test.ts \
+  src/modules/learning-projects/project-build-lifecycle.test.ts \
+  src/modules/learning-projects/project-build-continuation.test.ts \
+  src/modules/learning-projects/learning-projects.build-steps.test.ts \
   src/modules/learning-projects/learning-projects.build-material-request-sync.test.ts \
   src/modules/learning-projects/learning-projects.build-material-allocation.test.ts \
   src/modules/learning-projects/learning-projects.build-item-state.test.ts \
-  src/modules/learning-projects/learning-projects.build-steps.test.ts \
   src/modules/learning-projects/learning-projects.build-acquired-removal.test.ts \
   src/modules/learning-projects/learning-projects.build-reservation-sync.test.ts \
-  src/modules/materials/materials.acquired-access.http.test.ts \
+  src/modules/learning-projects/learning-projects.material-coverage.test.ts \
+  src/modules/learning-projects/learning-projects.browse-coverage.test.ts \
   src/modules/materials/materials.acquired-access.test.ts \
-  src/modules/supplier-material-requests/supplier-material-requests.test.ts
+  src/modules/learner-material-requests/learner-material-requests.test.ts
 ```
 
-### Flutter (targeted)
+### Flutter (focused)
 
 ```bash
+cd apps/frontend
 flutter test \
-  test/learning_hub_api_mapper_test.dart \
-  test/project_build_item_display_test.dart \
-  test/project_build_acquisition_state_test.dart \
-  test/project_build_linked_material_panel_test.dart \
+  test/learner_builds_lifecycle_test.dart \
+  test/learner_portfolio_test.dart \
+  test/project_build_actions_panel_test.dart \
   test/project_build_refresh_test.dart \
-  test/project_build_route_refresh_test.dart \
-  test/learner_material_requests_test.dart \
-  test/notification_display_test.dart \
-  test/learner_notifications_navigation_test.dart
+  test/learning_hub_api_mapper_test.dart \
+  test/learning_project_card_layout_test.dart \
+  test/learner_material_requests_test.dart
 ```
 
-## Manual smoke-test runbook
+## Manual smoke-test matrix
 
-1. Log in as learner → open **Learning Hub** → browse/search/filter projects.
-2. Open a project → **Start build**.
-3. On a missing component → **Request material** → submit request.
-4. As supplier → suggest a matching owned material.
-5. As learner → open request notification/detail → **View material** → create reservation.
-6. Confirm build item shows **Reserved**; wait or complete reservation as supplier/driver.
-7. Confirm item becomes **Acquired** and ready only when quantity/units match.
-8. Complete unlocked build steps → build status **Completed**.
-9. Open acquired non-public material from reservation history (authenticated).
-10. **Remove from this component** → item returns to Missing; reservation history still works.
-11. Guest/unrelated learner still gets 404 on acquired non-public material.
+| Scenario | Verify |
+|----------|--------|
+| Active build, no reservations | Pause preserves progress |
+| Active build + active reservation | Pause; reservation still active |
+| Paused build | Resume restores `IN_PROGRESS`; appears as Resume on Home |
+| Archive with blockers | Actionable error; succeeds after resolve |
+| Completed build | Read-only; hidden from Continue; portfolio entry |
+| Archived build | Read-only; Build again creates new attempt |
+| Completion story | Skip, add later, photos persist |
+| Arabic / RTL | Tabs, dialogs, cards |
 
-## Known intentional limitations
+## Intentional limitations
 
-- No completed-build portfolio or history list yet
-- No multiple build attempts per project yet
-- No learner Material → Related Projects discovery yet
-- No browse readiness filter/sorting on project cards yet
-- No E-learning layer, checkpoints, or outcomes yet
-- No general unit-conversion engine (compatibility is exact/normalized string match)
-- Already-owned quantity remains boolean/manual, not quantity-evaluated
+- No public portfolio sharing, certificates, or social reactions
+- No environmental CO₂ / diversion estimates
+- No E-learning layer, checkpoints, or outcomes
 - No automatic AI material matching
+- Pausing does not pause reservation deadlines
+- No duplicate active build attempts per project
 
 ## Frontend files
 
 | Area | Path |
 |------|------|
-| Repository | `domain/learning_project_repository.dart`, `data/api_learning_hub_repository.dart` |
-| Providers | `application/learning_hub_providers.dart`, `project_build_refresh.dart` |
-| State display | `presentation/widgets/project_build_acquisition_state.dart`, `project_build_item_display.dart` |
-| Pages | `learning_hub_page.dart`, `learning_project_details_page.dart`, `learning_project_build_page.dart` |
-| L10n | `presentation/l10n/learning_project_build_l10n.dart` |
+| Learning hub | `features/learning_hub/` |
+| My Builds / Portfolio | `features/learner_builds/` |
+| Build lifecycle UI | `learning_project_build_page.dart`, `project_build_completion_story_section.dart` |
+| Profile quick actions | `learner_profile_dashboard_widgets.dart` |
 
 ## Backend files
 
 | Area | Path |
 |------|------|
-| Learning projects | `modules/learning-projects/` |
-| Build item state | `learning-projects.build-item-state.ts` |
-| Quantity allocation | `learning-projects.build-material-allocation.ts` |
-| MR sync | `learning-projects.build-material-request-sync.ts` |
-| Reservation sync | `learning-projects.build-reservation-sync.ts` |
-| Acquired access | `modules/materials/materials.acquired-access.ts` |
+| Lifecycle | `project-build-lifecycle.ts`, `project-build-completion-snapshot.ts`, `project-build-completion-story.ts` |
+| Learner builds API | `modules/learner-builds/` |
 | Continuation | `project-build-continuation.ts` |
+| Migration | `prisma/migrations/20260804180000_project_build_lifecycle/` |
