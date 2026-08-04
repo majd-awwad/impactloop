@@ -60,7 +60,7 @@ void main() {
 
     expect(find.text('Build checklist'), findsOneWidget);
     expect(find.text('Continue checklist'), findsOneWidget);
-    expect(find.text('1/2 ready for build'), findsOneWidget);
+    expect(find.text('1 of 2 ready in your build'), findsOneWidget);
 
     await tester.tap(find.text('Continue checklist'));
     await tester.pumpAndSettle();

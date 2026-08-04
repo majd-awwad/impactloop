@@ -25,7 +25,9 @@ import '../../application/learning_hub_providers.dart';
 import '../../application/project_build_refresh.dart';
 import '../../domain/models/learning_project.dart';
 import '../../domain/models/project_build.dart';
+import '../../domain/models/project_material_coverage.dart';
 import '../theme/learning_ui_palette.dart';
+import '../l10n/learning_hub_coverage_l10n.dart';
 import '../l10n/learning_project_build_l10n.dart';
 import '../widgets/project_build_acquisition_state.dart';
 import '../widgets/project_build_item_display.dart';
@@ -887,6 +889,24 @@ class _BuildHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
     final progress = buildRecord.progress.percent.clamp(0, 100) / 100;
+    final coverageL10n = LearningHubCoverageL10n.of(context);
+    final readinessLabel = coverageL10n.personalReadinessSummary(
+      ProjectPersonalBuildReadiness(
+        buildId: buildRecord.id,
+        buildStatus: switch (buildRecord.status) {
+          ProjectBuildStatus.inProgress => 'IN_PROGRESS',
+          ProjectBuildStatus.completed => 'COMPLETED',
+          ProjectBuildStatus.archived => 'ARCHIVED',
+        },
+        readyComponents: buildRecord.progress.ready,
+        totalRequiredComponents: buildRecord.progress.total,
+        needsMaterialComponents:
+            buildRecord.progress.total - buildRecord.progress.ready,
+        readinessRatio: buildRecord.progress.total == 0
+            ? 0
+            : buildRecord.progress.ready / buildRecord.progress.total,
+      ),
+    );
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
@@ -967,7 +987,7 @@ class _BuildHeader extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            '${buildRecord.progress.ready}/${buildRecord.progress.total} ready for build',
+            readinessLabel,
             style: AppTextStyles.label(
               context,
             ).copyWith(color: palette.textSecondary),

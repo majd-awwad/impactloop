@@ -7,6 +7,7 @@ import '../../presentation/theme/learning_project_visuals.dart';
 import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
 import 'project_engagement_strip.dart';
+import 'project_material_coverage_chip.dart';
 
 class FeaturedProjectCard extends StatelessWidget {
   const FeaturedProjectCard({super.key, required this.project});
@@ -158,6 +159,8 @@ class _FeaturedContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
+        ProjectMaterialCoverageChip(project: project, compact: true),
+        const SizedBox(height: AppSpacing.sm),
         ProjectEngagementStrip(project: project),
         const SizedBox(height: AppSpacing.lg),
         compact ? buttonChild : SizedBox(width: 176, child: buttonChild),

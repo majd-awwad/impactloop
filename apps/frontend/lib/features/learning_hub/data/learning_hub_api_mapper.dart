@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../domain/models/learning_project.dart';
+import '../domain/models/project_material_coverage.dart';
 import '../domain/models/learning_project_draft_component.dart';
 import '../domain/models/learning_project_submission.dart';
 import '../domain/models/project_build.dart';
@@ -312,6 +313,12 @@ class LearningHubApiMapper {
             ar: formatComponentCount(componentCount),
           );
 
+    final materialCoverageJson = _asMap(json['materialCoverage']);
+    final personalReadinessJson = _asMap(json['personalBuildReadiness']);
+    final componentCoverage = includeDetailFields
+        ? _mapComponentCoverage(json['componentCoverage'])
+        : const <ProjectComponentCoverageItem>[];
+
     return LearningProject(
       id: id,
       category: LocalizedText(en: categoryNameEn, ar: categoryNameAr),
@@ -349,6 +356,13 @@ class LearningHubApiMapper {
       recentReviews: recentReviews,
       viewerReview: viewerReview,
       tags: tags,
+      materialCoverage: materialCoverageJson == null
+          ? null
+          : ProjectMaterialCoverageSummary.fromJson(materialCoverageJson),
+      personalBuildReadiness: personalReadinessJson == null
+          ? null
+          : ProjectPersonalBuildReadiness.fromJson(personalReadinessJson),
+      componentCoverage: componentCoverage,
     );
   }
 
@@ -419,9 +433,44 @@ class LearningHubApiMapper {
             canBeSubstituted: item['canBeSubstituted'] == true,
             categoryId: _nullableString(item['categoryId']),
             notes: _nullableString(item['notes']),
+            publicAvailabilityStatus: _availabilityStatus(
+              item['publicAvailabilityStatus'],
+            ),
           );
         })
         .toList(growable: false);
+  }
+
+  static List<ProjectComponentCoverageItem> _mapComponentCoverage(
+    Object? raw,
+  ) {
+    if (raw is! List) {
+      return const [];
+    }
+
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => ProjectComponentCoverageItem.fromJson(
+            Map<String, dynamic>.from(item),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  static ComponentPublicAvailabilityStatus? _availabilityStatus(Object? raw) {
+    switch ((raw as String?)?.toUpperCase()) {
+      case 'AVAILABLE':
+        return ComponentPublicAvailabilityStatus.available;
+      case 'PARTIAL':
+        return ComponentPublicAvailabilityStatus.partial;
+      case 'MISSING':
+        return ComponentPublicAvailabilityStatus.missing;
+      case 'UNKNOWN':
+        return ComponentPublicAvailabilityStatus.unknown;
+      default:
+        return null;
+    }
   }
 
   static List<LearningProjectSubmissionComponent> _mapSubmissionComponents(

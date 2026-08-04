@@ -520,16 +520,7 @@ class ApiLearningHubRepository implements LearningProjectRepository {
   }
 
   Map<String, dynamic> _queryParameters(LearningProjectsQuery query) {
-    return {
-      'page': query.page,
-      'limit': query.limit,
-      if (query.q != null && query.q!.trim().isNotEmpty) 'q': query.q,
-      if (query.categoryId != null && query.categoryId!.trim().isNotEmpty)
-        'categoryId': query.categoryId,
-      if (query.difficulty != null && query.difficulty!.trim().isNotEmpty)
-        'difficulty': query.difficulty,
-      if (query.tag != null && query.tag!.trim().isNotEmpty) 'tag': query.tag,
-    };
+    return query.toApiQueryParameters();
   }
 
   Map<String, dynamic> _submissionQueryParameters(

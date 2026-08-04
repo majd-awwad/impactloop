@@ -8,6 +8,7 @@ import '../../../../shared/widgets/app_feedback.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../domain/models/learning_project.dart';
+import '../l10n/learning_hub_coverage_l10n.dart';
 import '../theme/learning_ui_palette.dart';
 
 class ProjectBuildActionsPanel extends ConsumerStatefulWidget {
@@ -125,20 +126,33 @@ class _ProjectBuildActionsPanelState
               : () => _startOrContinueBuild(hasBuild: false),
           onBrowseMaterials: _browseMaterials,
         ),
-        data: (build) => _BuildPanelContent(
-          project: widget.project,
-          componentCount: componentCount,
-          isBusy: _isStarting,
-          hasBuild: build != null,
-          readyCount: build?.progress.ready,
-          statusText: build == null
+        data: (build) {
+          final personal = widget.project.personalBuildReadiness;
+          final l10n = LearningHubCoverageL10n.of(context);
+          final readyCount = personal?.readyComponents ?? build?.progress.ready;
+          final totalRequired =
+              personal?.totalRequiredComponents ?? build?.progress.total;
+          final statusText = build == null
               ? null
-              : '${build.progress.ready}/${build.progress.total} ready for build',
-          onStartOrContinue: componentCount == 0 || _isStarting
+              : personal != null && personal.isInProgress
+              ? l10n.personalReadinessSummary(personal)
+              : totalRequired == null
               ? null
-              : () => _startOrContinueBuild(hasBuild: build != null),
-          onBrowseMaterials: _browseMaterials,
-        ),
+              : '$readyCount of $totalRequired ready in your build';
+
+          return _BuildPanelContent(
+            project: widget.project,
+            componentCount: componentCount,
+            isBusy: _isStarting,
+            hasBuild: build != null,
+            readyCount: readyCount,
+            statusText: statusText,
+            onStartOrContinue: componentCount == 0 || _isStarting
+                ? null
+                : () => _startOrContinueBuild(hasBuild: build != null),
+            onBrowseMaterials: _browseMaterials,
+          );
+        },
       ),
     );
   }
