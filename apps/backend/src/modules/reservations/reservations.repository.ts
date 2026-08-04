@@ -290,6 +290,7 @@ export const createLearnerReservation = async (input: {
         currency: true,
         supplierProfileId: true,
         locationId: true,
+        unit: true,
       },
     });
 
@@ -395,6 +396,8 @@ export const createLearnerReservation = async (input: {
         learnerId: input.requesterId,
         buildItemId: input.buildItemId,
         materialId: material.id,
+        quantityRequested: requestedQuantity,
+        materialUnit: material.unit,
       });
 
       if (!buildItemValidation.ok) {

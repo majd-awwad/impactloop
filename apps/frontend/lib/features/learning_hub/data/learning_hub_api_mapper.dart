@@ -568,6 +568,9 @@ class LearningHubApiMapper {
         json['readinessLabel'],
         fallback: 'Still missing',
       ),
+      quantityAllocation: _mapQuantityAllocation(json['quantityAllocation']),
+      acquisitionState: _nullableString(json['acquisitionState']),
+      allocationResult: _nullableString(json['allocationResult']),
       component: ProjectRequiredComponentItem(
         id: _stringOrFallback(componentJson['id'], fallback: ''),
         name: LocalizedText(en: name, ar: name),
@@ -642,6 +645,26 @@ class LearningHubApiMapper {
       materialId: _stringOrFallback(json['materialId'], fallback: ''),
       needsAction: json['needsAction'] == true,
       statusLabel: _stringOrFallback(json['statusLabel'], fallback: ''),
+      quantityRequested: _numberFromDynamic(json['quantityRequested']),
+    );
+  }
+
+  static ProjectBuildQuantityAllocation? _mapQuantityAllocation(Object? raw) {
+    final json = _asMap(raw);
+    if (json == null) {
+      return null;
+    }
+
+    return ProjectBuildQuantityAllocation(
+      outcome: _stringOrFallback(json['outcome'], fallback: ''),
+      requiredQuantity: _numberFromDynamic(json['requiredQuantity']) ?? 0,
+      requiredUnit: _stringOrFallback(json['requiredUnit'], fallback: 'piece'),
+      availableQuantity: _numberFromDynamic(json['availableQuantity']),
+      acquiredQuantity: _numberFromDynamic(json['acquiredQuantity']),
+      reservationQuantity: _numberFromDynamic(json['reservationQuantity']),
+      allocatedQuantity: _numberFromDynamic(json['allocatedQuantity']),
+      isQuantityReady: json['isQuantityReady'] == true,
+      warning: _nullableString(json['warning']),
     );
   }
 

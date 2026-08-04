@@ -35,6 +35,7 @@ import {
   unlikeLearningProject,
   unfollowLearningProject,
   unlinkBuildItemMaterial,
+  removeAcquiredBuildItemAllocation,
   unsaveLearningProject,
   updateMyLearningProjectSubmission,
   updateProjectBuildItem,
@@ -44,6 +45,7 @@ import {
   learningProjectsQuerySchema,
   linkBuildItemMaterialSchema,
   linkBuildItemReservationSchema,
+  removeAcquiredBuildItemAllocationSchema,
   projectBuildItemParamSchema,
   projectBuildStepParamSchema,
   buildGuideConversationSchema,
@@ -213,6 +215,15 @@ learningProjectsRouter.delete(
   requireRoles('LEARNER'),
   validate(projectBuildItemParamSchema, 'params'),
   asyncHandler(unlinkBuildItemMaterial),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/items/:itemId/remove-acquired-allocation',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectBuildItemParamSchema, 'params'),
+  validate(removeAcquiredBuildItemAllocationSchema),
+  asyncHandler(removeAcquiredBuildItemAllocation),
 );
 
 learningProjectsRouter.post(

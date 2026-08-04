@@ -194,6 +194,9 @@ class ProjectBuildItem {
     this.learnerNote,
     this.linkedMaterial,
     this.linkedReservation,
+    this.quantityAllocation,
+    this.acquisitionState,
+    this.allocationResult,
   });
 
   final String id;
@@ -205,6 +208,9 @@ class ProjectBuildItem {
   final LinkedReservationSummary? linkedReservation;
   final bool isReadyForBuild;
   final String readinessLabel;
+  final ProjectBuildQuantityAllocation? quantityAllocation;
+  final String? acquisitionState;
+  final String? allocationResult;
 }
 
 class ProjectBuild {

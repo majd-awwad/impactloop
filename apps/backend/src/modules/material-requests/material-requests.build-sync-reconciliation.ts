@@ -68,10 +68,15 @@ export const needsFulfilledRequestBuildSync = async (input: {
     select: {
       linkedMaterialId: true,
       linkedReservationId: true,
+      dismissedAcquiredReservationId: true,
     },
   });
 
   if (!buildItem) {
+    return false;
+  }
+
+  if (buildItem.dismissedAcquiredReservationId === input.completedMatch.reservationId) {
     return false;
   }
 

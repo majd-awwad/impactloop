@@ -68,6 +68,7 @@ class LinkedReservationSummary {
     required this.materialId,
     required this.needsAction,
     required this.statusLabel,
+    this.quantityRequested,
   });
 
   final String id;
@@ -75,6 +76,41 @@ class LinkedReservationSummary {
   final String materialId;
   final bool needsAction;
   final String statusLabel;
+  final double? quantityRequested;
+}
+
+class ProjectBuildQuantityAllocation {
+  const ProjectBuildQuantityAllocation({
+    required this.outcome,
+    required this.requiredQuantity,
+    required this.requiredUnit,
+    this.availableQuantity,
+    this.acquiredQuantity,
+    this.reservationQuantity,
+    this.allocatedQuantity,
+    this.isQuantityReady = false,
+    this.warning,
+  });
+
+  final String outcome;
+  final double requiredQuantity;
+  final String requiredUnit;
+  final double? availableQuantity;
+  final double? acquiredQuantity;
+  final double? reservationQuantity;
+  final double? allocatedQuantity;
+  final bool isQuantityReady;
+  final String? warning;
+
+  bool get isInsufficient =>
+      outcome == 'insufficient_quantity' ||
+      outcome == 'incompatible_unit' ||
+      outcome == 'unknown_quantity';
+
+  bool get isPartialAcquired =>
+      outcome == 'allocation_partial' &&
+      (acquiredQuantity ?? 0) > 0 &&
+      !isQuantityReady;
 }
 
 class BuildMaterialCandidate {

@@ -26,7 +26,13 @@ import {
   resolveBuildItemReadiness,
   resolveBuildItemStepUnlockReadiness,
   unlinkBuildItemMaterial,
+  removeAcquiredMaterialFromBuildItem,
 } from './learning-projects.build-material-linking.js';
+import {
+  mapBuildItemQuantityAllocationDto,
+  resolveBuildItemAllocationContext,
+} from './learning-projects.build-material-allocation.js';
+import { prisma } from '../../database/prisma.js';
 import type {
   CreateAiAuthoringDraftInput,
   LearningProjectsQuery,
@@ -466,12 +472,41 @@ const deriveBuildStepViews = (input: {
 
 const mapProjectBuildItem = (
   item: ProjectBuildRecord['items'][number],
+  allocationContext?: {
+    requiredQuantity: number;
+    requiredUnit: string;
+    componentRole: string;
+    materialUnit: string | null;
+    availableQuantity: number | null;
+    peerClaimsOnMaterial: number;
+    allocationWarning: string | null;
+  },
 ) => {
   const readiness = resolveBuildItemReadiness({
     status: item.status,
+    componentRole: allocationContext?.componentRole,
+    requiredQuantity: allocationContext?.requiredQuantity,
+    requiredUnit: allocationContext?.requiredUnit,
+    materialUnit: allocationContext?.materialUnit,
+    availableQuantity: allocationContext?.availableQuantity,
+    peerClaimsOnMaterial: allocationContext?.peerClaimsOnMaterial,
+    allocationWarning: allocationContext?.allocationWarning,
     linkedReservation: item.linkedReservation,
     linkedMaterial: item.linkedMaterial,
   });
+
+  const quantityAllocation = mapBuildItemQuantityAllocationDto(
+    'quantityAllocation' in readiness
+      ? readiness.quantityAllocation
+      : undefined,
+  );
+
+  if (allocationContext?.allocationWarning && quantityAllocation) {
+    quantityAllocation.warning =
+      quantityAllocation.warning ?? allocationContext.allocationWarning;
+  } else if (allocationContext?.allocationWarning) {
+    // expose historical conflict even when no active allocation view
+  }
 
   return {
     id: item.id,
@@ -482,8 +517,25 @@ const mapProjectBuildItem = (
       linkedReservationStatus: item.linkedReservation?.status ?? null,
     }),
     linkedReservation: mapLinkedReservationSummary(item.linkedReservation),
+    acquisitionState: readiness.acquisitionState,
+    allocationResult: readiness.allocationResult,
     isReadyForBuild: readiness.isReadyForBuild,
     readinessLabel: readiness.readinessLabel,
+    quantityAllocation:
+      quantityAllocation ??
+      (allocationContext?.allocationWarning
+        ? {
+            outcome: 'conflict',
+            requiredQuantity: allocationContext.requiredQuantity,
+            requiredUnit: allocationContext.requiredUnit,
+            availableQuantity: allocationContext.availableQuantity,
+            acquiredQuantity: null,
+            reservationQuantity: null,
+            allocatedQuantity: null,
+            isQuantityReady: false,
+            warning: allocationContext.allocationWarning,
+          }
+        : null),
     component: {
       id: item.requiredComponent.id,
       categoryId: item.requiredComponent.categoryId,
@@ -504,19 +556,35 @@ const mapProjectBuildItem = (
   };
 };
 
-const mapProjectBuild = (build: ProjectBuildRecord) => {
-  const mappedItems = build.items.map((item) => mapProjectBuildItem(item));
+const mapProjectBuild = async (build: ProjectBuildRecord) => {
+  const allocationContexts = await resolveBuildItemAllocationContext(prisma, {
+    buildStatus: build.status,
+    items: build.items,
+  });
+  const allocationByItemId = new Map(
+    allocationContexts.map((context) => [context.itemId, context]),
+  );
+
+  const mappedItems = build.items.map((item) =>
+    mapProjectBuildItem(item, allocationByItemId.get(item.id)),
+  );
   const readyItems = mappedItems.filter((item) => item.isReadyForBuild);
   const totalItems = mappedItems.length;
   const allMaterialsReadyForSteps =
     totalItems > 0 &&
-    build.items.every((item) =>
-      resolveBuildItemStepUnlockReadiness({
+    build.items.every((item) => {
+      const allocation = allocationByItemId.get(item.id);
+      return resolveBuildItemStepUnlockReadiness({
         status: item.status,
+        componentRole: allocation?.componentRole,
+        requiredQuantity: allocation?.requiredQuantity,
+        requiredUnit: allocation?.requiredUnit,
+        materialUnit: allocation?.materialUnit,
+        allocationWarning: allocation?.allocationWarning,
         linkedReservation: item.linkedReservation,
         linkedMaterial: item.linkedMaterial,
-      }).isReadyForStepUnlock,
-    );
+      }).isReadyForStepUnlock;
+    });
   const materialReadiness = summarizeMaterialReadiness(mappedItems);
   const stepViews = deriveBuildStepViews({
     projectSteps: build.project.steps,
@@ -570,7 +638,7 @@ const hydrateLearnerProjectBuild = async (
     );
 
   return {
-    ...mapProjectBuild(build),
+    ...(await mapProjectBuild(build)),
     guideConversationId: guideConversation?.id ?? null,
   };
 };
@@ -1130,14 +1198,14 @@ export const getOwnedProjectBuildByBuildId = async (
     userId,
   );
 
-  return build ? mapProjectBuild(build) : null;
+  return build ? await mapProjectBuild(build) : null;
 };
 
 export const listActiveProjectBuildsForLearner = async (userId: string) => {
   const builds =
     await learningProjectsRepository.findActiveProjectBuildsForLearner(userId);
 
-  return builds.map((build) => mapProjectBuild(build));
+  return Promise.all(builds.map((build) => mapProjectBuild(build)));
 };
 
 export const startProjectBuildById = async (
@@ -1279,6 +1347,51 @@ export const unlinkBuildItemMaterialById = async (
   }
 
   return hydrateLearnerProjectBuild(build, userId);
+};
+
+export const removeAcquiredMaterialFromBuildItemById = async (
+  projectId: string,
+  userId: string,
+  itemId: string,
+  input: { materialId: string; reservationId: string },
+) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    projectId,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  const previousItem = findBuildItem(
+    await learningProjectsRepository.findProjectBuild(projectId, userId),
+    itemId,
+  );
+
+  const { outcome, build } = await removeAcquiredMaterialFromBuildItem({
+    projectId,
+    learnerId: userId,
+    itemId,
+    materialId: input.materialId,
+    reservationId: input.reservationId,
+  });
+
+  if (!build) {
+    throw new AppError('Project build not found', 404, 'NOT_FOUND');
+  }
+
+  const updatedItem = findBuildItem(build, itemId);
+  if (
+    previousItem?.linkedMaterialId !== updatedItem?.linkedMaterialId ||
+    previousItem?.linkedReservationId !== updatedItem?.linkedReservationId
+  ) {
+    invalidateLearnerHomeCache(userId);
+  }
+
+  return {
+    outcome,
+    build: await hydrateLearnerProjectBuild(build, userId),
+  };
 };
 
 export const linkBuildItemReservationById = async (
@@ -1688,7 +1801,7 @@ export const getOrCreateBuildGuideConversationByProjectId = async (
     throw new AppError('Project build not found.', 404, 'BUILD_NOT_FOUND');
   }
 
-  const mappedBuild = mapProjectBuild(build);
+  const mappedBuild = await mapProjectBuild(build);
   const conversation = await getOrCreateBuildGuideConversation({
     userId,
     projectBuildId: build.id,

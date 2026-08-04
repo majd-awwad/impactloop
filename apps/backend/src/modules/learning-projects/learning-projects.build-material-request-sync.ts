@@ -1,6 +1,10 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 
 import { ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES } from './learning-projects.build-reservation-linking.js';
+import {
+  isReservationLinkedToAnotherBuildItem,
+  unitsAreCompatible,
+} from './learning-projects.build-material-allocation.js';
 
 export type BuildMaterialRequestSyncOutcome =
   | 'synced'
@@ -8,8 +12,10 @@ export type BuildMaterialRequestSyncOutcome =
   | 'no_build_link'
   | 'conflict'
   | 'invalid_relationship'
+  | 'incompatible_unit'
   | 'archived_build'
-  | 'build_item_not_found';
+  | 'build_item_not_found'
+  | 'dismissed_allocation';
 
 const isActiveReservationStatus = (status: string) =>
   (ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES as readonly string[]).includes(
@@ -87,6 +93,13 @@ export const syncBuildItemFromCompletedMaterialRequest = async (
       id: true,
       linkedMaterialId: true,
       linkedReservationId: true,
+      dismissedAcquiredReservationId: true,
+      requiredComponent: {
+        select: {
+          unit: true,
+          componentRole: true,
+        },
+      },
       build: {
         select: {
           status: true,
@@ -101,6 +114,22 @@ export const syncBuildItemFromCompletedMaterialRequest = async (
 
   if (buildItem.build.status === 'ARCHIVED') {
     return 'archived_build';
+  }
+
+  if (buildItem.dismissedAcquiredReservationId === reservation.id) {
+    return 'dismissed_allocation';
+  }
+
+  const reservationLinkedElsewhere = await isReservationLinkedToAnotherBuildItem(
+    tx,
+    {
+      reservationId: reservation.id,
+      buildItemId: buildItem.id,
+    },
+  );
+
+  if (reservationLinkedElsewhere) {
+    return 'conflict';
   }
 
   if (
@@ -141,6 +170,19 @@ export const syncBuildItemFromCompletedMaterialRequest = async (
   const now = new Date();
   const { materialId } = match;
   const { id: reservationId } = reservation;
+
+  const material = await tx.material.findUnique({
+    where: { id: materialId },
+    select: { unit: true },
+  });
+
+  if (
+    material &&
+    buildItem.requiredComponent.componentRole !== 'TOOL' &&
+    !unitsAreCompatible(buildItem.requiredComponent.unit, material.unit)
+  ) {
+    return 'incompatible_unit';
+  }
 
   if (!buildItem.linkedMaterialId && !buildItem.linkedReservationId) {
     const claimed = await tx.projectBuildItem.updateMany({

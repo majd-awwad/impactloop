@@ -832,13 +832,23 @@ describe('build step unlock material readiness', () => {
     });
     ids.reservations.push(reservation.id);
 
-    for (const item of started.items) {
+    for (const [index, item] of started.items.entries()) {
+      if (index === 0) {
+        await prisma.projectBuildItem.update({
+          where: { id: item.id },
+          data: {
+            linkedMaterialId: material.id,
+            linkedReservationId: reservation.id,
+            linkedMaterialAt: new Date(),
+          },
+        });
+        continue;
+      }
+
       await prisma.projectBuildItem.update({
         where: { id: item.id },
         data: {
-          linkedMaterialId: material.id,
-          linkedReservationId: reservation.id,
-          linkedMaterialAt: new Date(),
+          status: 'ALREADY_OWNED',
         },
       });
     }

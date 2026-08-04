@@ -7,12 +7,15 @@ void showErrorSnackBar(
   BuildContext context,
   Object error, {
   AppLocalizations? l10n,
+  String? message,
 }) {
   _showFeedbackSnackBar(
     context,
-    message: l10n == null
-        ? userFriendlyErrorMessage(error)
-        : localizedApiErrorMessage(error, l10n),
+    message:
+        message ??
+        (l10n == null
+            ? userFriendlyErrorMessage(error)
+            : localizedApiErrorMessage(error, l10n)),
     backgroundColor: Theme.of(context).colorScheme.errorContainer,
     foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
   );

@@ -507,6 +507,19 @@ export const findMaterialById = async (id: string) => {
   });
 };
 
+export const findMaterialDetailByIdIncludingNonPublic = async (id: string) => {
+  return prisma.material.findFirst({
+    where: {
+      id,
+      category: {
+        isActive: true,
+        categoryType: { in: ['MATERIAL', 'BOTH'] },
+      },
+    },
+    include: materialDetailInclude,
+  });
+};
+
 export const findPublicMaterialById = async (
   id: string,
   client: PrismaClientLike = prisma,

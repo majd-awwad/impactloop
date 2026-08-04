@@ -166,6 +166,16 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<ProjectBuild> removeAcquiredMaterialFromBuildItem(
+    String projectId,
+    String itemId, {
+    required String materialId,
+    required String reservationId,
+  }) async {
+    return startBuild(projectId);
+  }
+
+  @override
   Future<ProjectBuild> completeBuildStep(String projectId, String stepId) async {
     return startBuild(projectId);
   }

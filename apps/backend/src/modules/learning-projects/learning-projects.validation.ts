@@ -226,6 +226,11 @@ export const linkBuildItemReservationSchema = z.object({
   reservationId: z.string().trim().min(1),
 });
 
+export const removeAcquiredBuildItemAllocationSchema = z.object({
+  materialId: z.string().trim().min(1),
+  reservationId: z.string().trim().min(1),
+});
+
 export type LearningProjectsQuery = z.infer<typeof learningProjectsQuerySchema>;
 export type MyLearningProjectsQuery = z.infer<typeof myLearningProjectsQuerySchema>;
 export type ProjectReviewInput = z.infer<typeof projectReviewSchema>;

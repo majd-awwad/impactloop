@@ -252,6 +252,27 @@ class ApiLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<ProjectBuild> removeAcquiredMaterialFromBuildItem(
+    String projectId,
+    String itemId, {
+    required String materialId,
+    required String reservationId,
+  }) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/items/$itemId/remove-acquired-allocation',
+        data: {
+          'materialId': materialId,
+          'reservationId': reservationId,
+        },
+      ),
+      (json) => LearningHubApiMapper.fromBuildJson(
+        (json['build'] as Map<String, dynamic>?) ?? json,
+      ),
+    );
+  }
+
+  @override
   Future<ProjectBuild> completeBuildStep(String projectId, String stepId) {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(

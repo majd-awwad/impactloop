@@ -210,6 +210,16 @@ class _BuildPanelRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<ProjectBuild> removeAcquiredMaterialFromBuildItem(
+    String projectId,
+    String itemId, {
+    required String materialId,
+    required String reservationId,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<ProjectBuild> completeBuildStep(String projectId, String stepId) {
     throw UnimplementedError();
   }

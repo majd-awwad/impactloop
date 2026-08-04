@@ -10,6 +10,8 @@ ProjectBuildItem _item({
   String reservationStatus = 'ACCEPTED',
   bool includeReservation = true,
   bool includeMaterial = true,
+  String? acquisitionState,
+  String? allocationResult,
 }) {
   return ProjectBuildItem(
     id: 'item-1',
@@ -28,6 +30,8 @@ ProjectBuildItem _item({
     readinessLabel: isReadyForBuild
         ? 'Ready for build — material acquired'
         : 'Reservation in progress — not ready yet',
+    acquisitionState: acquisitionState,
+    allocationResult: allocationResult,
     linkedMaterial: includeMaterial
         ? const LinkedMaterialSummary(
             id: 'material-1',
@@ -63,8 +67,14 @@ ProjectBuildItem _item({
 void main() {
   group('ProjectBuildAcquisitionState', () {
     test('completed linked reservation maps to acquired', () {
-      final item = _item(isReadyForBuild: true, reservationStatus: 'COMPLETED');
+      final item = _item(
+        isReadyForBuild: true,
+        reservationStatus: 'COMPLETED',
+        acquisitionState: 'acquired',
+        allocationResult: 'sufficient',
+      );
 
+      expect(ProjectBuildAcquisitionState.isAcquired(item), isTrue);
       expect(
         ProjectBuildAcquisitionState.isAcquiredViaCompletedReservation(item),
         isTrue,
@@ -119,6 +129,8 @@ void main() {
         component: acquired.component,
         isReadyForBuild: true,
         readinessLabel: 'Marked as already owned',
+        acquisitionState: 'already_owned',
+        allocationResult: 'not_applicable',
       );
 
       expect(
@@ -131,7 +143,7 @@ void main() {
         ProjectBuildAcquisitionState.shouldShowClassificationControls(
           alreadyOwned,
         ),
-        isTrue,
+        isFalse,
       );
     });
 

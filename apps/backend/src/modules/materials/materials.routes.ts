@@ -110,6 +110,7 @@ materialsRouter.get(
 
 materialsRouter.get(
   '/:id',
+  optionalAuthMiddleware,
   validate(materialIdParamSchema, 'params'),
   asyncHandler(getMaterial),
 );

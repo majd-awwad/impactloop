@@ -313,12 +313,69 @@ class _LearningProjectBuildPageState
   }
 
   Future<void> _unlinkMaterial(ProjectBuildItem item) async {
+    if (ProjectBuildAcquisitionState.canRemoveAcquiredAllocation(item)) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(
+            LearningProjectBuildL10n.removeAcquiredAllocationTitle.resolve(
+              dialogContext,
+            ),
+          ),
+          content: Text(
+            LearningProjectBuildL10n.removeAcquiredAllocationBody.resolve(
+              dialogContext,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(
+                LearningProjectBuildL10n.removeFromComponent.resolve(
+                  dialogContext,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true || !mounted) {
+        return;
+      }
+    }
+
     setState(() => _updatingItemIds.add(item.id));
     try {
-      await ref
-          .read(learningHubRepositoryProvider)
-          .unlinkMaterial(widget.projectId, item.id);
-      _refreshBuild();
+      if (ProjectBuildAcquisitionState.canRemoveAcquiredAllocation(item)) {
+        final materialId = item.linkedMaterial?.id;
+        final reservationId = item.linkedReservation?.id;
+        if (materialId == null || reservationId == null) {
+          throw StateError('Missing linked material or reservation');
+        }
+
+        await ref
+            .read(learningHubRepositoryProvider)
+            .removeAcquiredMaterialFromBuildItem(
+              widget.projectId,
+              item.id,
+              materialId: materialId,
+              reservationId: reservationId,
+            );
+      } else {
+        await ref
+            .read(learningHubRepositoryProvider)
+            .unlinkMaterial(widget.projectId, item.id);
+      }
+
+      await _refreshBuild();
+      invalidateLearnerMaterialRequests(ref);
+      ref.invalidate(learnerHomeFeedProvider);
+      ref.invalidate(learnerHomeSectionDetailsProvider);
     } catch (error) {
       if (mounted) {
         showErrorSnackBar(context, error);
@@ -1307,6 +1364,10 @@ class _BuildItemCard extends StatelessWidget {
     final statusStyle = AppStatusStyle.of(context, displayMeta.tone);
     final isAcquired =
         ProjectBuildAcquisitionState.isAcquiredViaCompletedReservation(item);
+    final isPartiallyAcquired =
+        ProjectBuildAcquisitionState.isPartiallyAcquired(item);
+    final hasInsufficientQuantity =
+        ProjectBuildAcquisitionState.hasInsufficientQuantity(item);
     final isAwaitingResolution =
         ProjectBuildAcquisitionState.isAwaitingResolution(item);
     final hasSelectedMaterial =
@@ -1376,7 +1437,20 @@ class _BuildItemCard extends StatelessWidget {
                 _BuildStatusChip(meta: displayMeta),
             ],
           ),
-          if (!item.isReadyForBuild && !isAcquired && !isAwaitingResolution) ...[
+          if (displayMeta.detail != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              displayMeta.detail!.resolve(context),
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textSecondary, height: 1.35),
+            ),
+          ],
+          if (!item.isReadyForBuild &&
+              !isAcquired &&
+              !isPartiallyAcquired &&
+              !hasInsufficientQuantity &&
+              !isAwaitingResolution) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
               hasSelectedMaterial
@@ -1411,36 +1485,6 @@ class _BuildItemCard extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     LearningProjectBuildL10n.needsAttention.resolve(context),
-                    style: AppTextStyles.body(
-                      context,
-                    ).copyWith(color: palette.textSecondary, height: 1.35),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          if (isAcquired) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: statusStyle.background,
-                borderRadius: AppRadius.mdAll,
-                border: Border.all(color: statusStyle.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    LearningProjectBuildL10n.materialAcquired.resolve(context),
-                    style: AppTextStyles.subtitle(
-                      context,
-                    ).copyWith(color: statusStyle.foreground),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    LearningProjectBuildL10n.acquiredSummary.resolve(context),
                     style: AppTextStyles.body(
                       context,
                     ).copyWith(color: palette.textSecondary, height: 1.35),
@@ -1510,15 +1554,14 @@ class _BuildItemCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             ProjectBuildLinkedMaterialPanel(
               material: item.linkedMaterial!,
-              linkedReservation: item.linkedReservation,
-              isReadyForBuild: item.isReadyForBuild,
-              readinessLabel: item.readinessLabel,
+              item: item,
               isBusy: isUpdating,
               onViewMaterial: onViewLinkedMaterial,
               onReserveMaterial: item.linkedReservation == null
                   ? onReserveLinkedMaterial
                   : null,
               onUnlink: onUnlinkMaterial,
+              onUseAnotherMaterial: onShowMaterialCandidates,
             ),
           ],
           const SizedBox(height: AppSpacing.md),

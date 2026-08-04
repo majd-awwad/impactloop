@@ -11,22 +11,64 @@ class ProjectBuildItemDisplayMeta {
     required this.label,
     required this.icon,
     required this.tone,
+    this.detail,
   });
 
   final LocalizedText label;
   final IconData icon;
   final AppStatusTone tone;
+  final LocalizedText? detail;
 
   static ProjectBuildItemDisplayMeta forItem(ProjectBuildItem item) {
-    if (ProjectBuildAcquisitionState.isAcquiredViaCompletedReservation(item)) {
+    final allocation = item.quantityAllocation;
+    final acquisitionState =
+        ProjectBuildAcquisitionState.resolveAcquisitionState(item);
+    final allocationResult =
+        ProjectBuildAcquisitionState.resolveAllocationResult(item);
+
+    if (acquisitionState == 'acquired') {
+      if (allocationResult == 'insufficient_quantity') {
+        final acquired = allocation?.acquiredQuantity ?? 0;
+        final required =
+            allocation?.requiredQuantity ?? item.component.quantity;
+        return ProjectBuildItemDisplayMeta(
+          label: LearningProjectBuildL10n.acquired,
+          icon: Icons.check_circle_outline,
+          tone: AppStatusTone.success,
+          detail: LearningProjectBuildL10n.partiallyAcquiredDetail(
+            acquired: acquired,
+            required: required,
+          ),
+        );
+      }
+
+      if (allocationResult == 'incompatible_unit') {
+        return ProjectBuildItemDisplayMeta(
+          label: LearningProjectBuildL10n.acquired,
+          icon: Icons.check_circle_outline,
+          tone: AppStatusTone.success,
+          detail: LearningProjectBuildL10n.acquiredIncompatibleUnit,
+        );
+      }
+
+      final acquired =
+          allocation?.acquiredQuantity ?? item.linkedReservation?.quantityRequested;
+      final required = allocation?.requiredQuantity ?? item.component.quantity;
+
       return ProjectBuildItemDisplayMeta(
         label: LearningProjectBuildL10n.acquired,
         icon: Icons.check_circle_outline,
         tone: AppStatusTone.success,
+        detail: acquired != null
+            ? LearningProjectBuildL10n.quantityAcquiredRequired(
+                acquired: acquired,
+                required: required,
+              )
+            : null,
       );
     }
 
-    if (ProjectBuildAcquisitionState.isAwaitingResolution(item)) {
+    if (acquisitionState == 'needs_attention') {
       return ProjectBuildItemDisplayMeta(
         label: LearningProjectBuildL10n.needsAttention,
         icon: Icons.warning_amber_rounded,
@@ -34,7 +76,7 @@ class ProjectBuildItemDisplayMeta {
       );
     }
 
-    if (ProjectBuildAcquisitionState.hasActiveLinkedReservation(item)) {
+    if (acquisitionState == 'reserved') {
       return ProjectBuildItemDisplayMeta(
         label: LearningProjectBuildL10n.reserved,
         icon: Icons.lock_clock_rounded,
@@ -42,7 +84,32 @@ class ProjectBuildItemDisplayMeta {
       );
     }
 
-    if (ProjectBuildAcquisitionState.hasSelectedMaterial(item)) {
+    if (acquisitionState == 'selected') {
+      if (allocationResult == 'insufficient_quantity' ||
+          allocationResult == 'incompatible_unit' ||
+          allocationResult == 'unknown_quantity') {
+        final available = allocation?.availableQuantity;
+        final required =
+            allocation?.requiredQuantity ?? item.component.quantity;
+        return ProjectBuildItemDisplayMeta(
+          label: LearningProjectBuildL10n.selected,
+          icon: Icons.check_circle_outline,
+          tone: AppStatusTone.primary,
+          detail: allocationResult == 'insufficient_quantity' &&
+                  available != null
+              ? LearningProjectBuildL10n.quantityAvailableRequired(
+                  available: available,
+                  required: required,
+                )
+              : allocation?.warning != null
+              ? LocalizedText(
+                  en: allocation!.warning!,
+                  ar: allocation.warning!,
+                )
+              : null,
+        );
+      }
+
       return ProjectBuildItemDisplayMeta(
         label: LearningProjectBuildL10n.selected,
         icon: Icons.check_circle_outline,
@@ -50,7 +117,7 @@ class ProjectBuildItemDisplayMeta {
       );
     }
 
-    if (ProjectBuildAcquisitionState.isAlreadyOwnedClassification(item)) {
+    if (acquisitionState == 'already_owned') {
       return ProjectBuildItemDisplayMeta(
         label: LearningProjectBuildL10n.alreadyOwned,
         icon: Icons.home_repair_service_outlined,

@@ -74,4 +74,82 @@ class LearningProjectBuildL10n {
     en: 'Material selected — reserve or acquire it before building.',
     ar: 'تم اختيار المادة — احجزها أو احصل عليها قبل البناء.',
   );
+
+  static const insufficientQuantity = LocalizedText(
+    en: 'Insufficient quantity',
+    ar: 'الكمية غير كافية',
+  );
+
+  static const partiallyAcquired = LocalizedText(
+    en: 'Partially acquired',
+    ar: 'تم الحصول على جزء من الكمية',
+  );
+
+  static LocalizedText partiallyAcquiredDetail({
+    required double acquired,
+    required double required,
+  }) =>
+      LocalizedText(
+        en:
+            'Partially acquired — ${_formatQuantityLabel(acquired)} acquired, ${_formatQuantityLabel(required)} required',
+        ar:
+            'تم الحصول على جزء من الكمية — تم الحصول على ${_formatQuantityLabel(acquired)}، المطلوب ${_formatQuantityLabel(required)}',
+      );
+
+  static const acquiredIncompatibleUnit = LocalizedText(
+    en:
+        'This acquired material is not compatible with the required component unit.',
+    ar: 'المادة التي تم الحصول عليها غير متوافقة مع وحدة المكوّن المطلوبة.',
+  );
+
+  static const useAnotherMaterial = LocalizedText(
+    en: 'Use another material',
+    ar: 'استخدام مادة أخرى',
+  );
+
+  static const removeFromComponent = LocalizedText(
+    en: 'Remove from this component',
+    ar: 'إزالة المادة من هذا المكوّن',
+  );
+
+  static const removeAcquiredAllocationTitle = LocalizedText(
+    en: 'Remove this material from the component?',
+    ar: 'إزالة هذه المادة من المكوّن؟',
+  );
+
+  static const removeAcquiredAllocationBody = LocalizedText(
+    en:
+        'The completed reservation and acquisition history will remain available.',
+    ar: 'سيبقى الحجز المكتمل وسجل الحصول على المادة محفوظين.',
+  );
+
+  static String _formatQuantityLabel(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toInt().toString();
+    }
+
+    return value.toString();
+  }
+
+  static LocalizedText quantityAvailableRequired({
+    required double available,
+    required double required,
+  }) =>
+      LocalizedText(
+        en:
+            '${_formatQuantityLabel(available)} available, ${_formatQuantityLabel(required)} required',
+        ar:
+            'المتوفر ${_formatQuantityLabel(available)}، المطلوب ${_formatQuantityLabel(required)}',
+      );
+
+  static LocalizedText quantityAcquiredRequired({
+    required double acquired,
+    required double required,
+  }) =>
+      LocalizedText(
+        en:
+            '${_formatQuantityLabel(acquired)} acquired, ${_formatQuantityLabel(required)} required',
+        ar:
+            'تم الحصول على ${_formatQuantityLabel(acquired)}، المطلوب ${_formatQuantityLabel(required)}',
+      );
 }

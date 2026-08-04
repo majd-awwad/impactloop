@@ -73,7 +73,7 @@ export const getMaterial = async (
 ): Promise<void> => {
   const { id } = readValidatedParams<{ id: string }>(req);
   const material = await measureRequestStage('materials.public-detail', () =>
-    getMaterialById(id, undefined, getRequestAbortSignal(res)),
+    getMaterialById(id, req.auth, getRequestAbortSignal(res)),
   );
 
   res.json(successResponse('Material fetched successfully', material));

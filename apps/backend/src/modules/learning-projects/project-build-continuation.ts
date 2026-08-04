@@ -27,12 +27,23 @@ export const CONTINUE_PROJECT_BUILD_ORDER_BY = [
 
 export const isContinueBuildItemReady = (item: {
   status: string;
-  linkedReservation: { status: string } | null;
-}): boolean =>
-  item.linkedReservation?.status === 'COMPLETED' ||
-  (CONTINUE_BUILD_READY_ITEM_STATUSES as readonly string[]).includes(
+  linkedReservation: { status: string; quantityRequested?: { toNumber(): number } | number } | null;
+  requiredQuantity?: number;
+}): boolean => {
+  if (item.linkedReservation?.status === 'COMPLETED') {
+    const required = item.requiredQuantity ?? 0;
+    const acquired =
+      typeof item.linkedReservation.quantityRequested === 'number'
+        ? item.linkedReservation.quantityRequested
+        : item.linkedReservation.quantityRequested?.toNumber() ?? 0;
+
+    return required <= 0 || acquired >= required;
+  }
+
+  return (CONTINUE_BUILD_READY_ITEM_STATUSES as readonly string[]).includes(
     item.status,
   );
+};
 
 export const buildContinuableProjectBuildWhere = (
   learnerId: string,

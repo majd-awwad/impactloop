@@ -34,6 +34,7 @@ import {
   unlikeLearningProjectById,
   unfollowLearningProjectById,
   unlinkBuildItemMaterialById,
+  removeAcquiredMaterialFromBuildItemById,
   unsaveLearningProjectById,
   updateMyLearningProjectSubmissionById,
   updateProjectBuildItemById,
@@ -287,6 +288,32 @@ export const unlinkBuildItemMaterial = async (
   const build = await unlinkBuildItemMaterialById(id, req.auth!.sub, itemId);
 
   res.json(successResponse('Material unlinked successfully', build));
+};
+
+export const removeAcquiredBuildItemAllocation = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id, itemId } = readValidatedParams<{ id: string; itemId: string }>(
+    req,
+  );
+  const { materialId, reservationId } = req.body as {
+    materialId: string;
+    reservationId: string;
+  };
+  const result = await removeAcquiredMaterialFromBuildItemById(
+    id,
+    req.auth!.sub,
+    itemId,
+    { materialId, reservationId },
+  );
+
+  res.json(
+    successResponse('Acquired material allocation removed', {
+      outcome: result.outcome,
+      build: result.build,
+    }),
+  );
 };
 
 export const linkBuildItemReservation = async (

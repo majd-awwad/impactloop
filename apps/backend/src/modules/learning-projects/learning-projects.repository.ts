@@ -302,6 +302,7 @@ const projectBuildInclude = {
           deliveryAllowed: true,
           ownerId: true,
           materialType: true,
+          unit: true,
           category: {
             select: {
               id: true,
@@ -347,6 +348,7 @@ const projectBuildInclude = {
           id: true,
           status: true,
           materialId: true,
+          quantityRequested: true,
         },
       },
       requiredComponent: {
@@ -760,6 +762,7 @@ export const linkBuildItemMaterial = async (input: {
       data: {
         linkedMaterialId: input.materialId,
         linkedMaterialAt: new Date(),
+        dismissedAcquiredReservationId: null,
       },
     });
 
@@ -824,6 +827,62 @@ export const unlinkBuildItemMaterial = async (input: {
     : null;
 };
 
+export const removeAcquiredBuildItemAllocation = async (input: {
+  projectId: string;
+  learnerId: string;
+  itemId: string;
+  materialId: string;
+  reservationId: string;
+}) => {
+  const result = await prisma.$transaction(async (tx) => {
+    const item = await tx.projectBuildItem.findFirst({
+      where: {
+        id: input.itemId,
+        linkedMaterialId: input.materialId,
+        linkedReservationId: input.reservationId,
+        build: {
+          projectId: input.projectId,
+          learnerId: input.learnerId,
+          status: { not: 'ARCHIVED' },
+          project: {
+            is: publicProjectWhere,
+          },
+        },
+      },
+      select: {
+        id: true,
+        buildId: true,
+      },
+    });
+
+    if (!item) {
+      return null;
+    }
+
+    const cleared = await tx.projectBuildItem.updateMany({
+      where: {
+        id: item.id,
+        linkedMaterialId: input.materialId,
+        linkedReservationId: input.reservationId,
+      },
+      data: {
+        linkedMaterialId: null,
+        linkedReservationId: null,
+        linkedMaterialAt: null,
+        dismissedAcquiredReservationId: input.reservationId,
+      },
+    });
+
+    if (cleared.count !== 1) {
+      return null;
+    }
+
+    return item;
+  });
+
+  return result;
+};
+
 export const linkBuildItemReservation = async (input: {
   projectId: string;
   learnerId: string;
@@ -847,6 +906,12 @@ export const linkBuildItemReservation = async (input: {
         buildId: true,
         linkedMaterialId: true,
         linkedReservationId: true,
+        requiredComponent: {
+          select: {
+            quantity: true,
+            unit: true,
+          },
+        },
       },
     });
 
@@ -862,6 +927,8 @@ export const linkBuildItemReservation = async (input: {
       select: {
         id: true,
         materialId: true,
+        quantityRequested: true,
+        status: true,
       },
     });
 
@@ -887,11 +954,23 @@ export const linkBuildItemReservation = async (input: {
       return { id: buildItem.buildId };
     }
 
+    const material = await tx.material.findUnique({
+      where: { id: reservation.materialId },
+      select: { unit: true },
+    });
+
+    if (!material) {
+      throw new AppError('Material not found', 404, 'NOT_FOUND');
+    }
+
     const validation = await validateBuildItemForReservationLink(tx, {
       learnerId: input.learnerId,
       buildItemId: buildItem.id,
       materialId: reservation.materialId,
       ignoreReservationId: reservation.id,
+      reservationId: reservation.id,
+      quantityRequested: reservation.quantityRequested,
+      materialUnit: material.unit,
     });
 
     if (!validation.ok) {
@@ -909,6 +988,24 @@ export const linkBuildItemReservation = async (input: {
             'This build checklist item already has an active linked reservation',
             409,
             'ACTIVE_BUILD_ITEM_RESERVATION',
+          );
+        case 'INSUFFICIENT_QUANTITY':
+          throw new AppError(
+            'Reserved quantity is insufficient for this build item',
+            400,
+            'INSUFFICIENT_QUANTITY',
+          );
+        case 'RESERVATION_ALREADY_ALLOCATED':
+          throw new AppError(
+            'This reservation is already linked to another build item',
+            409,
+            'RESERVATION_ALREADY_ALLOCATED',
+          );
+        case 'INCOMPATIBLE_UNIT':
+          throw new AppError(
+            'Material unit is not compatible with the required component unit',
+            400,
+            'INCOMPATIBLE_UNIT',
           );
         default:
           throw new AppError(
@@ -1694,11 +1791,24 @@ export const completeProjectBuildStep = async (input: {
           select: {
             status: true,
             linkedMaterialId: true,
+            linkedMaterial: {
+              select: {
+                unit: true,
+              },
+            },
+            requiredComponent: {
+              select: {
+                quantity: true,
+                unit: true,
+                componentRole: true,
+              },
+            },
             linkedReservation: {
               select: {
                 id: true,
                 materialId: true,
                 status: true,
+                quantityRequested: true,
               },
             },
           },
@@ -1742,6 +1852,10 @@ export const completeProjectBuildStep = async (input: {
     const allMaterialsReady = build.items.every((item) =>
       resolveBuildItemStepUnlockReadiness({
         status: item.status,
+        componentRole: item.requiredComponent.componentRole,
+        requiredQuantity: item.requiredComponent.quantity.toNumber(),
+        requiredUnit: item.requiredComponent.unit,
+        materialUnit: item.linkedMaterial?.unit ?? null,
         linkedReservation: item.linkedReservation,
       }).isReadyForStepUnlock,
     );

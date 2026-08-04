@@ -7,9 +7,12 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../shared/widgets/app_close_button.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../l10n/l10n.dart';
 import '../../domain/models/project_build.dart';
+import '../../domain/models/project_build_material_link.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../l10n/learning_project_build_l10n.dart';
+import '../project_build_material_link_error_message.dart';
 import '../theme/learning_ui_palette.dart';
 import 'project_build_acquisition_state.dart';
 
@@ -116,7 +119,16 @@ class _ProjectBuildMaterialCandidatesSheetState
       Navigator.of(context).pop(build);
     } catch (error) {
       if (!mounted) return;
-      showErrorSnackBar(context, error);
+      showErrorSnackBar(
+        context,
+        error,
+        l10n: context.l10n,
+        message: projectBuildMaterialLinkErrorMessage(
+          error,
+          languageCode: Localizations.localeOf(context).languageCode,
+          l10n: context.l10n,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _linkingMaterialId = null);
@@ -269,42 +281,44 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
   const ProjectBuildLinkedMaterialPanel({
     super.key,
     required this.material,
-    this.linkedReservation,
-    required this.isReadyForBuild,
-    required this.readinessLabel,
+    required this.item,
     required this.isBusy,
     required this.onViewMaterial,
     this.onReserveMaterial,
     required this.onUnlink,
+    this.onUseAnotherMaterial,
   });
 
   final LinkedMaterialSummary material;
-  final LinkedReservationSummary? linkedReservation;
-  final bool isReadyForBuild;
-  final String readinessLabel;
+  final ProjectBuildItem item;
   final bool isBusy;
   final VoidCallback onViewMaterial;
   final VoidCallback? onReserveMaterial;
   final VoidCallback onUnlink;
+  final VoidCallback? onUseAnotherMaterial;
 
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
     final colors = AppThemeColors.of(context);
     final textTheme = Theme.of(context).textTheme;
-    final isAcquired =
-        linkedReservation?.status.toUpperCase() == 'COMPLETED' &&
-        isReadyForBuild;
-    final isAwaitingResolution =
-        linkedReservation?.status.toUpperCase() == 'AWAITING_RESOLUTION';
+    final acquisitionState =
+        ProjectBuildAcquisitionState.resolveAcquisitionState(item);
+    final allocationResult =
+        ProjectBuildAcquisitionState.resolveAllocationResult(item);
+    final isAcquired = acquisitionState == 'acquired';
+    final isPartiallyAcquired =
+        isAcquired && allocationResult == 'insufficient_quantity';
+    final isIncompatibleAcquired =
+        isAcquired && allocationResult == 'incompatible_unit';
+    final linkedReservation = item.linkedReservation;
+    final isAwaitingResolution = acquisitionState == 'needs_attention';
     final showAvailabilityWarning =
         ProjectBuildAcquisitionState.shouldShowAvailabilityWarning(
           material: material,
           linkedReservation: linkedReservation,
         );
-    final borderColor = isAcquired
-        ? palette.lime.withValues(alpha: 0.42)
-        : isReadyForBuild
+    final borderColor = item.isReadyForBuild
         ? palette.lime.withValues(alpha: 0.42)
         : palette.borderSubtle;
 
@@ -324,7 +338,7 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
               Icon(
                 Icons.link_rounded,
                 size: 18,
-                color: isReadyForBuild ? palette.lime : palette.textSecondary,
+                color: item.isReadyForBuild ? palette.lime : palette.textSecondary,
               ),
               const SizedBox(width: AppSpacing.xs),
               Text(
@@ -380,12 +394,13 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
               ),
             ),
           ],
-          if (linkedReservation != null && !isAcquired && !isAwaitingResolution) ...[
+          if (linkedReservation != null &&
+              acquisitionState == 'reserved') ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
-              linkedReservation!.statusLabel,
+              linkedReservation.statusLabel,
               style: textTheme.bodyMedium?.copyWith(
-                color: linkedReservation!.needsAction
+                color: linkedReservation.needsAction
                     ? colors.warningText
                     : palette.textSecondary,
               ),
@@ -402,37 +417,81 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
               ),
             ),
           ],
-          if (isAcquired) ...[
+          if (isIncompatibleAcquired) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
-              LearningProjectBuildL10n.reservationCompleted.resolve(context),
+              LearningProjectBuildL10n.acquiredIncompatibleUnit.resolve(
+                context,
+              ),
               style: textTheme.bodyMedium?.copyWith(
-                color: palette.textSecondary,
+                color: colors.warningText,
                 fontWeight: FontWeight.w600,
               ),
             ),
-          ],
-          if (isAcquired ||
-              isReadyForBuild ||
-              linkedReservation != null ||
-              (!isReadyForBuild && !isAcquired && !isAwaitingResolution)) ...[
+          ] else if (isPartiallyAcquired) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
-              isAcquired
-                  ? LearningProjectBuildL10n.readyForBuildMaterialAcquired
-                      .resolve(context)
-                  : isReadyForBuild
-                  ? readinessLabel
-                  : linkedReservation != null
-                  ? LearningProjectBuildL10n.materialSelectedNotReady.resolve(
-                      context,
-                    )
-                  : LearningProjectBuildL10n.materialSelectedReserveOrAcquire
-                      .resolve(context),
+              LearningProjectBuildL10n.partiallyAcquiredDetail(
+                acquired: item.quantityAllocation?.acquiredQuantity ??
+                    item.linkedReservation?.quantityRequested ??
+                    0,
+                required: item.quantityAllocation?.requiredQuantity ??
+                    item.component.quantity,
+              ).resolve(context),
               style: textTheme.bodyMedium?.copyWith(
-                color: isAcquired || isReadyForBuild
-                    ? palette.lime
-                    : palette.textSecondary,
+                color: colors.warningText,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ] else if (item.isReadyForBuild && isAcquired) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              LearningProjectBuildL10n.readyForBuildMaterialAcquired.resolve(
+                context,
+              ),
+              style: textTheme.bodyMedium?.copyWith(
+                color: palette.lime,
+                height: 1.45,
+              ),
+            ),
+          ] else if (acquisitionState == 'selected' &&
+              (allocationResult == 'insufficient_quantity' ||
+                  allocationResult == 'incompatible_unit' ||
+                  allocationResult == 'unknown_quantity')) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              item.quantityAllocation?.warning ?? item.readinessLabel,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colors.warningText,
+                height: 1.45,
+              ),
+            ),
+          ] else if (item.isReadyForBuild) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              item.readinessLabel,
+              style: textTheme.bodyMedium?.copyWith(
+                color: palette.lime,
+                height: 1.45,
+              ),
+            ),
+          ] else if (acquisitionState == 'reserved') ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              item.readinessLabel,
+              style: textTheme.bodyMedium?.copyWith(
+                color: palette.textSecondary,
+                height: 1.45,
+              ),
+            ),
+          ] else if (acquisitionState == 'selected') ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              LearningProjectBuildL10n.materialSelectedReserveOrAcquire.resolve(
+                context,
+              ),
+              style: textTheme.bodyMedium?.copyWith(
+                color: palette.textSecondary,
                 height: 1.45,
               ),
             ),
@@ -461,14 +520,34 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
                 icon: const Icon(Icons.open_in_new_rounded),
                 label: const Text('View material'),
               ),
+              if (isAcquired && onUseAnotherMaterial != null)
+                TextButton.icon(
+                  onPressed: isBusy ? null : onUseAnotherMaterial,
+                  style: AppStatusButtonStyle.text(
+                    context,
+                    AppStatusTone.primary,
+                  ),
+                  icon: const Icon(Icons.swap_horiz_rounded),
+                  label: Text(
+                    LearningProjectBuildL10n.useAnotherMaterial.resolve(context),
+                  ),
+                ),
               TextButton.icon(
                 onPressed: isBusy ? null : onUnlink,
                 style: AppStatusButtonStyle.text(
                   context,
-                  AppStatusTone.warning,
+                  isAcquired ? AppStatusTone.warning : AppStatusTone.warning,
                 ),
-                icon: const Icon(Icons.link_off_rounded),
-                label: const Text('Unlink'),
+                icon: Icon(
+                  isAcquired ? Icons.layers_clear_outlined : Icons.link_off_rounded,
+                ),
+                label: Text(
+                  isAcquired
+                      ? LearningProjectBuildL10n.removeFromComponent.resolve(
+                          context,
+                        )
+                      : 'Unlink',
+                ),
               ),
             ],
           ),
