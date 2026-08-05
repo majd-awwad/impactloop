@@ -445,6 +445,17 @@ export const listLearnerBuilds = async (input: {
         completionSnapshot: {
           select: { snapshot: true },
         },
+        learningSession: {
+          select: {
+            id: true,
+            learningGoal: true,
+            confidenceBefore: true,
+            confidenceAfter: true,
+            goalOutcome: true,
+            finalReflection: true,
+            learningSummary: true,
+          },
+        },
         _count: {
           select: {
             items: true,

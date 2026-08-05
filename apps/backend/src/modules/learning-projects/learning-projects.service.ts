@@ -33,6 +33,10 @@ import {
   resolveBuildItemAllocationContext,
 } from './learning-projects.build-material-allocation.js';
 import { prisma } from '../../database/prisma.js';
+import {
+  attachLearningSetupToBuild,
+  resolveLearningSetupAfterBuildStart,
+} from '../project-learning/build-learning-session-setup.service.js';
 import type {
   CreateAiAuthoringDraftInput,
   LearningProjectsQuery,
@@ -686,10 +690,12 @@ const hydrateLearnerProjectBuild = async (
       learnerId,
       build.id,
     );
+  const learningSetup = await attachLearningSetupToBuild(build, learnerId);
 
   return {
     ...(await mapProjectBuild(build)),
     guideConversationId: guideConversation?.id ?? null,
+    learningSetup,
   };
 };
 
@@ -1400,7 +1406,17 @@ export const startProjectBuildById = async (
     invalidateLearnerHomeCache(userId);
   }
 
-  return hydrateLearnerProjectBuild(build, userId);
+  const hydrated = await hydrateLearnerProjectBuild(build, userId);
+
+  if (!existingBuild) {
+    try {
+      hydrated.learningSetup = await resolveLearningSetupAfterBuildStart(build);
+    } catch {
+      hydrated.learningSetup = await attachLearningSetupToBuild(build, userId);
+    }
+  }
+
+  return hydrated;
 };
 
 export const startProjectBuildAgainById = async (
@@ -1414,7 +1430,15 @@ export const startProjectBuildAgainById = async (
   }
 
   invalidateLearnerHomeCache(userId);
-  return hydrateLearnerProjectBuild(build, userId);
+  const hydrated = await hydrateLearnerProjectBuild(build, userId);
+
+  try {
+    hydrated.learningSetup = await resolveLearningSetupAfterBuildStart(build);
+  } catch {
+    hydrated.learningSetup = await attachLearningSetupToBuild(build, userId);
+  }
+
+  return hydrated;
 };
 
 export const updateProjectBuildItemById = async (

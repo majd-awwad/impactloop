@@ -58,6 +58,35 @@ import {
   updateMyLearningProjectSubmissionSchema,
   updateProjectBuildItemSchema,
 } from './learning-projects.validation.js';
+import {
+  getMyBuildLearningSession,
+  getMyBuildStepLearningCheck,
+  getMyBuildStepLearningCheckAiHandoff,
+  getMyBuildFinalLearningCheck,
+  getMyBuildFinalLearningCheckAiHandoff,
+  setupMyBuildLearningSession,
+  skipMyBuildLearningAssignment,
+  skipMyBuildStepLearningCheck,
+  skipMyBuildFinalLearningCheckAssignment,
+  submitMyBuildLearningAnswer,
+  submitMyBuildStepLearningCheckAnswer,
+  submitMyBuildFinalLearningCheckAnswer,
+  updateMyBuildLearningSession,
+  updateMyBuildLearningCompletionReflection,
+  reportMyBuildLearningAssignmentUnclear,
+  clearMyBuildLearningAssignmentUnclear,
+  viewMyBuildLearningHint,
+  viewMyBuildStepLearningCheckHint,
+  viewMyBuildFinalLearningCheckHint,
+} from '../project-learning/project-learning.controller.js';
+import {
+  projectLearningAssignmentParamSchema,
+  projectLearningBuildStepParamSchema,
+  completionReflectionBodySchema,
+  setupLearningSessionBodySchema,
+  submitLearningAnswerBodySchema,
+  updateLearningSessionBodySchema,
+} from '../project-learning/project-learning.validation.js';
 import { attachCommentRoutes } from '../comments/comments.routes.js';
 
 export const learningProjectsRouter = Router();
@@ -174,6 +203,164 @@ learningProjectsRouter.post(
   requireRoles('LEARNER'),
   validate(projectBuildStepParamSchema, 'params'),
   asyncHandler(completeProjectBuildStep),
+);
+
+learningProjectsRouter.get(
+  '/:id/builds/me/learning-session',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  asyncHandler(getMyBuildLearningSession),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/learning-session/setup',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  validate(setupLearningSessionBodySchema),
+  asyncHandler(setupMyBuildLearningSession),
+);
+
+learningProjectsRouter.patch(
+  '/:id/builds/me/learning-session',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  validate(updateLearningSessionBodySchema),
+  asyncHandler(updateMyBuildLearningSession),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/learning-session/assignments/:assignmentId/answer',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectLearningAssignmentParamSchema, 'params'),
+  validate(submitLearningAnswerBodySchema),
+  asyncHandler(submitMyBuildLearningAnswer),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/learning-session/assignments/:assignmentId/skip',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectLearningAssignmentParamSchema, 'params'),
+  asyncHandler(skipMyBuildLearningAssignment),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/learning-session/assignments/:assignmentId/hint',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectLearningAssignmentParamSchema, 'params'),
+  asyncHandler(viewMyBuildLearningHint),
+);
+
+learningProjectsRouter.get(
+  '/:id/builds/me/learning-session/steps/:stepId/check',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectLearningBuildStepParamSchema, 'params'),
+  asyncHandler(getMyBuildStepLearningCheck),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/learning-session/steps/:stepId/check/hint',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectLearningBuildStepParamSchema, 'params'),
+  asyncHandler(viewMyBuildStepLearningCheckHint),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/learning-session/steps/:stepId/check/answer',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectLearningBuildStepParamSchema, 'params'),
+  validate(submitLearningAnswerBodySchema),
+  asyncHandler(submitMyBuildStepLearningCheckAnswer),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/learning-session/steps/:stepId/check/skip',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectLearningBuildStepParamSchema, 'params'),
+  asyncHandler(skipMyBuildStepLearningCheck),
+);
+
+learningProjectsRouter.get(
+  '/:id/builds/me/learning-session/steps/:stepId/check/ai-handoff',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectLearningBuildStepParamSchema, 'params'),
+  asyncHandler(getMyBuildStepLearningCheckAiHandoff),
+);
+
+learningProjectsRouter.get(
+  '/:id/builds/me/learning-session/final-check',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  asyncHandler(getMyBuildFinalLearningCheck),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/learning-session/final-check/assignments/:assignmentId/hint',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectLearningAssignmentParamSchema, 'params'),
+  asyncHandler(viewMyBuildFinalLearningCheckHint),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/learning-session/final-check/assignments/:assignmentId/answer',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectLearningAssignmentParamSchema, 'params'),
+  validate(submitLearningAnswerBodySchema),
+  asyncHandler(submitMyBuildFinalLearningCheckAnswer),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/learning-session/final-check/assignments/:assignmentId/skip',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectLearningAssignmentParamSchema, 'params'),
+  asyncHandler(skipMyBuildFinalLearningCheckAssignment),
+);
+
+learningProjectsRouter.get(
+  '/:id/builds/me/learning-session/final-check/assignments/:assignmentId/ai-handoff',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectLearningAssignmentParamSchema, 'params'),
+  asyncHandler(getMyBuildFinalLearningCheckAiHandoff),
+);
+
+learningProjectsRouter.patch(
+  '/:id/builds/me/learning-session/completion-reflection',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  validate(completionReflectionBodySchema),
+  asyncHandler(updateMyBuildLearningCompletionReflection),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/learning-session/assignments/:assignmentId/report-unclear',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectLearningAssignmentParamSchema, 'params'),
+  asyncHandler(reportMyBuildLearningAssignmentUnclear),
+);
+
+learningProjectsRouter.delete(
+  '/:id/builds/me/learning-session/assignments/:assignmentId/report-unclear',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectLearningAssignmentParamSchema, 'params'),
+  asyncHandler(clearMyBuildLearningAssignmentUnclear),
 );
 
 learningProjectsRouter.post(

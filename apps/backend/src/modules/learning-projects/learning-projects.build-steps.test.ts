@@ -282,10 +282,22 @@ after(async () => {
   }
 
   if (ids.builds.length > 0) {
+    await prisma.projectBuildLearningSession.deleteMany({
+      where: { buildId: { in: ids.builds } },
+    });
     await prisma.projectBuild.deleteMany({ where: { id: { in: ids.builds } } });
   }
 
   if (ids.projects.length > 0) {
+    await prisma.projectBuildLearningSession.deleteMany({
+      where: { build: { projectId: { in: ids.projects } } },
+    });
+    await prisma.projectLearningQuestion.deleteMany({
+      where: { pack: { projectId: { in: ids.projects } } },
+    });
+    await prisma.projectLearningPack.deleteMany({
+      where: { projectId: { in: ids.projects } },
+    });
     await prisma.learningProject.deleteMany({ where: { id: { in: ids.projects } } });
   }
 

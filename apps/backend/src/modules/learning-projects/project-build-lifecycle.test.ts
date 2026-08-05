@@ -156,6 +156,9 @@ after(async () => {
     await prisma.reservation.deleteMany({ where: { id: { in: ids.reservations } } });
   }
   if (ids.builds.length) {
+    await prisma.projectBuildLearningSession.deleteMany({
+      where: { buildId: { in: ids.builds } },
+    });
     await prisma.projectBuild.deleteMany({ where: { id: { in: ids.builds } } });
   }
   if (ids.materials.length) {
@@ -165,6 +168,15 @@ after(async () => {
     await prisma.location.deleteMany({ where: { id: { in: ids.locations } } });
   }
   if (ids.projects.length) {
+    await prisma.projectBuildLearningSession.deleteMany({
+      where: { build: { projectId: { in: ids.projects } } },
+    });
+    await prisma.projectLearningQuestion.deleteMany({
+      where: { pack: { projectId: { in: ids.projects } } },
+    });
+    await prisma.projectLearningPack.deleteMany({
+      where: { projectId: { in: ids.projects } },
+    });
     await prisma.learningProject.deleteMany({ where: { id: { in: ids.projects } } });
   }
   if (ids.categories.length) {
