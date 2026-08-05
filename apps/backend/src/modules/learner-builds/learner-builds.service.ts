@@ -12,10 +12,14 @@ import {
   getOwnedProjectBuildByBuildId,
   hydrateLearnerProjectBuildFromRecord,
 } from '../learning-projects/learning-projects.service.js';
+import {
+  mapMyBuildsLearningSummary,
+  mapPortfolioLearningStory,
+} from './learner-build-learning-summary.js';
 
-const mapListItem = (
-  build: Awaited<ReturnType<typeof listLearnerBuilds>>['items'][number],
-) => {
+type ListBuildRow = Awaited<ReturnType<typeof listLearnerBuilds>>['items'][number];
+
+const mapListItemBase = (build: ListBuildRow) => {
   const snapshot = build.completionSnapshot?.snapshot as
     | Record<string, unknown>
     | undefined;
@@ -50,6 +54,25 @@ const mapListItem = (
   };
 };
 
+const mapMyBuildsListItem = (build: ListBuildRow) => ({
+  ...mapListItemBase(build),
+  learning: mapMyBuildsLearningSummary({
+    buildStatus: build.status,
+    session: build.learningSession,
+  }),
+});
+
+const mapPortfolioListItem = (build: ListBuildRow) => {
+  const learning = mapPortfolioLearningStory({
+    session: build.learningSession,
+  });
+
+  return {
+    ...mapListItemBase(build),
+    ...(learning ? { learning } : {}),
+  };
+};
+
 export const getLearnerBuildsList = async (input: {
   learnerId: string;
   status?: ProjectBuildStatus | 'ACTIVE';
@@ -59,7 +82,7 @@ export const getLearnerBuildsList = async (input: {
   const result = await listLearnerBuilds(input);
 
   return {
-    items: result.items.map(mapListItem),
+    items: result.items.map(mapMyBuildsListItem),
     pagination: {
       page: input.page,
       limit: input.limit,
@@ -101,12 +124,23 @@ export const getLearnerPortfolio = async (input: {
   learnerId: string;
   page: number;
   limit: number;
-}) =>
-  getLearnerBuildsList({
+}) => {
+  const result = await listLearnerBuilds({
     learnerId: input.learnerId,
     status: 'COMPLETED',
     page: input.page,
     limit: input.limit,
   });
+
+  return {
+    items: result.items.map(mapPortfolioListItem),
+    pagination: {
+      page: input.page,
+      limit: input.limit,
+      total: result.total,
+      totalPages: Math.max(1, Math.ceil(result.total / input.limit)),
+    },
+  };
+};
 
 export const getLearnerBuildByIdMapped = getOwnedProjectBuildByBuildId;

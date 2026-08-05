@@ -108,8 +108,8 @@ learnerBuildsRouter.post(
   authMiddleware,
   requireRoles('LEARNER'),
   validate(learnerBuildIdParamSchema, 'params'),
-  validate(completionPhotoCaptionSchema),
   buildCompletionPhotoUploadMiddleware,
+  validate(completionPhotoCaptionSchema),
   asyncHandler(uploadCompletionPhotoHandler),
 );
 

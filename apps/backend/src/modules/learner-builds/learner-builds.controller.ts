@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 
-import { readValidatedParams } from '../../middlewares/validate.middleware.js';
+import { readValidatedParams, readValidatedQuery } from '../../middlewares/validate.middleware.js';
 import { successResponse } from '../../utils/api-response.js';
 
 import {
@@ -20,7 +20,7 @@ import {
 } from '../learning-projects/project-build-completion-story.js';
 
 export const listLearnerBuildsHandler = async (req: Request, res: Response) => {
-  const query = req.query as unknown as ListLearnerBuildsQuery;
+  const query = readValidatedQuery<ListLearnerBuildsQuery>(req);
   const result = await getLearnerBuildsList({
     learnerId: req.auth!.sub,
     status: query.status,
@@ -32,7 +32,7 @@ export const listLearnerBuildsHandler = async (req: Request, res: Response) => {
 };
 
 export const getLearnerPortfolioHandler = async (req: Request, res: Response) => {
-  const query = req.query as unknown as ListLearnerBuildsQuery;
+  const query = readValidatedQuery<ListLearnerBuildsQuery>(req);
   const result = await getLearnerPortfolio({
     learnerId: req.auth!.sub,
     page: query.page,
