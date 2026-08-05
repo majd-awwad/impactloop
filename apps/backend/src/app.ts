@@ -36,6 +36,10 @@ import {
 import { recommendationActionAttributionMiddleware } from './modules/recommendation-events/recommendation-events.service.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
 import {
+  paymentsMockWebhookRouter,
+  paymentsRouter,
+} from './modules/payments/payments.routes.js';
+import {
   ensureMaterialUploadsDir,
   MATERIAL_UPLOADS_DIR,
 } from './modules/uploads/uploads.storage.js';
@@ -104,6 +108,14 @@ export const createApp = (options: CreateAppOptions): Express => {
     express.static(SUPPLIER_VERIFICATION_UPLOADS_DIR),
   );
   app.use('/uploads/build-completion', express.static(BUILD_COMPLETION_UPLOADS_DIR));
+  // Raw body required for mock payment webhook HMAC verification.
+  if (env.paymentMockRoutesEnabled) {
+    app.use(
+      '/api/payments/webhooks/mock',
+      express.raw({ type: 'application/json' }),
+      paymentsMockWebhookRouter,
+    );
+  }
   app.use(express.json());
   app.use(recommendationActionAttributionMiddleware);
 
@@ -117,6 +129,7 @@ export const createApp = (options: CreateAppOptions): Express => {
   app.use('/api/learning-projects', learningProjectsRouter);
   app.use('/api/materials', materialsRouter);
   app.use('/api/reservations', reservationsRouter);
+  app.use('/api/payments', paymentsRouter);
   app.use('/api/deliveries', deliveriesRouter);
   app.use('/api/driver', driverRouter);
   app.use('/api/uploads', uploadsRouter);

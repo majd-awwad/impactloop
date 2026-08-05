@@ -221,6 +221,52 @@ enum DeliveryAssignmentStatus {
   CANCELLED
 }
 
+enum PaymentPurpose {
+  MATERIAL_SUBTOTAL
+  DELIVERY_FEE
+}
+
+enum PaymentOrderStatus {
+  REQUIRES_PAYMENT
+  CHECKOUT_PENDING
+  PAID
+  REFUND_PENDING
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentAttemptStatus {
+  CREATED
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentProviderType {
+  MOCK
+}
+
+enum PaymentProviderMode {
+  LOCAL
+  SANDBOX
+}
+
+enum PaymentProviderEventProcessingStatus {
+  RECEIVED
+  PROCESSED
+  IGNORED_DUPLICATE
+  REJECTED
+}
+
+enum PaymentRefundStatus {
+  REQUESTED
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
 enum ReviewTargetType {
   SUPPLIER
   DRIVER
@@ -609,6 +655,7 @@ model User {
   learnerMaterialRequests                LearnerMaterialRequest[]               @relation("LearnerMaterialRequestLearner")
   learnerMaterialRequestMatches          LearnerMaterialRequestMatch[]          @relation("LearnerMaterialRequestMatchSupplier")
   learningQuestionFeedback               ProjectBuildLearningQuestionFeedback[] @relation("ProjectBuildLearningQuestionFeedbackLearner")
+  paymentOrdersAsPayer                   PaymentOrder[]                         @relation("PaymentOrderPayer")
 
   @@index([suspendedById])
   @@index([reactivatedById])
@@ -1751,6 +1798,7 @@ model Reservation {
   dropoffArea                       String?                       @map("dropoff_area")
   deliveryGroupId                   String?                       @map("delivery_group_id")
   deliveryGroup                     DeliveryGroup?                @relation(fields: [deliveryGroupId], references: [id], onDelete: SetNull)
+  materialPaymentOrders             PaymentOrder[]                @relation("PaymentOrderReservation")
 
   @@index([ownerId])
   @@index([requesterId])
@@ -1761,26 +1809,27 @@ model Reservation {
 }
 
 model DeliveryGroup {
-  id                      String              @id @default(cuid())
-  learnerId               String              @map("learner_id")
-  supplierProfileId       String              @map("supplier_profile_id")
-  dropoffCity             String              @map("dropoff_city")
-  dropoffArea             String?             @map("dropoff_area")
-  deliveryAddressText     String?             @map("delivery_address_text")
-  deliveryFee             Decimal             @map("delivery_fee") @db.Decimal(12, 2)
-  currency                String              @default("NIS")
-  deliveryZone            DeliveryZone        @map("delivery_zone")
-  status                  DeliveryGroupStatus @default(OPEN)
-  windowStart             DateTime            @map("window_start")
-  windowEnd               DateTime            @map("window_end")
-  assignedDriverProfileId String?             @map("assigned_driver_profile_id")
-  createdAt               DateTime            @default(now()) @map("created_at")
-  updatedAt               DateTime            @updatedAt @map("updated_at")
-  learner                 User                @relation("DeliveryGroupLearner", fields: [learnerId], references: [id], onDelete: Cascade)
-  supplierProfile         SupplierProfile     @relation(fields: [supplierProfileId], references: [id], onDelete: Cascade)
-  assignedDriverProfile   DriverProfile?      @relation("AssignedDriverDeliveryGroups", fields: [assignedDriverProfileId], references: [id], onDelete: SetNull)
-  reservations            Reservation[]
-  delivery                Delivery?
+  id                       String              @id @default(cuid())
+  learnerId                String              @map("learner_id")
+  supplierProfileId        String              @map("supplier_profile_id")
+  dropoffCity              String              @map("dropoff_city")
+  dropoffArea              String?             @map("dropoff_area")
+  deliveryAddressText      String?             @map("delivery_address_text")
+  deliveryFee              Decimal             @map("delivery_fee") @db.Decimal(12, 2)
+  currency                 String              @default("NIS")
+  deliveryZone             DeliveryZone        @map("delivery_zone")
+  status                   DeliveryGroupStatus @default(OPEN)
+  windowStart              DateTime            @map("window_start")
+  windowEnd                DateTime            @map("window_end")
+  assignedDriverProfileId  String?             @map("assigned_driver_profile_id")
+  createdAt                DateTime            @default(now()) @map("created_at")
+  updatedAt                DateTime            @updatedAt @map("updated_at")
+  learner                  User                @relation("DeliveryGroupLearner", fields: [learnerId], references: [id], onDelete: Cascade)
+  supplierProfile          SupplierProfile     @relation(fields: [supplierProfileId], references: [id], onDelete: Cascade)
+  assignedDriverProfile    DriverProfile?      @relation("AssignedDriverDeliveryGroups", fields: [assignedDriverProfileId], references: [id], onDelete: SetNull)
+  reservations             Reservation[]
+  delivery                 Delivery?
+  deliveryFeePaymentOrders PaymentOrder[]      @relation("PaymentOrderDeliveryGroup")
 
   @@index([learnerId, supplierProfileId, status])
   @@index([supplierProfileId])
@@ -2578,4 +2627,102 @@ model RecommendationEventOutbox {
   @@index([processedAt])
   @@index([createdAt])
   @@map("recommendation_event_outbox")
+}
+
+model PaymentOrder {
+  id              String             @id @default(cuid())
+  payerUserId     String             @map("payer_user_id")
+  purpose         PaymentPurpose
+  cycleNumber     Int                @default(1) @map("cycle_number")
+  status          PaymentOrderStatus @default(REQUIRES_PAYMENT)
+  currency        String
+  amount          Decimal            @db.Decimal(12, 2)
+  reservationId   String?            @map("reservation_id")
+  deliveryGroupId String?            @map("delivery_group_id")
+  paidAt          DateTime?          @map("paid_at")
+  cancelledAt     DateTime?          @map("cancelled_at")
+  refundedAt      DateTime?          @map("refunded_at")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  payer           User               @relation("PaymentOrderPayer", fields: [payerUserId], references: [id], onDelete: Restrict)
+  reservation     Reservation?       @relation("PaymentOrderReservation", fields: [reservationId], references: [id], onDelete: Restrict)
+  deliveryGroup   DeliveryGroup?     @relation("PaymentOrderDeliveryGroup", fields: [deliveryGroupId], references: [id], onDelete: Restrict)
+  attempts        PaymentAttempt[]
+  refund          PaymentRefund?
+
+  @@index([payerUserId, status])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([reservationId])
+  @@index([deliveryGroupId])
+  @@map("payment_orders")
+}
+
+model PaymentAttempt {
+  id               String                 @id @default(cuid())
+  paymentOrderId   String                 @map("payment_order_id")
+  provider         PaymentProviderType
+  providerMode     PaymentProviderMode    @map("provider_mode")
+  status           PaymentAttemptStatus   @default(CREATED)
+  amount           Decimal                @db.Decimal(12, 2)
+  currency         String
+  /// Bounded to PostgreSQL INTEGER; see PAYMENT_AMOUNT_MINOR_MAX / migration CHECKs.
+  amountMinor      Int                    @map("amount_minor")
+  providerRef      String?                @map("provider_ref")
+  checkoutRef      String?                @map("checkout_ref")
+  failureCode      String?                @map("failure_code")
+  failureMessage   String?                @map("failure_message")
+  providerMetadata Json?                  @map("provider_metadata")
+  expiresAt        DateTime?              @map("expires_at")
+  succeededAt      DateTime?              @map("succeeded_at")
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+  paymentOrder     PaymentOrder           @relation(fields: [paymentOrderId], references: [id], onDelete: Cascade)
+  providerEvents   PaymentProviderEvent[]
+  refunds          PaymentRefund[]
+
+  @@index([paymentOrderId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("payment_attempts")
+}
+
+model PaymentProviderEvent {
+  id               String                               @id @default(cuid())
+  provider         PaymentProviderType
+  providerEventId  String                               @map("provider_event_id")
+  eventType        String                               @map("event_type")
+  paymentAttemptId String?                              @map("payment_attempt_id")
+  payloadJson      Json                                 @map("payload_json")
+  signatureValid   Boolean                              @map("signature_valid")
+  processingStatus PaymentProviderEventProcessingStatus @default(RECEIVED) @map("processing_status")
+  processingError  String?                              @map("processing_error")
+  receivedAt       DateTime                             @default(now()) @map("received_at")
+  processedAt      DateTime?                            @map("processed_at")
+  paymentAttempt   PaymentAttempt?                      @relation(fields: [paymentAttemptId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, providerEventId])
+  @@index([paymentAttemptId])
+  @@index([processingStatus, receivedAt])
+  @@map("payment_provider_events")
+}
+
+model PaymentRefund {
+  id                String              @id @default(cuid())
+  paymentOrderId    String              @unique @map("payment_order_id")
+  paymentAttemptId  String              @map("payment_attempt_id")
+  status            PaymentRefundStatus @default(REQUESTED)
+  amount            Decimal             @db.Decimal(12, 2)
+  currency          String
+  reason            String?
+  providerRefundRef String?             @map("provider_refund_ref")
+  failureCode       String?             @map("failure_code")
+  failureMessage    String?             @map("failure_message")
+  requestedAt       DateTime            @default(now()) @map("requested_at")
+  succeededAt       DateTime?           @map("succeeded_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  paymentOrder      PaymentOrder        @relation(fields: [paymentOrderId], references: [id], onDelete: Restrict)
+  paymentAttempt    PaymentAttempt      @relation(fields: [paymentAttemptId], references: [id], onDelete: Restrict)
+
+  @@index([paymentAttemptId])
+  @@index([status])
+  @@map("payment_refunds")
 }

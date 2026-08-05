@@ -1,0 +1,635 @@
+import type { Prisma } from '../../generated/prisma/client.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
+
+import { PROVIDER_EVENT_TYPES } from './payments.constants.js';
+import { moneyDecimalToMinorUnits, moneyEquals } from './payments.money.js';
+import type { NormalizedProviderEvent } from './providers/payment-provider.js';
+
+const isUniqueConstraintError = (error: unknown): boolean =>
+  typeof error === 'object' &&
+  error !== null &&
+  'code' in error &&
+  (error as { code?: string }).code === 'P2002';
+
+const redactedPayload = (
+  event: NormalizedProviderEvent,
+): Prisma.InputJsonValue => ({
+  type: event.eventType,
+  attemptId: event.paymentAttemptId,
+  providerRef: event.providerRef,
+  amountMinor: event.amountMinor,
+  currency: event.currency,
+  providerRefundRef:
+    typeof event.payload.providerRefundRef === 'string'
+      ? event.payload.providerRefundRef
+      : null,
+  failureCode:
+    typeof event.payload.failureCode === 'string'
+      ? event.payload.failureCode
+      : null,
+});
+
+export type ProcessProviderEventResult = {
+  processingStatus:
+    | 'PROCESSED'
+    | 'IGNORED_DUPLICATE'
+    | 'REJECTED'
+    | 'RECEIVED';
+  paymentOrderId?: string;
+  paymentAttemptId?: string | null;
+  reason?: string;
+};
+
+const markRejected = async (
+  tx: Prisma.TransactionClient,
+  eventRowId: string,
+  error: string,
+) => {
+  await tx.paymentProviderEvent.update({
+    where: { id: eventRowId },
+    data: {
+      processingStatus: 'REJECTED',
+      processingError: error,
+      processedAt: new Date(),
+    },
+  });
+};
+
+const markProcessed = async (
+  tx: Prisma.TransactionClient,
+  eventRowId: string,
+  reason?: string,
+) => {
+  await tx.paymentProviderEvent.update({
+    where: { id: eventRowId },
+    data: {
+      processingStatus: 'PROCESSED',
+      processingError: reason ?? null,
+      processedAt: new Date(),
+    },
+  });
+};
+
+const requirePaymentSuccessFields = (
+  event: NormalizedProviderEvent,
+): string | null => {
+  if (!event.paymentAttemptId) return 'MISSING_ATTEMPT_ID';
+  if (!event.providerRef) return 'MISSING_PROVIDER_REF';
+  if (event.amountMinor == null) return 'MISSING_AMOUNT';
+  if (!event.currency) return 'MISSING_CURRENCY';
+  return null;
+};
+
+const requireRefundSuccessFields = (
+  event: NormalizedProviderEvent,
+): string | null => {
+  if (!event.paymentAttemptId) return 'MISSING_ATTEMPT_ID';
+  if (!event.providerRef) return 'MISSING_PROVIDER_REF';
+  if (typeof event.payload.providerRefundRef !== 'string') {
+    return 'MISSING_PROVIDER_REFUND_REF';
+  }
+  if (event.amountMinor == null) return 'MISSING_AMOUNT';
+  if (!event.currency) return 'MISSING_CURRENCY';
+  return null;
+};
+
+const requireDeclineIdentity = (
+  event: NormalizedProviderEvent,
+): string | null => {
+  if (!event.paymentAttemptId) return 'MISSING_ATTEMPT_ID';
+  return null;
+};
+
+export const processVerifiedProviderEvent = async (
+  event: NormalizedProviderEvent,
+  signatureValid: boolean,
+): Promise<ProcessProviderEventResult> => {
+  return runSerializableTransaction(async (tx) => {
+    let eventRow;
+    try {
+      // Never insert untrusted attempt IDs as FKs before resolution.
+      eventRow = await tx.paymentProviderEvent.create({
+        data: {
+          provider: event.provider,
+          providerEventId: event.providerEventId,
+          eventType: event.eventType,
+          paymentAttemptId: null,
+          payloadJson: redactedPayload(event),
+          signatureValid,
+          processingStatus: 'RECEIVED',
+        },
+      });
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        return { processingStatus: 'IGNORED_DUPLICATE' };
+      }
+      throw error;
+    }
+
+    if (!signatureValid) {
+      await markRejected(tx, eventRow.id, 'INVALID_SIGNATURE');
+      return { processingStatus: 'REJECTED', reason: 'INVALID_SIGNATURE' };
+    }
+
+    const externalAttemptId = event.paymentAttemptId;
+    if (!externalAttemptId) {
+      await markRejected(tx, eventRow.id, 'MISSING_ATTEMPT_ID');
+      return { processingStatus: 'REJECTED', reason: 'MISSING_ATTEMPT_ID' };
+    }
+
+    const attempt = await tx.paymentAttempt.findUnique({
+      where: { id: externalAttemptId },
+      include: {
+        paymentOrder: true,
+      },
+    });
+
+    if (!attempt) {
+      await markRejected(tx, eventRow.id, 'ATTEMPT_NOT_FOUND');
+      return { processingStatus: 'REJECTED', reason: 'ATTEMPT_NOT_FOUND' };
+    }
+
+    await tx.paymentProviderEvent.update({
+      where: { id: eventRow.id },
+      data: { paymentAttemptId: attempt.id },
+    });
+
+    const order = attempt.paymentOrder;
+    const orderAmountMinor = moneyDecimalToMinorUnits(order.amount);
+    const now = new Date();
+
+    if (event.provider !== attempt.provider) {
+      await markRejected(tx, eventRow.id, 'PROVIDER_MISMATCH');
+      return {
+        processingStatus: 'REJECTED',
+        reason: 'PROVIDER_MISMATCH',
+        paymentOrderId: order.id,
+        paymentAttemptId: attempt.id,
+      };
+    }
+
+    if (event.eventType === PROVIDER_EVENT_TYPES.PAYMENT_SUCCEEDED) {
+      const missing = requirePaymentSuccessFields(event);
+      if (missing) {
+        await markRejected(tx, eventRow.id, missing);
+        return {
+          processingStatus: 'REJECTED',
+          reason: missing,
+          paymentOrderId: order.id,
+          paymentAttemptId: attempt.id,
+        };
+      }
+
+      if (event.amountMinor !== attempt.amountMinor) {
+        await markRejected(tx, eventRow.id, 'AMOUNT_MISMATCH');
+        return {
+          processingStatus: 'REJECTED',
+          reason: 'AMOUNT_MISMATCH',
+          paymentOrderId: order.id,
+          paymentAttemptId: attempt.id,
+        };
+      }
+
+      if (event.amountMinor !== orderAmountMinor) {
+        await markRejected(tx, eventRow.id, 'ORDER_AMOUNT_MISMATCH');
+        return {
+          processingStatus: 'REJECTED',
+          reason: 'ORDER_AMOUNT_MISMATCH',
+          paymentOrderId: order.id,
+          paymentAttemptId: attempt.id,
+        };
+      }
+
+      if (event.currency!.toUpperCase() !== attempt.currency.toUpperCase()) {
+        await markRejected(tx, eventRow.id, 'CURRENCY_MISMATCH');
+        return {
+          processingStatus: 'REJECTED',
+          reason: 'CURRENCY_MISMATCH',
+          paymentOrderId: order.id,
+          paymentAttemptId: attempt.id,
+        };
+      }
+
+      if (event.currency!.toUpperCase() !== order.currency.toUpperCase()) {
+        await markRejected(tx, eventRow.id, 'ORDER_CURRENCY_MISMATCH');
+        return {
+          processingStatus: 'REJECTED',
+          reason: 'ORDER_CURRENCY_MISMATCH',
+          paymentOrderId: order.id,
+          paymentAttemptId: attempt.id,
+        };
+      }
+
+      if (
+        attempt.providerRef != null &&
+        event.providerRef !== attempt.providerRef
+      ) {
+        await markRejected(tx, eventRow.id, 'PROVIDER_REF_MISMATCH');
+        return {
+          processingStatus: 'REJECTED',
+          reason: 'PROVIDER_REF_MISMATCH',
+          paymentOrderId: order.id,
+          paymentAttemptId: attempt.id,
+        };
+      }
+
+      if (attempt.status === 'SUCCEEDED' && order.status === 'PAID') {
+        await markProcessed(tx, eventRow.id, 'IDEMPOTENT_SUCCESS');
+        return {
+          processingStatus: 'PROCESSED',
+          reason: 'IDEMPOTENT_SUCCESS',
+          paymentOrderId: order.id,
+          paymentAttemptId: attempt.id,
+        };
+      }
+
+      if (
+        order.status === 'PAID' ||
+        order.status === 'REFUND_PENDING' ||
+        order.status === 'REFUNDED'
+      ) {
+        if (attempt.status !== 'SUCCEEDED') {
+          await tx.paymentAttempt.update({
+            where: { id: attempt.id },
+            data: {
+              status: 'SUCCEEDED',
+              succeededAt: attempt.succeededAt ?? now,
+              failureCode: null,
+              failureMessage: null,
+              providerRef: attempt.providerRef ?? event.providerRef,
+            },
+          });
+        }
+
+        await markProcessed(tx, eventRow.id, 'DUPLICATE_SUCCESS_DIFFERENT_ATTEMPT');
+        return {
+          processingStatus: 'PROCESSED',
+          reason: 'DUPLICATE_SUCCESS_DIFFERENT_ATTEMPT',
+          paymentOrderId: order.id,
+          paymentAttemptId: attempt.id,
+        };
+      }
+
+      if (order.status === 'CANCELLED') {
+        await markProcessed(tx, eventRow.id, 'ORPHAN_SUCCESS_TERMINAL_ORDER');
+        return {
+          processingStatus: 'PROCESSED',
+          reason: 'ORPHAN_SUCCESS_TERMINAL_ORDER',
+          paymentOrderId: order.id,
+          paymentAttemptId: attempt.id,
+        };
+      }
+
+      if (attempt.status !== 'CREATED' && attempt.status !== 'PENDING') {
+        await markProcessed(tx, eventRow.id, 'LATE_SUCCESS_INACTIVE_ATTEMPT');
+        return {
+          processingStatus: 'PROCESSED',
+          reason: 'LATE_SUCCESS_INACTIVE_ATTEMPT',
+          paymentOrderId: order.id,
+          paymentAttemptId: attempt.id,
+        };
+      }
+
+      await tx.paymentAttempt.update({
+        where: { id: attempt.id },
+        data: {
+          status: 'SUCCEEDED',
+          succeededAt: now,
+          failureCode: null,
+          failureMessage: null,
+          providerRef: attempt.providerRef ?? event.providerRef,
+        },
+      });
+
+      await tx.paymentOrder.update({
+        where: { id: order.id },
+        data: {
+          status: 'PAID',
+          paidAt: now,
+        },
+      });
+
+      await markProcessed(tx, eventRow.id);
+      return {
+        processingStatus: 'PROCESSED',
+        paymentOrderId: order.id,
+        paymentAttemptId: attempt.id,
+      };
+    }
+
+    if (
+      event.eventType === PROVIDER_EVENT_TYPES.PAYMENT_DECLINED ||
+      event.eventType === PROVIDER_EVENT_TYPES.PAYMENT_CANCELLED ||
+      event.eventType === PROVIDER_EVENT_TYPES.PAYMENT_EXPIRED
+    ) {
+      const missing = requireDeclineIdentity(event);
+      if (missing) {
+        await markRejected(tx, eventRow.id, missing);
+        return { processingStatus: 'REJECTED', reason: missing };
+      }
+
+      if (
+        order.status === 'PAID' ||
+        order.status === 'REFUND_PENDING' ||
+        order.status === 'REFUNDED'
+      ) {
+        await markProcessed(tx, eventRow.id, 'LATE_FAILURE_IGNORED');
+        return {
+          processingStatus: 'PROCESSED',
+          reason: 'LATE_FAILURE_IGNORED',
+          paymentOrderId: order.id,
+          paymentAttemptId: attempt.id,
+        };
+      }
+
+      if (attempt.status === 'SUCCEEDED') {
+        await markProcessed(tx, eventRow.id, 'LATE_FAILURE_SUCCEEDED_ATTEMPT');
+        return {
+          processingStatus: 'PROCESSED',
+          reason: 'LATE_FAILURE_SUCCEEDED_ATTEMPT',
+          paymentOrderId: order.id,
+          paymentAttemptId: attempt.id,
+        };
+      }
+
+      const attemptStatus =
+        event.eventType === PROVIDER_EVENT_TYPES.PAYMENT_CANCELLED
+          ? 'CANCELLED'
+          : event.eventType === PROVIDER_EVENT_TYPES.PAYMENT_EXPIRED
+            ? 'EXPIRED'
+            : 'FAILED';
+
+      if (attempt.status === 'CREATED' || attempt.status === 'PENDING') {
+        await tx.paymentAttempt.update({
+          where: { id: attempt.id },
+          data: {
+            status: attemptStatus,
+            failureCode: attemptStatus,
+            failureMessage: `Provider reported ${event.eventType}`,
+          },
+        });
+      }
+
+      if (
+        order.status === 'CHECKOUT_PENDING' ||
+        order.status === 'REQUIRES_PAYMENT'
+      ) {
+        const activePending = await tx.paymentAttempt.count({
+          where: {
+            paymentOrderId: order.id,
+            status: { in: ['CREATED', 'PENDING'] },
+            id: { not: attempt.id },
+          },
+        });
+
+        if (activePending === 0) {
+          await tx.paymentOrder.update({
+            where: { id: order.id },
+            data: { status: 'REQUIRES_PAYMENT' },
+          });
+        }
+      }
+
+      await markProcessed(tx, eventRow.id);
+      return {
+        processingStatus: 'PROCESSED',
+        paymentOrderId: order.id,
+        paymentAttemptId: attempt.id,
+      };
+    }
+
+    if (event.eventType === PROVIDER_EVENT_TYPES.PAYMENT_PENDING) {
+      if (attempt.status === 'SUCCEEDED') {
+        await markProcessed(tx, eventRow.id, 'LATE_PENDING_SUCCEEDED_ATTEMPT');
+        return {
+          processingStatus: 'PROCESSED',
+          reason: 'LATE_PENDING_SUCCEEDED_ATTEMPT',
+          paymentOrderId: order.id,
+          paymentAttemptId: attempt.id,
+        };
+      }
+
+      if (
+        order.status === 'PAID' ||
+        order.status === 'REFUND_PENDING' ||
+        order.status === 'REFUNDED'
+      ) {
+        await markProcessed(tx, eventRow.id, 'LATE_PENDING_IGNORED');
+        return {
+          processingStatus: 'PROCESSED',
+          reason: 'LATE_PENDING_IGNORED',
+          paymentOrderId: order.id,
+          paymentAttemptId: attempt.id,
+        };
+      }
+
+      if (attempt.status === 'CREATED' || attempt.status === 'PENDING') {
+        await tx.paymentAttempt.update({
+          where: { id: attempt.id },
+          data: { status: 'PENDING' },
+        });
+      }
+
+      await markProcessed(tx, eventRow.id);
+      return {
+        processingStatus: 'PROCESSED',
+        paymentOrderId: order.id,
+        paymentAttemptId: attempt.id,
+      };
+    }
+
+    if (
+      event.eventType === PROVIDER_EVENT_TYPES.REFUND_PENDING ||
+      event.eventType === PROVIDER_EVENT_TYPES.REFUND_SUCCEEDED ||
+      event.eventType === PROVIDER_EVENT_TYPES.REFUND_FAILED
+    ) {
+      const refund = await tx.paymentRefund.findUnique({
+        where: { paymentOrderId: order.id },
+      });
+
+      if (!refund) {
+        await markRejected(tx, eventRow.id, 'REFUND_NOT_FOUND');
+        return {
+          processingStatus: 'REJECTED',
+          reason: 'REFUND_NOT_FOUND',
+          paymentOrderId: order.id,
+          paymentAttemptId: attempt.id,
+        };
+      }
+
+      if (
+        refund.status === 'SUCCEEDED' ||
+        order.status === 'REFUNDED'
+      ) {
+        const reason =
+          event.eventType === PROVIDER_EVENT_TYPES.REFUND_PENDING
+            ? 'LATE_REFUND_PENDING_IGNORED'
+            : event.eventType === PROVIDER_EVENT_TYPES.REFUND_FAILED
+              ? 'LATE_REFUND_FAILED_IGNORED'
+              : 'IDEMPOTENT_REFUND_SUCCESS';
+        await markProcessed(tx, eventRow.id, reason);
+        return {
+          processingStatus: 'PROCESSED',
+          reason,
+          paymentOrderId: order.id,
+          paymentAttemptId: attempt.id,
+        };
+      }
+
+      if (event.eventType === PROVIDER_EVENT_TYPES.REFUND_PENDING) {
+        await tx.paymentRefund.update({
+          where: { id: refund.id },
+          data: { status: 'PENDING' },
+        });
+        if (order.status === 'PAID' || order.status === 'REFUND_PENDING') {
+          await tx.paymentOrder.update({
+            where: { id: order.id },
+            data: { status: 'REFUND_PENDING' },
+          });
+        }
+      } else if (event.eventType === PROVIDER_EVENT_TYPES.REFUND_SUCCEEDED) {
+        const missing = requireRefundSuccessFields(event);
+        if (missing) {
+          await markRejected(tx, eventRow.id, missing);
+          return {
+            processingStatus: 'REJECTED',
+            reason: missing,
+            paymentOrderId: order.id,
+            paymentAttemptId: attempt.id,
+          };
+        }
+
+        if (event.amountMinor !== attempt.amountMinor) {
+          await markRejected(tx, eventRow.id, 'AMOUNT_MISMATCH');
+          return {
+            processingStatus: 'REJECTED',
+            reason: 'AMOUNT_MISMATCH',
+            paymentOrderId: order.id,
+            paymentAttemptId: attempt.id,
+          };
+        }
+
+        if (event.amountMinor !== orderAmountMinor) {
+          await markRejected(tx, eventRow.id, 'ORDER_AMOUNT_MISMATCH');
+          return {
+            processingStatus: 'REJECTED',
+            reason: 'ORDER_AMOUNT_MISMATCH',
+            paymentOrderId: order.id,
+            paymentAttemptId: attempt.id,
+          };
+        }
+
+        if (!moneyEquals(refund.amount, order.amount)) {
+          await markRejected(tx, eventRow.id, 'REFUND_AMOUNT_MISMATCH');
+          return {
+            processingStatus: 'REJECTED',
+            reason: 'REFUND_AMOUNT_MISMATCH',
+            paymentOrderId: order.id,
+            paymentAttemptId: attempt.id,
+          };
+        }
+
+        if (event.currency!.toUpperCase() !== attempt.currency.toUpperCase()) {
+          await markRejected(tx, eventRow.id, 'CURRENCY_MISMATCH');
+          return {
+            processingStatus: 'REJECTED',
+            reason: 'CURRENCY_MISMATCH',
+            paymentOrderId: order.id,
+            paymentAttemptId: attempt.id,
+          };
+        }
+
+        if (event.currency!.toUpperCase() !== order.currency.toUpperCase()) {
+          await markRejected(tx, eventRow.id, 'ORDER_CURRENCY_MISMATCH');
+          return {
+            processingStatus: 'REJECTED',
+            reason: 'ORDER_CURRENCY_MISMATCH',
+            paymentOrderId: order.id,
+            paymentAttemptId: attempt.id,
+          };
+        }
+
+        if (
+          attempt.providerRef != null &&
+          event.providerRef !== attempt.providerRef
+        ) {
+          await markRejected(tx, eventRow.id, 'PROVIDER_REF_MISMATCH');
+          return {
+            processingStatus: 'REJECTED',
+            reason: 'PROVIDER_REF_MISMATCH',
+            paymentOrderId: order.id,
+            paymentAttemptId: attempt.id,
+          };
+        }
+
+        const providerRefundRef = event.payload.providerRefundRef as string;
+        if (
+          refund.providerRefundRef != null &&
+          refund.providerRefundRef !== providerRefundRef
+        ) {
+          await markRejected(tx, eventRow.id, 'PROVIDER_REFUND_REF_MISMATCH');
+          return {
+            processingStatus: 'REJECTED',
+            reason: 'PROVIDER_REFUND_REF_MISMATCH',
+            paymentOrderId: order.id,
+            paymentAttemptId: attempt.id,
+          };
+        }
+
+        await tx.paymentRefund.update({
+          where: { id: refund.id },
+          data: {
+            status: 'SUCCEEDED',
+            succeededAt: now,
+            failureCode: null,
+            failureMessage: null,
+            providerRefundRef,
+          },
+        });
+        await tx.paymentOrder.update({
+          where: { id: order.id },
+          data: {
+            status: 'REFUNDED',
+            refundedAt: now,
+          },
+        });
+      } else {
+        await tx.paymentRefund.update({
+          where: { id: refund.id },
+          data: {
+            status: 'FAILED',
+            failureCode:
+              typeof event.payload.failureCode === 'string'
+                ? event.payload.failureCode
+                : 'REFUND_FAILED',
+            failureMessage:
+              typeof event.payload.failureMessage === 'string'
+                ? event.payload.failureMessage
+                : 'Provider refund failed',
+          },
+        });
+        if (order.status === 'REFUND_PENDING') {
+          await tx.paymentOrder.update({
+            where: { id: order.id },
+            data: { status: 'PAID' },
+          });
+        }
+      }
+
+      await markProcessed(tx, eventRow.id);
+      return {
+        processingStatus: 'PROCESSED',
+        paymentOrderId: order.id,
+        paymentAttemptId: attempt.id,
+      };
+    }
+
+    await markRejected(tx, eventRow.id, 'UNKNOWN_EVENT_TYPE');
+    return {
+      processingStatus: 'REJECTED',
+      reason: 'UNKNOWN_EVENT_TYPE',
+      paymentOrderId: order.id,
+      paymentAttemptId: attempt.id,
+    };
+  });
+};
