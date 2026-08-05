@@ -418,6 +418,41 @@ enum ProjectBuildItemStatus {
   ALTERNATIVE
 }
 
+enum ProjectLearningPackStatus {
+  GENERATING
+  READY
+  FAILED
+  STALE
+}
+
+enum ProjectLearningQuestionStage {
+  START
+  STEP
+  FINAL
+}
+
+enum ProjectLearningQuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  BEST_ACTION
+}
+
+enum ProjectLearningAssignmentStatus {
+  NOT_ATTEMPTED
+  ANSWERED
+  SKIPPED
+}
+
+enum ProjectBuildLearningFeedbackType {
+  UNCLEAR
+}
+
+enum ProjectBuildLearningGoalOutcome {
+  ACHIEVED
+  PARTIALLY_ACHIEVED
+  NOT_YET_ACHIEVED
+}
+
 enum RecommendationEntityType {
   MATERIAL
   PROJECT
@@ -495,84 +530,85 @@ enum CommentStatus {
 }
 
 model User {
-  id                                     String                            @id @default(cuid())
-  displayName                            String                            @map("display_name")
-  email                                  String                            @unique
-  phone                                  String?                           @unique
-  passwordHash                           String                            @map("password_hash")
-  accountStatus                          AccountStatus                     @default(PENDING_VERIFICATION) @map("account_status")
-  recommendationEvidenceEligibility      RecommendationEvidenceEligibility @default(ELIGIBLE) @map("recommendation_evidence_eligibility")
-  profileImageUrl                        String?                           @map("profile_image_url")
-  emailVerifiedAt                        DateTime?                         @map("email_verified_at")
-  phoneVerifiedAt                        DateTime?                         @map("phone_verified_at")
-  lastLoginAt                            DateTime?                         @map("last_login_at")
-  activeRole                             UserRole?                         @map("active_role")
-  suspensionReason                       String?                           @map("suspension_reason")
-  suspendedAt                            DateTime?                         @map("suspended_at")
-  suspendedById                          String?                           @map("suspended_by_id")
-  reactivatedAt                          DateTime?                         @map("reactivated_at")
-  reactivatedById                        String?                           @map("reactivated_by_id")
-  createdAt                              DateTime                          @default(now()) @map("created_at")
-  updatedAt                              DateTime                          @updatedAt @map("updated_at")
+  id                                     String                                 @id @default(cuid())
+  displayName                            String                                 @map("display_name")
+  email                                  String                                 @unique
+  phone                                  String?                                @unique
+  passwordHash                           String                                 @map("password_hash")
+  accountStatus                          AccountStatus                          @default(PENDING_VERIFICATION) @map("account_status")
+  recommendationEvidenceEligibility      RecommendationEvidenceEligibility      @default(ELIGIBLE) @map("recommendation_evidence_eligibility")
+  profileImageUrl                        String?                                @map("profile_image_url")
+  emailVerifiedAt                        DateTime?                              @map("email_verified_at")
+  phoneVerifiedAt                        DateTime?                              @map("phone_verified_at")
+  lastLoginAt                            DateTime?                              @map("last_login_at")
+  activeRole                             UserRole?                              @map("active_role")
+  suspensionReason                       String?                                @map("suspension_reason")
+  suspendedAt                            DateTime?                              @map("suspended_at")
+  suspendedById                          String?                                @map("suspended_by_id")
+  reactivatedAt                          DateTime?                              @map("reactivated_at")
+  reactivatedById                        String?                                @map("reactivated_by_id")
+  createdAt                              DateTime                               @default(now()) @map("created_at")
+  updatedAt                              DateTime                               @updatedAt @map("updated_at")
   roles                                  UserRoleAssignment[]
   authTokens                             AuthToken[]
   learnerProfile                         LearnerProfile?
   supplierProfile                        SupplierProfile?
   driverProfile                          DriverProfile?
-  invitedRoles                           RoleInvitation[]                  @relation("RoleInvitationInvitedBy")
-  usedInvitations                        RoleInvitation[]                  @relation("RoleInvitationUsedByUser")
-  assignedRoles                          UserRoleAssignment[]              @relation("UserRoleAssignedBy")
-  ownedMaterials                         Material[]                        @relation("MaterialOwner")
-  ownedReservationsAsOwner               Reservation[]                     @relation("ReservationOwner")
-  ownedReservationsAsRequester           Reservation[]                     @relation("ReservationRequester")
-  deliveryGroupsAsLearner                DeliveryGroup[]                   @relation("DeliveryGroupLearner")
-  reservationStatusChanges               ReservationStatusHistory[]        @relation("ReservationStatusChangedBy")
-  requestedDeliveries                    Delivery[]                        @relation("DeliveryRequestedBy")
-  deliveryAssignmentsMade                DeliveryAssignment[]              @relation("DeliveryAssignedBy")
-  deliveryStatusChanges                  DeliveryStatusHistory[]           @relation("DeliveryStatusChangedBy")
+  invitedRoles                           RoleInvitation[]                       @relation("RoleInvitationInvitedBy")
+  usedInvitations                        RoleInvitation[]                       @relation("RoleInvitationUsedByUser")
+  assignedRoles                          UserRoleAssignment[]                   @relation("UserRoleAssignedBy")
+  ownedMaterials                         Material[]                             @relation("MaterialOwner")
+  ownedReservationsAsOwner               Reservation[]                          @relation("ReservationOwner")
+  ownedReservationsAsRequester           Reservation[]                          @relation("ReservationRequester")
+  deliveryGroupsAsLearner                DeliveryGroup[]                        @relation("DeliveryGroupLearner")
+  reservationStatusChanges               ReservationStatusHistory[]             @relation("ReservationStatusChangedBy")
+  requestedDeliveries                    Delivery[]                             @relation("DeliveryRequestedBy")
+  deliveryAssignmentsMade                DeliveryAssignment[]                   @relation("DeliveryAssignedBy")
+  deliveryStatusChanges                  DeliveryStatusHistory[]                @relation("DeliveryStatusChangedBy")
   idempotencyRecords                     IdempotencyRecord[]
   notifications                          Notification[]
-  reviewsGiven                           Review[]                          @relation("ReviewReviewer")
-  reviewsReceived                        Review[]                          @relation("ReviewReviewedUser")
-  createdLearningProjects                LearningProject[]                 @relation("LearningProjectCreatedBy")
-  reviewedLearningProjects               LearningProject[]                 @relation("LearningProjectReviewedBy")
-  supplierVerificationsReviewed          SupplierProfile[]                 @relation("SupplierVerificationReviewedBy")
-  approvedProjectSteps                   ProjectStep[]                     @relation("ProjectStepApprovedBy")
+  reviewsGiven                           Review[]                               @relation("ReviewReviewer")
+  reviewsReceived                        Review[]                               @relation("ReviewReviewedUser")
+  createdLearningProjects                LearningProject[]                      @relation("LearningProjectCreatedBy")
+  reviewedLearningProjects               LearningProject[]                      @relation("LearningProjectReviewedBy")
+  supplierVerificationsReviewed          SupplierProfile[]                      @relation("SupplierVerificationReviewedBy")
+  approvedProjectSteps                   ProjectStep[]                          @relation("ProjectStepApprovedBy")
   priceRuleRequests                      PriceRuleRequest[]
   categoryRequests                       CategoryRequest[]
-  materialReportsSubmitted               MaterialReport[]                  @relation("MaterialReportReporter")
-  materialReportsReviewed                MaterialReport[]                  @relation("MaterialReportReviewedBy")
-  reservationMessagesSent                ReservationMessage[]              @relation("ReservationMessageSender")
-  noShowReportsSubmitted                 NoShowReport[]                    @relation("NoShowReportReporter")
-  noShowReportsTargeted                  NoShowReport[]                    @relation("NoShowReportTarget")
-  noShowReportsReviewed                  NoShowReport[]                    @relation("NoShowReportReviewedBy")
-  moderatedMaterials                     Material[]                        @relation("MaterialModeratedBy")
-  supplierFollows                        SupplierFollower[]                @relation("SupplierFollowerUser")
-  materialLikes                          MaterialLike[]                    @relation("MaterialLikeUser")
-  materialViews                          MaterialView[]                    @relation("MaterialViewUser")
-  projectLikes                           ProjectLike[]                     @relation("ProjectLikeUser")
-  projectSaves                           ProjectSave[]                     @relation("ProjectSaveUser")
-  projectFollows                         ProjectFollow[]                   @relation("ProjectFollowUser")
-  projectReviews                         ProjectUserReview[]               @relation("ProjectUserReviewUser")
-  projectBuilds                          ProjectBuild[]                    @relation("ProjectBuildLearner")
+  materialReportsSubmitted               MaterialReport[]                       @relation("MaterialReportReporter")
+  materialReportsReviewed                MaterialReport[]                       @relation("MaterialReportReviewedBy")
+  reservationMessagesSent                ReservationMessage[]                   @relation("ReservationMessageSender")
+  noShowReportsSubmitted                 NoShowReport[]                         @relation("NoShowReportReporter")
+  noShowReportsTargeted                  NoShowReport[]                         @relation("NoShowReportTarget")
+  noShowReportsReviewed                  NoShowReport[]                         @relation("NoShowReportReviewedBy")
+  moderatedMaterials                     Material[]                             @relation("MaterialModeratedBy")
+  supplierFollows                        SupplierFollower[]                     @relation("SupplierFollowerUser")
+  materialLikes                          MaterialLike[]                         @relation("MaterialLikeUser")
+  materialViews                          MaterialView[]                         @relation("MaterialViewUser")
+  projectLikes                           ProjectLike[]                          @relation("ProjectLikeUser")
+  projectSaves                           ProjectSave[]                          @relation("ProjectSaveUser")
+  projectFollows                         ProjectFollow[]                        @relation("ProjectFollowUser")
+  projectReviews                         ProjectUserReview[]                    @relation("ProjectUserReviewUser")
+  projectBuilds                          ProjectBuild[]                         @relation("ProjectBuildLearner")
   savedLocations                         UserSavedLocation[]
-  suspendedBy                            User?                             @relation("UserSuspendedBy", fields: [suspendedById], references: [id], onDelete: SetNull)
-  accountsSuspended                      User[]                            @relation("UserSuspendedBy")
-  reactivatedBy                          User?                             @relation("UserReactivatedBy", fields: [reactivatedById], references: [id], onDelete: SetNull)
-  accountsReactivated                    User[]                            @relation("UserReactivatedBy")
+  suspendedBy                            User?                                  @relation("UserSuspendedBy", fields: [suspendedById], references: [id], onDelete: SetNull)
+  accountsSuspended                      User[]                                 @relation("UserSuspendedBy")
+  reactivatedBy                          User?                                  @relation("UserReactivatedBy", fields: [reactivatedById], references: [id], onDelete: SetNull)
+  accountsReactivated                    User[]                                 @relation("UserReactivatedBy")
   adminActivityLogs                      AdminActivityLog[]
   aiConversations                        AiConversation[]
   projectAuthoringSessions               ProjectAuthoringSession[]
   aiPendingActions                       AiPendingAction[]
-  generatedAdminLearningProjectAiReviews LearningProjectAdminAiReview[]    @relation("LearningProjectAdminAiReviewGeneratedBy")
+  generatedAdminLearningProjectAiReviews LearningProjectAdminAiReview[]         @relation("LearningProjectAdminAiReviewGeneratedBy")
   recommendationGenerations              RecommendationGeneration[]
   recommendationRequests                 RecommendationRequest[]
   recommendationImpressions              RecommendationImpression[]
   recommendationActions                  RecommendationAction[]
-  comments                               Comment[]                         @relation("CommentAuthor")
-  commentsDeleted                        Comment[]                         @relation("CommentDeletedBy")
-  learnerMaterialRequests                LearnerMaterialRequest[]          @relation("LearnerMaterialRequestLearner")
-  learnerMaterialRequestMatches          LearnerMaterialRequestMatch[]     @relation("LearnerMaterialRequestMatchSupplier")
+  comments                               Comment[]                              @relation("CommentAuthor")
+  commentsDeleted                        Comment[]                              @relation("CommentDeletedBy")
+  learnerMaterialRequests                LearnerMaterialRequest[]               @relation("LearnerMaterialRequestLearner")
+  learnerMaterialRequestMatches          LearnerMaterialRequestMatch[]          @relation("LearnerMaterialRequestMatchSupplier")
+  learningQuestionFeedback               ProjectBuildLearningQuestionFeedback[] @relation("ProjectBuildLearningQuestionFeedbackLearner")
 
   @@index([suspendedById])
   @@index([reactivatedById])
@@ -884,6 +920,7 @@ model LearningProject {
   taxonomyConcepts         LearningProjectConcept[]
   comments                 Comment[]
   learnerMaterialRequests  LearnerMaterialRequest[]
+  learningPacks            ProjectLearningPack[]
 
   @@index([categoryId])
   @@index([createdBy])
@@ -958,20 +995,21 @@ model ProjectRequiredComponent {
 }
 
 model ProjectStep {
-  id             String                     @id @default(uuid())
-  projectId      String                     @map("project_id")
-  stepNumber     Int                        @map("step_number")
-  title          String
-  description    String
-  imageUrl       String?                    @map("image_url")
-  generatedByAi  Boolean                    @default(false) @map("generated_by_ai")
-  approvedBy     String?                    @map("approved_by")
-  reviewStatus   ProjectReviewStatus        @default(PENDING_REVIEW) @map("review_status")
-  createdAt      DateTime                   @default(now()) @map("created_at")
-  updatedAt      DateTime                   @updatedAt @map("updated_at")
-  project        LearningProject            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  approvedByUser User?                      @relation("ProjectStepApprovedBy", fields: [approvedBy], references: [id], onDelete: SetNull)
-  buildProgress  ProjectBuildStepProgress[]
+  id                String                     @id @default(uuid())
+  projectId         String                     @map("project_id")
+  stepNumber        Int                        @map("step_number")
+  title             String
+  description       String
+  imageUrl          String?                    @map("image_url")
+  generatedByAi     Boolean                    @default(false) @map("generated_by_ai")
+  approvedBy        String?                    @map("approved_by")
+  reviewStatus      ProjectReviewStatus        @default(PENDING_REVIEW) @map("review_status")
+  createdAt         DateTime                   @default(now()) @map("created_at")
+  updatedAt         DateTime                   @updatedAt @map("updated_at")
+  project           LearningProject            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  approvedByUser    User?                      @relation("ProjectStepApprovedBy", fields: [approvedBy], references: [id], onDelete: SetNull)
+  buildProgress     ProjectBuildStepProgress[]
+  learningQuestions ProjectLearningQuestion[]
 
   @@unique([projectId, stepNumber])
   @@index([projectId])
@@ -1205,6 +1243,7 @@ model ProjectBuild {
   learnerMaterialRequests LearnerMaterialRequest[]
   completionStory         ProjectBuildCompletionStory?
   completionSnapshot      ProjectBuildCompletionSnapshot?
+  learningSession         ProjectBuildLearningSession?
 
   @@unique([projectId, learnerId, attemptNumber])
   @@index([learnerId])
@@ -1251,6 +1290,168 @@ model ProjectBuildCompletionSnapshot {
   build     ProjectBuild @relation(fields: [buildId], references: [id], onDelete: Cascade)
 
   @@map("project_build_completion_snapshots")
+}
+
+model ProjectLearningPack {
+  id                      String                        @id @default(cuid())
+  projectId               String                        @map("project_id")
+  versionNumber           Int                           @map("version_number")
+  contentHash             String                        @map("content_hash")
+  hashAlgorithm           String                        @default("SHA-256") @map("hash_algorithm")
+  hashSchemaVersion       Int                           @default(1) @map("hash_schema_version")
+  status                  ProjectLearningPackStatus     @default(GENERATING)
+  generatedAt             DateTime?                     @map("generated_at")
+  failedAt                DateTime?                     @map("failed_at")
+  failureReason           String?                       @map("failure_reason") @db.Text
+  staleAt                 DateTime?                     @map("stale_at")
+  staleReason             String?                       @map("stale_reason") @db.Text
+  providerName            String?                       @map("provider_name")
+  modelName               String?                       @map("model_name")
+  generatorSchemaVersion  Int                           @default(1) @map("generator_schema_version")
+  promptVersion           String?                       @map("prompt_version")
+  generationStartedAt     DateTime?                     @map("generation_started_at")
+  generationCompletedAt   DateTime?                     @map("generation_completed_at")
+  generationAttemptCount  Int                           @default(0) @map("generation_attempt_count")
+  lastGenerationErrorCode String?                       @map("last_generation_error_code")
+  createdAt               DateTime                      @default(now()) @map("created_at")
+  updatedAt               DateTime                      @updatedAt @map("updated_at")
+  project                 LearningProject               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  questions               ProjectLearningQuestion[]
+  learningSessions        ProjectBuildLearningSession[]
+
+  @@unique([projectId, contentHash])
+  @@unique([projectId, versionNumber])
+  @@index([projectId])
+  @@index([projectId, status])
+  @@index([status])
+  @@map("project_learning_packs")
+}
+
+model ProjectLearningQuestion {
+  id                 String                                   @id @default(cuid())
+  packId             String                                   @map("pack_id")
+  stage              ProjectLearningQuestionStage
+  projectStepId      String?                                  @map("project_step_id")
+  questionType       ProjectLearningQuestionType              @map("question_type")
+  conceptKey         String                                   @map("concept_key")
+  promptEn           String                                   @map("prompt_en") @db.Text
+  promptAr           String                                   @map("prompt_ar") @db.Text
+  explanationEn      String                                   @map("explanation_en") @db.Text
+  explanationAr      String                                   @map("explanation_ar") @db.Text
+  hintEn             String                                   @map("hint_en") @db.Text
+  hintAr             String                                   @map("hint_ar") @db.Text
+  relativeDifficulty Int                                      @default(2) @map("relative_difficulty")
+  correctOptionKey   String                                   @map("correct_option_key")
+  orderScopeKey      String                                   @map("order_scope_key")
+  packDisplayOrder   Int                                      @map("pack_display_order")
+  createdAt          DateTime                                 @default(now()) @map("created_at")
+  updatedAt          DateTime                                 @updatedAt @map("updated_at")
+  pack               ProjectLearningPack                      @relation(fields: [packId], references: [id], onDelete: Cascade)
+  projectStep        ProjectStep?                             @relation(fields: [projectStepId], references: [id], onDelete: Restrict)
+  options            ProjectLearningQuestionOption[]
+  assignments        ProjectBuildLearningQuestionAssignment[]
+
+  @@unique([packId, stage, orderScopeKey, packDisplayOrder])
+  @@index([packId])
+  @@index([packId, stage])
+  @@index([projectStepId])
+  @@map("project_learning_questions")
+}
+
+model ProjectLearningQuestionOption {
+  id           String                  @id @default(cuid())
+  questionId   String                  @map("question_id")
+  optionKey    String                  @map("option_key")
+  textEn       String                  @map("text_en") @db.Text
+  textAr       String                  @map("text_ar") @db.Text
+  displayOrder Int                     @map("display_order")
+  createdAt    DateTime                @default(now()) @map("created_at")
+  updatedAt    DateTime                @updatedAt @map("updated_at")
+  question     ProjectLearningQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, optionKey])
+  @@index([questionId])
+  @@map("project_learning_question_options")
+}
+
+model ProjectBuildLearningSession {
+  id               String                                   @id @default(cuid())
+  buildId          String                                   @unique @map("build_id")
+  packId           String                                   @map("pack_id")
+  learningGoal     String?                                  @map("learning_goal") @db.Text
+  confidenceBefore Int?                                     @map("confidence_before")
+  confidenceAfter  Int?                                     @map("confidence_after")
+  goalOutcome      ProjectBuildLearningGoalOutcome?         @map("goal_outcome")
+  finalReflection  String?                                  @map("final_reflection") @db.Text
+  learningSummary  Json?                                    @map("learning_summary")
+  createdAt        DateTime                                 @default(now()) @map("created_at")
+  updatedAt        DateTime                                 @updatedAt @map("updated_at")
+  build            ProjectBuild                             @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  pack             ProjectLearningPack                      @relation(fields: [packId], references: [id], onDelete: Restrict)
+  assignments      ProjectBuildLearningQuestionAssignment[]
+
+  @@index([packId])
+  @@map("project_build_learning_sessions")
+}
+
+model ProjectBuildLearningQuestionAssignment {
+  id                       String                                 @id @default(cuid())
+  sessionId                String                                 @map("session_id")
+  questionId               String                                 @map("question_id")
+  stage                    ProjectLearningQuestionStage
+  projectStepId            String?                                @map("project_step_id")
+  orderScopeKey            String                                 @map("order_scope_key")
+  displayOrder             Int                                    @map("display_order")
+  status                   ProjectLearningAssignmentStatus        @default(NOT_ATTEMPTED)
+  hintViewedAt             DateTime?                              @map("hint_viewed_at")
+  aiExplanationRequestedAt DateTime?                              @map("ai_explanation_requested_at")
+  createdAt                DateTime                               @default(now()) @map("created_at")
+  updatedAt                DateTime                               @updatedAt @map("updated_at")
+  session                  ProjectBuildLearningSession            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question                 ProjectLearningQuestion                @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  answerAttempts           ProjectBuildLearningAnswerAttempt[]
+  feedback                 ProjectBuildLearningQuestionFeedback[]
+
+  @@unique([sessionId, questionId])
+  @@unique([sessionId, stage, orderScopeKey, displayOrder])
+  @@index([sessionId])
+  @@index([sessionId, status])
+  @@index([questionId])
+  @@map("project_build_learning_question_assignments")
+}
+
+model ProjectBuildLearningQuestionFeedback {
+  id           String                                 @id @default(cuid())
+  assignmentId String                                 @map("assignment_id")
+  learnerId    String                                 @map("learner_id")
+  type         ProjectBuildLearningFeedbackType
+  createdAt    DateTime                               @default(now()) @map("created_at")
+  updatedAt    DateTime                               @updatedAt @map("updated_at")
+  clearedAt    DateTime?                              @map("cleared_at")
+  assignment   ProjectBuildLearningQuestionAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  learner      User                                   @relation("ProjectBuildLearningQuestionFeedbackLearner", fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, type])
+  @@index([assignmentId])
+  @@index([learnerId])
+  @@index([type, clearedAt])
+  @@map("project_build_learning_question_feedback")
+}
+
+model ProjectBuildLearningAnswerAttempt {
+  id                String                                 @id @default(cuid())
+  assignmentId      String                                 @map("assignment_id")
+  attemptNumber     Int                                    @map("attempt_number")
+  selectedOptionKey String                                 @map("selected_option_key")
+  isCorrect         Boolean                                @map("is_correct")
+  submittedAt       DateTime                               @default(now()) @map("submitted_at")
+  createdAt         DateTime                               @default(now()) @map("created_at")
+  assignment        ProjectBuildLearningQuestionAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, attemptNumber])
+  @@index([assignmentId])
+  @@index([assignmentId, submittedAt])
+  @@map("project_build_learning_answer_attempts")
 }
 
 model ProjectBuildStepProgress {
