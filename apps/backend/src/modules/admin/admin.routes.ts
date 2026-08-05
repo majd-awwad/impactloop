@@ -94,19 +94,23 @@ import {
 import {
   exportAdminPeopleHandler,
   getAdminPerson,
+  getAdminPersonBuildLearning,
   getAdminPeopleSummary,
   listAdminPeople,
+  listAdminPersonBuildsLearning,
   preflightAdminPeopleExportHandler,
   reactivateAdminPerson,
   suspendAdminPerson,
 } from '../admin-people/admin-people.controller.js';
 import {
+  adminPeopleBuildLearningParamSchema,
   adminPeopleExportDownloadQuerySchema,
   adminPeopleExportFiltersSchema,
   adminPeopleListQuerySchema,
   adminPeopleUserIdParamSchema,
   suspendUserSchema,
 } from '../admin-people/admin-people.validation.js';
+import { paginationQuerySchema } from '../../utils/zod-helpers.js';
 import {
   exportAdminReservationsHandler,
   getAdminReservationHandler,
@@ -515,6 +519,23 @@ adminRouter.get(
   requireRoles('ADMIN'),
   validate(adminPeopleUserIdParamSchema, 'params'),
   asyncHandler(getAdminPerson),
+);
+
+adminRouter.get(
+  '/people/:id/builds',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminPeopleUserIdParamSchema, 'params'),
+  validate(paginationQuerySchema, 'query'),
+  asyncHandler(listAdminPersonBuildsLearning),
+);
+
+adminRouter.get(
+  '/people/:id/builds/:buildId/learning',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminPeopleBuildLearningParamSchema, 'params'),
+  asyncHandler(getAdminPersonBuildLearning),
 );
 
 adminRouter.patch(

@@ -19,12 +19,20 @@ export const adminPeopleUserIdParamSchema = z.object({
   id: z.string().trim().min(1),
 });
 
+export const adminPeopleBuildLearningParamSchema = z.object({
+  id: z.string().trim().min(1),
+  buildId: z.string().trim().min(1),
+});
+
 export const suspendUserSchema = z.object({
   reason: z.string().trim().min(3, 'Suspension reason is required.').max(2000),
 });
 
 export type AdminPeopleListQuery = z.infer<typeof adminPeopleListQuerySchema>;
 export type AdminPeopleUserIdParams = z.infer<typeof adminPeopleUserIdParamSchema>;
+export type AdminPeopleBuildLearningParams = z.infer<
+  typeof adminPeopleBuildLearningParamSchema
+>;
 export type SuspendUserInput = z.infer<typeof suspendUserSchema>;
 
 export const adminPeopleExportFiltersSchema = adminPeopleListQuerySchema.omit({
