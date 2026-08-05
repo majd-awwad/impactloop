@@ -41,6 +41,7 @@ import '../../features/learner_material_requests/presentation/pages/learner_mate
 import '../../features/learner_material_requests/presentation/pages/learner_material_requests_page.dart';
 import '../../features/learner_builds/presentation/pages/my_builds_page.dart';
 import '../../features/learner_builds/presentation/pages/portfolio_page.dart';
+import '../../features/project_notebook/presentation/pages/project_notebook_page.dart';
 import '../../features/locations/presentation/pages/saved_locations_page.dart';
 import '../../features/material_discovery/domain/material_discovery_query.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
@@ -210,6 +211,7 @@ _RouteAccessLevel _routeAccessForPath(String path) {
       path == '/learner/material-requests' ||
       path.startsWith('/learner/material-requests/') ||
       path == '/learner/builds' ||
+      (path.startsWith('/learner/builds/') && path.endsWith('/notebook')) ||
       path == '/learner/portfolio' ||
       path.startsWith('/home/recommendations/') ||
       path == '/materials/liked' ||
@@ -669,6 +671,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/learner/builds',
         builder: (context, state) => const MyBuildsPage(),
+      ),
+      GoRoute(
+        path: '/learner/builds/:buildId/notebook',
+        builder: (context, state) => ProjectNotebookPage(
+          buildId: state.pathParameters['buildId']!,
+        ),
       ),
       GoRoute(
         path: '/learner/portfolio',

@@ -18,6 +18,10 @@ const learnerPortfolioRoute = '/learner/portfolio';
 /// Canonical My Builds list route.
 const learnerBuildsRoute = '/learner/builds';
 
+/// Canonical private project notebook route for a specific build attempt.
+String learnerBuildNotebookRoute(String buildId) =>
+    '/learner/builds/$buildId/notebook';
+
 extension AppNavigationExtensions on BuildContext {
   void popOrGo(String fallbackLocation) {
     if (canPop()) {

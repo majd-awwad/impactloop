@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -10,6 +11,7 @@ import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../learning_hub/domain/models/project_build.dart';
+import '../../../project_notebook/presentation/l10n/project_notebook_l10n.dart';
 import '../../data/models/learner_build_models.dart';
 import '../l10n/learner_builds_l10n.dart';
 
@@ -160,10 +162,22 @@ class LearnerBuildListCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: palette.textMuted,
-                textDirection: Directionality.of(context),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: ProjectNotebookL10n.projectNotebook.resolve(context),
+                    onPressed: () => context.push(
+                      learnerBuildNotebookRoute(item.id),
+                    ),
+                    icon: const Icon(Icons.menu_book_outlined),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: palette.textMuted,
+                    textDirection: Directionality.of(context),
+                  ),
+                ],
               ),
             ],
           ),
