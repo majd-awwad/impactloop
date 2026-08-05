@@ -13,10 +13,12 @@ import {
   getCompletionStoryHandler,
   getLearnerBuildHandler,
   getLearnerPortfolioHandler,
+  getProjectBuildNotebookHandler,
   listLearnerBuildsHandler,
   pauseLearnerBuildHandler,
   resumeLearnerBuildHandler,
   updateCompletionStoryHandler,
+  updateProjectBuildNotebookHandler,
   uploadCompletionPhotoHandler,
 } from './learner-builds.controller.js';
 import {
@@ -26,6 +28,7 @@ import {
   listLearnerBuildsQuerySchema,
   updateCompletionStorySchema,
 } from './learner-builds.validation.js';
+import { updateProjectBuildNotebookSchema } from './learner-build-notebook.validation.js';
 
 export const learnerBuildsRouter = Router();
 
@@ -120,4 +123,23 @@ learnerBuildsRouter.delete(
   requireRoles('LEARNER'),
   validate(learnerBuildPhotoIdParamSchema, 'params'),
   asyncHandler(deleteCompletionPhotoHandler),
+);
+
+learnerBuildsRouter.get(
+  '/builds/:buildId/notebook',
+  privateNoStoreMiddleware,
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learnerBuildIdParamSchema, 'params'),
+  asyncHandler(getProjectBuildNotebookHandler),
+);
+
+learnerBuildsRouter.put(
+  '/builds/:buildId/notebook',
+  privateNoStoreMiddleware,
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learnerBuildIdParamSchema, 'params'),
+  validate(updateProjectBuildNotebookSchema),
+  asyncHandler(updateProjectBuildNotebookHandler),
 );

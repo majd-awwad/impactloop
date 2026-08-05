@@ -1244,6 +1244,7 @@ model ProjectBuild {
   completionStory         ProjectBuildCompletionStory?
   completionSnapshot      ProjectBuildCompletionSnapshot?
   learningSession         ProjectBuildLearningSession?
+  notebook                ProjectBuildNotebook?
 
   @@unique([projectId, learnerId, attemptNumber])
   @@index([learnerId])
@@ -1290,6 +1291,17 @@ model ProjectBuildCompletionSnapshot {
   build     ProjectBuild @relation(fields: [buildId], references: [id], onDelete: Cascade)
 
   @@map("project_build_completion_snapshots")
+}
+
+model ProjectBuildNotebook {
+  id        String       @id @default(cuid())
+  buildId   String       @unique @map("build_id")
+  content   Json
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  build     ProjectBuild @relation(fields: [buildId], references: [id], onDelete: Cascade)
+
+  @@map("project_build_notebooks")
 }
 
 model ProjectLearningPack {
