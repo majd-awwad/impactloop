@@ -1,6 +1,8 @@
 import 'learning_project.dart';
 import 'project_build_material_link.dart';
+import 'learning_session.dart';
 
+export 'learning_session.dart';
 export 'project_build_material_link.dart';
 
 enum ProjectBuildStatus { inProgress, paused, completed, archived }
@@ -306,6 +308,7 @@ class ProjectBuild {
     this.guideConversationId,
     this.completionStory,
     this.impactSummary,
+    this.learningSetup,
   });
 
   final String id;
@@ -326,6 +329,7 @@ class ProjectBuild {
   final String? guideConversationId;
   final ProjectBuildCompletionStory? completionStory;
   final ProjectBuildImpactSummary? impactSummary;
+  final ProjectBuildLearningSetup? learningSetup;
 
   bool get isEditingLocked =>
       isReadOnly ||

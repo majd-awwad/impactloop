@@ -12,6 +12,12 @@ const learnerShellTabRoutes = {
   '/profile',
 };
 
+/// Canonical learner private Portfolio route (registered in [appRouterProvider]).
+const learnerPortfolioRoute = '/learner/portfolio';
+
+/// Canonical My Builds list route.
+const learnerBuildsRoute = '/learner/builds';
+
 extension AppNavigationExtensions on BuildContext {
   void popOrGo(String fallbackLocation) {
     if (canPop()) {

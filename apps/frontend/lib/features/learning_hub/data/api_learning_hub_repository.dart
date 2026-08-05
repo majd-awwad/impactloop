@@ -304,6 +304,298 @@ class ApiLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<LearningSessionBundle> fetchLearningSession(String projectId) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session',
+      ),
+      LearningHubApiMapper.fromLearningSessionBundleJson,
+    );
+  }
+
+  @override
+  Future<LearningSessionBundle> setupLearningSession(
+    String projectId, {
+    String? learningGoal,
+    int? confidenceBefore,
+  }) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/setup',
+        data: {
+          'learningGoal': ?learningGoal?.trim(),
+          'confidenceBefore': ?confidenceBefore,
+        },
+      ),
+      (json) {
+        final sessionJson = json['session'];
+        final setupJson = json['learningSetup'];
+        return LearningSessionBundle(
+          session: sessionJson is Map
+              ? LearningHubApiMapper.fromLearningSessionJson(
+                  Map<String, dynamic>.from(sessionJson),
+                )
+              : null,
+          learningSetup: setupJson is Map
+              ? LearningHubApiMapper.fromLearningSessionBundleJson({
+                  'learningSetup': setupJson,
+                }).learningSetup
+              : const ProjectBuildLearningSetup(
+                  status: LearningSetupStatus.notRequested,
+                ),
+        );
+      },
+    );
+  }
+
+  @override
+  Future<BuildLearningSession> updateLearningSession(
+    String projectId, {
+    String? learningGoal,
+    int? confidenceBefore,
+  }) {
+    return unwrapApiResponse(
+      _client.patch<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session',
+        data: {
+          'learningGoal': ?learningGoal?.trim(),
+          'confidenceBefore': ?confidenceBefore,
+        },
+      ),
+      LearningHubApiMapper.fromLearningSessionJson,
+    );
+  }
+
+  @override
+  Future<LearningAnswerSubmissionResult> submitLearningAnswer(
+    String projectId,
+    String assignmentId, {
+    required String selectedOptionKey,
+  }) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/assignments/$assignmentId/answer',
+        data: {'selectedOptionKey': selectedOptionKey},
+      ),
+      LearningHubApiMapper.fromLearningAnswerSubmissionJson,
+    );
+  }
+
+  @override
+  Future<LearningAssignment> skipLearningAssignment(
+    String projectId,
+    String assignmentId,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/assignments/$assignmentId/skip',
+      ),
+      LearningHubApiMapper.fromLearningAssignmentJson,
+    );
+  }
+
+  @override
+  Future<LearningAssignment> viewLearningHint(
+    String projectId,
+    String assignmentId,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/assignments/$assignmentId/hint',
+      ),
+      LearningHubApiMapper.fromLearningAssignmentJson,
+    );
+  }
+
+  @override
+  Future<StepLearningCheck?> fetchStepLearningCheck(
+    String projectId,
+    String stepId,
+  ) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/steps/$stepId/check',
+      ),
+      LearningHubApiMapper.fromStepLearningCheckResponseJson,
+    );
+  }
+
+  @override
+  Future<StepLearningCheck> viewStepLearningCheckHint(
+    String projectId,
+    String stepId,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/steps/$stepId/check/hint',
+      ),
+      (json) => LearningHubApiMapper.fromStepLearningCheckJson(
+        Map<String, dynamic>.from(json['check'] as Map),
+      ),
+    );
+  }
+
+  @override
+  Future<StepLearningCheckAnswerSubmission> submitStepLearningCheckAnswer(
+    String projectId,
+    String stepId, {
+    required String selectedOptionKey,
+  }) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/steps/$stepId/check/answer',
+        data: {'selectedOptionKey': selectedOptionKey},
+      ),
+      LearningHubApiMapper.fromStepLearningCheckAnswerSubmissionJson,
+    );
+  }
+
+  @override
+  Future<StepLearningCheck> skipStepLearningCheck(
+    String projectId,
+    String stepId,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/steps/$stepId/check/skip',
+      ),
+      (json) => LearningHubApiMapper.fromStepLearningCheckJson(
+        Map<String, dynamic>.from(json['check'] as Map),
+      ),
+    );
+  }
+
+  @override
+  Future<StepLearningCheckAiHandoff> fetchStepLearningCheckAiHandoff(
+    String projectId,
+    String stepId,
+  ) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/steps/$stepId/check/ai-handoff',
+      ),
+      LearningHubApiMapper.fromStepLearningCheckAiHandoffJson,
+    );
+  }
+
+  @override
+  Future<FinalLearningCheck> fetchFinalLearningCheck(String projectId) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/final-check',
+      ),
+      LearningHubApiMapper.fromFinalLearningCheckResponseJson,
+    );
+  }
+
+  @override
+  Future<FinalLearningAssignment> viewFinalLearningCheckHint(
+    String projectId,
+    String assignmentId,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/final-check/assignments/$assignmentId/hint',
+      ),
+      (json) => LearningHubApiMapper.fromFinalLearningAssignmentJson(
+        Map<String, dynamic>.from(json['assignment'] as Map),
+      ),
+    );
+  }
+
+  @override
+  Future<FinalLearningCheckAnswerSubmission> submitFinalLearningCheckAnswer(
+    String projectId,
+    String assignmentId, {
+    required String selectedOptionKey,
+  }) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/final-check/assignments/$assignmentId/answer',
+        data: {'selectedOptionKey': selectedOptionKey},
+      ),
+      LearningHubApiMapper.fromFinalLearningCheckAnswerSubmissionJson,
+    );
+  }
+
+  @override
+  Future<FinalLearningCheckAnswerSubmission> skipFinalLearningCheckAssignment(
+    String projectId,
+    String assignmentId,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/final-check/assignments/$assignmentId/skip',
+      ),
+      LearningHubApiMapper.fromFinalLearningCheckAnswerSubmissionJson,
+    );
+  }
+
+  @override
+  Future<FinalLearningCheckAiHandoff> fetchFinalLearningCheckAiHandoff(
+    String projectId,
+    String assignmentId,
+  ) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/final-check/assignments/$assignmentId/ai-handoff',
+      ),
+      LearningHubApiMapper.fromFinalLearningCheckAiHandoffJson,
+    );
+  }
+
+  @override
+  Future<LearningCompletionReflectionResult> updateLearningCompletionReflection(
+    String projectId, {
+    LearningGoalOutcome? goalOutcome,
+    int? confidenceAfter,
+    String? finalReflection,
+  }) {
+    return unwrapApiResponse(
+      _client.patch<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/completion-reflection',
+        data: {
+          if (goalOutcome != null)
+            'goalOutcome': switch (goalOutcome) {
+              LearningGoalOutcome.achieved => 'ACHIEVED',
+              LearningGoalOutcome.partiallyAchieved => 'PARTIALLY_ACHIEVED',
+              LearningGoalOutcome.notYetAchieved => 'NOT_YET_ACHIEVED',
+            },
+          'confidenceAfter': ?confidenceAfter,
+          'finalReflection': ?finalReflection,
+        },
+      ),
+      LearningHubApiMapper.fromLearningCompletionReflectionJson,
+    );
+  }
+
+  @override
+  Future<void> reportLearningAssignmentUnclear(
+    String projectId,
+    String assignmentId,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/assignments/$assignmentId/report-unclear',
+      ),
+      (_) {},
+    );
+  }
+
+  @override
+  Future<void> clearLearningAssignmentUnclearReport(
+    String projectId,
+    String assignmentId,
+  ) {
+    return unwrapApiResponse(
+      _client.delete<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/learning-session/assignments/$assignmentId/report-unclear',
+      ),
+      (_) {},
+    );
+  }
+
+  @override
   Future<List<MaterialCategory>> fetchProjectCategories() {
     return _categoriesApi.fetchProjectCategories();
   }
@@ -489,7 +781,7 @@ class ApiLearningHubRepository implements LearningProjectRepository {
           'ideaText': ideaText,
           'categoryId': categoryId,
           'difficulty': difficulty,
-          if (locale != null) 'locale': locale,
+          'locale': ?locale,
         },
         options: Options(headers: {'Idempotency-Key': idempotencyKey}),
       ),
@@ -505,7 +797,7 @@ class ApiLearningHubRepository implements LearningProjectRepository {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '$_basePath/mine/$projectId/authoring-conversation',
-        data: {if (locale != null) 'locale': locale},
+        data: {'locale': ?locale},
       ),
       LearningHubApiMapper.authoringSessionFromJson,
     );

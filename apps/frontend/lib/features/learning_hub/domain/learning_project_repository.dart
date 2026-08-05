@@ -88,6 +88,102 @@ abstract class LearningProjectRepository {
     String projectId,
   );
 
+  Future<LearningSessionBundle> fetchLearningSession(String projectId);
+
+  Future<LearningSessionBundle> setupLearningSession(
+    String projectId, {
+    String? learningGoal,
+    int? confidenceBefore,
+  });
+
+  Future<BuildLearningSession> updateLearningSession(
+    String projectId, {
+    String? learningGoal,
+    int? confidenceBefore,
+  });
+
+  Future<LearningAnswerSubmissionResult> submitLearningAnswer(
+    String projectId,
+    String assignmentId, {
+    required String selectedOptionKey,
+  });
+
+  Future<LearningAssignment> skipLearningAssignment(
+    String projectId,
+    String assignmentId,
+  );
+
+  Future<LearningAssignment> viewLearningHint(
+    String projectId,
+    String assignmentId,
+  );
+
+  Future<StepLearningCheck?> fetchStepLearningCheck(
+    String projectId,
+    String stepId,
+  );
+
+  Future<StepLearningCheck> viewStepLearningCheckHint(
+    String projectId,
+    String stepId,
+  );
+
+  Future<StepLearningCheckAnswerSubmission> submitStepLearningCheckAnswer(
+    String projectId,
+    String stepId, {
+    required String selectedOptionKey,
+  });
+
+  Future<StepLearningCheck> skipStepLearningCheck(
+    String projectId,
+    String stepId,
+  );
+
+  Future<StepLearningCheckAiHandoff> fetchStepLearningCheckAiHandoff(
+    String projectId,
+    String stepId,
+  );
+
+  Future<FinalLearningCheck> fetchFinalLearningCheck(String projectId);
+
+  Future<FinalLearningAssignment> viewFinalLearningCheckHint(
+    String projectId,
+    String assignmentId,
+  );
+
+  Future<FinalLearningCheckAnswerSubmission> submitFinalLearningCheckAnswer(
+    String projectId,
+    String assignmentId, {
+    required String selectedOptionKey,
+  });
+
+  Future<FinalLearningCheckAnswerSubmission> skipFinalLearningCheckAssignment(
+    String projectId,
+    String assignmentId,
+  );
+
+  Future<FinalLearningCheckAiHandoff> fetchFinalLearningCheckAiHandoff(
+    String projectId,
+    String assignmentId,
+  );
+
+  Future<LearningCompletionReflectionResult> updateLearningCompletionReflection(
+    String projectId, {
+    LearningGoalOutcome? goalOutcome,
+    int? confidenceAfter,
+    String? finalReflection,
+  });
+
+  Future<void> reportLearningAssignmentUnclear(
+    String projectId,
+    String assignmentId,
+  );
+
+  Future<void> clearLearningAssignmentUnclearReport(
+    String projectId,
+    String assignmentId,
+  );
+
   Future<List<MaterialCategory>> fetchProjectCategories();
 
   Future<List<MaterialCategory>> fetchMaterialCategories();

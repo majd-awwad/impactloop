@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/auth/auth_interceptor.dart';
 import '../../../core/network/api_response.dart';
 import '../../learning_hub/data/learning_hub_api_mapper.dart';
 import '../../learning_hub/domain/models/project_build.dart';
@@ -36,7 +37,7 @@ class LearnerBuildsApi {
       _client.get<Map<String, dynamic>>(
         _buildsPath,
         queryParameters: {
-          if (status != null) 'status': status,
+          'status': ?status,
           'page': page,
           'limit': limit,
         },
@@ -54,7 +55,7 @@ class LearnerBuildsApi {
         _portfolioPath,
         queryParameters: {'page': page, 'limit': limit},
       ),
-      LearnerBuildListResult.fromJson,
+      (json) => LearnerBuildListResult.fromJson(json, portfolioMode: true),
     );
   }
 
@@ -103,18 +104,30 @@ class LearnerBuildsApi {
 
   Future<ProjectBuildCompletionStoryPhoto> uploadCompletionPhoto(
     String buildId, {
-    required String filePath,
+    required List<int> bytes,
+    required String fileName,
+    required String mimeType,
     String? caption,
   }) async {
     final formData = FormData.fromMap({
-      'photo': await MultipartFile.fromFile(filePath),
-      if (caption != null) 'caption': caption,
+      'photo': MultipartFile.fromBytes(
+        bytes,
+        filename: fileName,
+        contentType: DioMediaType.parse(mimeType),
+      ),
+      'caption': ?caption,
     });
 
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '$_buildsPath/$buildId/completion-story/photos',
         data: formData,
+        options: Options(
+          contentType: 'multipart/form-data',
+          sendTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 60),
+          extra: const {AuthInterceptor.skipAuthRefreshExtraKey: true},
+        ),
       ),
       (json) {
         final photo = json['photo'];
