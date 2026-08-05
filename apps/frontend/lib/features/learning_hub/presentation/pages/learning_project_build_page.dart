@@ -34,6 +34,7 @@ import '../widgets/project_build_acquisition_state.dart';
 import '../widgets/project_build_item_display.dart';
 import '../../../learner_builds/application/learner_builds_providers.dart';
 import '../../../learner_builds/presentation/l10n/learner_builds_l10n.dart';
+import '../../../project_notebook/presentation/l10n/project_notebook_l10n.dart';
 import '../widgets/project_build_material_linking.dart';
 import '../widgets/project_build_completion_story_section.dart';
 import '../../application/learning_session_providers.dart';
@@ -1747,6 +1748,22 @@ class _BuildHeader extends StatelessWidget {
                 hasExistingConversation: buildRecord.guideConversationId != null,
                 onOpenBuildGuide: onOpenBuildGuide,
               );
+              final notebookAction = OutlinedButton.icon(
+                onPressed: () => context.push(
+                  learnerBuildNotebookRoute(buildRecord.id),
+                ),
+                icon: const Icon(Icons.menu_book_outlined, size: 18),
+                label: Text(
+                  ProjectNotebookL10n.projectNotebook.resolve(context),
+                ),
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                ),
+              );
               final menuAction = _BuildLifecycleMenu(
                 buildRecord: buildRecord,
                 isBusy: isLifecycleActionInFlight,
@@ -1786,6 +1803,8 @@ class _BuildHeader extends StatelessWidget {
                     ],
                     const SizedBox(height: AppSpacing.sm),
                     guideAction,
+                    const SizedBox(height: AppSpacing.sm),
+                    notebookAction,
                   ],
                 );
               }
@@ -1799,6 +1818,8 @@ class _BuildHeader extends StatelessWidget {
                       Expanded(child: titleBlock),
                       const SizedBox(width: AppSpacing.sm),
                       menuAction,
+                      const SizedBox(width: AppSpacing.sm),
+                      notebookAction,
                       const SizedBox(width: AppSpacing.sm),
                       guideAction,
                     ],

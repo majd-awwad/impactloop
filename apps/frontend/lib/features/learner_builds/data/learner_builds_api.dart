@@ -4,6 +4,7 @@ import '../../../core/auth/auth_interceptor.dart';
 import '../../../core/network/api_response.dart';
 import '../../learning_hub/data/learning_hub_api_mapper.dart';
 import '../../learning_hub/domain/models/project_build.dart';
+import '../../project_notebook/domain/models/project_build_notebook.dart';
 import 'models/learner_build_models.dart';
 
 class UpdateCompletionStoryPayload {
@@ -147,6 +148,26 @@ class LearnerBuildsApi {
   Future<void> deleteCompletionPhoto(String buildId, String photoId) async {
     await _client.delete<void>(
       '$_buildsPath/$buildId/completion-story/photos/$photoId',
+    );
+  }
+
+  Future<ProjectBuildNotebook> fetchNotebook(String buildId) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>('$_buildsPath/$buildId/notebook'),
+      ProjectBuildNotebook.fromJson,
+    );
+  }
+
+  Future<ProjectBuildNotebook> saveNotebook(
+    String buildId,
+    NotebookDocument content,
+  ) {
+    return unwrapApiResponse(
+      _client.put<Map<String, dynamic>>(
+        '$_buildsPath/$buildId/notebook',
+        data: {'content': content.toJson()},
+      ),
+      ProjectBuildNotebook.fromJson,
     );
   }
 }

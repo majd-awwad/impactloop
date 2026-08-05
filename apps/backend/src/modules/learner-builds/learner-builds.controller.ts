@@ -18,6 +18,11 @@ import {
   getProjectBuildCompletionStory,
   upsertProjectBuildCompletionStory,
 } from '../learning-projects/project-build-completion-story.js';
+import type { UpdateProjectBuildNotebookInput } from './learner-build-notebook.validation.js';
+import {
+  getProjectBuildNotebook,
+  upsertProjectBuildNotebook,
+} from './project-build-notebook.js';
 
 export const listLearnerBuildsHandler = async (req: Request, res: Response) => {
   const query = readValidatedQuery<ListLearnerBuildsQuery>(req);
@@ -125,4 +130,26 @@ export const deleteCompletionPhotoHandler = async (req: Request, res: Response) 
   await deleteProjectBuildCompletionPhoto(buildId, req.auth!.sub, photoId);
 
   res.status(204).send();
+};
+
+export const getProjectBuildNotebookHandler = async (req: Request, res: Response) => {
+  const { buildId } = readValidatedParams<{ buildId: string }>(req);
+  const notebook = await getProjectBuildNotebook(buildId, req.auth!.sub);
+
+  res.json(successResponse('Project notebook fetched successfully', notebook));
+};
+
+export const updateProjectBuildNotebookHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  const { buildId } = readValidatedParams<{ buildId: string }>(req);
+  const body = req.body as UpdateProjectBuildNotebookInput;
+  const notebook = await upsertProjectBuildNotebook(
+    buildId,
+    req.auth!.sub,
+    body.content,
+  );
+
+  res.json(successResponse('Project notebook saved successfully', notebook));
 };
