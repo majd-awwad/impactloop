@@ -619,9 +619,10 @@ describe('Material request fulfillment on completed reservation', () => {
     );
     assert.ok(fulfilled);
     assert.equal(fulfilled?.status, 'FULFILLED');
+    assert.equal(fulfilled?.transitionedToFulfilled, true);
     assert.equal(fulfilled?.learnerId, learner.id);
 
-    if (fulfilled) {
+    if (fulfilled?.transitionedToFulfilled) {
       await createNotificationIfMissing({
         userId: fulfilled.learnerId,
         notificationType: 'MATERIAL_REQUEST_FULFILLED',

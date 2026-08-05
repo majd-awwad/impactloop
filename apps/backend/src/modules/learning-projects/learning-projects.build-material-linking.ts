@@ -11,7 +11,18 @@ import {
   type BuildCandidateLearnerContext,
   type BuildCandidateMaterialInput,
 } from './learning-projects.build-candidate-ranking.js';
+import {
+  detectHistoricalAllocationConflict,
+  evaluateBuildItemQuantityAllocation,
+  loadBuildAllocationPeers,
+  validateMaterialLinkAllocationInBuild,
+} from './learning-projects.build-material-allocation.js';
+import {
+  resolveBuildItemReadinessFromState,
+  resolveBuildItemStepUnlockReadinessFromState,
+} from './learning-projects.build-item-state.js';
 import * as learningProjectsRepository from './learning-projects.repository.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
 const CANDIDATE_LIMIT = 10;
 const CANDIDATE_POOL_LIMIT = 60;
@@ -38,6 +49,7 @@ const linkedMaterialSelect = {
   deliveryAllowed: true,
   ownerId: true,
   materialType: true,
+  unit: true,
   category: {
     select: {
       id: true,
@@ -82,13 +94,14 @@ const linkedReservationSelect = {
   id: true,
   status: true,
   materialId: true,
+  quantityRequested: true,
 } satisfies Prisma.ReservationSelect;
 
-type LinkedMaterialRecord = Prisma.MaterialGetPayload<{
+export type LinkedMaterialRecord = Prisma.MaterialGetPayload<{
   select: typeof linkedMaterialSelect;
 }>;
 
-type LinkedReservationRecord = Prisma.ReservationGetPayload<{
+export type LinkedReservationRecord = Prisma.ReservationGetPayload<{
   select: typeof linkedReservationSelect;
 }>;
 
@@ -124,12 +137,16 @@ const resolvePublicSupplierVerified = (
 
 export const mapLinkedMaterialSummary = (
   material: LinkedMaterialRecord | null | undefined,
+  options?: {
+    linkedReservationStatus?: string | null;
+  },
 ) => {
   if (!material) {
     return null;
   }
 
   const isPubliclyAvailable = material.status === 'AVAILABLE';
+  const isAcquired = options?.linkedReservationStatus === 'COMPLETED';
 
   return {
     id: material.id,
@@ -143,9 +160,10 @@ export const mapLinkedMaterialSummary = (
     condition: material.condition,
     status: material.status,
     isPubliclyAvailable,
-    availabilityWarning: isPubliclyAvailable
-      ? null
-      : 'This linked material is no longer available on the platform.',
+    availabilityWarning:
+      isPubliclyAvailable || isAcquired
+        ? null
+        : 'This linked material is no longer available on the platform.',
     isFree: material.isFree,
     price: decimalToNumber(material.price),
     currency: material.currency,
@@ -168,12 +186,15 @@ export const mapLinkedReservationSummary = (
     return null;
   }
 
-  const needsAction = TERMINAL_RESERVATION_STATUSES.has(reservation.status);
+  const needsAction =
+    TERMINAL_RESERVATION_STATUSES.has(reservation.status) ||
+    reservation.status === 'AWAITING_RESOLUTION';
 
   return {
     id: reservation.id,
     status: reservation.status,
     materialId: reservation.materialId,
+    quantityRequested: decimalToNumber(reservation.quantityRequested),
     needsAction,
     statusLabel: formatReservationStatusLabel(reservation.status),
   };
@@ -190,7 +211,7 @@ const formatReservationStatusLabel = (status: string) => {
     case 'ACCEPTED':
       return 'Accepted — pickup or delivery in progress';
     case 'COMPLETED':
-      return 'Ready for build — material acquired';
+      return 'Reservation completed';
     case 'REJECTED':
     case 'CANCELLED':
     case 'EXPIRED':
@@ -198,7 +219,7 @@ const formatReservationStatusLabel = (status: string) => {
     case 'FULFILLMENT_FAILED':
       return 'Reservation ended — choose another option';
     case 'AWAITING_RESOLUTION':
-      return 'Awaiting resolution';
+      return 'Reservation requires resolution';
     default:
       return status
         .toLowerCase()
@@ -216,94 +237,27 @@ const BUILD_ITEM_READY_STATUSES = new Set([
 
 export const resolveBuildItemStepUnlockReadiness = (input: {
   status: string;
+  componentRole?: string;
+  requiredQuantity?: number;
+  requiredUnit?: string;
+  materialUnit?: string | null;
   linkedReservation?: LinkedReservationRecord | null;
   linkedMaterial?: LinkedMaterialRecord | null;
-}) => {
-  if (input.linkedReservation?.status === 'COMPLETED') {
-    return {
-      isReadyForStepUnlock: true,
-    };
-  }
-
-  if (input.status === 'ALREADY_OWNED') {
-    return {
-      isReadyForStepUnlock: true,
-    };
-  }
-
-  return {
-    isReadyForStepUnlock: false,
-  };
-};
+  allocationWarning?: string | null;
+}) => resolveBuildItemStepUnlockReadinessFromState(input);
 
 export const resolveBuildItemReadiness = (input: {
   status: string;
+  componentRole?: string;
+  requiredQuantity?: number;
+  requiredUnit?: string;
+  materialUnit?: string | null;
+  availableQuantity?: number | null;
+  peerClaimsOnMaterial?: number;
   linkedReservation?: LinkedReservationRecord | null;
   linkedMaterial?: LinkedMaterialRecord | null;
-}) => {
-  if (input.linkedReservation?.status === 'COMPLETED') {
-    return {
-      isReadyForBuild: true,
-      readinessLabel: 'Ready for build — material acquired',
-    };
-  }
-
-  if (BUILD_ITEM_READY_STATUSES.has(input.status)) {
-    const label =
-      input.status === 'ALREADY_OWNED'
-        ? 'Marked as already owned'
-        : input.status === 'ALTERNATIVE'
-          ? 'Alternative accepted'
-          : 'Marked as available';
-
-    return {
-      isReadyForBuild: true,
-      readinessLabel: label,
-    };
-  }
-
-  if (input.linkedReservation) {
-    const reservationStatus = input.linkedReservation.status;
-
-    if (
-      ACTIVE_HOLD_STATUSES.includes(
-        reservationStatus as (typeof ACTIVE_HOLD_STATUSES)[number],
-      ) ||
-      reservationStatus === 'AWAITING_RESOLUTION'
-    ) {
-      return {
-        isReadyForBuild: false,
-        readinessLabel: 'Reservation in progress — not ready yet',
-      };
-    }
-
-    if (TERMINAL_RESERVATION_STATUSES.has(reservationStatus)) {
-      return {
-        isReadyForBuild: false,
-        readinessLabel: 'Linked reservation needs attention',
-      };
-    }
-  }
-
-  if (input.linkedMaterial) {
-    return {
-      isReadyForBuild: false,
-      readinessLabel: 'Material selected — reserve or acquire it before building',
-    };
-  }
-
-  if (input.status === 'RESERVED') {
-    return {
-      isReadyForBuild: false,
-      readinessLabel: 'Marked reserved — acquire the material to mark ready',
-    };
-  }
-
-  return {
-    isReadyForBuild: false,
-    readinessLabel: 'Still missing',
-  };
-};
+  allocationWarning?: string | null;
+}) => resolveBuildItemReadinessFromState(input);
 
 const parseSearchKeywords = (value: Prisma.JsonValue | null | undefined) => {
   if (!Array.isArray(value)) {
@@ -369,6 +323,7 @@ const candidateMaterialSelect = {
   pickupAllowed: true,
   deliveryAllowed: true,
   ownerId: true,
+  unit: true,
   createdAt: true,
   category: linkedMaterialSelect.category,
   location: linkedMaterialSelect.location,
@@ -791,7 +746,11 @@ export const linkBuildItemMaterial = async (input: {
         },
       },
     },
-    select: linkedMaterialSelect,
+    select: {
+      ...linkedMaterialSelect,
+      unit: true,
+      quantity: true,
+    },
   });
 
   if (!material) {
@@ -810,18 +769,104 @@ export const linkBuildItemMaterial = async (input: {
     );
   }
 
-  const build = await learningProjectsRepository.linkBuildItemMaterial({
-    projectId: input.projectId,
-    learnerId: input.learnerId,
-    itemId: input.itemId,
-    materialId: input.materialId,
+  const build = await runSerializableTransaction(async (tx) => {
+    const item = await tx.projectBuildItem.findFirst({
+      where: {
+        id: input.itemId,
+        build: {
+          projectId: input.projectId,
+          learnerId: input.learnerId,
+        },
+      },
+      select: {
+        id: true,
+        buildId: true,
+        linkedMaterialId: true,
+        linkedReservationId: true,
+        build: {
+          select: {
+            status: true,
+          },
+        },
+        requiredComponent: {
+          select: {
+            quantity: true,
+            unit: true,
+            componentRole: true,
+          },
+        },
+      },
+    });
+
+    if (!item) {
+      return null;
+    }
+
+    if (item.linkedMaterialId === input.materialId) {
+      return { buildId: item.buildId, noOp: true as const };
+    }
+
+    const peerItems = await loadBuildAllocationPeers(tx, item.buildId);
+    const validation = await validateMaterialLinkAllocationInBuild(tx, {
+      buildId: item.buildId,
+      buildItemId: item.id,
+      materialId: input.materialId,
+      requiredQuantity: decimalToNumber(item.requiredComponent.quantity) ?? 0,
+      requiredUnit: item.requiredComponent.unit,
+      componentRole: item.requiredComponent.componentRole,
+      buildStatus: item.build.status,
+      peerItems,
+    });
+
+    if (!validation.ok) {
+      throw new AppError(
+        validation.message,
+        400,
+        validation.code.toUpperCase(),
+        validation.details,
+      );
+    }
+
+    const claimed = await tx.projectBuildItem.updateMany({
+      where: {
+        id: item.id,
+        OR: [
+          { linkedMaterialId: null },
+          { linkedMaterialId: input.materialId },
+        ],
+      },
+      data: {
+        linkedMaterialId: input.materialId,
+        linkedMaterialAt: new Date(),
+        dismissedAcquiredReservationId: null,
+      },
+    });
+
+    if (claimed.count !== 1) {
+      throw new AppError(
+        'Unable to link material to build item',
+        409,
+        'CONFLICT',
+      );
+    }
+
+    return { buildId: item.buildId, noOp: false as const };
   });
 
   if (!build) {
     throw new AppError('Project build item not found', 404, 'NOT_FOUND');
   }
 
-  return build;
+  return learningProjectsRepository.findOwnedProjectBuildByBuildId(
+    build.buildId,
+    input.learnerId,
+  ).then((loaded) => {
+    if (!loaded) {
+      throw new AppError('Project build not found', 404, 'NOT_FOUND');
+    }
+
+    return loaded;
+  });
 };
 
 export const unlinkBuildItemMaterial = async (input: {
@@ -876,6 +921,158 @@ export const unlinkBuildItemMaterial = async (input: {
   }
 
   return build;
+};
+
+export type RemoveAcquiredMaterialFromBuildItemOutcome =
+  | 'removed'
+  | 'already_removed'
+  | 'stale_link'
+  | 'conflict'
+  | 'archived_build'
+  | 'unauthorized';
+
+export const removeAcquiredMaterialFromBuildItem = async (input: {
+  projectId: string;
+  learnerId: string;
+  itemId: string;
+  materialId: string;
+  reservationId: string;
+}): Promise<{
+  outcome: RemoveAcquiredMaterialFromBuildItemOutcome;
+  build: Awaited<ReturnType<typeof learningProjectsRepository.findOwnedProjectBuildByBuildId>>;
+}> => {
+  const buildItem = await learningProjectsRepository.findLearnerBuildItem({
+    projectId: input.projectId,
+    learnerId: input.learnerId,
+    itemId: input.itemId,
+  });
+
+  if (!buildItem) {
+    throw new AppError('Project build item not found', 404, 'NOT_FOUND');
+  }
+
+  const buildRecord = await prisma.projectBuild.findFirst({
+    where: {
+      id: buildItem.buildId,
+      projectId: input.projectId,
+      learnerId: input.learnerId,
+    },
+    select: {
+      id: true,
+      status: true,
+    },
+  });
+
+  if (!buildRecord) {
+    return { outcome: 'unauthorized', build: null };
+  }
+
+  if (buildRecord.status === 'ARCHIVED') {
+    return {
+      outcome: 'archived_build',
+      build: await learningProjectsRepository.findOwnedProjectBuildByBuildId(
+        buildRecord.id,
+        input.learnerId,
+      ),
+    };
+  }
+
+  if (
+    buildItem.linkedMaterialId == null &&
+    buildItem.linkedReservationId == null
+  ) {
+    return {
+      outcome:
+        buildItem.dismissedAcquiredReservationId === input.reservationId
+          ? 'already_removed'
+          : 'already_removed',
+      build: await learningProjectsRepository.findOwnedProjectBuildByBuildId(
+        buildRecord.id,
+        input.learnerId,
+      ),
+    };
+  }
+
+  if (
+    buildItem.linkedMaterialId !== input.materialId ||
+    buildItem.linkedReservationId !== input.reservationId
+  ) {
+    return {
+      outcome: 'stale_link',
+      build: await learningProjectsRepository.findOwnedProjectBuildByBuildId(
+        buildRecord.id,
+        input.learnerId,
+      ),
+    };
+  }
+
+  const reservation = await prisma.reservation.findFirst({
+    where: {
+      id: input.reservationId,
+      requesterId: input.learnerId,
+      materialId: input.materialId,
+    },
+    select: {
+      id: true,
+      status: true,
+    },
+  });
+
+  if (!reservation || reservation.status !== 'COMPLETED') {
+    return {
+      outcome: 'conflict',
+      build: await learningProjectsRepository.findOwnedProjectBuildByBuildId(
+        buildRecord.id,
+        input.learnerId,
+      ),
+    };
+  }
+
+  const cleared = await learningProjectsRepository.removeAcquiredBuildItemAllocation({
+    projectId: input.projectId,
+    learnerId: input.learnerId,
+    itemId: input.itemId,
+    materialId: input.materialId,
+    reservationId: input.reservationId,
+  });
+
+  if (!cleared) {
+    const refreshed = await learningProjectsRepository.findLearnerBuildItem({
+      projectId: input.projectId,
+      learnerId: input.learnerId,
+      itemId: input.itemId,
+    });
+
+    if (
+      refreshed?.linkedMaterialId == null &&
+      refreshed?.linkedReservationId == null &&
+      refreshed?.dismissedAcquiredReservationId === input.reservationId
+    ) {
+      return {
+        outcome: 'already_removed',
+        build: await learningProjectsRepository.findOwnedProjectBuildByBuildId(
+          buildRecord.id,
+          input.learnerId,
+        ),
+      };
+    }
+
+    return {
+      outcome: 'stale_link',
+      build: await learningProjectsRepository.findOwnedProjectBuildByBuildId(
+        buildRecord.id,
+        input.learnerId,
+      ),
+    };
+  }
+
+  return {
+    outcome: 'removed',
+    build: await learningProjectsRepository.findOwnedProjectBuildByBuildId(
+      buildRecord.id,
+      input.learnerId,
+    ),
+  };
 };
 
 const SUPPORTED_BUDGET_CURRENCY = 'NIS';

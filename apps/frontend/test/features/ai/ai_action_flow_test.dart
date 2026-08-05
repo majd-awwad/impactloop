@@ -1470,6 +1470,11 @@ class _TrackingBuildRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<ProjectBuild> buildAgain(String projectId) async {
+    return _refreshedBuild(projectId);
+  }
+
+  @override
   Future<ProjectBuild> updateBuildItem(
     String projectId,
     String itemId, {
@@ -1499,6 +1504,16 @@ class _TrackingBuildRepository implements LearningProjectRepository {
 
   @override
   Future<ProjectBuild> unlinkMaterial(String projectId, String itemId) async {
+    return _refreshedBuild(projectId);
+  }
+
+  @override
+  Future<ProjectBuild> removeAcquiredMaterialFromBuildItem(
+    String projectId,
+    String itemId, {
+    required String materialId,
+    required String reservationId,
+  }) async {
     return _refreshedBuild(projectId);
   }
 
@@ -1863,6 +1878,11 @@ class _StepCompletionTrackingBuildRepository implements LearningProjectRepositor
   }
 
   @override
+  Future<ProjectBuild> buildAgain(String projectId) async {
+    return _inProgressBuild(projectId);
+  }
+
+  @override
   Future<ProjectBuild> updateBuildItem(
     String projectId,
     String itemId, {
@@ -1894,6 +1914,16 @@ class _StepCompletionTrackingBuildRepository implements LearningProjectRepositor
 
   @override
   Future<ProjectBuild> unlinkMaterial(String projectId, String itemId) async {
+    return _inProgressBuild(projectId);
+  }
+
+  @override
+  Future<ProjectBuild> removeAcquiredMaterialFromBuildItem(
+    String projectId,
+    String itemId, {
+    required String materialId,
+    required String reservationId,
+  }) async {
     return _inProgressBuild(projectId);
   }
 

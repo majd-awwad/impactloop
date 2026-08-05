@@ -795,7 +795,7 @@ class JourneySummarySection extends StatelessWidget {
         label: l10n.completedBuilds,
         count: journey.completedBuildsCount,
         icon: Icons.task_alt_rounded,
-        route: '/learning',
+        route: '/learner/portfolio',
         tone: _MetricTone.mint,
       ),
       _JourneyMetricData(
@@ -1446,11 +1446,44 @@ class DashboardQuickActions extends StatelessWidget {
             children: [
               Expanded(
                 child: _QuickActionTile(
-                  icon: Icons.manage_accounts_outlined,
-                  label: l10n.accountSettingsDestination,
-                  semanticLabel: l10n.openAccountSettings,
-                  onTap: () =>
-                      onOpen('/profile/account', refreshOnReturn: true),
+                  icon: Icons.handyman_outlined,
+                  label: l10n.myBuilds,
+                  semanticLabel: l10n.openMyBuilds,
+                  onTap: () => onOpen(
+                    '/learner/builds',
+                    refreshOnReturn: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _QuickActionTile(
+                  icon: Icons.collections_bookmark_outlined,
+                  label: l10n.portfolio,
+                  semanticLabel: l10n.openPortfolio,
+                  onTap: () => onOpen(
+                    '/learner/portfolio',
+                    refreshOnReturn: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _QuickActionTile(
+                  icon: Icons.request_quote_outlined,
+                  label: l10n.materialRequests,
+                  semanticLabel: l10n.openMaterialRequests,
+                  onTap: () => onOpen(
+                    '/learner/material-requests',
+                    refreshOnReturn: true,
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -1463,6 +1496,25 @@ class DashboardQuickActions extends StatelessWidget {
                       onOpen('/profile/locations', refreshOnReturn: true),
                 ),
               ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _QuickActionTile(
+                  icon: Icons.manage_accounts_outlined,
+                  label: l10n.accountSettingsDestination,
+                  semanticLabel: l10n.openAccountSettings,
+                  onTap: () =>
+                      onOpen('/profile/account', refreshOnReturn: true),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              const Expanded(child: SizedBox.shrink()),
             ],
           ),
         ),

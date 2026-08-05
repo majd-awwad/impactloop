@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../domain/models/learning_project.dart';
+import '../domain/models/project_material_coverage.dart';
 import '../domain/models/learning_project_draft_component.dart';
 import '../domain/models/learning_project_submission.dart';
 import '../domain/models/project_build.dart';
@@ -29,10 +30,19 @@ class LearningHubApiMapper {
       id: _stringOrFallback(json['id'], fallback: ''),
       projectId: _stringOrFallback(json['projectId'], fallback: ''),
       status: _mapBuildStatus(json['status']),
+      attemptNumber: _intFromDynamic(json['attemptNumber']) ?? 1,
+      isReadOnly: json['isReadOnly'] == true ||
+          _mapBuildStatus(json['status']) == ProjectBuildStatus.completed ||
+          _mapBuildStatus(json['status']) == ProjectBuildStatus.archived,
       startedAt: _dateTimeFromDynamic(json['startedAt']),
       completedAt: _dateTimeFromDynamic(json['completedAt']),
+      pausedAt: _dateTimeFromDynamic(json['pausedAt']),
+      archivedAt: _dateTimeFromDynamic(json['archivedAt']),
       updatedAt: _dateTimeFromDynamic(json['updatedAt']),
       guideConversationId: _nullableString(json['guideConversationId']),
+      completionStory: _mapCompletionStory(json['completionStory']),
+      impactSummary: _mapImpactSummary(json['impactSummary']),
+      learningSetup: _mapLearningSetup(json['learningSetup']),
       project: ProjectBuildProject(
         id: _stringOrFallback(projectJson['id'], fallback: ''),
         title: _stringOrFallback(projectJson['title'], fallback: 'Project'),
@@ -312,6 +322,12 @@ class LearningHubApiMapper {
             ar: formatComponentCount(componentCount),
           );
 
+    final materialCoverageJson = _asMap(json['materialCoverage']);
+    final personalReadinessJson = _asMap(json['personalBuildReadiness']);
+    final componentCoverage = includeDetailFields
+        ? _mapComponentCoverage(json['componentCoverage'])
+        : const <ProjectComponentCoverageItem>[];
+
     return LearningProject(
       id: id,
       category: LocalizedText(en: categoryNameEn, ar: categoryNameAr),
@@ -349,6 +365,13 @@ class LearningHubApiMapper {
       recentReviews: recentReviews,
       viewerReview: viewerReview,
       tags: tags,
+      materialCoverage: materialCoverageJson == null
+          ? null
+          : ProjectMaterialCoverageSummary.fromJson(materialCoverageJson),
+      personalBuildReadiness: personalReadinessJson == null
+          ? null
+          : ProjectPersonalBuildReadiness.fromJson(personalReadinessJson),
+      componentCoverage: componentCoverage,
     );
   }
 
@@ -419,9 +442,44 @@ class LearningHubApiMapper {
             canBeSubstituted: item['canBeSubstituted'] == true,
             categoryId: _nullableString(item['categoryId']),
             notes: _nullableString(item['notes']),
+            publicAvailabilityStatus: _availabilityStatus(
+              item['publicAvailabilityStatus'],
+            ),
           );
         })
         .toList(growable: false);
+  }
+
+  static List<ProjectComponentCoverageItem> _mapComponentCoverage(
+    Object? raw,
+  ) {
+    if (raw is! List) {
+      return const [];
+    }
+
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => ProjectComponentCoverageItem.fromJson(
+            Map<String, dynamic>.from(item),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  static ComponentPublicAvailabilityStatus? _availabilityStatus(Object? raw) {
+    switch ((raw as String?)?.toUpperCase()) {
+      case 'AVAILABLE':
+        return ComponentPublicAvailabilityStatus.available;
+      case 'PARTIAL':
+        return ComponentPublicAvailabilityStatus.partial;
+      case 'MISSING':
+        return ComponentPublicAvailabilityStatus.missing;
+      case 'UNKNOWN':
+        return ComponentPublicAvailabilityStatus.unknown;
+      default:
+        return null;
+    }
   }
 
   static List<LearningProjectSubmissionComponent> _mapSubmissionComponents(
@@ -568,6 +626,9 @@ class LearningHubApiMapper {
         json['readinessLabel'],
         fallback: 'Still missing',
       ),
+      quantityAllocation: _mapQuantityAllocation(json['quantityAllocation']),
+      acquisitionState: _nullableString(json['acquisitionState']),
+      allocationResult: _nullableString(json['allocationResult']),
       component: ProjectRequiredComponentItem(
         id: _stringOrFallback(componentJson['id'], fallback: ''),
         name: LocalizedText(en: name, ar: name),
@@ -642,6 +703,26 @@ class LearningHubApiMapper {
       materialId: _stringOrFallback(json['materialId'], fallback: ''),
       needsAction: json['needsAction'] == true,
       statusLabel: _stringOrFallback(json['statusLabel'], fallback: ''),
+      quantityRequested: _numberFromDynamic(json['quantityRequested']),
+    );
+  }
+
+  static ProjectBuildQuantityAllocation? _mapQuantityAllocation(Object? raw) {
+    final json = _asMap(raw);
+    if (json == null) {
+      return null;
+    }
+
+    return ProjectBuildQuantityAllocation(
+      outcome: _stringOrFallback(json['outcome'], fallback: ''),
+      requiredQuantity: _numberFromDynamic(json['requiredQuantity']) ?? 0,
+      requiredUnit: _stringOrFallback(json['requiredUnit'], fallback: 'piece'),
+      availableQuantity: _numberFromDynamic(json['availableQuantity']),
+      acquiredQuantity: _numberFromDynamic(json['acquiredQuantity']),
+      reservationQuantity: _numberFromDynamic(json['reservationQuantity']),
+      allocatedQuantity: _numberFromDynamic(json['allocatedQuantity']),
+      isQuantityReady: json['isQuantityReady'] == true,
+      warning: _nullableString(json['warning']),
     );
   }
 
@@ -700,12 +781,79 @@ class LearningHubApiMapper {
     );
   }
 
+  static ProjectBuildCompletionStory? completionStoryFromJson(Object? raw) =>
+      _mapCompletionStory(raw);
+
   static ProjectBuildStatus _mapBuildStatus(Object? raw) {
-    return switch (_stringOrFallback(raw, fallback: 'IN_PROGRESS')) {
+    return switch (_stringOrFallback(raw, fallback: 'IN_PROGRESS').toUpperCase()) {
       'COMPLETED' => ProjectBuildStatus.completed,
       'ARCHIVED' => ProjectBuildStatus.archived,
+      'PAUSED' => ProjectBuildStatus.paused,
       _ => ProjectBuildStatus.inProgress,
     };
+  }
+
+  static ProjectBuildCompletionStory? _mapCompletionStory(Object? raw) {
+    final json = _asMap(raw);
+    if (json == null) {
+      return null;
+    }
+
+    final photosJson = json['photos'];
+    final photos = photosJson is List
+        ? photosJson
+              .whereType<Map>()
+              .map(
+                (photo) => ProjectBuildCompletionStoryPhoto(
+                  id: _stringOrFallback(photo['id'], fallback: ''),
+                  imageUrl: _stringOrFallback(photo['imageUrl'], fallback: ''),
+                  caption: _nullableString(photo['caption']),
+                  sortOrder: _intFromDynamic(photo['sortOrder']) ?? 0,
+                ),
+              )
+              .toList(growable: false)
+        : const <ProjectBuildCompletionStoryPhoto>[];
+
+    return ProjectBuildCompletionStory(
+      reflection: _nullableString(json['reflection']),
+      caption: _nullableString(json['caption']),
+      updatedAt: _dateTimeFromDynamic(json['updatedAt']),
+      photos: photos,
+    );
+  }
+
+  static ProjectBuildImpactSummary? _mapImpactSummary(Object? raw) {
+    final json = _asMap(raw);
+    if (json == null) {
+      return null;
+    }
+
+    final categoriesJson = json['materialCategoriesUsed'];
+    final categories = categoriesJson is List
+        ? categoriesJson.whereType<String>().toList(growable: false)
+        : const <String>[];
+
+    return ProjectBuildImpactSummary(
+      projectId: _stringOrFallback(json['projectId'], fallback: ''),
+      projectTitle: _stringOrFallback(json['projectTitle'], fallback: ''),
+      attemptNumber: _intFromDynamic(json['attemptNumber']) ?? 1,
+      completedAt: _dateTimeFromDynamic(json['completedAt']),
+      startedAt: _dateTimeFromDynamic(json['startedAt']),
+      elapsedMs: _intFromDynamic(json['elapsedMs']),
+      requiredMaterialComponentCount:
+          _intFromDynamic(json['requiredMaterialComponentCount']) ?? 0,
+      readyMaterialComponentCount:
+          _intFromDynamic(json['readyMaterialComponentCount']) ?? 0,
+      alreadyOwnedComponentCount:
+          _intFromDynamic(json['alreadyOwnedComponentCount']) ?? 0,
+      acquiredViaImpactLoopCount:
+          _intFromDynamic(json['acquiredViaImpactLoopCount']) ?? 0,
+      uniqueAcquiredMaterialCount:
+          _intFromDynamic(json['uniqueAcquiredMaterialCount']) ?? 0,
+      completedStepCount: _intFromDynamic(json['completedStepCount']) ?? 0,
+      totalStepCount: _intFromDynamic(json['totalStepCount']) ?? 0,
+      materialCategoriesUsed: categories,
+    );
   }
 
   static ProjectBuildItemStatus _mapBuildItemStatus(Object? raw) {
@@ -931,5 +1079,584 @@ class LearningHubApiMapper {
     }
 
     return null;
+  }
+
+  static ProjectBuildLearningSetup? _mapLearningSetup(Object? value) {
+    final json = _asMap(value);
+    if (json == null) {
+      return null;
+    }
+
+    return ProjectBuildLearningSetup(
+      status: _mapLearningSetupStatus(json['status']),
+      sessionId: _nullableString(json['sessionId']),
+      packVersion: _intFromDynamic(json['packVersion']),
+      startQuestionCount: _intFromDynamic(json['startQuestionCount']) ?? 0,
+      reasonCode: _nullableString(json['reasonCode']),
+      retryAfterSeconds: _intFromDynamic(json['retryAfterSeconds']),
+      retryable: json['retryable'] == true,
+    );
+  }
+
+  static LearningSetupStatus _mapLearningSetupStatus(Object? value) {
+    return switch (_stringOrFallback(value, fallback: '').toUpperCase()) {
+      'READY' => LearningSetupStatus.ready,
+      'PREPARING' => LearningSetupStatus.preparing,
+      'UNAVAILABLE' => LearningSetupStatus.unavailable,
+      _ => LearningSetupStatus.notRequested,
+    };
+  }
+
+  static LearningSessionBundle fromLearningSessionBundleJson(
+    Map<String, dynamic> json,
+  ) {
+    final sessionJson = _asMap(json['session']);
+    final setupJson = _asMap(json['learningSetup']);
+
+    return LearningSessionBundle(
+      session: sessionJson == null ? null : fromLearningSessionJson(sessionJson),
+      learningSetup: setupJson == null
+          ? const ProjectBuildLearningSetup(status: LearningSetupStatus.notRequested)
+          : _mapLearningSetup(setupJson)!,
+    );
+  }
+
+  static BuildLearningSession fromLearningSessionJson(
+    Map<String, dynamic> json,
+  ) {
+    final assignmentsJson = json['assignments'];
+
+    return BuildLearningSession(
+      id: _stringOrFallback(json['id'], fallback: ''),
+      buildId: _stringOrFallback(json['buildId'], fallback: ''),
+      packId: _stringOrFallback(json['packId'], fallback: ''),
+      learningGoal: _nullableString(json['learningGoal']),
+      confidenceBefore: _intFromDynamic(json['confidenceBefore']),
+      confidenceAfter: _intFromDynamic(json['confidenceAfter']),
+      goalOutcome: _mapLearningGoalOutcome(json['goalOutcome']),
+      finalReflection: _nullableString(json['finalReflection']),
+      learningSummary: _asMap(json['learningSummary']) == null
+          ? null
+          : fromBuildLearningSummaryJson(
+              Map<String, dynamic>.from(_asMap(json['learningSummary'])!),
+            ),
+      assignments: assignmentsJson is List
+          ? assignmentsJson
+                .whereType<Map>()
+                .map(
+                  (item) => _mapLearningAssignment(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList(growable: false)
+          : const <LearningAssignment>[],
+    );
+  }
+
+  static LearningAssignment _mapLearningAssignment(Map<String, dynamic> json) {
+    final questionJson = _asMap(json['question']) ?? const <String, dynamic>{};
+    final attemptsJson = json['answerAttempts'];
+
+    return LearningAssignment(
+      id: _stringOrFallback(json['id'], fallback: ''),
+      stage: _stringOrFallback(json['stage'], fallback: 'START'),
+      status: _mapLearningAssignmentStatus(json['status']),
+      displayOrder: _intFromDynamic(json['displayOrder']) ?? 1,
+      projectStepId: _nullableString(json['projectStepId']),
+      stepTitle: _nullableString(json['stepTitle']),
+      reviewCorrectOptionKey: _nullableString(json['reviewCorrectOptionKey']),
+      hintViewedAt: _dateTimeFromDynamic(json['hintViewedAt']),
+      unclearReported: json['unclearReported'] == true,
+      question: _mapLearningQuestion(questionJson),
+      answerAttempts: attemptsJson is List
+          ? attemptsJson
+                .whereType<Map>()
+                .map(
+                  (item) => _mapLearningAnswerAttempt(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList(growable: false)
+          : const <LearningAnswerAttempt>[],
+    );
+  }
+
+  static LearningAssignmentStatus _mapLearningAssignmentStatus(Object? value) {
+    return switch (_stringOrFallback(value, fallback: '').toUpperCase()) {
+      'ANSWERED' => LearningAssignmentStatus.answered,
+      'SKIPPED' => LearningAssignmentStatus.skipped,
+      _ => LearningAssignmentStatus.notAttempted,
+    };
+  }
+
+  static LearningQuestion _mapLearningQuestion(Map<String, dynamic> json) {
+    final optionsJson = json['options'];
+
+    return LearningQuestion(
+      id: _stringOrFallback(json['id'], fallback: ''),
+      stage: _stringOrFallback(json['stage'], fallback: 'START'),
+      questionType: _stringOrFallback(json['questionType'], fallback: ''),
+      promptEn: _stringOrFallback(json['promptEn'], fallback: ''),
+      promptAr: _stringOrFallback(json['promptAr'], fallback: ''),
+      explanationEn: _stringOrFallback(json['explanationEn'], fallback: ''),
+      explanationAr: _stringOrFallback(json['explanationAr'], fallback: ''),
+      hintEn: _stringOrFallback(json['hintEn'], fallback: ''),
+      hintAr: _stringOrFallback(json['hintAr'], fallback: ''),
+      options: optionsJson is List
+          ? optionsJson
+                .whereType<Map>()
+                .map(
+                  (item) => _mapLearningQuestionOption(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList(growable: false)
+          : const <LearningQuestionOption>[],
+    );
+  }
+
+  static LearningQuestionOption _mapLearningQuestionOption(
+    Map<String, dynamic> json,
+  ) {
+    return LearningQuestionOption(
+      optionKey: _stringOrFallback(json['optionKey'], fallback: ''),
+      textEn: _stringOrFallback(json['textEn'], fallback: ''),
+      textAr: _stringOrFallback(json['textAr'], fallback: ''),
+      displayOrder: _intFromDynamic(json['displayOrder']) ?? 1,
+    );
+  }
+
+  static LearningAnswerAttempt _mapLearningAnswerAttempt(
+    Map<String, dynamic> json,
+  ) {
+    return LearningAnswerAttempt(
+      id: _stringOrFallback(json['id'], fallback: ''),
+      attemptNumber: _intFromDynamic(json['attemptNumber']) ?? 1,
+      selectedOptionKey: _stringOrFallback(json['selectedOptionKey'], fallback: ''),
+      isCorrect: json['isCorrect'] == true,
+      submittedAt:
+          _dateTimeFromDynamic(json['submittedAt']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  }
+
+  static LearningAssignment fromLearningAssignmentJson(
+    Map<String, dynamic> json,
+  ) => _mapLearningAssignment(json);
+
+  static LearningAnswerSubmissionResult fromLearningAnswerSubmissionJson(
+    Map<String, dynamic> json,
+  ) {
+    final attemptJson = _asMap(json['attempt']) ?? const <String, dynamic>{};
+    final assignmentJson =
+        _asMap(json['assignment']) ?? const <String, dynamic>{};
+
+    return LearningAnswerSubmissionResult(
+      attempt: _mapLearningAnswerAttempt(attemptJson),
+      assignment: _mapLearningAssignment(assignmentJson),
+    );
+  }
+
+  static StepLearningCheck? fromStepLearningCheckResponseJson(
+    Map<String, dynamic> json,
+  ) {
+    final checkJson = _asMap(json['check']);
+    if (checkJson == null) {
+      return null;
+    }
+    return fromStepLearningCheckJson(checkJson);
+  }
+
+  static StepLearningCheck fromStepLearningCheckJson(Map<String, dynamic> json) {
+    final questionJson = _asMap(json['question']) ?? const <String, dynamic>{};
+    final attemptsJson = json['answerAttempts'];
+    final latestResultJson = _asMap(json['latestResult']);
+
+    return StepLearningCheck(
+      assignmentId: _stringOrFallback(json['assignmentId'], fallback: ''),
+      stepId: _stringOrFallback(json['stepId'], fallback: ''),
+      stage: _stringOrFallback(json['stage'], fallback: 'STEP'),
+      questionType: _stringOrFallback(json['questionType'], fallback: ''),
+      displayOrder: _intFromDynamic(json['displayOrder']) ?? 1,
+      status: _mapLearningAssignmentStatus(json['status']),
+      uiState: _mapStepLearningCheckUiState(json['uiState']),
+      attemptCount: _intFromDynamic(json['attemptCount']) ?? 0,
+      hintViewed: json['hintViewed'] == true,
+      unclearReported: json['unclearReported'] == true,
+      mayRetry: json['mayRetry'] == true,
+      isReadOnly: json['isReadOnly'] == true,
+      question: _mapLearningQuestion(questionJson),
+      answerAttempts: attemptsJson is List
+          ? attemptsJson
+                .whereType<Map>()
+                .map(
+                  (item) => _mapLearningAnswerAttempt(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList(growable: false)
+          : const <LearningAnswerAttempt>[],
+      latestSelectedOptionKey: _nullableString(json['latestSelectedOptionKey']),
+      hasCorrectAttempt: json['hasCorrectAttempt'] == true,
+      correctOptionKey: _nullableString(json['correctOptionKey']),
+      latestResult: latestResultJson == null
+          ? null
+          : StepLearningCheckResult(
+              selectedOptionKey: _stringOrFallback(
+                latestResultJson['selectedOptionKey'],
+                fallback: '',
+              ),
+              isCorrect: latestResultJson['isCorrect'] == true,
+              attemptNumber:
+                  _intFromDynamic(latestResultJson['attemptNumber']) ?? 1,
+              explanationEn: _stringOrFallback(
+                latestResultJson['explanationEn'],
+                fallback: '',
+              ),
+              explanationAr: _stringOrFallback(
+                latestResultJson['explanationAr'],
+                fallback: '',
+              ),
+              correctOptionKey: _nullableString(
+                latestResultJson['correctOptionKey'],
+              ),
+              mayRetry: latestResultJson['mayRetry'] == true,
+            ),
+    );
+  }
+
+  static StepLearningCheckUiState _mapStepLearningCheckUiState(Object? value) {
+    return switch (_stringOrFallback(value, fallback: '').toUpperCase()) {
+      'INCORRECT' => StepLearningCheckUiState.incorrect,
+      'CORRECT' => StepLearningCheckUiState.correct,
+      'SKIPPED' => StepLearningCheckUiState.skipped,
+      'REVIEWED' => StepLearningCheckUiState.reviewed,
+      _ => StepLearningCheckUiState.notAttempted,
+    };
+  }
+
+  static StepLearningCheckAnswerSubmission
+  fromStepLearningCheckAnswerSubmissionJson(Map<String, dynamic> json) {
+    final attemptJson = _asMap(json['attempt']) ?? const <String, dynamic>{};
+    final checkJson = _asMap(json['check']) ?? const <String, dynamic>{};
+
+    return StepLearningCheckAnswerSubmission(
+      attempt: _mapLearningAnswerAttempt(attemptJson),
+      check: fromStepLearningCheckJson(checkJson),
+    );
+  }
+
+  static StepLearningCheckAiHandoff fromStepLearningCheckAiHandoffJson(
+    Map<String, dynamic> json,
+  ) {
+    final contextJson = _asMap(json['context']) ?? const <String, dynamic>{};
+
+    return StepLearningCheckAiHandoff(
+      suggestedPromptEn: _stringOrFallback(
+        json['suggestedPromptEn'],
+        fallback: '',
+      ),
+      suggestedPromptAr: _stringOrFallback(
+        json['suggestedPromptAr'],
+        fallback: '',
+      ),
+      context: StepLearningCheckAiHandoffContext(
+        projectId: _stringOrFallback(contextJson['projectId'], fallback: ''),
+        projectTitle: _stringOrFallback(
+          contextJson['projectTitle'],
+          fallback: '',
+        ),
+        buildId: _stringOrFallback(contextJson['buildId'], fallback: ''),
+        stepId: _stringOrFallback(contextJson['stepId'], fallback: ''),
+        stepTitle: _stringOrFallback(contextJson['stepTitle'], fallback: ''),
+        stepDescription: _stringOrFallback(
+          contextJson['stepDescription'],
+          fallback: '',
+        ),
+        questionPromptEn: _stringOrFallback(
+          contextJson['questionPromptEn'],
+          fallback: '',
+        ),
+        questionPromptAr: _stringOrFallback(
+          contextJson['questionPromptAr'],
+          fallback: '',
+        ),
+        selectedOptionKey: _stringOrFallback(
+          contextJson['selectedOptionKey'],
+          fallback: '',
+        ),
+        selectedOptionTextEn: _stringOrFallback(
+          contextJson['selectedOptionTextEn'],
+          fallback: '',
+        ),
+        selectedOptionTextAr: _stringOrFallback(
+          contextJson['selectedOptionTextAr'],
+          fallback: '',
+        ),
+        isCorrect: contextJson['isCorrect'] == true,
+        conceptKey: _stringOrFallback(contextJson['conceptKey'], fallback: ''),
+        explanationEn: _stringOrFallback(
+          contextJson['explanationEn'],
+          fallback: '',
+        ),
+        explanationAr: _stringOrFallback(
+          contextJson['explanationAr'],
+          fallback: '',
+        ),
+      ),
+    );
+  }
+
+  static LearningGoalOutcome? _mapLearningGoalOutcome(Object? value) {
+    return switch (_stringOrFallback(value, fallback: '').toUpperCase()) {
+      'ACHIEVED' => LearningGoalOutcome.achieved,
+      'PARTIALLY_ACHIEVED' => LearningGoalOutcome.partiallyAchieved,
+      'NOT_YET_ACHIEVED' => LearningGoalOutcome.notYetAchieved,
+      _ => null,
+    };
+  }
+
+  static LearningCheckProgress fromLearningCheckProgressJson(
+    Map<String, dynamic> json,
+  ) {
+    return LearningCheckProgress(
+      total: _intFromDynamic(json['total']) ?? 0,
+      answered: _intFromDynamic(json['answered']) ?? 0,
+      correct: _intFromDynamic(json['correct']) ?? 0,
+      skipped: _intFromDynamic(json['skipped']) ?? 0,
+      remaining: _intFromDynamic(json['remaining']) ?? 0,
+      handled: _intFromDynamic(json['handled']) ?? 0,
+    );
+  }
+
+  static BuildLearningSummary fromBuildLearningSummaryJson(
+    Map<String, dynamic> json,
+  ) {
+    List<LearningSummaryConcept> mapConcepts(Object? value) {
+      if (value is! List) {
+        return const [];
+      }
+      return value
+          .whereType<Map>()
+          .map(
+            (item) => LearningSummaryConcept(
+              conceptKey: _stringOrFallback(item['conceptKey'], fallback: ''),
+              labelEn: _stringOrFallback(item['labelEn'], fallback: ''),
+              labelAr: _stringOrFallback(item['labelAr'], fallback: ''),
+            ),
+          )
+          .toList(growable: false);
+    }
+
+    return BuildLearningSummary(
+      schemaVersion: _intFromDynamic(json['schemaVersion']) ?? 1,
+      generatedAt:
+          _dateTimeFromDynamic(json['generatedAt']) ?? DateTime.now().toUtc(),
+      startCheck: fromLearningCheckProgressJson(
+        _asMap(json['startCheck']) ?? const {},
+      ),
+      stepChecks: fromLearningCheckProgressJson(
+        _asMap(json['stepChecks']) ?? const {},
+      ),
+      finalCheck: fromLearningCheckProgressJson(
+        _asMap(json['finalCheck']) ?? const {},
+      ),
+      understoodConcepts: mapConcepts(json['understoodConcepts']),
+      reviewConcepts: mapConcepts(json['reviewConcepts']),
+      uncheckedConceptCount:
+          _intFromDynamic(json['uncheckedConceptCount']) ?? 0,
+      confidenceBefore: _intFromDynamic(json['confidenceBefore']),
+      confidenceAfter: _intFromDynamic(json['confidenceAfter']),
+      goalOutcome: _mapLearningGoalOutcome(json['goalOutcome']),
+    );
+  }
+
+  static FinalLearningCheck fromFinalLearningCheckResponseJson(
+    Map<String, dynamic> json,
+  ) {
+    final checkJson = _asMap(json['check']) ?? json;
+    return fromFinalLearningCheckJson(checkJson);
+  }
+
+  static FinalLearningCheck fromFinalLearningCheckJson(
+    Map<String, dynamic> json,
+  ) {
+    final assignmentsJson = json['assignments'];
+    final summaryJson = _asMap(json['learningSummary']);
+
+    return FinalLearningCheck(
+      available: json['available'] != false,
+      isReadOnly: json['isReadOnly'] == true,
+      progress: fromLearningCheckProgressJson(
+        _asMap(json['progress']) ?? const {},
+      ),
+      assignments: assignmentsJson is List
+          ? assignmentsJson
+                .whereType<Map>()
+                .map(
+                  (item) => fromFinalLearningAssignmentJson(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList(growable: false)
+          : const <FinalLearningAssignment>[],
+      learningSummary: summaryJson == null
+          ? null
+          : fromBuildLearningSummaryJson(summaryJson),
+    );
+  }
+
+  static FinalLearningAssignment fromFinalLearningAssignmentJson(
+    Map<String, dynamic> json,
+  ) {
+    final questionJson = _asMap(json['question']) ?? const <String, dynamic>{};
+    final attemptsJson = json['answerAttempts'];
+    final latestResultJson = _asMap(json['latestResult']);
+
+    return FinalLearningAssignment(
+      assignmentId: _stringOrFallback(json['assignmentId'], fallback: ''),
+      questionId: _stringOrFallback(json['questionId'], fallback: ''),
+      stage: _stringOrFallback(json['stage'], fallback: 'FINAL'),
+      questionType: _stringOrFallback(json['questionType'], fallback: ''),
+      displayOrder: _intFromDynamic(json['displayOrder']) ?? 1,
+      status: _mapLearningAssignmentStatus(json['status']),
+      uiState: _mapStepLearningCheckUiState(json['uiState']),
+      attemptCount: _intFromDynamic(json['attemptCount']) ?? 0,
+      hintViewed: json['hintViewed'] == true,
+      unclearReported: json['unclearReported'] == true,
+      mayRetry: json['mayRetry'] == true,
+      isReadOnly: json['isReadOnly'] == true,
+      question: _mapLearningQuestion(questionJson),
+      answerAttempts: attemptsJson is List
+          ? attemptsJson
+                .whereType<Map>()
+                .map(
+                  (item) => _mapLearningAnswerAttempt(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList(growable: false)
+          : const <LearningAnswerAttempt>[],
+      latestSelectedOptionKey: _nullableString(json['latestSelectedOptionKey']),
+      hasCorrectAttempt: json['hasCorrectAttempt'] == true,
+      correctOptionKey: _nullableString(json['correctOptionKey']),
+      latestResult: latestResultJson == null
+          ? null
+          : StepLearningCheckResult(
+              selectedOptionKey: _stringOrFallback(
+                latestResultJson['selectedOptionKey'],
+                fallback: '',
+              ),
+              isCorrect: latestResultJson['isCorrect'] == true,
+              attemptNumber:
+                  _intFromDynamic(latestResultJson['attemptNumber']) ?? 1,
+              explanationEn: _stringOrFallback(
+                latestResultJson['explanationEn'],
+                fallback: '',
+              ),
+              explanationAr: _stringOrFallback(
+                latestResultJson['explanationAr'],
+                fallback: '',
+              ),
+              correctOptionKey: _nullableString(
+                latestResultJson['correctOptionKey'],
+              ),
+              mayRetry: latestResultJson['mayRetry'] == true,
+            ),
+    );
+  }
+
+  static FinalLearningCheckAnswerSubmission
+  fromFinalLearningCheckAnswerSubmissionJson(Map<String, dynamic> json) {
+    final attemptJson = _asMap(json['attempt']);
+    final assignmentJson =
+        _asMap(json['assignment']) ?? const <String, dynamic>{};
+    final progressJson = _asMap(json['progress']);
+    final summaryJson = _asMap(json['learningSummary']);
+
+    return FinalLearningCheckAnswerSubmission(
+      attempt: attemptJson == null
+          ? null
+          : _mapLearningAnswerAttempt(attemptJson),
+      assignment: fromFinalLearningAssignmentJson(assignmentJson),
+      progress: progressJson == null
+          ? null
+          : fromLearningCheckProgressJson(progressJson),
+      learningSummary: summaryJson == null
+          ? null
+          : fromBuildLearningSummaryJson(summaryJson),
+    );
+  }
+
+  static FinalLearningCheckAiHandoff fromFinalLearningCheckAiHandoffJson(
+    Map<String, dynamic> json,
+  ) {
+    final contextJson = _asMap(json['context']) ?? const <String, dynamic>{};
+
+    return FinalLearningCheckAiHandoff(
+      suggestedPromptEn: _stringOrFallback(
+        json['suggestedPromptEn'],
+        fallback: '',
+      ),
+      suggestedPromptAr: _stringOrFallback(
+        json['suggestedPromptAr'],
+        fallback: '',
+      ),
+      context: FinalLearningCheckAiHandoffContext(
+        projectId: _stringOrFallback(contextJson['projectId'], fallback: ''),
+        projectTitle: _stringOrFallback(
+          contextJson['projectTitle'],
+          fallback: '',
+        ),
+        buildId: _stringOrFallback(contextJson['buildId'], fallback: ''),
+        assignmentId: _stringOrFallback(
+          contextJson['assignmentId'],
+          fallback: '',
+        ),
+        questionPromptEn: _stringOrFallback(
+          contextJson['questionPromptEn'],
+          fallback: '',
+        ),
+        questionPromptAr: _stringOrFallback(
+          contextJson['questionPromptAr'],
+          fallback: '',
+        ),
+        selectedOptionKey: _stringOrFallback(
+          contextJson['selectedOptionKey'],
+          fallback: '',
+        ),
+        selectedOptionTextEn: _stringOrFallback(
+          contextJson['selectedOptionTextEn'],
+          fallback: '',
+        ),
+        selectedOptionTextAr: _stringOrFallback(
+          contextJson['selectedOptionTextAr'],
+          fallback: '',
+        ),
+        isCorrect: contextJson['isCorrect'] == true,
+        conceptKey: _stringOrFallback(contextJson['conceptKey'], fallback: ''),
+        explanationEn: _stringOrFallback(
+          contextJson['explanationEn'],
+          fallback: '',
+        ),
+        explanationAr: _stringOrFallback(
+          contextJson['explanationAr'],
+          fallback: '',
+        ),
+        learningGoal: _nullableString(contextJson['learningGoal']),
+      ),
+    );
+  }
+
+  static LearningCompletionReflectionResult
+  fromLearningCompletionReflectionJson(Map<String, dynamic> json) {
+    final sessionJson = _asMap(json['session']) ?? const <String, dynamic>{};
+    final summaryJson = _asMap(json['learningSummary']);
+
+    return LearningCompletionReflectionResult(
+      session: fromLearningSessionJson(sessionJson),
+      learningSummary: summaryJson == null
+          ? null
+          : fromBuildLearningSummaryJson(summaryJson),
+    );
   }
 }

@@ -120,6 +120,21 @@ const buildLearningProjectsWhere = (
   return where;
 };
 
+export const LEARNING_PROJECT_BROWSE_CANDIDATE_LIMIT = 200;
+
+export const findLearningProjectBrowseCandidates = async (
+  query: LearningProjectsQuery,
+) => {
+  const where = buildLearningProjectsWhere(query);
+
+  return prisma.learningProject.findMany({
+    where,
+    include: learningProjectListInclude,
+    orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+    take: LEARNING_PROJECT_BROWSE_CANDIDATE_LIMIT,
+  });
+};
+
 const learningProjectListInclude = {
   category: {
     select: {
@@ -253,7 +268,7 @@ const myLearningProjectDetailInclude = {
   },
 } satisfies Prisma.LearningProjectInclude;
 
-const projectBuildInclude = {
+export const projectBuildInclude = {
   project: {
     select: {
       id: true,
@@ -302,6 +317,7 @@ const projectBuildInclude = {
           deliveryAllowed: true,
           ownerId: true,
           materialType: true,
+          unit: true,
           category: {
             select: {
               id: true,
@@ -347,6 +363,7 @@ const projectBuildInclude = {
           id: true,
           status: true,
           materialId: true,
+          quantityRequested: true,
         },
       },
       requiredComponent: {
@@ -378,6 +395,19 @@ const projectBuildInclude = {
       requiredComponent: {
         createdAt: 'asc' as const,
       },
+    },
+  },
+  completionStory: {
+    include: {
+      photos: {
+        orderBy: { sortOrder: 'asc' as const },
+      },
+    },
+  },
+  completionSnapshot: {
+    select: {
+      snapshot: true,
+      createdAt: true,
     },
   },
 } satisfies Prisma.ProjectBuildInclude;
@@ -528,16 +558,12 @@ export const findPublicLearningProjectById = async (id: string) => {
 export const findProjectBuild = async (
   projectId: string,
   learnerId: string,
+  buildId?: string,
 ) => {
-  return prisma.projectBuild.findUnique({
-    where: {
-      projectId_learnerId: {
-        projectId,
-        learnerId,
-      },
-    },
-    include: projectBuildInclude,
-  });
+  const { findProjectBuildForLearner } = await import(
+    './project-build-lifecycle.js'
+  );
+  return findProjectBuildForLearner({ projectId, learnerId, buildId });
 };
 
 export const findOwnedProjectBuildByBuildId = async (
@@ -571,72 +597,20 @@ export const startProjectBuild = async (
   projectId: string,
   learnerId: string,
 ) => {
-  const build = await prisma.$transaction(async (tx) => {
-    const project = await tx.learningProject.findFirst({
-      where: {
-        id: projectId,
-        ...publicProjectWhere,
-      },
-      select: {
-        id: true,
-        requiredComponents: {
-          select: {
-            id: true,
-          },
-          orderBy: {
-            createdAt: 'asc',
-          },
-        },
-      },
-    });
+  const { startOrReturnProjectBuild } = await import(
+    './project-build-lifecycle.js'
+  );
+  return startOrReturnProjectBuild(projectId, learnerId);
+};
 
-    if (!project) {
-      return null;
-    }
-
-    const build = await tx.projectBuild.upsert({
-      where: {
-        projectId_learnerId: {
-          projectId,
-          learnerId,
-        },
-      },
-      create: {
-        projectId,
-        learnerId,
-        items: project.requiredComponents.length
-          ? {
-              create: project.requiredComponents.map((component) => ({
-                requiredComponentId: component.id,
-              })),
-            }
-          : undefined,
-      },
-      update: {},
-      select: {
-        id: true,
-      },
-    });
-
-    if (project.requiredComponents.length > 0) {
-      await tx.projectBuildItem.createMany({
-        data: project.requiredComponents.map((component) => ({
-          buildId: build.id,
-          requiredComponentId: component.id,
-        })),
-        skipDuplicates: true,
-      });
-    }
-
-    return build;
-  });
-
-  return build
-    ? prisma.projectBuild.findUniqueOrThrow({
-        where: { id: build.id },
-        include: projectBuildInclude,
-      })
-    : null;
+export const startProjectBuildAgain = async (
+  projectId: string,
+  learnerId: string,
+) => {
+  const { createProjectBuildAttempt } = await import(
+    './project-build-lifecycle.js'
+  );
+  return createProjectBuildAttempt(projectId, learnerId);
 };
 
 export const updateProjectBuildItem = async (input: {
@@ -760,6 +734,7 @@ export const linkBuildItemMaterial = async (input: {
       data: {
         linkedMaterialId: input.materialId,
         linkedMaterialAt: new Date(),
+        dismissedAcquiredReservationId: null,
       },
     });
 
@@ -824,6 +799,62 @@ export const unlinkBuildItemMaterial = async (input: {
     : null;
 };
 
+export const removeAcquiredBuildItemAllocation = async (input: {
+  projectId: string;
+  learnerId: string;
+  itemId: string;
+  materialId: string;
+  reservationId: string;
+}) => {
+  const result = await prisma.$transaction(async (tx) => {
+    const item = await tx.projectBuildItem.findFirst({
+      where: {
+        id: input.itemId,
+        linkedMaterialId: input.materialId,
+        linkedReservationId: input.reservationId,
+        build: {
+          projectId: input.projectId,
+          learnerId: input.learnerId,
+          status: { not: 'ARCHIVED' },
+          project: {
+            is: publicProjectWhere,
+          },
+        },
+      },
+      select: {
+        id: true,
+        buildId: true,
+      },
+    });
+
+    if (!item) {
+      return null;
+    }
+
+    const cleared = await tx.projectBuildItem.updateMany({
+      where: {
+        id: item.id,
+        linkedMaterialId: input.materialId,
+        linkedReservationId: input.reservationId,
+      },
+      data: {
+        linkedMaterialId: null,
+        linkedReservationId: null,
+        linkedMaterialAt: null,
+        dismissedAcquiredReservationId: input.reservationId,
+      },
+    });
+
+    if (cleared.count !== 1) {
+      return null;
+    }
+
+    return item;
+  });
+
+  return result;
+};
+
 export const linkBuildItemReservation = async (input: {
   projectId: string;
   learnerId: string;
@@ -847,6 +878,12 @@ export const linkBuildItemReservation = async (input: {
         buildId: true,
         linkedMaterialId: true,
         linkedReservationId: true,
+        requiredComponent: {
+          select: {
+            quantity: true,
+            unit: true,
+          },
+        },
       },
     });
 
@@ -862,6 +899,8 @@ export const linkBuildItemReservation = async (input: {
       select: {
         id: true,
         materialId: true,
+        quantityRequested: true,
+        status: true,
       },
     });
 
@@ -887,11 +926,23 @@ export const linkBuildItemReservation = async (input: {
       return { id: buildItem.buildId };
     }
 
+    const material = await tx.material.findUnique({
+      where: { id: reservation.materialId },
+      select: { unit: true },
+    });
+
+    if (!material) {
+      throw new AppError('Material not found', 404, 'NOT_FOUND');
+    }
+
     const validation = await validateBuildItemForReservationLink(tx, {
       learnerId: input.learnerId,
       buildItemId: buildItem.id,
       materialId: reservation.materialId,
       ignoreReservationId: reservation.id,
+      reservationId: reservation.id,
+      quantityRequested: reservation.quantityRequested,
+      materialUnit: material.unit,
     });
 
     if (!validation.ok) {
@@ -909,6 +960,24 @@ export const linkBuildItemReservation = async (input: {
             'This build checklist item already has an active linked reservation',
             409,
             'ACTIVE_BUILD_ITEM_RESERVATION',
+          );
+        case 'INSUFFICIENT_QUANTITY':
+          throw new AppError(
+            'Reserved quantity is insufficient for this build item',
+            400,
+            'INSUFFICIENT_QUANTITY',
+          );
+        case 'RESERVATION_ALREADY_ALLOCATED':
+          throw new AppError(
+            'This reservation is already linked to another build item',
+            409,
+            'RESERVATION_ALREADY_ALLOCATED',
+          );
+        case 'INCOMPATIBLE_UNIT':
+          throw new AppError(
+            'Material unit is not compatible with the required component unit',
+            400,
+            'INCOMPATIBLE_UNIT',
           );
         default:
           throw new AppError(
@@ -1678,14 +1747,13 @@ export const completeProjectBuildStep = async (input: {
   projectId: string;
   learnerId: string;
   stepId: string;
-}): Promise<{ buildId: string; noOp: boolean }> => {
+}): Promise<{ buildId: string; noOp: boolean; completed?: boolean }> => {
   return prisma.$transaction(async (tx) => {
-    const build = await tx.projectBuild.findUnique({
+    const build = await tx.projectBuild.findFirst({
       where: {
-        projectId_learnerId: {
-          projectId: input.projectId,
-          learnerId: input.learnerId,
-        },
+        projectId: input.projectId,
+        learnerId: input.learnerId,
+        status: { in: ['IN_PROGRESS', 'PAUSED'] },
       },
       select: {
         id: true,
@@ -1694,11 +1762,24 @@ export const completeProjectBuildStep = async (input: {
           select: {
             status: true,
             linkedMaterialId: true,
+            linkedMaterial: {
+              select: {
+                unit: true,
+              },
+            },
+            requiredComponent: {
+              select: {
+                quantity: true,
+                unit: true,
+                componentRole: true,
+              },
+            },
             linkedReservation: {
               select: {
                 id: true,
                 materialId: true,
                 status: true,
+                quantityRequested: true,
               },
             },
           },
@@ -1708,6 +1789,18 @@ export const completeProjectBuildStep = async (input: {
 
     if (!build) {
       throw new AppError('Project build not found.', 404, 'BUILD_NOT_FOUND');
+    }
+
+    if (build.status === 'PAUSED') {
+      throw new AppError(
+        'Resume the build before completing steps.',
+        409,
+        'BUILD_PAUSED',
+      );
+    }
+
+    if (build.status !== 'IN_PROGRESS') {
+      throw new AppError('Project build is not editable.', 409, 'BUILD_NOT_EDITABLE');
     }
 
     const projectSteps = await tx.projectStep.findMany({
@@ -1742,6 +1835,10 @@ export const completeProjectBuildStep = async (input: {
     const allMaterialsReady = build.items.every((item) =>
       resolveBuildItemStepUnlockReadiness({
         status: item.status,
+        componentRole: item.requiredComponent.componentRole,
+        requiredQuantity: item.requiredComponent.quantity.toNumber(),
+        requiredUnit: item.requiredComponent.unit,
+        materialUnit: item.linkedMaterial?.unit ?? null,
         linkedReservation: item.linkedReservation,
       }).isReadyForStepUnlock,
     );
@@ -1796,12 +1893,24 @@ export const completeProjectBuildStep = async (input: {
         data: {
           status: 'COMPLETED',
           completedAt,
+          pausedAt: null,
         },
       });
     }
 
-    return { buildId: build.id, noOp: false };
+    return { buildId: build.id, noOp: false, completed: allStepsCompleted };
   });
+};
+
+export const finalizeCompletedBuildSnapshot = async (buildId: string) => {
+  const build = await prisma.projectBuild.findUniqueOrThrow({
+    where: { id: buildId },
+    include: projectBuildInclude,
+  });
+  const { createProjectBuildCompletionSnapshot } = await import(
+    './project-build-completion-snapshot.js'
+  );
+  await createProjectBuildCompletionSnapshot(build);
 };
 
 export const updateOwnedProjectBuildItemsStatusBatch = async (input: {

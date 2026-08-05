@@ -29,11 +29,13 @@ import {
   resubmitMyLearningProjectSubmissionById,
   saveLearningProjectById,
   startProjectBuildById,
+  startProjectBuildAgainById,
   submitLearningProjectForReview,
   submitMyLearningProjectDraftById,
   unlikeLearningProjectById,
   unfollowLearningProjectById,
   unlinkBuildItemMaterialById,
+  removeAcquiredMaterialFromBuildItemById,
   unsaveLearningProjectById,
   updateMyLearningProjectSubmissionById,
   updateProjectBuildItemById,
@@ -182,7 +184,9 @@ export const getMyProjectBuild = async (
   res: Response,
 ): Promise<void> => {
   const { id } = readValidatedParams<{ id: string }>(req);
-  const build = await getMyProjectBuildById(id, req.auth!.sub);
+  const buildId =
+    typeof req.query.buildId === 'string' ? req.query.buildId : undefined;
+  const build = await getMyProjectBuildById(id, req.auth!.sub, buildId);
 
   res.json(successResponse('Project build fetched successfully', build));
 };
@@ -222,6 +226,16 @@ export const startProjectBuild = async (
   const build = await startProjectBuildById(id, req.auth!.sub);
 
   res.json(successResponse('Project build ready', build));
+};
+
+export const startProjectBuildAgain = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const build = await startProjectBuildAgainById(id, req.auth!.sub);
+
+  res.json(successResponse('New project build attempt started', build));
 };
 
 export const updateProjectBuildItem = async (
@@ -287,6 +301,32 @@ export const unlinkBuildItemMaterial = async (
   const build = await unlinkBuildItemMaterialById(id, req.auth!.sub, itemId);
 
   res.json(successResponse('Material unlinked successfully', build));
+};
+
+export const removeAcquiredBuildItemAllocation = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id, itemId } = readValidatedParams<{ id: string; itemId: string }>(
+    req,
+  );
+  const { materialId, reservationId } = req.body as {
+    materialId: string;
+    reservationId: string;
+  };
+  const result = await removeAcquiredMaterialFromBuildItemById(
+    id,
+    req.auth!.sub,
+    itemId,
+    { materialId, reservationId },
+  );
+
+  res.json(
+    successResponse('Acquired material allocation removed', {
+      outcome: result.outcome,
+      build: result.build,
+    }),
+  );
 };
 
 export const linkBuildItemReservation = async (

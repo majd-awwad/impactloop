@@ -60,7 +60,7 @@ void main() {
 
     expect(find.text('Build checklist'), findsOneWidget);
     expect(find.text('Continue checklist'), findsOneWidget);
-    expect(find.text('1/2 ready for build'), findsOneWidget);
+    expect(find.text('1 of 2 ready in your build'), findsOneWidget);
 
     await tester.tap(find.text('Continue checklist'));
     await tester.pumpAndSettle();
@@ -177,6 +177,11 @@ class _BuildPanelRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<ProjectBuild> buildAgain(String projectId) async {
+    return startBuild(projectId);
+  }
+
+  @override
   Future<ProjectBuild> updateBuildItem(
     String projectId,
     String itemId, {
@@ -206,6 +211,16 @@ class _BuildPanelRepository implements LearningProjectRepository {
 
   @override
   Future<ProjectBuild> unlinkMaterial(String projectId, String itemId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<ProjectBuild> removeAcquiredMaterialFromBuildItem(
+    String projectId,
+    String itemId, {
+    required String materialId,
+    required String reservationId,
+  }) {
     throw UnimplementedError();
   }
 

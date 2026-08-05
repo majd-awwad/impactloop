@@ -400,6 +400,11 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<ProjectBuild> buildAgain(String projectId) async {
+    return startBuild(projectId);
+  }
+
+  @override
   Future<ProjectBuild> updateBuildItem(
     String projectId,
     String itemId, {
@@ -434,6 +439,16 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
 
   @override
   Future<ProjectBuild> unlinkMaterial(String projectId, String itemId) async {
+    return startBuild(projectId);
+  }
+
+  @override
+  Future<ProjectBuild> removeAcquiredMaterialFromBuildItem(
+    String projectId,
+    String itemId, {
+    required String materialId,
+    required String reservationId,
+  }) async {
     return startBuild(projectId);
   }
 

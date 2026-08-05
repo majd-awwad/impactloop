@@ -23,6 +23,7 @@ import '../widgets/featured_project_card.dart';
 import '../widgets/learning_category_chips.dart';
 import '../widgets/learning_hub_hero.dart';
 import '../widgets/learning_project_card.dart';
+import '../widgets/learning_project_card_layout.dart';
 import 'learning_project_authoring_pages.dart';
 
 const _featuredTip = LocalizedText(
@@ -55,6 +56,8 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
   String? _searchTerm;
   String? _selectedDifficulty;
   String? _selectedTag;
+  String? _selectedAvailability;
+  String? _selectedSort;
   _LearningProjectListMode _listMode = _LearningProjectListMode.all;
   LearningProjectsResult? _lastResult;
 
@@ -65,13 +68,17 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
     categoryId: _selectedCategoryId,
     difficulty: _selectedDifficulty,
     tag: _selectedTag,
+    availability: _selectedAvailability,
+    sort: _selectedSort,
   );
 
   bool get _hasActiveFilters =>
       _selectedCategoryId != null ||
       (_searchTerm != null && _searchTerm!.isNotEmpty) ||
       _selectedDifficulty != null ||
-      _selectedTag != null;
+      _selectedTag != null ||
+      (_selectedAvailability != null && _selectedAvailability != 'ANY') ||
+      (_selectedSort != null && _selectedSort != 'DEFAULT');
 
   @override
   void initState() {
@@ -153,6 +160,20 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
     });
   }
 
+  void _setAvailability(String? availability) {
+    setState(() {
+      _selectedAvailability = availability;
+      _currentPage = 1;
+    });
+  }
+
+  void _setSort(String? sort) {
+    setState(() {
+      _selectedSort = sort;
+      _currentPage = 1;
+    });
+  }
+
   void _clearFilters() {
     _searchDebounce?.cancel();
     _searchController.clear();
@@ -163,6 +184,8 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
       _searchTerm = null;
       _selectedDifficulty = null;
       _selectedTag = null;
+      _selectedAvailability = null;
+      _selectedSort = null;
       _currentPage = 1;
     });
   }
@@ -273,6 +296,8 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
         searchDraft: _searchDraft,
         selectedDifficulty: _selectedDifficulty,
         selectedTag: _selectedTag,
+        selectedAvailability: _selectedAvailability,
+        selectedSort: _selectedSort,
         listMode: _listMode,
         hasActiveFilters: _hasActiveFilters,
         isRefreshing: isRefreshing,
@@ -281,6 +306,8 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
         onSearchSubmitted: _applySearch,
         onDifficultySelected: _setDifficulty,
         onTagSelected: _setTag,
+        onAvailabilitySelected: _setAvailability,
+        onSortSelected: _setSort,
         onListModeSelected: _setListMode,
         onClearFilters: _clearFilters,
         onRetry: () => _invalidateCurrentProjects(query),
@@ -350,6 +377,8 @@ class _HubContent extends StatelessWidget {
     required this.searchDraft,
     required this.selectedDifficulty,
     required this.selectedTag,
+    required this.selectedAvailability,
+    required this.selectedSort,
     required this.listMode,
     required this.hasActiveFilters,
     required this.isRefreshing,
@@ -358,6 +387,8 @@ class _HubContent extends StatelessWidget {
     required this.onSearchSubmitted,
     required this.onDifficultySelected,
     required this.onTagSelected,
+    required this.onAvailabilitySelected,
+    required this.onSortSelected,
     required this.onListModeSelected,
     required this.onClearFilters,
     required this.onRetry,
@@ -376,6 +407,8 @@ class _HubContent extends StatelessWidget {
   final String searchDraft;
   final String? selectedDifficulty;
   final String? selectedTag;
+  final String? selectedAvailability;
+  final String? selectedSort;
   final _LearningProjectListMode listMode;
   final bool hasActiveFilters;
   final bool isRefreshing;
@@ -384,6 +417,8 @@ class _HubContent extends StatelessWidget {
   final ValueChanged<String> onSearchSubmitted;
   final ValueChanged<String?> onDifficultySelected;
   final ValueChanged<String?> onTagSelected;
+  final ValueChanged<String?> onAvailabilitySelected;
+  final ValueChanged<String?> onSortSelected;
   final ValueChanged<_LearningProjectListMode> onListModeSelected;
   final VoidCallback onClearFilters;
   final VoidCallback onRetry;
@@ -471,12 +506,16 @@ class _HubContent extends StatelessWidget {
                 searchDraft: searchDraft,
                 selectedDifficulty: selectedDifficulty,
                 selectedTag: selectedTag,
+                selectedAvailability: selectedAvailability,
+                selectedSort: selectedSort,
                 tagOptions: tagOptions,
                 hasActiveFilters: hasActiveFilters,
                 onSearchChanged: onSearchChanged,
                 onSearchSubmitted: onSearchSubmitted,
                 onDifficultySelected: onDifficultySelected,
                 onTagSelected: onTagSelected,
+                onAvailabilitySelected: onAvailabilitySelected,
+                onSortSelected: onSortSelected,
                 onClearFilters: onClearFilters,
               ),
               const SizedBox(height: AppSpacing.xl),
@@ -514,16 +553,32 @@ class _HubContent extends StatelessWidget {
                       ? Icons.search_off_rounded
                       : Icons.school_outlined,
                   title: hasActiveFilters
-                      ? const LocalizedText(
-                          en: 'No projects match your filters',
-                          ar: 'لا توجد مشاريع تطابق عوامل التصفية',
-                        )
+                      ? (selectedAvailability != null &&
+                                selectedAvailability != 'ANY'
+                            ? const LocalizedText(
+                                en: 'No projects match this availability',
+                                ar: 'لا توجد مشاريع تطابق حالة التوفر هذه',
+                              )
+                            : const LocalizedText(
+                                en: 'No projects match your filters',
+                                ar: 'لا توجد مشاريع تطابق عوامل التصفية',
+                              ))
                       : _emptyTitleForMode(listMode),
                   subtitle: hasActiveFilters
-                      ? const LocalizedText(
-                          en: 'Try a different search, difficulty, category, or tag.',
-                          ar: 'جرّب بحثاً أو مستوى أو فئة أو وسم مختلف.',
-                        )
+                      ? (selectedAvailability != null &&
+                                selectedAvailability != 'ANY'
+                            ? const LocalizedText(
+                                en:
+                                    'Try a different availability level or clear filters.',
+                                ar:
+                                    'جرّب حالة توفر مختلفة أو امسح عوامل التصفية.',
+                              )
+                            : const LocalizedText(
+                                en:
+                                    'Try a different search, difficulty, category, or tag.',
+                                ar:
+                                    'جرّب بحثاً أو مستوى أو فئة أو وسم مختلف.',
+                              ))
                       : _emptySubtitleForMode(listMode),
                   actionLabel: hasActiveFilters
                       ? const LocalizedText(
@@ -571,15 +626,13 @@ class _HubContent extends StatelessWidget {
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final width = constraints.maxWidth;
-                    var columns = 1;
-
-                    if (width >= 1160) {
-                      columns = 3;
-                    } else if (width >= 760) {
-                      columns = 2;
-                    }
-                    final itemWidth =
-                        (width - ((columns - 1) * AppSpacing.md)) / columns;
+                    final columns = LearningProjectCardLayout.columnsForWidth(
+                      width,
+                    );
+                    final itemWidth = LearningProjectCardLayout.itemWidthForGrid(
+                      gridWidth: width,
+                      columns: columns,
+                    );
 
                     return Wrap(
                       spacing: AppSpacing.md,
@@ -641,7 +694,7 @@ class _HubContent extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              _LearningHubRoadmapPanel(onSubmitProject: onSubmitProject),
+              _LearningHubBuildJourneyPanel(onSubmitProject: onSubmitProject),
             ],
           ),
         ),
@@ -1035,8 +1088,8 @@ class _PaginationButton extends StatelessWidget {
   }
 }
 
-class _LearningHubRoadmapPanel extends StatelessWidget {
-  const _LearningHubRoadmapPanel({required this.onSubmitProject});
+class _LearningHubBuildJourneyPanel extends StatelessWidget {
+  const _LearningHubBuildJourneyPanel({required this.onSubmitProject});
 
   final VoidCallback onSubmitProject;
 
@@ -1058,12 +1111,12 @@ class _LearningHubRoadmapPanel extends StatelessWidget {
           final content = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.route_outlined, color: palette.lime),
+              Icon(Icons.construction_outlined, color: palette.lime),
               const SizedBox(height: AppSpacing.md),
               Text(
                 const LocalizedText(
-                  en: 'Build tools are coming next',
-                  ar: 'أدوات البناء قادمة لاحقاً',
+                  en: 'Start a project build',
+                  ar: 'ابدأ بناء مشروع',
                 ).resolve(context),
                 style: AppTextStyles.title(
                   context,
@@ -1072,8 +1125,10 @@ class _LearningHubRoadmapPanel extends StatelessWidget {
               const SizedBox(height: AppSpacing.xs),
               Text(
                 const LocalizedText(
-                  en: 'Saved and followed project lists are available. The next Learning Hub steps are persisted build progress, stronger project-material linking, and in-hub reservation handoff without automated matching.',
-                  ar: 'قوائم المشاريع المحفوظة والمتابعة متاحة. الخطوات القادمة هي حفظ تقدم البناء، وتقوية ربط المشاريع بالمواد، وتحويل الحجز من داخل المركز بدون مطابقة آلية.',
+                  en:
+                      'Open a project, start or continue your build checklist, link materials, request matches, reserve items, and track readiness step by step.',
+                  ar:
+                      'افتح مشروعاً، وابدأ قائمة البناء أو تابعها، واربط المواد، واطلب مطابقات، واحجز العناصر، وتتبع الجاهزية خطوة بخطوة.',
                 ).resolve(context),
                 style: AppTextStyles.body(
                   context,
@@ -1304,12 +1359,16 @@ class _LearningHubFilters extends StatelessWidget {
     required this.searchDraft,
     required this.selectedDifficulty,
     required this.selectedTag,
+    required this.selectedAvailability,
+    required this.selectedSort,
     required this.tagOptions,
     required this.hasActiveFilters,
     required this.onSearchChanged,
     required this.onSearchSubmitted,
     required this.onDifficultySelected,
     required this.onTagSelected,
+    required this.onAvailabilitySelected,
+    required this.onSortSelected,
     required this.onClearFilters,
   });
 
@@ -1333,12 +1392,16 @@ class _LearningHubFilters extends StatelessWidget {
   final String searchDraft;
   final String? selectedDifficulty;
   final String? selectedTag;
+  final String? selectedAvailability;
+  final String? selectedSort;
   final List<String> tagOptions;
   final bool hasActiveFilters;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String> onSearchSubmitted;
   final ValueChanged<String?> onDifficultySelected;
   final ValueChanged<String?> onTagSelected;
+  final ValueChanged<String?> onAvailabilitySelected;
+  final ValueChanged<String?> onSortSelected;
   final VoidCallback onClearFilters;
 
   @override
@@ -1448,6 +1511,109 @@ class _LearningHubFilters extends StatelessWidget {
                   selected: selectedDifficulty == option.value,
                   onSelected: () => onDifficultySelected(option.value),
                 ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _FilterGroup(
+            title: const LocalizedText(
+              en: 'Material availability',
+              ar: 'توفر المواد',
+            ),
+            children: [
+              _LearningFilterChip(
+                label: const LocalizedText(
+                  en: 'Any availability',
+                  ar: 'أي حالة توفر',
+                ).resolve(context),
+                selected:
+                    selectedAvailability == null || selectedAvailability == 'ANY',
+                onSelected: () => onAvailabilitySelected('ANY'),
+              ),
+              _LearningFilterChip(
+                label: const LocalizedText(
+                  en: 'All materials available',
+                  ar: 'جميع المواد متوفرة',
+                ).resolve(context),
+                selected: selectedAvailability == 'FULL',
+                onSelected: () => onAvailabilitySelected('FULL'),
+              ),
+              _LearningFilterChip(
+                label: const LocalizedText(
+                  en: 'Most materials available',
+                  ar: 'معظم المواد متوفرة',
+                ).resolve(context),
+                selected: selectedAvailability == 'MOST',
+                onSelected: () => onAvailabilitySelected('MOST'),
+              ),
+              _LearningFilterChip(
+                label: const LocalizedText(
+                  en: 'Some materials available',
+                  ar: 'بعض المواد متوفرة',
+                ).resolve(context),
+                selected: selectedAvailability == 'SOME',
+                onSelected: () => onAvailabilitySelected('SOME'),
+              ),
+              _LearningFilterChip(
+                label: const LocalizedText(
+                  en: 'No materials available',
+                  ar: 'لا توجد مواد متوفرة',
+                ).resolve(context),
+                selected: selectedAvailability == 'NONE',
+                onSelected: () => onAvailabilitySelected('NONE'),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _FilterGroup(
+            title: const LocalizedText(en: 'Sort by', ar: 'ترتيب حسب'),
+            children: [
+              _LearningFilterChip(
+                label: const LocalizedText(
+                  en: 'Recommended',
+                  ar: 'مقترحة',
+                ).resolve(context),
+                selected: selectedSort == null || selectedSort == 'DEFAULT',
+                onSelected: () => onSortSelected('DEFAULT'),
+              ),
+              _LearningFilterChip(
+                label: const LocalizedText(
+                  en: 'Most materials available',
+                  ar: 'الأكثر توفرًا للمواد',
+                ).resolve(context),
+                selected: selectedSort == 'MOST_AVAILABLE',
+                onSelected: () => onSortSelected('MOST_AVAILABLE'),
+              ),
+              _LearningFilterChip(
+                label: const LocalizedText(
+                  en: 'Shortest duration',
+                  ar: 'الأقصر مدة',
+                ).resolve(context),
+                selected: selectedSort == 'SHORTEST_DURATION',
+                onSelected: () => onSortSelected('SHORTEST_DURATION'),
+              ),
+              _LearningFilterChip(
+                label: const LocalizedText(
+                  en: 'Easiest first',
+                  ar: 'الأسهل أولًا',
+                ).resolve(context),
+                selected: selectedSort == 'EASIEST',
+                onSelected: () => onSortSelected('EASIEST'),
+              ),
+              _LearningFilterChip(
+                label: const LocalizedText(
+                  en: 'Most popular',
+                  ar: 'الأكثر شيوعًا',
+                ).resolve(context),
+                selected: selectedSort == 'MOST_POPULAR',
+                onSelected: () => onSortSelected('MOST_POPULAR'),
+              ),
+              _LearningFilterChip(
+                label: const LocalizedText(en: 'Newest', ar: 'الأحدث').resolve(
+                  context,
+                ),
+                selected: selectedSort == 'NEWEST',
+                onSelected: () => onSortSelected('NEWEST'),
+              ),
             ],
           ),
           if (tagOptions.isNotEmpty) ...[

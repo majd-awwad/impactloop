@@ -3,6 +3,7 @@ import 'package:frontend/features/learning_hub/domain/learning_projects_result.d
 import 'package:frontend/features/learning_hub/domain/models/learning_project.dart';
 import 'package:frontend/features/learning_hub/domain/models/learning_project_submission.dart';
 import 'package:frontend/features/learning_hub/domain/models/project_build.dart';
+import 'package:frontend/features/learning_hub/domain/models/learning_session.dart';
 import 'package:frontend/features/learning_hub/domain/project_engagement.dart';
 import 'package:frontend/features/learning_hub/domain/project_follow_status.dart';
 import 'package:frontend/features/learning_hub/domain/project_save_status.dart';
@@ -128,6 +129,11 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<ProjectBuild> buildAgain(String projectId) async {
+    return startBuild(projectId);
+  }
+
+  @override
   Future<ProjectBuild> updateBuildItem(
     String projectId,
     String itemId, {
@@ -166,6 +172,16 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<ProjectBuild> removeAcquiredMaterialFromBuildItem(
+    String projectId,
+    String itemId, {
+    required String materialId,
+    required String reservationId,
+  }) async {
+    return startBuild(projectId);
+  }
+
+  @override
   Future<ProjectBuild> completeBuildStep(String projectId, String stepId) async {
     return startBuild(projectId);
   }
@@ -195,6 +211,164 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
         ),
       ),
     );
+  }
+
+  @override
+  Future<LearningSessionBundle> fetchLearningSession(String projectId) async {
+    return const LearningSessionBundle(
+      session: null,
+      learningSetup: ProjectBuildLearningSetup(
+        status: LearningSetupStatus.notRequested,
+      ),
+    );
+  }
+
+  @override
+  Future<LearningSessionBundle> setupLearningSession(
+    String projectId, {
+    String? learningGoal,
+    int? confidenceBefore,
+  }) async {
+    return fetchLearningSession(projectId);
+  }
+
+  @override
+  Future<BuildLearningSession> updateLearningSession(
+    String projectId, {
+    String? learningGoal,
+    int? confidenceBefore,
+  }) async {
+    throw UnimplementedError('updateLearningSession');
+  }
+
+  @override
+  Future<LearningAnswerSubmissionResult> submitLearningAnswer(
+    String projectId,
+    String assignmentId, {
+    required String selectedOptionKey,
+  }) async {
+    throw UnimplementedError('submitLearningAnswer');
+  }
+
+  @override
+  Future<LearningAssignment> skipLearningAssignment(
+    String projectId,
+    String assignmentId,
+  ) async {
+    throw UnimplementedError('skipLearningAssignment');
+  }
+
+  @override
+  Future<LearningAssignment> viewLearningHint(
+    String projectId,
+    String assignmentId,
+  ) async {
+    throw UnimplementedError('viewLearningHint');
+  }
+
+  @override
+  Future<StepLearningCheck?> fetchStepLearningCheck(
+    String projectId,
+    String stepId,
+  ) async {
+    return null;
+  }
+
+  @override
+  Future<StepLearningCheck> viewStepLearningCheckHint(
+    String projectId,
+    String stepId,
+  ) async {
+    throw UnimplementedError('viewStepLearningCheckHint');
+  }
+
+  @override
+  Future<StepLearningCheckAnswerSubmission> submitStepLearningCheckAnswer(
+    String projectId,
+    String stepId, {
+    required String selectedOptionKey,
+  }) async {
+    throw UnimplementedError('submitStepLearningCheckAnswer');
+  }
+
+  @override
+  Future<StepLearningCheck> skipStepLearningCheck(
+    String projectId,
+    String stepId,
+  ) async {
+    throw UnimplementedError('skipStepLearningCheck');
+  }
+
+  @override
+  Future<StepLearningCheckAiHandoff> fetchStepLearningCheckAiHandoff(
+    String projectId,
+    String stepId,
+  ) async {
+    throw UnimplementedError('fetchStepLearningCheckAiHandoff');
+  }
+
+  @override
+  Future<FinalLearningCheck> fetchFinalLearningCheck(String projectId) async {
+    throw UnimplementedError('fetchFinalLearningCheck');
+  }
+
+  @override
+  Future<FinalLearningAssignment> viewFinalLearningCheckHint(
+    String projectId,
+    String assignmentId,
+  ) async {
+    throw UnimplementedError('viewFinalLearningCheckHint');
+  }
+
+  @override
+  Future<FinalLearningCheckAnswerSubmission> submitFinalLearningCheckAnswer(
+    String projectId,
+    String assignmentId, {
+    required String selectedOptionKey,
+  }) async {
+    throw UnimplementedError('submitFinalLearningCheckAnswer');
+  }
+
+  @override
+  Future<FinalLearningCheckAnswerSubmission> skipFinalLearningCheckAssignment(
+    String projectId,
+    String assignmentId,
+  ) async {
+    throw UnimplementedError('skipFinalLearningCheckAssignment');
+  }
+
+  @override
+  Future<FinalLearningCheckAiHandoff> fetchFinalLearningCheckAiHandoff(
+    String projectId,
+    String assignmentId,
+  ) async {
+    throw UnimplementedError('fetchFinalLearningCheckAiHandoff');
+  }
+
+  @override
+  Future<LearningCompletionReflectionResult> updateLearningCompletionReflection(
+    String projectId, {
+    LearningGoalOutcome? goalOutcome,
+    int? confidenceAfter,
+    String? finalReflection,
+  }) async {
+    throw UnimplementedError('updateLearningCompletionReflection');
+  }
+
+  @override
+  Future<void> reportLearningAssignmentUnclear(
+    String projectId,
+    String assignmentId,
+  ) async {
+    throw UnimplementedError('reportLearningAssignmentUnclear');
+  }
+
+  @override
+  Future<void> clearLearningAssignmentUnclearReport(
+    String projectId,
+    String assignmentId,
+  ) async {
+    throw UnimplementedError('clearLearningAssignmentUnclearReport');
   }
 
   @override

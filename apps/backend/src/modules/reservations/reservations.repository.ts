@@ -20,6 +20,7 @@ import {
   setBuildItemLinkedReservationId,
   validateBuildItemForReservationLink,
 } from '../learning-projects/learning-projects.build-reservation-linking.js';
+import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
 
 const reservationInclude = {
   material: {
@@ -289,6 +290,7 @@ export const createLearnerReservation = async (input: {
         currency: true,
         supplierProfileId: true,
         locationId: true,
+        unit: true,
       },
     });
 
@@ -394,6 +396,8 @@ export const createLearnerReservation = async (input: {
         learnerId: input.requesterId,
         buildItemId: input.buildItemId,
         materialId: material.id,
+        quantityRequested: requestedQuantity,
+        materialUnit: material.unit,
       });
 
       if (!buildItemValidation.ok) {
@@ -630,6 +634,8 @@ export const cancelLearnerReservation = async (input: {
     });
 
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
+
+    await applyBuildReservationSyncInTransaction(tx, existing.id);
 
     return { outcome: 'CANCELLED' as const, reservationId: existing.id };
   });

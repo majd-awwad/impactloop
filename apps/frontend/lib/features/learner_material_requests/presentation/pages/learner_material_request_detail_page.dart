@@ -11,9 +11,12 @@ import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../home/application/learner_home_provider.dart';
+import '../../../learning_hub/application/project_build_refresh.dart';
 import '../../application/learner_material_requests_providers.dart';
 import '../../data/models/learner_material_request.dart';
 import '../l10n/learner_material_requests_l10n.dart';
+import '../widgets/learner_material_request_match_card.dart';
 
 const _kMaxContentWidth = 720.0;
 
@@ -154,6 +157,38 @@ class _RequestDetailBody extends ConsumerStatefulWidget {
 class _RequestDetailBodyState extends ConsumerState<_RequestDetailBody> {
   bool _isMutating = false;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshLinkedBuildState(widget.request);
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _RequestDetailBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.request.id != widget.request.id ||
+        oldWidget.request.buildSyncRepaired != widget.request.buildSyncRepaired ||
+        oldWidget.request.updatedAt != widget.request.updatedAt) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _refreshLinkedBuildState(widget.request);
+      });
+    }
+  }
+
+  void _refreshLinkedBuildState(LearnerMaterialRequest request) {
+    if (request.projectId == null || request.projectId!.isEmpty) {
+      return;
+    }
+
+    ref.refreshLinkedProjectBuild(request.projectId);
+    if (request.buildSyncRepaired || request.isFulfilled) {
+      ref.invalidate(learnerHomeFeedProvider);
+      ref.invalidate(learnerHomeSectionDetailsProvider);
+    }
+  }
+
   Future<void> _runAction(Future<void> Function() action) async {
     if (_isMutating) return;
     setState(() => _isMutating = true);
@@ -253,20 +288,6 @@ class _RequestDetailBodyState extends ConsumerState<_RequestDetailBody> {
         LearnerMaterialRequestsL10n.suggestionDismissed.resolve(context),
       );
     });
-  }
-
-  void _openMaterial(LearnerMaterialRequestMatch match) {
-    final materialId = match.materialId;
-    if (materialId.isEmpty) return;
-    context.push('/materials/$materialId');
-  }
-
-  void _reserveMaterial(LearnerMaterialRequestMatch match) {
-    final materialId = match.materialId;
-    if (materialId.isEmpty) return;
-    context.push(
-      '/materials/$materialId?materialRequestMatchId=${Uri.encodeComponent(match.id)}',
-    );
   }
 
   @override
@@ -392,6 +413,24 @@ class _RequestDetailBodyState extends ConsumerState<_RequestDetailBody> {
                     ],
                   ),
                 ),
+                if (request.isFulfilled &&
+                    request.projectId != null &&
+                    request.projectId!.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: FilledButton.tonalIcon(
+                      onPressed: () =>
+                          context.push('/learning/${request.projectId}/build'),
+                      icon: const Icon(Icons.construction_outlined),
+                      label: Text(
+                        LearnerMaterialRequestsL10n.returnToProjectBuild.resolve(
+                          context,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
               const SizedBox(height: AppSpacing.md),
               Wrap(
@@ -437,7 +476,11 @@ class _RequestDetailBodyState extends ConsumerState<_RequestDetailBody> {
         ),
         const SizedBox(height: AppSpacing.lg),
         Text(
-          LearnerMaterialRequestsL10n.matchesTitle.resolve(context),
+          request.isFulfilled
+              ? LearnerMaterialRequestsL10n.fulfilledMatchesTitle.resolve(
+                  context,
+                )
+              : LearnerMaterialRequestsL10n.matchesTitle.resolve(context),
           style: AppTextStyles.subtitle(
             context,
           ).copyWith(color: palette.textPrimary),
@@ -466,140 +509,21 @@ class _RequestDetailBodyState extends ConsumerState<_RequestDetailBody> {
                 .map(
                   (match) => Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: _MatchCard(
+                    child: LearnerMaterialRequestMatchCard(
                       match: match,
+                      requestId: request.id,
+                      requestStatus: request.status,
+                      projectId: request.projectId,
                       isMutating: _isMutating,
-                      onDismiss: () => _handleDismissMatch(match),
-                      onOpenMaterial: () => _openMaterial(match),
-                      onReserve: () => _reserveMaterial(match),
+                      onDismiss: request.isOpen
+                          ? () => _handleDismissMatch(match)
+                          : () {},
                     ),
                   ),
                 )
                 .toList(growable: false),
           ),
       ],
-    );
-  }
-}
-
-class _MatchCard extends StatelessWidget {
-  const _MatchCard({
-    required this.match,
-    required this.isMutating,
-    required this.onDismiss,
-    required this.onOpenMaterial,
-    required this.onReserve,
-  });
-
-  final LearnerMaterialRequestMatch match;
-  final bool isMutating;
-  final VoidCallback onDismiss;
-  final VoidCallback onOpenMaterial;
-  final VoidCallback onReserve;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-    final colors = AppThemeColors.of(context);
-    final material = match.material;
-
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: palette.panelSurface,
-        borderRadius: AppRadius.lgAll,
-        border: Border.all(
-          color: match.isDismissed ? palette.borderSubtle : colors.primary
-              .withValues(alpha: 0.35),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  material?.title ?? 'Material',
-                  style: AppTextStyles.subtitle(
-                    context,
-                  ).copyWith(color: palette.textPrimary),
-                ),
-              ),
-              if (match.isReserved)
-                Container(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colors.success.withValues(alpha: 0.12),
-                    borderRadius: AppRadius.pillAll,
-                  ),
-                  child: Text(
-                    'Reserved',
-                    style: AppTextStyles.label(
-                      context,
-                    ).copyWith(color: colors.success),
-                  ),
-                ),
-            ],
-          ),
-          if (material != null) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              LearnerMaterialRequestsL10n.quantityUnitLine(
-                _formatQuantity(material.quantity),
-                material.unit,
-              ).resolve(context),
-              style: AppTextStyles.body(
-                context,
-              ).copyWith(color: palette.textSecondary),
-            ),
-            if (material.location != null) ...[
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                material.location!.displayLabel,
-                style: AppTextStyles.body(
-                  context,
-                ).copyWith(color: palette.textSecondary),
-              ),
-            ],
-          ],
-          const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              OutlinedButton(
-                onPressed: onOpenMaterial,
-                child: Text(
-                  LearnerMaterialRequestsL10n.openMaterial.resolve(context),
-                ),
-              ),
-              if (match.isSuggested && !match.isReserved) ...[
-                FilledButton(
-                  onPressed: onReserve,
-                  child: Text(
-                    LearnerMaterialRequestsL10n.reserveMaterial.resolve(
-                      context,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: isMutating ? null : onDismiss,
-                  child: Text(
-                    LearnerMaterialRequestsL10n.dismissSuggestion.resolve(
-                      context,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
     );
   }
 }

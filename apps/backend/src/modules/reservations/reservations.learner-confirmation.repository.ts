@@ -14,6 +14,7 @@ import {
   ensureSelfPickupCodeStored,
 } from '../../utils/handover-codes.js';
 import { ensureDeliveryForAcceptedReservation } from '../delivery-groups/delivery-group-operations.service.js';
+import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
 
 const learnerConfirmationExistingSelect = {
   id: true,
@@ -102,6 +103,7 @@ export const resolveLearnerConfirmation = async (input: {
       });
 
       await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
+      await applyBuildReservationSyncInTransaction(tx, existing.id);
 
       return { outcome: 'CANCELLED' as const };
     }

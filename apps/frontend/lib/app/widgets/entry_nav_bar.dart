@@ -546,6 +546,7 @@ class _MobileNavLayout extends StatelessWidget {
               alignment: WrapAlignment.end,
               children: [
                 if (isAuthenticated && user != null) ...[
+                  ...trailingActions,
                   _AccountMenu(
                     user: user!,
                     settings: settings,
@@ -564,7 +565,7 @@ class _MobileNavLayout extends StatelessWidget {
                     onPressed: onSignIn ?? () => context.go('/login'),
                   ),
                 _UtilityPills(settings: settings, ref: ref, compact: true),
-                ...trailingActions,
+                if (!isAuthenticated) ...trailingActions,
               ],
             ),
           ),

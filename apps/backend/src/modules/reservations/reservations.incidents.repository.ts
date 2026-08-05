@@ -15,6 +15,7 @@ import {
   HANDOVER_GRACE_MINUTES,
 } from '../../utils/handover-timing.js';
 import { recomputeAndUpdateMaterialStatus, runSerializableTransaction } from './reservations.quantity.js';
+import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
 
 const mapLearnerSupplierReason = (
   reason: string,
@@ -61,6 +62,8 @@ const transitionSelfPickupToAwaitingResolution = async (
   if (input.releaseHold) {
     await recomputeAndUpdateMaterialStatus(tx, input.materialId);
   }
+
+  await applyBuildReservationSyncInTransaction(tx, input.reservationId);
 };
 
 export const createLearnerSupplierIssueReport = async (input: {

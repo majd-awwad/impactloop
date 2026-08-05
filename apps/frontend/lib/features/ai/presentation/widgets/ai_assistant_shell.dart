@@ -879,6 +879,30 @@ class _AiEmbeddedAssistantChatState extends ConsumerState<AiEmbeddedAssistantCha
   bool _shouldAutoScroll = true;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _applyComposerPrefill());
+  }
+
+  @override
+  void didUpdateWidget(covariant AiEmbeddedAssistantChat oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _applyComposerPrefill();
+  }
+
+  void _applyComposerPrefill() {
+    final prefill = ref.read(aiAssistantShellProvider).composerPrefill;
+    if (prefill == null || prefill.isEmpty) {
+      return;
+    }
+    if (_inputController.text.trim().isEmpty) {
+      _inputController.text = prefill;
+      _inputController.selection = TextSelection.collapsed(offset: prefill.length);
+    }
+    ref.read(aiAssistantShellProvider.notifier).clearComposerPrefill();
+  }
+
+  @override
   void dispose() {
     _inputController.dispose();
     _scrollController.dispose();

@@ -275,12 +275,38 @@ after(async () => {
     });
   }
 
+  if (ids.reservations.length > 0) {
+    await prisma.reservation.deleteMany({
+      where: { id: { in: ids.reservations } },
+    });
+  }
+
   if (ids.builds.length > 0) {
+    await prisma.projectBuildLearningSession.deleteMany({
+      where: { buildId: { in: ids.builds } },
+    });
     await prisma.projectBuild.deleteMany({ where: { id: { in: ids.builds } } });
   }
 
   if (ids.projects.length > 0) {
+    await prisma.projectBuildLearningSession.deleteMany({
+      where: { build: { projectId: { in: ids.projects } } },
+    });
+    await prisma.projectLearningQuestion.deleteMany({
+      where: { pack: { projectId: { in: ids.projects } } },
+    });
+    await prisma.projectLearningPack.deleteMany({
+      where: { projectId: { in: ids.projects } },
+    });
     await prisma.learningProject.deleteMany({ where: { id: { in: ids.projects } } });
+  }
+
+  if (ids.materials.length > 0) {
+    await prisma.material.deleteMany({ where: { id: { in: ids.materials } } });
+  }
+
+  if (ids.locations.length > 0) {
+    await prisma.location.deleteMany({ where: { id: { in: ids.locations } } });
   }
 
   if (ids.categories.length > 0) {
@@ -818,13 +844,23 @@ describe('build step unlock material readiness', () => {
     });
     ids.reservations.push(reservation.id);
 
-    for (const item of started.items) {
+    for (const [index, item] of started.items.entries()) {
+      if (index === 0) {
+        await prisma.projectBuildItem.update({
+          where: { id: item.id },
+          data: {
+            linkedMaterialId: material.id,
+            linkedReservationId: reservation.id,
+            linkedMaterialAt: new Date(),
+          },
+        });
+        continue;
+      }
+
       await prisma.projectBuildItem.update({
         where: { id: item.id },
         data: {
-          linkedMaterialId: material.id,
-          linkedReservationId: reservation.id,
-          linkedMaterialAt: new Date(),
+          status: 'ALREADY_OWNED',
         },
       });
     }

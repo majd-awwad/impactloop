@@ -40,6 +40,8 @@ import '../../features/landing/presentation/pages/landing_page.dart';
 import '../../features/learner_material_requests/presentation/pages/learner_material_request_detail_page.dart';
 import '../../features/learner_material_requests/presentation/pages/learner_material_request_form_page.dart';
 import '../../features/learner_material_requests/presentation/pages/learner_material_requests_page.dart';
+import '../../features/learner_builds/presentation/pages/my_builds_page.dart';
+import '../../features/learner_builds/presentation/pages/portfolio_page.dart';
 import '../../features/locations/presentation/pages/saved_locations_page.dart';
 import '../../features/material_discovery/domain/material_discovery_query.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
@@ -208,6 +210,8 @@ _RouteAccessLevel _routeAccessForPath(String path) {
       path.startsWith('/learner/deliveries/') ||
       path == '/learner/material-requests' ||
       path.startsWith('/learner/material-requests/') ||
+      path == '/learner/builds' ||
+      path == '/learner/portfolio' ||
       path.startsWith('/home/recommendations/') ||
       path == '/materials/liked' ||
       path == '/ai/assistant' ||
@@ -371,7 +375,9 @@ bool _isLearnerPortalHomePath(String path) {
       path.startsWith('/learner/reservations/') ||
       path.startsWith('/learner/deliveries/') ||
       path == '/learner/material-requests' ||
-      path.startsWith('/learner/material-requests/');
+      path.startsWith('/learner/material-requests/') ||
+      path == '/learner/builds' ||
+      path == '/learner/portfolio';
 }
 
 String? _resolveActivePortalRedirect(AuthState authState, String path) {
@@ -663,6 +669,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/learner/material-requests',
         builder: (context, state) => const LearnerMaterialRequestsPage(),
+      ),
+      GoRoute(
+        path: '/learner/builds',
+        builder: (context, state) => const MyBuildsPage(),
+      ),
+      GoRoute(
+        path: '/learner/portfolio',
+        builder: (context, state) => const PortfolioPage(),
       ),
       GoRoute(
         path: '/learner/material-requests/new',

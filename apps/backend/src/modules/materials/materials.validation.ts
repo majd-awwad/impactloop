@@ -130,6 +130,15 @@ export const relatedMaterialsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(8).default(4),
 });
 
+export const materialRelatedProjectsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(12).default(6),
+});
+
+export type MaterialRelatedProjectsQuery = z.infer<
+  typeof materialRelatedProjectsQuerySchema
+>;
+
 export type RelatedMaterialsQuery = z.infer<typeof relatedMaterialsQuerySchema>;
 
 export const priceCheckSchema = z.object({

@@ -12,6 +12,7 @@ import '../../../learning_hub/domain/learning_projects_result.dart';
 import '../../../learning_hub/domain/models/learning_project.dart';
 import '../../../learning_hub/presentation/theme/learning_project_visuals.dart';
 import '../../../learning_hub/presentation/widgets/project_engagement_strip.dart';
+import '../../../learning_hub/presentation/widgets/project_material_coverage_chip.dart';
 import 'empty_activity_card.dart';
 import 'home_section_header.dart';
 
@@ -367,6 +368,8 @@ class HomeLearningProjectCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: AppSpacing.sm),
+                        ProjectMaterialCoverageChip(project: project, compact: true),
+                        const SizedBox(height: AppSpacing.xs),
                         if (reason != null && reason!.trim().isNotEmpty) ...[
                           Text(
                             reason!.trim(),

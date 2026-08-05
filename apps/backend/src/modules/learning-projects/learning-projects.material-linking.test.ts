@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 
+import { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { hashPassword } from '../../utils/password.js';
 import { AppError } from '../../utils/app-error.js';
@@ -279,6 +280,7 @@ describe('learning project build material linking', () => {
           deliveryAllowed: false,
           ownerId: 'owner',
           materialType: 'Arduino',
+          unit: 'piece',
           category: { id: 'cat', nameEn: 'Electronics', nameAr: 'Electronics' },
           location: { city: 'Ramallah', area: null },
           images: [],
@@ -292,10 +294,18 @@ describe('learning project build material linking', () => {
     assert.equal(
       resolveBuildItemReadiness({
         status: 'MISSING',
+        requiredQuantity: 4,
+        requiredUnit: 'pieces',
+        materialUnit: 'pieces',
+        linkedMaterial: {
+          id: 'mat-1',
+          unit: 'pieces',
+        } as never,
         linkedReservation: {
           id: 'res-1',
           status: 'COMPLETED',
           materialId: 'mat-1',
+          quantityRequested: new Prisma.Decimal(4),
         },
       }).isReadyForBuild,
       true,

@@ -27,6 +27,7 @@ import { profileRouter } from './modules/profile/profile.routes.js';
 import { learnerHomeRouter } from './modules/learner-home/learner-home.routes.js';
 import { learnerMaterialRequestsRouter } from './modules/learner-material-requests/learner-material-requests.routes.js';
 import { learnerProfileSummaryRouter } from './modules/learner-profile-summary/learner-profile-summary.routes.js';
+import { learnerBuildsRouter } from './modules/learner-builds/learner-builds.routes.js';
 import { aiRouter } from './modules/ai/ai.routes.js';
 import {
   bindRecommendationEventOriginMiddleware,
@@ -46,10 +47,15 @@ import {
   ensureSupplierVerificationUploadsDir,
   SUPPLIER_VERIFICATION_UPLOADS_DIR,
 } from './modules/uploads/verification-uploads.storage.js';
+import {
+  ensureBuildCompletionUploadsDir,
+  BUILD_COMPLETION_UPLOADS_DIR,
+} from './modules/learning-projects/build-completion-uploads.storage.js';
 
 ensureMaterialUploadsDir();
 ensureProfileUploadsDir();
 ensureSupplierVerificationUploadsDir();
+ensureBuildCompletionUploadsDir();
 
 export type CreateAppOptions = {
   recommendationEventOrigin: WritableRecommendationEventSource;
@@ -97,6 +103,7 @@ export const createApp = (options: CreateAppOptions): Express => {
     '/uploads/supplier-verification',
     express.static(SUPPLIER_VERIFICATION_UPLOADS_DIR),
   );
+  app.use('/uploads/build-completion', express.static(BUILD_COMPLETION_UPLOADS_DIR));
   app.use(express.json());
   app.use(recommendationActionAttributionMiddleware);
 
@@ -121,6 +128,7 @@ export const createApp = (options: CreateAppOptions): Express => {
   app.use('/api/learner/material-requests', learnerMaterialRequestsRouter);
   app.use('/api/learner', learnerHomeRouter);
   app.use('/api/learner', learnerProfileSummaryRouter);
+  app.use('/api/learner', learnerBuildsRouter);
   app.use('/api/ai/v1', aiRouter);
   app.use('/api/notifications', notificationsRouter);
   app.use('/api/suppliers', publicSuppliersRouter);

@@ -63,6 +63,51 @@ class LearnerMaterialRequestProjectContext {
   }
 }
 
+class LearnerMaterialRequestMatchSupplier {
+  const LearnerMaterialRequestMatchSupplier({
+    this.displayName,
+    this.avatarUrl,
+    this.city,
+    this.area,
+    this.isVerified = false,
+  });
+
+  final String? displayName;
+  final String? avatarUrl;
+  final String? city;
+  final String? area;
+  final bool isVerified;
+
+  static LearnerMaterialRequestMatchSupplier? fromJsonOrNull(Object? value) {
+    if (value is! Map) return null;
+    final json = Map<String, dynamic>.from(value);
+    final displayName = json['displayName'] as String?;
+    if ((displayName ?? '').trim().isEmpty &&
+        json['avatarUrl'] == null &&
+        json['city'] == null) {
+      return null;
+    }
+    return LearnerMaterialRequestMatchSupplier(
+      displayName: displayName,
+      avatarUrl: json['avatarUrl'] as String?,
+      city: json['city'] as String?,
+      area: json['area'] as String?,
+      isVerified: json['isVerified'] as bool? ?? false,
+    );
+  }
+
+  String get locationLabel {
+    final trimmedArea = area?.trim();
+    if (city != null && city!.trim().isNotEmpty) {
+      if (trimmedArea != null && trimmedArea.isNotEmpty) {
+        return '${city!.trim()}, $trimmedArea';
+      }
+      return city!.trim();
+    }
+    return '';
+  }
+}
+
 class LearnerMaterialRequestMatchMaterial {
   const LearnerMaterialRequestMatchMaterial({
     required this.id,
@@ -72,6 +117,11 @@ class LearnerMaterialRequestMatchMaterial {
     required this.unit,
     required this.pickupAllowed,
     required this.deliveryAllowed,
+    this.condition,
+    this.isFree = true,
+    this.price,
+    this.currency,
+    this.imageUrl,
     this.location,
     this.supplierPublicName,
   });
@@ -83,6 +133,11 @@ class LearnerMaterialRequestMatchMaterial {
   final String unit;
   final bool pickupAllowed;
   final bool deliveryAllowed;
+  final String? condition;
+  final bool isFree;
+  final double? price;
+  final String? currency;
+  final String? imageUrl;
   final LearnerMaterialRequestLocation? location;
   final String? supplierPublicName;
 
@@ -97,6 +152,11 @@ class LearnerMaterialRequestMatchMaterial {
       unit: _stringOrEmpty(json['unit']),
       pickupAllowed: json['pickupAllowed'] as bool? ?? false,
       deliveryAllowed: json['deliveryAllowed'] as bool? ?? false,
+      condition: json['condition'] as String?,
+      isFree: json['isFree'] as bool? ?? true,
+      price: _numOrNull(json['price']),
+      currency: json['currency'] as String?,
+      imageUrl: json['imageUrl'] as String?,
       location: json['location'] is Map
           ? LearnerMaterialRequestLocation.fromJson(
               Map<String, dynamic>.from(json['location'] as Map),
@@ -116,9 +176,14 @@ class LearnerMaterialRequestMatch {
     this.matchReasonCode,
     this.rankingScore,
     this.reservationId,
+    this.reservationStatus,
+    this.isAcquired = false,
+    this.canReserve = false,
+    this.unavailableReason,
     required this.createdAt,
     required this.updatedAt,
     this.material,
+    this.supplier,
   });
 
   final String id;
@@ -128,13 +193,24 @@ class LearnerMaterialRequestMatch {
   final String? matchReasonCode;
   final double? rankingScore;
   final String? reservationId;
+  final String? reservationStatus;
+  final bool isAcquired;
+  final bool canReserve;
+  final String? unavailableReason;
   final DateTime createdAt;
   final DateTime updatedAt;
   final LearnerMaterialRequestMatchMaterial? material;
+  final LearnerMaterialRequestMatchSupplier? supplier;
 
   bool get isSuggested => status == 'SUGGESTED';
   bool get isDismissed => status == 'DISMISSED';
-  bool get isReserved => reservationId != null;
+  bool get isUnavailable => status == 'UNAVAILABLE';
+  bool get isReserved =>
+      reservationId != null || status == 'RESERVATION_CREATED';
+
+  bool get isCompletedAcquisition =>
+      isAcquired ||
+      (reservationStatus?.toUpperCase() == 'COMPLETED' && reservationId != null);
 
   factory LearnerMaterialRequestMatch.fromJson(Map<String, dynamic> json) {
     return LearnerMaterialRequestMatch(
@@ -145,10 +221,17 @@ class LearnerMaterialRequestMatch {
       matchReasonCode: json['matchReasonCode'] as String?,
       rankingScore: _numOrNull(json['rankingScore']),
       reservationId: json['reservationId'] as String?,
+      reservationStatus: json['reservationStatus'] as String?,
+      isAcquired: json['isAcquired'] as bool? ?? false,
+      canReserve: json['canReserve'] as bool? ?? false,
+      unavailableReason: json['unavailableReason'] as String?,
       createdAt: _dateOrNull(json['createdAt']) ?? DateTime.now(),
       updatedAt: _dateOrNull(json['updatedAt']) ?? DateTime.now(),
       material: LearnerMaterialRequestMatchMaterial.fromJsonOrNull(
         json['material'],
+      ),
+      supplier: LearnerMaterialRequestMatchSupplier.fromJsonOrNull(
+        json['supplier'],
       ),
     );
   }
@@ -179,6 +262,8 @@ class LearnerMaterialRequest {
     required this.createdAt,
     required this.updatedAt,
     required this.suggestionCount,
+    this.activeSuggestionCount = 0,
+    this.buildSyncRepaired = false,
     this.matches = const [],
   });
 
@@ -205,6 +290,8 @@ class LearnerMaterialRequest {
   final DateTime createdAt;
   final DateTime updatedAt;
   final int suggestionCount;
+  final int activeSuggestionCount;
+  final bool buildSyncRepaired;
   final List<LearnerMaterialRequestMatch> matches;
 
   bool get isOpen => status == 'OPEN';
@@ -246,7 +333,14 @@ class LearnerMaterialRequest {
       cancelledAt: _dateOrNull(json['cancelledAt']),
       createdAt: _dateOrNull(json['createdAt']) ?? DateTime.now(),
       updatedAt: _dateOrNull(json['updatedAt']) ?? DateTime.now(),
-      suggestionCount: (json['suggestionCount'] as num?)?.toInt() ?? 0,
+      suggestionCount: (json['activeSuggestionCount'] as num?)?.toInt() ??
+          (json['suggestionCount'] as num?)?.toInt() ??
+          0,
+      activeSuggestionCount:
+          (json['activeSuggestionCount'] as num?)?.toInt() ??
+          (json['suggestionCount'] as num?)?.toInt() ??
+          0,
+      buildSyncRepaired: json['buildSyncRepaired'] as bool? ?? false,
       matches: rawMatches is List
           ? rawMatches
                 .whereType<Map>()

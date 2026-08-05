@@ -58,6 +58,14 @@ class LearnerProfileL10n {
   String get completedBuilds => t('Completed builds', 'مشاريع مكتملة');
   String get savedProjects => t('Saved projects', 'مشاريع محفوظة');
   String get likedMaterials => t('Liked materials', 'المواد التي أعجبتني');
+  String get materialRequests =>
+      t('Material requests', 'طلبات المواد');
+  String get myBuilds => t('My builds', 'مشاريعي');
+  String get portfolio => t('Portfolio', 'معرض الإنجازات');
+  String get openMyBuilds => t('Open my builds', 'فتح مشاريعي');
+  String get openPortfolio => t('Open portfolio', 'فتح معرض الإنجازات');
+  String get openMaterialRequests =>
+      t('Open material requests', 'فتح طلبات المواد');
   String metricSemantics(String label, String count) =>
       t('$label, $count. Open.', '$label، $count. فتح.');
 

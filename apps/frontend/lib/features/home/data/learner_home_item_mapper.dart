@@ -68,6 +68,7 @@ class LearnerHomeItemMapper {
           progressPercent: (progress['percent'] as num?)?.toInt() ?? 0,
           readyCount: (progress['ready'] as num?)?.toInt() ?? 0,
           totalCount: (progress['total'] as num?)?.toInt() ?? 0,
+          buildStatus: build['status'] as String?,
         );
       default:
         return null;

@@ -1,6 +1,12 @@
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { normalizeSearchText } from '../../utils/normalize-search-text.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
+import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
+import {
+  syncBuildItemFromCompletedMaterialRequest,
+  type BuildMaterialRequestSyncOutcome,
+} from '../learning-projects/learning-projects.build-material-request-sync.js';
 import {
   runIdempotentOperation,
   validateIdempotencyKey,
@@ -12,6 +18,7 @@ import {
   MAX_OPEN_LEARNER_MATERIAL_REQUESTS,
   shouldLazyExpire,
 } from '../material-requests/material-requests.lifecycle.js';
+import { reconcileFulfilledRequestBuildSync } from '../material-requests/material-requests.build-sync-reconciliation.js';
 import { refreshUnavailableSuggestedMatches } from '../material-requests/material-requests.match-availability.js';
 
 import * as repository from './learner-material-requests.repository.js';
@@ -316,7 +323,21 @@ export const getLearnerMaterialRequest = async (
       fresh;
   }
 
-  return mapLearnerRequest(fresh);
+  const reconciliation = await reconcileFulfilledRequestBuildSync(
+    requestId,
+    learnerId,
+    fulfillRequestFromCompletedReservation,
+  );
+  if (reconciliation.repaired) {
+    fresh =
+      (await repository.findRequestByIdForLearner(requestId, learnerId)) ??
+      fresh;
+  }
+
+  return {
+    ...mapLearnerRequest(fresh),
+    buildSyncRepaired: reconciliation.repaired,
+  };
 };
 
 export const updateLearnerMaterialRequest = async (
@@ -507,24 +528,167 @@ export const dismissLearnerMaterialRequestMatch = async (
   return getLearnerMaterialRequest(learnerId, match.materialRequestId);
 };
 
-export const fulfillRequestFromCompletedReservation = async (
+export type FulfillFromCompletedReservationResult = {
+  id: string;
+  learnerId: string;
+  requestedItemName: string;
+  status: string;
+  transitionedToFulfilled: boolean;
+  buildSyncOutcome: BuildMaterialRequestSyncOutcome;
+};
+
+const loadValidMatchForCompletedReservation = async (
   reservationId: string,
 ) => {
-  const match = await prisma.learnerMaterialRequestMatch.findFirst({
+  const reservation = await prisma.reservation.findUnique({
+    where: { id: reservationId },
+    select: {
+      id: true,
+      status: true,
+      requesterId: true,
+      materialId: true,
+    },
+  });
+
+  if (!reservation || reservation.status !== 'COMPLETED') {
+    return null;
+  }
+
+  const matches = await prisma.learnerMaterialRequestMatch.findMany({
     where: { reservationId },
     include: { materialRequest: true },
   });
-  if (!match || match.materialRequest.status !== 'OPEN') {
+
+  const validMatches = matches.filter(
+    (match) =>
+      match.reservationId === reservation.id &&
+      match.materialId === reservation.materialId,
+  );
+
+  if (validMatches.length !== 1) {
     return null;
   }
-  if (shouldLazyExpire(match.materialRequest)) {
-    await repository.updateRequest(match.materialRequestId, {
-      status: 'EXPIRED',
+
+  return {
+    match: validMatches[0]!,
+    reservation,
+  };
+};
+
+export const fulfillRequestFromCompletedReservation = async (
+  reservationId: string,
+): Promise<FulfillFromCompletedReservationResult | null> => {
+  const loaded = await loadValidMatchForCompletedReservation(reservationId);
+  if (!loaded) {
+    return null;
+  }
+
+  const outcome = await runSerializableTransaction(async (tx) => {
+    const reservation = await tx.reservation.findUnique({
+      where: { id: reservationId },
+      select: {
+        id: true,
+        status: true,
+        requesterId: true,
+        materialId: true,
+      },
     });
+
+    if (!reservation || reservation.status !== 'COMPLETED') {
+      return null;
+    }
+
+    const matches = await tx.learnerMaterialRequestMatch.findMany({
+      where: { reservationId },
+      include: { materialRequest: true },
+    });
+
+    const validMatches = matches.filter(
+      (match) =>
+        match.reservationId === reservation.id &&
+        match.materialId === reservation.materialId,
+    );
+
+    if (validMatches.length !== 1) {
+      return null;
+    }
+
+    const match = validMatches[0]!;
+    const materialRequest = match.materialRequest;
+
+    if (reservation.requesterId !== materialRequest.learnerId) {
+      return null;
+    }
+
+    if (
+      materialRequest.status !== 'OPEN' &&
+      materialRequest.status !== 'FULFILLED'
+    ) {
+      return null;
+    }
+
+    let transitionedToFulfilled = false;
+    let requestRow = materialRequest;
+
+    if (materialRequest.status === 'OPEN') {
+      if (
+        shouldLazyExpire({
+          status: 'OPEN',
+          expiresAt: materialRequest.expiresAt,
+        })
+      ) {
+        await tx.learnerMaterialRequest.update({
+          where: { id: materialRequest.id },
+          data: { status: 'EXPIRED' },
+        });
+        return null;
+      }
+
+      requestRow = await tx.learnerMaterialRequest.update({
+        where: { id: materialRequest.id },
+        data: {
+          status: 'FULFILLED',
+          fulfilledAt: new Date(),
+        },
+      });
+      transitionedToFulfilled = true;
+    }
+
+    const buildSyncOutcome = await syncBuildItemFromCompletedMaterialRequest(
+      tx,
+      {
+        materialRequest: {
+          id: requestRow.id,
+          learnerId: requestRow.learnerId,
+          projectBuildId: requestRow.projectBuildId,
+          projectBuildItemId: requestRow.projectBuildItemId,
+        },
+        match: {
+          materialRequestId: match.materialRequestId,
+          materialId: match.materialId,
+          reservationId: match.reservationId,
+        },
+        reservation,
+      },
+    );
+
+    return {
+      id: requestRow.id,
+      learnerId: requestRow.learnerId,
+      requestedItemName: requestRow.requestedItemName,
+      status: requestRow.status,
+      transitionedToFulfilled,
+      buildSyncOutcome,
+    };
+  });
+
+  if (!outcome) {
     return null;
   }
-  return repository.updateRequest(match.materialRequestId, {
-    status: 'FULFILLED',
-    fulfilledAt: new Date(),
-  });
+
+  if (outcome.buildSyncOutcome === 'synced') {
+    invalidateLearnerHomeCache(outcome.learnerId);
+  }
+
+  return outcome;
 };

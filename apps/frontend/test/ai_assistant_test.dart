@@ -1618,6 +1618,9 @@ class _BuildGuideHubRepository implements LearningProjectRepository {
       _build;
 
   @override
+  Future<ProjectBuild> buildAgain(String projectId) async => _build;
+
+  @override
   Future<ProjectBuild> updateBuildItem(
     String projectId,
     String itemId, {
@@ -1647,6 +1650,16 @@ class _BuildGuideHubRepository implements LearningProjectRepository {
 
   @override
   Future<ProjectBuild> unlinkMaterial(String projectId, String itemId) async {
+    return _build;
+  }
+
+  @override
+  Future<ProjectBuild> removeAcquiredMaterialFromBuildItem(
+    String projectId,
+    String itemId, {
+    required String materialId,
+    required String reservationId,
+  }) async {
     return _build;
   }
 

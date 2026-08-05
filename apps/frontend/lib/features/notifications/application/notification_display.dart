@@ -73,6 +73,10 @@ NotificationVisualCategory categoryForNotification(
       return NotificationVisualCategory.reservation;
     case 'MATERIAL_MODERATION_UPDATE':
       return NotificationVisualCategory.material;
+    case 'MATERIAL_REQUEST_SUGGESTION':
+    case 'MATERIAL_REQUEST_MATCH_UNAVAILABLE':
+    case 'MATERIAL_REQUEST_FULFILLED':
+      return NotificationVisualCategory.materialRequest;
     case 'CATEGORY_REQUEST_UPDATE':
     case 'PRICE_REQUEST_UPDATE':
       return NotificationVisualCategory.materialRequest;
@@ -92,6 +96,9 @@ NotificationVisualCategory categoryForNotification(
   }
   if (entity == 'LEARNING_PROJECT' || type.contains('LEARNING_PROJECT')) {
     return NotificationVisualCategory.learning;
+  }
+  if (entity == 'MATERIAL_REQUEST' || type.startsWith('MATERIAL_REQUEST_')) {
+    return NotificationVisualCategory.materialRequest;
   }
   if (entity == 'CATEGORY_REQUEST' || entity == 'PRICE_RULE_REQUEST') {
     return NotificationVisualCategory.materialRequest;
@@ -189,6 +196,10 @@ String notificationActionLabel(
   }
   if (notification.relatedEntityType == 'LEARNING_PROJECT') {
     return l10n?.viewSubmission ?? 'View submission';
+  }
+  if (notification.relatedEntityType == 'MATERIAL_REQUEST' ||
+      notification.notificationType.startsWith('MATERIAL_REQUEST_')) {
+    return 'View request';
   }
   return l10n?.open ?? 'Open';
 }
@@ -556,6 +567,13 @@ String? notificationOpenRoute(
     return '/learning/submissions/${notification.relatedEntityId}';
   }
 
+  if (!isSupplierMode && !isDriverMode) {
+    final materialRequestRoute = materialRequestNotificationRoute(notification);
+    if (materialRequestRoute != null) {
+      return materialRequestRoute;
+    }
+  }
+
   return _supplierMaterialReviewOpenRoute(
     notification,
     isSupplierMode: isSupplierMode,
@@ -623,8 +641,6 @@ String? _supplierMaterialReviewOpenRoute(
       return null;
 
     default:
-      // No learner MATERIAL_REQUEST_* / MATCH_* producers exist. Do not guess.
-      // publishedMaterialId alone is never enough without an exact type contract.
       if (_metadataPublishedMaterialId(notification) != null) {
         return null;
       }

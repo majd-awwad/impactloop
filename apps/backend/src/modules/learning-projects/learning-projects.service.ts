@@ -26,7 +26,17 @@ import {
   resolveBuildItemReadiness,
   resolveBuildItemStepUnlockReadiness,
   unlinkBuildItemMaterial,
+  removeAcquiredMaterialFromBuildItem,
 } from './learning-projects.build-material-linking.js';
+import {
+  mapBuildItemQuantityAllocationDto,
+  resolveBuildItemAllocationContext,
+} from './learning-projects.build-material-allocation.js';
+import { prisma } from '../../database/prisma.js';
+import {
+  attachLearningSetupToBuild,
+  resolveLearningSetupAfterBuildStart,
+} from '../project-learning/build-learning-session-setup.service.js';
 import type {
   CreateAiAuthoringDraftInput,
   LearningProjectsQuery,
@@ -41,6 +51,16 @@ import {
   normalizeSubmitComponent,
   type NormalizedSubmitComponent,
 } from './learning-projects.submit-components.js';
+import {
+  batchComputeProjectMaterialCoverage,
+  matchesMaterialAvailabilityFilter,
+  paginateBrowseResults,
+  sortBrowseProjects,
+  type BrowseProjectSortEntry,
+  type LearningProjectsBrowseSort,
+  type MaterialAvailabilityFilter,
+  type ProjectMaterialCoverageResult,
+} from './learning-projects.material-coverage.js';
 
 type SubmitLearningProjectResponse = {
   id: string;
@@ -122,6 +142,19 @@ const mapProjectReview = (review: ProjectReviewRecord) => ({
   updatedAt: review.updatedAt.toISOString(),
 });
 
+const mapMaterialCoverageDto = (
+  coverage?: ProjectMaterialCoverageResult | null,
+) => {
+  if (!coverage) {
+    return null;
+  }
+
+  return {
+    materialCoverage: coverage.materialCoverage,
+    personalBuildReadiness: coverage.personalBuildReadiness,
+  };
+};
+
 const mapLearningProjectListItem = (
   project: Awaited<
     ReturnType<typeof learningProjectsRepository.findLearningProjects>
@@ -133,6 +166,7 @@ const mapLearningProjectListItem = (
     followersCount?: number;
     isFollowing?: boolean;
     ratingSummary?: ReviewSummary;
+    coverage?: ProjectMaterialCoverageResult | null;
   } = {},
 ) => ({
   id: project.id,
@@ -151,6 +185,7 @@ const mapLearningProjectListItem = (
   followersCount: engagement.followersCount ?? 0,
   isFollowing: engagement.isFollowing ?? false,
   createdAt: project.createdAt.toISOString(),
+  ...mapMaterialCoverageDto(engagement.coverage),
 });
 
 const mapSubmissionActions = (status: string) => ({
@@ -267,6 +302,7 @@ const mapLearningProjectDetail = (
     ratingSummary?: ReviewSummary;
     recentReviews?: ProjectReviewRecord[];
     viewerReview?: ProjectReviewRecord | null;
+    coverage?: ProjectMaterialCoverageResult | null;
   } = {},
 ) => ({
   id: project.id,
@@ -294,6 +330,10 @@ const mapLearningProjectDetail = (
     isRequired: component.isRequired,
     canBeSubstituted: component.canBeSubstituted,
     notes: component.notes,
+    publicAvailabilityStatus:
+      engagement.coverage?.componentCoverage.find(
+        (entry) => entry.componentId === component.id,
+      )?.availabilityStatus ?? null,
   })),
   steps: project.steps.map((step) => ({
     id: step.id,
@@ -327,6 +367,8 @@ const mapLearningProjectDetail = (
   followersCount: engagement.followersCount ?? 0,
   isFollowing: engagement.isFollowing ?? false,
   createdAt: project.createdAt.toISOString(),
+  ...mapMaterialCoverageDto(engagement.coverage),
+  componentCoverage: engagement.coverage?.componentCoverage ?? [],
 });
 
 const summarizeMaterialReadiness = (
@@ -466,22 +508,70 @@ const deriveBuildStepViews = (input: {
 
 const mapProjectBuildItem = (
   item: ProjectBuildRecord['items'][number],
+  allocationContext?: {
+    requiredQuantity: number;
+    requiredUnit: string;
+    componentRole: string;
+    materialUnit: string | null;
+    availableQuantity: number | null;
+    peerClaimsOnMaterial: number;
+    allocationWarning: string | null;
+  },
 ) => {
   const readiness = resolveBuildItemReadiness({
     status: item.status,
+    componentRole: allocationContext?.componentRole,
+    requiredQuantity: allocationContext?.requiredQuantity,
+    requiredUnit: allocationContext?.requiredUnit,
+    materialUnit: allocationContext?.materialUnit,
+    availableQuantity: allocationContext?.availableQuantity,
+    peerClaimsOnMaterial: allocationContext?.peerClaimsOnMaterial,
+    allocationWarning: allocationContext?.allocationWarning,
     linkedReservation: item.linkedReservation,
     linkedMaterial: item.linkedMaterial,
   });
+
+  const quantityAllocation = mapBuildItemQuantityAllocationDto(
+    'quantityAllocation' in readiness
+      ? readiness.quantityAllocation
+      : undefined,
+  );
+
+  if (allocationContext?.allocationWarning && quantityAllocation) {
+    quantityAllocation.warning =
+      quantityAllocation.warning ?? allocationContext.allocationWarning;
+  } else if (allocationContext?.allocationWarning) {
+    // expose historical conflict even when no active allocation view
+  }
 
   return {
     id: item.id,
     requiredComponentId: item.requiredComponentId,
     status: item.status,
     learnerNote: item.learnerNote,
-    linkedMaterial: mapLinkedMaterialSummary(item.linkedMaterial),
+    linkedMaterial: mapLinkedMaterialSummary(item.linkedMaterial, {
+      linkedReservationStatus: item.linkedReservation?.status ?? null,
+    }),
     linkedReservation: mapLinkedReservationSummary(item.linkedReservation),
+    acquisitionState: readiness.acquisitionState,
+    allocationResult: readiness.allocationResult,
     isReadyForBuild: readiness.isReadyForBuild,
     readinessLabel: readiness.readinessLabel,
+    quantityAllocation:
+      quantityAllocation ??
+      (allocationContext?.allocationWarning
+        ? {
+            outcome: 'conflict',
+            requiredQuantity: allocationContext.requiredQuantity,
+            requiredUnit: allocationContext.requiredUnit,
+            availableQuantity: allocationContext.availableQuantity,
+            acquiredQuantity: null,
+            reservationQuantity: null,
+            allocatedQuantity: null,
+            isQuantityReady: false,
+            warning: allocationContext.allocationWarning,
+          }
+        : null),
     component: {
       id: item.requiredComponent.id,
       categoryId: item.requiredComponent.categoryId,
@@ -502,19 +592,35 @@ const mapProjectBuildItem = (
   };
 };
 
-const mapProjectBuild = (build: ProjectBuildRecord) => {
-  const mappedItems = build.items.map((item) => mapProjectBuildItem(item));
+const mapProjectBuild = async (build: ProjectBuildRecord) => {
+  const allocationContexts = await resolveBuildItemAllocationContext(prisma, {
+    buildStatus: build.status,
+    items: build.items,
+  });
+  const allocationByItemId = new Map(
+    allocationContexts.map((context) => [context.itemId, context]),
+  );
+
+  const mappedItems = build.items.map((item) =>
+    mapProjectBuildItem(item, allocationByItemId.get(item.id)),
+  );
   const readyItems = mappedItems.filter((item) => item.isReadyForBuild);
   const totalItems = mappedItems.length;
   const allMaterialsReadyForSteps =
     totalItems > 0 &&
-    build.items.every((item) =>
-      resolveBuildItemStepUnlockReadiness({
+    build.items.every((item) => {
+      const allocation = allocationByItemId.get(item.id);
+      return resolveBuildItemStepUnlockReadiness({
         status: item.status,
+        componentRole: allocation?.componentRole,
+        requiredQuantity: allocation?.requiredQuantity,
+        requiredUnit: allocation?.requiredUnit,
+        materialUnit: allocation?.materialUnit,
+        allocationWarning: allocation?.allocationWarning,
         linkedReservation: item.linkedReservation,
         linkedMaterial: item.linkedMaterial,
-      }).isReadyForStepUnlock,
-    );
+      }).isReadyForStepUnlock;
+    });
   const materialReadiness = summarizeMaterialReadiness(mappedItems);
   const stepViews = deriveBuildStepViews({
     projectSteps: build.project.steps,
@@ -527,9 +633,13 @@ const mapProjectBuild = (build: ProjectBuildRecord) => {
     id: build.id,
     projectId: build.projectId,
     learnerId: build.learnerId,
+    attemptNumber: build.attemptNumber,
     status: build.status,
+    isReadOnly: build.status === 'COMPLETED' || build.status === 'ARCHIVED',
     startedAt: build.startedAt.toISOString(),
     completedAt: build.completedAt?.toISOString() ?? null,
+    pausedAt: build.pausedAt?.toISOString() ?? null,
+    archivedAt: build.archivedAt?.toISOString() ?? null,
     createdAt: build.createdAt.toISOString(),
     updatedAt: build.updatedAt.toISOString(),
     project: {
@@ -554,6 +664,20 @@ const mapProjectBuild = (build: ProjectBuildRecord) => {
       steps: stepViews.steps,
     },
     items: mappedItems,
+    completionStory: build.completionStory
+      ? {
+          reflection: build.completionStory.reflection,
+          caption: build.completionStory.caption,
+          updatedAt: build.completionStory.updatedAt.toISOString(),
+          photos: build.completionStory.photos.map((photo) => ({
+            id: photo.id,
+            imageUrl: photo.imageUrl,
+            caption: photo.caption,
+            sortOrder: photo.sortOrder,
+          })),
+        }
+      : null,
+    impactSummary: build.completionSnapshot?.snapshot ?? null,
   };
 };
 
@@ -566,44 +690,67 @@ const hydrateLearnerProjectBuild = async (
       learnerId,
       build.id,
     );
+  const learningSetup = await attachLearningSetupToBuild(build, learnerId);
 
   return {
-    ...mapProjectBuild(build),
+    ...(await mapProjectBuild(build)),
     guideConversationId: guideConversation?.id ?? null,
+    learningSetup,
   };
 };
+
+export const hydrateLearnerProjectBuildFromRecord = hydrateLearnerProjectBuild;
 
 export const getLearningProjects = async (
   query: LearningProjectsQuery,
   viewer?: AccessTokenPayload,
 ) => {
-  const result = await learningProjectsRepository.findLearningProjects(query);
+  const candidates =
+    await learningProjectsRepository.findLearningProjectBrowseCandidates(query);
 
-  return mapLearningProjectListResult(result, query, viewer);
+  return mapLearningProjectListResult(candidates, query, viewer);
 };
 
 export const getSavedLearningProjects = async (
   query: LearningProjectsQuery,
   viewer: AccessTokenPayload,
 ) => {
-  const result = await learningProjectsRepository.findSavedLearningProjects(
-    query,
-    viewer.sub,
+  const allCandidates =
+    await learningProjectsRepository.findLearningProjectBrowseCandidates(query);
+  const savedProjectIds = new Set(
+    (
+      await learningProjectsRepository.findSavedProjectIds(
+        viewer.sub,
+        allCandidates.map((project) => project.id),
+      )
+    ).values(),
+  );
+  const candidates = allCandidates.filter((project) =>
+    savedProjectIds.has(project.id),
   );
 
-  return mapLearningProjectListResult(result, query, viewer);
+  return mapLearningProjectListResult(candidates, query, viewer);
 };
 
 export const getFollowedLearningProjects = async (
   query: LearningProjectsQuery,
   viewer: AccessTokenPayload,
 ) => {
-  const result = await learningProjectsRepository.findFollowedLearningProjects(
-    query,
-    viewer.sub,
+  const allCandidates =
+    await learningProjectsRepository.findLearningProjectBrowseCandidates(query);
+  const followedProjectIds = new Set(
+    (
+      await learningProjectsRepository.findFollowedProjectIds(
+        viewer.sub,
+        allCandidates.map((project) => project.id),
+      )
+    ).values(),
+  );
+  const candidates = allCandidates.filter((project) =>
+    followedProjectIds.has(project.id),
   );
 
-  return mapLearningProjectListResult(result, query, viewer);
+  return mapLearningProjectListResult(candidates, query, viewer);
 };
 
 export const getMyLearningProjectSubmissions = async (
@@ -984,14 +1131,114 @@ export const resubmitMyLearningProjectSubmissionById = async (
   return getMyLearningProjectSubmissionById(id, userId);
 };
 
-const mapLearningProjectListResult = async (
-  result: Awaited<
-    ReturnType<typeof learningProjectsRepository.findLearningProjects>
+const applyCoverageBrowseTransforms = async (
+  candidates: Awaited<
+    ReturnType<typeof learningProjectsRepository.findLearningProjectBrowseCandidates>
   >,
   query: LearningProjectsQuery,
   viewer?: AccessTokenPayload,
 ) => {
-  const projectIds = result.items.map((item) => item.id);
+  const candidateIds = candidates.map((item) => item.id);
+  const coverageByProjectId = await batchComputeProjectMaterialCoverage({
+    projectIds: candidateIds,
+    personalReadinessProjectIds: [],
+  });
+
+  const availabilityFilter: MaterialAvailabilityFilter =
+    query.availability ?? 'ANY';
+  const sort: LearningProjectsBrowseSort = query.sort ?? 'DEFAULT';
+
+  let entries = candidates
+    .map((project) => {
+      const coverage = coverageByProjectId.get(project.id) ?? null;
+      if (!coverage) {
+        return null;
+      }
+
+      return {
+        project,
+        coverage,
+      };
+    })
+    .filter(
+      (
+        entry,
+      ): entry is {
+        project: (typeof candidates)[number];
+        coverage: ProjectMaterialCoverageResult;
+      } => entry != null,
+    )
+    .filter((entry) =>
+      matchesMaterialAvailabilityFilter(
+        entry.coverage.materialCoverage,
+        availabilityFilter,
+      ),
+    );
+
+  const rankingProjectIds = entries.map((entry) => entry.project.id);
+  const likesByProjectId =
+    sort === 'MOST_AVAILABLE' || sort === 'MOST_POPULAR'
+      ? await learningProjectsRepository.countLikesByProjectIds(
+          rankingProjectIds,
+        )
+      : new Map<string, number>();
+
+  const sortEntries: BrowseProjectSortEntry[] = entries.map((entry) => ({
+    id: entry.project.id,
+    createdAt: entry.project.createdAt,
+    difficulty: entry.project.difficulty,
+    estimatedDurationMinutes: entry.project.estimatedDurationMinutes,
+    coverage: entry.coverage.materialCoverage,
+    likesCount: likesByProjectId.get(entry.project.id) ?? 0,
+  }));
+
+  const sortedIds = sortBrowseProjects(sortEntries, sort).map((entry) => entry.id);
+  const entryByProjectId = new Map(
+    entries.map((entry) => [entry.project.id, entry] as const),
+  );
+  entries = sortedIds
+    .map((projectId) => entryByProjectId.get(projectId))
+    .filter((entry): entry is NonNullable<typeof entry> => entry != null);
+
+  const paginated = paginateBrowseResults(entries, query.page, query.limit);
+  const pageProjectIds = paginated.items.map((entry) => entry.project.id);
+
+  if (viewer?.roles.includes('LEARNER') && pageProjectIds.length > 0) {
+    const pageCoverage = await batchComputeProjectMaterialCoverage({
+      projectIds: pageProjectIds,
+      learnerId: viewer.sub,
+      personalReadinessProjectIds: pageProjectIds,
+    });
+
+    for (const projectId of pageProjectIds) {
+      const pageResult = pageCoverage.get(projectId);
+      const existing = coverageByProjectId.get(projectId);
+      if (pageResult && existing) {
+        existing.personalBuildReadiness = pageResult.personalBuildReadiness;
+      }
+    }
+  }
+
+  return {
+    items: paginated.items,
+    pagination: paginated.pagination,
+    coverageByProjectId,
+  };
+};
+
+const mapLearningProjectListResult = async (
+  candidates: Awaited<
+    ReturnType<typeof learningProjectsRepository.findLearningProjectBrowseCandidates>
+  >,
+  query: LearningProjectsQuery,
+  viewer?: AccessTokenPayload,
+) => {
+  const transformed = await applyCoverageBrowseTransforms(
+    candidates,
+    query,
+    viewer,
+  );
+  const projectIds = transformed.items.map((entry) => entry.project.id);
   const [
     likesByProjectId,
     likedProjectIds,
@@ -1009,22 +1256,18 @@ const mapLearningProjectListResult = async (
   ]);
 
   return {
-    items: result.items.map((item) =>
-      mapLearningProjectListItem(item, {
-        likesCount: likesByProjectId.get(item.id) ?? 0,
-        isLiked: likedProjectIds.has(item.id),
-        isSaved: savedProjectIds.has(item.id),
-        followersCount: followsByProjectId.get(item.id) ?? 0,
-        isFollowing: followedProjectIds.has(item.id),
-        ratingSummary: reviewSummariesByProjectId.get(item.id),
+    items: transformed.items.map((entry) =>
+      mapLearningProjectListItem(entry.project, {
+        likesCount: likesByProjectId.get(entry.project.id) ?? 0,
+        isLiked: likedProjectIds.has(entry.project.id),
+        isSaved: savedProjectIds.has(entry.project.id),
+        followersCount: followsByProjectId.get(entry.project.id) ?? 0,
+        isFollowing: followedProjectIds.has(entry.project.id),
+        ratingSummary: reviewSummariesByProjectId.get(entry.project.id),
+        coverage: entry.coverage,
       }),
     ),
-    pagination: {
-      page: query.page,
-      limit: query.limit,
-      total: result.total,
-      totalPages: result.total === 0 ? 0 : Math.ceil(result.total / query.limit),
-    },
+    pagination: transformed.pagination,
   };
 };
 
@@ -1047,6 +1290,7 @@ export const getLearningProjectById = async (
     reviewSummariesByProjectId,
     recentReviews,
     viewerReview,
+    coverageByProjectId,
   ] = await Promise.all([
     learningProjectsRepository.countLikesByProjectIds([project.id]),
     learningProjectsRepository.findLikedProjectIds(viewer?.sub, [project.id]),
@@ -1058,6 +1302,10 @@ export const getLearningProjectById = async (
     learningProjectsRepository.summarizeReviewsByProjectIds([project.id]),
     learningProjectsRepository.findRecentReviewsForProject(project.id),
     learningProjectsRepository.findReviewForViewer(project.id, viewer?.sub),
+    batchComputeProjectMaterialCoverage({
+      projectIds: [project.id],
+      learnerId: viewer?.roles.includes('LEARNER') ? viewer.sub : undefined,
+    }),
   ]);
 
   return mapLearningProjectDetail(project, {
@@ -1069,12 +1317,14 @@ export const getLearningProjectById = async (
     ratingSummary: reviewSummariesByProjectId.get(project.id),
     recentReviews,
     viewerReview,
+    coverage: coverageByProjectId.get(project.id) ?? null,
   });
 };
 
 export const getMyProjectBuildById = async (
   id: string,
   userId: string,
+  buildId?: string,
 ) => {
   const project = await learningProjectsRepository.findPublicLearningProjectById(
     id,
@@ -1084,7 +1334,37 @@ export const getMyProjectBuildById = async (
     throw new AppError('Learning project not found', 404, 'NOT_FOUND');
   }
 
-  const build = await learningProjectsRepository.findProjectBuild(id, userId);
+  let build = await learningProjectsRepository.findProjectBuild(id, userId, buildId);
+
+  if (build) {
+    const { reconcileProjectBuildMaterialRequestSync } = await import(
+      '../material-requests/material-requests.build-sync-reconciliation.js'
+    );
+    const { fulfillRequestFromCompletedReservation } = await import(
+      '../learner-material-requests/learner-material-requests.service.js'
+    );
+
+    const { repairedCount } = await reconcileProjectBuildMaterialRequestSync(
+      build.id,
+      userId,
+      fulfillRequestFromCompletedReservation,
+    );
+
+    const { reconcileTerminalLinkedReservationsForBuild } = await import(
+      './learning-projects.build-terminal-reconciliation.js'
+    );
+
+    const terminalRepair = await reconcileTerminalLinkedReservationsForBuild(
+      build.id,
+      userId,
+    );
+
+    if (repairedCount > 0 || terminalRepair.repairedCount > 0) {
+      build =
+        (await learningProjectsRepository.findProjectBuild(id, userId)) ??
+        build;
+    }
+  }
 
   return build ? hydrateLearnerProjectBuild(build, userId) : null;
 };
@@ -1098,14 +1378,14 @@ export const getOwnedProjectBuildByBuildId = async (
     userId,
   );
 
-  return build ? mapProjectBuild(build) : null;
+  return build ? await mapProjectBuild(build) : null;
 };
 
 export const listActiveProjectBuildsForLearner = async (userId: string) => {
   const builds =
     await learningProjectsRepository.findActiveProjectBuildsForLearner(userId);
 
-  return builds.map((build) => mapProjectBuild(build));
+  return Promise.all(builds.map((build) => mapProjectBuild(build)));
 };
 
 export const startProjectBuildById = async (
@@ -1126,7 +1406,39 @@ export const startProjectBuildById = async (
     invalidateLearnerHomeCache(userId);
   }
 
-  return hydrateLearnerProjectBuild(build, userId);
+  const hydrated = await hydrateLearnerProjectBuild(build, userId);
+
+  if (!existingBuild) {
+    try {
+      hydrated.learningSetup = await resolveLearningSetupAfterBuildStart(build);
+    } catch {
+      hydrated.learningSetup = await attachLearningSetupToBuild(build, userId);
+    }
+  }
+
+  return hydrated;
+};
+
+export const startProjectBuildAgainById = async (
+  id: string,
+  userId: string,
+) => {
+  const build = await learningProjectsRepository.startProjectBuildAgain(id, userId);
+
+  if (!build) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  invalidateLearnerHomeCache(userId);
+  const hydrated = await hydrateLearnerProjectBuild(build, userId);
+
+  try {
+    hydrated.learningSetup = await resolveLearningSetupAfterBuildStart(build);
+  } catch {
+    hydrated.learningSetup = await attachLearningSetupToBuild(build, userId);
+  }
+
+  return hydrated;
 };
 
 export const updateProjectBuildItemById = async (
@@ -1247,6 +1559,51 @@ export const unlinkBuildItemMaterialById = async (
   }
 
   return hydrateLearnerProjectBuild(build, userId);
+};
+
+export const removeAcquiredMaterialFromBuildItemById = async (
+  projectId: string,
+  userId: string,
+  itemId: string,
+  input: { materialId: string; reservationId: string },
+) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    projectId,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  const previousItem = findBuildItem(
+    await learningProjectsRepository.findProjectBuild(projectId, userId),
+    itemId,
+  );
+
+  const { outcome, build } = await removeAcquiredMaterialFromBuildItem({
+    projectId,
+    learnerId: userId,
+    itemId,
+    materialId: input.materialId,
+    reservationId: input.reservationId,
+  });
+
+  if (!build) {
+    throw new AppError('Project build not found', 404, 'NOT_FOUND');
+  }
+
+  const updatedItem = findBuildItem(build, itemId);
+  if (
+    previousItem?.linkedMaterialId !== updatedItem?.linkedMaterialId ||
+    previousItem?.linkedReservationId !== updatedItem?.linkedReservationId
+  ) {
+    invalidateLearnerHomeCache(userId);
+  }
+
+  return {
+    outcome,
+    build: await hydrateLearnerProjectBuild(build, userId),
+  };
 };
 
 export const linkBuildItemReservationById = async (
@@ -1626,7 +1983,7 @@ export const completeProjectBuildStepById = async (
     stepId,
   });
 
-  const build = await learningProjectsRepository.findProjectBuild(
+  let build = await learningProjectsRepository.findProjectBuild(
     projectId,
     userId,
   );
@@ -1637,6 +1994,13 @@ export const completeProjectBuildStepById = async (
 
   if (!result.noOp) {
     invalidateLearnerHomeCache(userId);
+  }
+
+  if ('completed' in result && result.completed) {
+    await learningProjectsRepository.finalizeCompletedBuildSnapshot(result.buildId);
+    build =
+      (await learningProjectsRepository.findProjectBuild(projectId, userId)) ??
+      build;
   }
 
   return hydrateLearnerProjectBuild(build, userId);
@@ -1656,7 +2020,7 @@ export const getOrCreateBuildGuideConversationByProjectId = async (
     throw new AppError('Project build not found.', 404, 'BUILD_NOT_FOUND');
   }
 
-  const mappedBuild = mapProjectBuild(build);
+  const mappedBuild = await mapProjectBuild(build);
   const conversation = await getOrCreateBuildGuideConversation({
     userId,
     projectBuildId: build.id,

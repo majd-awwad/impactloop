@@ -47,9 +47,11 @@ describe('project build continuation contract', () => {
     });
     const where = buildContinuableProjectBuildWhere('learner-1');
     assert.equal(where.learnerId, 'learner-1');
-    assert.equal(where.status, 'IN_PROGRESS');
-    assert.deepEqual(where.project, PUBLIC_CONTINUE_PROJECT_WHERE);
     assert.equal(where.OR?.length, 2);
+    assert.equal(where.OR?.[0]?.status, 'PAUSED');
+    assert.equal(where.OR?.[1]?.status, 'IN_PROGRESS');
+    assert.deepEqual(where.project, PUBLIC_CONTINUE_PROJECT_WHERE);
+    assert.equal(where.OR?.[1]?.OR?.length, 2);
     assert.deepEqual(CONTINUE_PROJECT_BUILD_ORDER_BY, [
       { updatedAt: 'desc' },
       { startedAt: 'desc' },

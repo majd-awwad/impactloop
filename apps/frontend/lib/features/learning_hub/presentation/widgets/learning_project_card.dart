@@ -6,7 +6,9 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../presentation/theme/learning_project_visuals.dart';
 import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
+import 'learning_project_card_layout.dart';
 import 'project_engagement_strip.dart';
+import 'project_material_coverage_chip.dart';
 
 class LearningProjectCard extends StatelessWidget {
   const LearningProjectCard({super.key, required this.project});
@@ -19,7 +21,7 @@ class LearningProjectCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return SizedBox(
-      height: 412,
+      height: LearningProjectCardLayout.gridCardHeight,
       child: InkWell(
         borderRadius: AppRadius.lgAll,
         onTap: () => context.push('/learning/${project.id}'),
@@ -46,57 +48,54 @@ class LearningProjectCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(
-                        height: 54,
-                        child: _ProjectTitleRow(project: project),
-                      ),
+                      _ProjectTitleRow(project: project),
                       const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        project.summary.resolve(context),
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: palette.textSecondary,
-                        ),
-                        textAlign: TextAlign.start,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      SizedBox(
-                        height: 30,
-                        child: Align(
-                          alignment: AlignmentDirectional.centerStart,
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              project.summary.resolve(context),
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: palette.textSecondary,
+                                height: 1.35,
+                              ),
+                              textAlign: TextAlign.start,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const Spacer(),
+                            Wrap(
+                              spacing: AppSpacing.sm,
+                              runSpacing: AppSpacing.xs,
                               children: [
                                 _ProjectMetaChip(
                                   label: project.category.resolve(context),
                                 ),
-                                const SizedBox(width: AppSpacing.sm),
                                 _ProjectMetaChip(
                                   label: project.duration.resolve(context),
                                 ),
                                 if (project.componentCountLabel.en
                                     .trim()
-                                    .isNotEmpty) ...[
-                                  const SizedBox(width: AppSpacing.sm),
+                                    .isNotEmpty)
                                   _ProjectMetaChip(
                                     label: project.componentCountLabel.resolve(
                                       context,
                                     ),
                                   ),
-                                ],
                               ],
                             ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      SizedBox(
-                        height: 34,
-                        child: ProjectEngagementStrip(
-                          project: project,
-                          density: ProjectEngagementDensity.compact,
+                            const SizedBox(height: AppSpacing.sm),
+                            ProjectMaterialCoverageChip(
+                              project: project,
+                              compact: true,
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            ProjectEngagementStrip(
+                              project: project,
+                              density: ProjectEngagementDensity.compact,
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -122,7 +121,7 @@ class _ProjectCardHeader extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return SizedBox(
-      height: 180,
+      height: LearningProjectCardLayout.coverHeight,
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: const BorderRadiusDirectional.only(
@@ -203,7 +202,7 @@ class _ProjectCardHeader extends StatelessWidget {
                   if (project.imageUrl == null)
                     Icon(
                       project.heroIconData,
-                      size: 54,
+                      size: 48,
                       color: palette.textPrimary,
                     ),
                 ],
@@ -327,22 +326,14 @@ class _ProjectMetaChip extends StatelessWidget {
         borderRadius: AppRadius.pillAll,
         border: Border.all(color: palette.borderSubtle),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 190),
-            child: Text(
-              label,
-              style: textTheme.labelSmall?.copyWith(
-                color: palette.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
+      child: Text(
+        label,
+        style: textTheme.labelSmall?.copyWith(
+          color: palette.textSecondary,
+          fontWeight: FontWeight.w600,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

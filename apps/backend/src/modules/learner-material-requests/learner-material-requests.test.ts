@@ -313,9 +313,27 @@ describe('Learner & Supplier material requests', () => {
     );
     assert.equal(detail.status, 200);
     const detailBody = (await detail.json()) as {
-      data: { matches: Array<{ id: string }> };
+      data: {
+        matches: Array<{
+          id: string;
+          canReserve: boolean;
+          supplier?: { displayName?: string };
+          material?: { title?: string; pickupAllowed?: boolean };
+        }>;
+        activeSuggestionCount: number;
+      };
     };
     assert.ok(detailBody.data.matches.length >= 1);
+    const learnerMatch = detailBody.data.matches.find((match) => match.id === matchId);
+    assert.ok(learnerMatch);
+    assert.equal(learnerMatch?.canReserve, true);
+    assert.equal(learnerMatch?.material?.title, 'DC motor 6V');
+    assert.ok(learnerMatch?.supplier?.displayName);
+    assert.equal(detailBody.data.activeSuggestionCount, 1);
+
+    const detailSerialized = JSON.stringify(detailBody.data);
+    assert.equal(detailSerialized.includes('email'), false);
+    assert.equal(detailSerialized.includes('phone'), false);
 
     const dismiss = await fetch(
       `${baseUrl}/api/learner/material-requests/matches/${matchId}/dismiss`,

@@ -6,6 +6,7 @@ import {
   clearPendingRescheduleFields,
 } from './reservation-reschedule.js';
 import { recomputeAndUpdateMaterialStatus } from './reservations.quantity.js';
+import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
 
 const learnerRescheduleExistingSelect = {
   id: true,
@@ -148,6 +149,7 @@ export const cancelLearnerRescheduleRequest = async (input: {
     });
 
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
+    await applyBuildReservationSyncInTransaction(tx, existing.id);
 
     return { conflict: false as const };
   });

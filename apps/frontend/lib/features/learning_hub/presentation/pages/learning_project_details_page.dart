@@ -18,6 +18,7 @@ import '../theme/learning_project_visuals.dart';
 import '../theme/learning_ui_palette.dart';
 import '../widgets/project_build_actions_panel.dart';
 import '../widgets/project_components_section.dart';
+import '../widgets/project_material_coverage_chip.dart';
 import '../widgets/project_link_list.dart';
 import '../widgets/project_reviews_section.dart';
 import '../widgets/project_steps_timeline.dart';
@@ -142,9 +143,13 @@ class _ProjectDetailsBody extends StatelessWidget {
                         targetId: project.id,
                       ),
                       const SizedBox(height: AppSpacing.lg),
-                      if (project.components.isNotEmpty) ...[
+                      ProjectMaterialCoveragePanel(project: project),
+                      const SizedBox(height: AppSpacing.lg),
+                      if (project.components.isNotEmpty ||
+                          project.requiredComponents.isNotEmpty) ...[
                         ProjectComponentsSection(
                           components: project.components,
+                          requiredComponents: project.requiredComponents,
                         ),
                         const SizedBox(height: AppSpacing.lg),
                       ],

@@ -42,6 +42,10 @@ import {
 import * as publicSuppliersRepository from '../public-suppliers/public-suppliers.repository.js';
 
 import * as materialsRepository from './materials.repository.js';
+import {
+  findLearnerAcquiredMaterialAccess,
+  findMaterialDetailForAcquiredLearner,
+} from './materials.acquired-access.js';
 import type {
   LikedMaterialsQuery,
   MaterialsQuery,
@@ -947,7 +951,21 @@ export const getMaterialById = async (
   viewer?: AccessTokenPayload,
   abortSignal?: AbortSignal,
 ) => {
-  const material = await materialsRepository.findMaterialById(id);
+  let material = await materialsRepository.findMaterialById(id);
+  let acquiredReservation:
+    | Awaited<ReturnType<typeof findLearnerAcquiredMaterialAccess>>
+    | null = null;
+
+  if (!material && viewer?.roles.includes('LEARNER')) {
+    acquiredReservation = await findLearnerAcquiredMaterialAccess({
+      requesterId: viewer.sub,
+      materialId: id,
+    });
+
+    if (acquiredReservation) {
+      material = await findMaterialDetailForAcquiredLearner(id);
+    }
+  }
 
   if (!material) {
     throw new AppError('Material not found', 404, 'NOT_FOUND');
@@ -983,6 +1001,47 @@ export const getMaterialById = async (
 
   if (!viewer) {
     return publicDetail;
+  }
+
+  if (acquiredReservation) {
+    const [likedMaterialIds, followedSupplierIds] = await Promise.all([
+      materialsRepository.findLikedMaterialIds(viewer.sub, [material.id]),
+      publicSuppliersRepository.findFollowedSupplierIds(
+        viewer.sub,
+        material.supplierProfileId ? [material.supplierProfileId] : [],
+      ),
+    ]);
+    const publicSupplier =
+      'supplier' in publicDetail ? publicDetail.supplier : undefined;
+
+    return {
+      ...publicDetail,
+      materialId: material.id,
+      isLiked: likedMaterialIds.has(material.id),
+      supplierFollowed: material.supplierProfileId
+        ? followedSupplierIds.has(material.supplierProfileId)
+        : false,
+      isAcquiredView: true,
+      acquiredQuantity: quantityDecimalToNumber(acquiredReservation.quantityRequested),
+      acquiredReservationId: acquiredReservation.id,
+      acquiredReservationStatus: acquiredReservation.status,
+      acquiredReservationCompletedAt:
+        acquiredReservation.completedAt?.toISOString() ?? null,
+      isOwnMaterial: false,
+      canReserve: false,
+      reserveBlockReason: 'ACQUIRED' as const,
+      reservation: null,
+      ...(publicSupplier
+        ? {
+            supplier: {
+              ...publicSupplier,
+              isFollowedByViewer: material.supplierProfileId
+                ? followedSupplierIds.has(material.supplierProfileId)
+                : false,
+            },
+          }
+        : {}),
+    };
   }
 
   const viewerState = await getMaterialViewerState(id, viewer);

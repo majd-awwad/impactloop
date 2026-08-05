@@ -50,6 +50,9 @@ void main() {
             'matchReasonCode': 'CATEGORY_AND_KEYWORD',
             'rankingScore': 0.82,
             'reservationId': null,
+            'reservationStatus': null,
+            'canReserve': true,
+            'unavailableReason': null,
             'createdAt': '2026-07-03T00:00:00.000Z',
             'updatedAt': '2026-07-03T00:00:00.000Z',
             'material': {
@@ -58,10 +61,22 @@ void main() {
               'status': 'AVAILABLE',
               'quantity': 5,
               'unit': 'piece',
+              'condition': 'GOOD',
+              'isFree': true,
+              'price': null,
+              'currency': 'NIS',
               'pickupAllowed': true,
               'deliveryAllowed': false,
+              'imageUrl': '/uploads/materials/arduino.jpg',
               'location': {'country': 'Palestine', 'city': 'Ramallah'},
               'supplierPublicName': 'Tech Reuse Hub',
+            },
+            'supplier': {
+              'displayName': 'Tech Reuse Hub',
+              'avatarUrl': '/uploads/suppliers/hub.png',
+              'city': 'Ramallah',
+              'area': 'Al-Tireh',
+              'isVerified': true,
             },
           },
         ],
@@ -77,10 +92,79 @@ void main() {
 
       final match = request.matches.single;
       expect(match.isSuggested, isTrue);
+      expect(match.canReserve, isTrue);
       expect(match.isDismissed, isFalse);
       expect(match.isReserved, isFalse);
       expect(match.material?.title, 'Arduino Uno R3');
+      expect(match.material?.imageUrl, '/uploads/materials/arduino.jpg');
+      expect(match.supplier?.displayName, 'Tech Reuse Hub');
+      expect(match.supplier?.isVerified, isTrue);
+      expect(request.activeSuggestionCount, 1);
       expect(request.activeMatches, hasLength(1));
+    });
+
+    test('parses fulfilled acquired match and build sync repair flag', () {
+      final request = LearnerMaterialRequest.fromJson({
+        'id': 'req-fulfilled',
+        'categoryId': 'cat-1',
+        'requestedItemName': 'Plastic crate',
+        'quantity': 1,
+        'unit': 'piece',
+        'alternativesAllowed': true,
+        'location': {'country': 'PS', 'city': 'Ramallah'},
+        'projectId': 'proj-1',
+        'projectBuildId': 'build-1',
+        'projectBuildItemId': 'item-1',
+        'projectContext': {
+          'title': 'Rolling Workshop Storage Crate',
+          'componentName': 'Plastic crate',
+        },
+        'status': 'FULFILLED',
+        'expiresAt': '2026-08-30T00:00:00.000Z',
+        'createdAt': '2026-07-01T00:00:00.000Z',
+        'updatedAt': '2026-07-02T00:00:00.000Z',
+        'buildSyncRepaired': true,
+        'matches': [
+          {
+            'id': 'match-1',
+            'materialRequestId': 'req-fulfilled',
+            'materialId': 'mat-1',
+            'status': 'RESERVATION_CREATED',
+            'reservationId': 'res-1',
+            'reservationStatus': 'COMPLETED',
+            'isAcquired': true,
+            'canReserve': false,
+            'createdAt': '2026-07-03T00:00:00.000Z',
+            'updatedAt': '2026-07-03T00:00:00.000Z',
+            'material': {
+              'id': 'mat-1',
+              'title': 'Sorted Plastic Bottle Caps Bag',
+              'status': 'AVAILABLE',
+              'quantity': 1,
+              'unit': 'piece',
+              'pickupAllowed': true,
+              'deliveryAllowed': false,
+              'imageUrl': '/uploads/materials/crate.jpg',
+              'supplierPublicName': 'Reuse Workshop',
+            },
+            'supplier': {
+              'displayName': 'Reuse Workshop',
+              'city': 'Ramallah',
+              'isVerified': true,
+            },
+          },
+        ],
+      });
+
+      expect(request.isFulfilled, isTrue);
+      expect(request.buildSyncRepaired, isTrue);
+      expect(request.projectId, 'proj-1');
+
+      final match = request.matches.single;
+      expect(match.isAcquired, isTrue);
+      expect(match.isCompletedAcquisition, isTrue);
+      expect(match.canReserve, isFalse);
+      expect(match.material?.title, 'Sorted Plastic Bottle Caps Bag');
     });
 
     test('applies safe defaults for missing/null fields', () {
@@ -160,6 +244,25 @@ void main() {
       final label = LearnerMaterialRequestsL10n.statusLabel('SOMETHING_NEW');
       expect(label.en, 'SOMETHING_NEW');
       expect(label.ar, 'SOMETHING_NEW');
+    });
+
+    test('renders suggestion action labels in English and Arabic', () {
+      expect(
+        LearnerMaterialRequestsL10n.reviewAndReserve.en,
+        'Review and reserve',
+      );
+      expect(
+        LearnerMaterialRequestsL10n.reviewAndReserve.ar,
+        'عرض المادة وحجزها',
+      );
+      expect(
+        LearnerMaterialRequestsL10n.noLongerAvailable.en,
+        'No longer available',
+      );
+      expect(
+        LearnerMaterialRequestsL10n.noLongerAvailable.ar,
+        'لم تعد متاحة',
+      );
     });
   });
 

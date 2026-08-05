@@ -21,8 +21,10 @@ import {
   getMaterials,
   unlikeMaterialById,
 } from './materials.service.js';
+import { getMaterialRelatedProjects } from './materials.material-related-projects.js';
 import type {
   LikedMaterialsQuery,
+  MaterialRelatedProjectsQuery,
   MaterialsQuery,
   PriceCheckInput,
 } from './materials.validation.js';
@@ -73,7 +75,7 @@ export const getMaterial = async (
 ): Promise<void> => {
   const { id } = readValidatedParams<{ id: string }>(req);
   const material = await measureRequestStage('materials.public-detail', () =>
-    getMaterialById(id, undefined, getRequestAbortSignal(res)),
+    getMaterialById(id, req.auth, getRequestAbortSignal(res)),
   );
 
   res.json(successResponse('Material fetched successfully', material));
@@ -120,6 +122,20 @@ export const getRelatedMaterialsHandler = async (
     getRelatedMaterials(id, limit, req.auth, getRequestAbortSignal(res)),
   );
   res.json(successResponse('Related materials fetched successfully', result));
+};
+
+export const getMaterialRelatedProjectsHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const query = readValidatedQuery<MaterialRelatedProjectsQuery>(req);
+  const result = await measureRequestStage('materials.related-projects', () =>
+    getMaterialRelatedProjects(id, query, req.auth),
+  );
+  res.json(
+    successResponse('Material related projects fetched successfully', result),
+  );
 };
 
 export const likeMaterial = async (

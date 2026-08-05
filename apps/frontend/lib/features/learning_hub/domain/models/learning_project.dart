@@ -4,6 +4,8 @@ export '../../../../shared/models/localized_text.dart';
 
 import '../../../../shared/models/localized_text.dart';
 
+import 'project_material_coverage.dart';
+
 class RatingBreakdown {
   const RatingBreakdown({required this.stars, required this.count});
 
@@ -62,6 +64,7 @@ class ProjectRequiredComponentItem {
     required this.canBeSubstituted,
     this.categoryId,
     this.notes,
+    this.publicAvailabilityStatus,
   });
 
   final String id;
@@ -73,6 +76,7 @@ class ProjectRequiredComponentItem {
   final bool canBeSubstituted;
   final String? categoryId;
   final String? notes;
+  final ComponentPublicAvailabilityStatus? publicAvailabilityStatus;
 }
 
 class LearningProject {
@@ -106,6 +110,9 @@ class LearningProject {
     this.longDescription,
     this.hasRatings = false,
     this.recommendationImpressionId,
+    this.materialCoverage,
+    this.personalBuildReadiness,
+    this.componentCoverage = const <ProjectComponentCoverageItem>[],
   });
 
   final String id;
@@ -137,6 +144,9 @@ class LearningProject {
   final List<String> tags;
   final bool hasRatings;
   final String? recommendationImpressionId;
+  final ProjectMaterialCoverageSummary? materialCoverage;
+  final ProjectPersonalBuildReadiness? personalBuildReadiness;
+  final List<ProjectComponentCoverageItem> componentCoverage;
 
   LearningProject copyWith({
     int? likesCount,
@@ -179,6 +189,9 @@ class LearningProject {
       recentReviews: recentReviews ?? this.recentReviews,
       viewerReview: viewerReview ?? this.viewerReview,
       tags: tags,
+      materialCoverage: materialCoverage,
+      personalBuildReadiness: personalBuildReadiness,
+      componentCoverage: componentCoverage,
     );
   }
 }

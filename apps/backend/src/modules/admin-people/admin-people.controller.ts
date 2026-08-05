@@ -12,12 +12,19 @@ import {
 } from './admin-people.export.js';
 import * as service from './admin-people.service.js';
 import type {
+  AdminPeopleBuildLearningParams,
   AdminPeopleExportDownloadQuery,
   AdminPeopleExportFilters,
   AdminPeopleListQuery,
   AdminPeopleUserIdParams,
   SuspendUserInput,
 } from './admin-people.validation.js';
+import {
+  getAdminBuildLearningDetail,
+  listAdminLearnerBuildsWithLearning,
+} from './admin-build-learning.service.js';
+import { paginationQuerySchema } from '../../utils/zod-helpers.js';
+import type { z } from 'zod';
 
 export const getAdminPeopleSummary = async (
   _req: Request,
@@ -86,4 +93,33 @@ export const reactivateAdminPerson = async (
   const { id } = readValidatedParams<AdminPeopleUserIdParams>(req);
   const result = await service.reactivateAdminPerson(req.auth!.sub, id);
   res.json(successResponse('Account reactivated.', result));
+};
+
+export const listAdminPersonBuildsLearning = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<AdminPeopleUserIdParams>(req);
+  const query = readValidatedQuery<z.infer<typeof paginationQuerySchema>>(req);
+  res.setHeader('Cache-Control', 'private, no-store');
+  const result = await listAdminLearnerBuildsWithLearning({
+    learnerUserId: id,
+    page: query.page,
+    limit: query.limit,
+  });
+  res.json(successResponse('Learner builds learning summary loaded.', result));
+};
+
+export const getAdminPersonBuildLearning = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id, buildId } =
+    readValidatedParams<AdminPeopleBuildLearningParams>(req);
+  res.setHeader('Cache-Control', 'private, no-store');
+  const result = await getAdminBuildLearningDetail({
+    learnerUserId: id,
+    buildId,
+  });
+  res.json(successResponse('Build learning activity loaded.', result));
 };

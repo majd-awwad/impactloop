@@ -135,10 +135,32 @@ BEGIN
 END
 $mapping_validation$;
 
+-- Fresh databases (migrate reset / shadow DB) have schema only: categories and
+-- taxonomy concepts are created later by seed. Treat that as an intentional no-op
+-- so this one-time production backfill does not block local reset. Partial matches
+-- still fail below via MISSING_CATEGORY.
+CREATE TEMP TABLE "category_ownership_backfill_control" (
+  "should_run" BOOLEAN NOT NULL
+) ON COMMIT DROP;
+
+INSERT INTO "category_ownership_backfill_control" ("should_run")
+SELECT EXISTS (
+  SELECT 1
+  FROM "category_ownership_backfill_mapping" AS "mapping"
+  JOIN "categories" AS "category"
+    ON "category"."name_en" = "mapping"."category_name"
+    AND "category"."category_type" = "mapping"."expected_category_type"
+);
+
 DO $category_validation$
 DECLARE
   "failure" RECORD;
 BEGIN
+  IF NOT (SELECT "should_run" FROM "category_ownership_backfill_control") THEN
+    RAISE NOTICE 'CATEGORY_OWNERSHIP_BACKFILL_SKIPPED_EMPTY_DATABASE';
+    RETURN;
+  END IF;
+
   SELECT
     "mapping"."category_name",
     "mapping"."expected_category_type",
@@ -211,6 +233,10 @@ DO $concept_validation$
 DECLARE
   "failure" RECORD;
 BEGIN
+  IF NOT (SELECT "should_run" FROM "category_ownership_backfill_control") THEN
+    RETURN;
+  END IF;
+
   SELECT
     "mapping"."category_name",
     "mapping"."expected_category_type",
@@ -328,6 +354,10 @@ DO $ownership_validation$
 DECLARE
   "failure" RECORD;
 BEGIN
+  IF NOT (SELECT "should_run" FROM "category_ownership_backfill_control") THEN
+    RETURN;
+  END IF;
+
   SELECT
     "category_name",
     "expected_category_type",
@@ -486,6 +516,10 @@ DECLARE
   "actual_material" INTEGER;
   "actual_project" INTEGER;
 BEGIN
+  IF NOT (SELECT "should_run" FROM "category_ownership_backfill_control") THEN
+    RETURN;
+  END IF;
+
   SELECT
     "mapping"."category_name",
     "mapping"."expected_category_type",

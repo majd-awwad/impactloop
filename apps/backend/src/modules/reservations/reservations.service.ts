@@ -667,6 +667,24 @@ export const createReservation = async (
         409,
         'ACTIVE_BUILD_ITEM_RESERVATION',
       );
+    case 'INSUFFICIENT_QUANTITY':
+      throw new AppError(
+        'Reserved quantity is insufficient for this build item',
+        400,
+        'INSUFFICIENT_QUANTITY',
+      );
+    case 'RESERVATION_ALREADY_ALLOCATED':
+      throw new AppError(
+        'This reservation is already linked to another build item',
+        409,
+        'RESERVATION_ALREADY_ALLOCATED',
+      );
+    case 'INCOMPATIBLE_UNIT':
+      throw new AppError(
+        'Material unit is not compatible with the required component unit',
+        400,
+        'INCOMPATIBLE_UNIT',
+      );
     case 'DELIVERY_PRICING_ERROR':
       throw new AppError(
         result.message ?? 'Delivery fee could not be calculated for this location.',

@@ -32,7 +32,8 @@ import '../../../comments/presentation/comments_section.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../profile/application/profile_providers.dart';
-import '../../../learning_hub/application/learning_hub_providers.dart';
+import '../../../learning_hub/application/project_build_refresh.dart';
+import '../../../learner_material_requests/application/learner_material_requests_providers.dart';
 import '../../../reservations/application/reservation_create_controller.dart';
 import '../../../reservations/application/reservation_timing_policy.dart';
 import '../../../reservations/data/models/create_reservation_request.dart';
@@ -43,6 +44,7 @@ import '../../../reservations/data/models/reservation_quote.dart';
 import '../../../reservations/data/reservations_repository.dart';
 import '../../../reservations/presentation/reservation_create_error_message.dart';
 import '../../../reservations/presentation/widgets/reservation_price_breakdown.dart';
+import '../../application/material_related_projects_providers.dart';
 import '../../application/material_discovery_providers.dart';
 import '../../domain/discovery_material.dart';
 import '../../domain/material_discovery_repository.dart';
@@ -50,6 +52,7 @@ import '../../domain/material_performance_models.dart';
 import '../../domain/material_view_operation_key.dart';
 import '../material_reserve_eligibility.dart';
 import '../material_discovery_content.dart';
+import '../widgets/material_related_projects_section.dart';
 import '../widgets/material_details_gallery.dart';
 import '../discovery_material_display.dart';
 import '../reservation_dialog_copy.dart';
@@ -151,6 +154,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
     super.activate();
     _isActive = true;
     _startObservingLifecycle();
+    invalidateMaterialRelatedProjects(ref, widget.materialId);
   }
 
   @override
@@ -565,14 +569,22 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
     ref.invalidate(homeSuggestedMaterialsProvider);
     unawaited(_loadViewerStateIfAuthenticated());
 
-    final projectId = widget.projectId?.trim();
-    if (projectId != null && projectId.isNotEmpty) {
-      ref.invalidate(projectBuildProvider(projectId));
+    ref.refreshLinkedProjectBuild(widget.projectId);
+
+    if (hasMaterialRequestMatchId) {
+      invalidateLearnerMaterialRequests(ref);
     }
 
     final returnTo = widget.returnTo?.trim();
     if (returnTo != null && returnTo.isNotEmpty) {
-      showInfoSnackBar(context, 'Reservation linked to your build checklist.');
+      if (hasMaterialRequestMatchId) {
+        showInfoSnackBar(
+          context,
+          'Reservation linked to your material request.',
+        );
+      } else if (hasBuildItemId) {
+        showInfoSnackBar(context, 'Reservation linked to your build checklist.');
+      }
       context.go(Uri.decodeComponent(returnTo));
       return;
     }
@@ -751,7 +763,9 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                               _MaterialDetailsPanel(material: material),
                               _MaterialDetailExtraSections(material: material),
                               const SizedBox(height: AppSpacing.md),
-                              _MaterialProjectHandoffPanel(material: material),
+                              MaterialRelatedProjectsSection(
+                                materialId: material.id,
+                              ),
                               const SizedBox(height: AppSpacing.md),
                               _SupplierCard(material: material),
                               const SizedBox(height: AppSpacing.md),
@@ -1634,102 +1648,6 @@ class _SupplierCardState extends ConsumerState<_SupplierCard> {
   }
 }
 
-class _MaterialProjectHandoffPanel extends StatelessWidget {
-  const _MaterialProjectHandoffPanel({required this.material});
-
-  final DiscoveryMaterial material;
-
-  String _searchTerm(BuildContext context) {
-    final title = material.title.resolve(context).trim();
-    if (title.isNotEmpty) {
-      return title;
-    }
-
-    return material.category.resolve(context).trim();
-  }
-
-  void _openLearningHub(BuildContext context) {
-    final search = _searchTerm(context);
-    final uri = Uri(path: '/learning', queryParameters: {'q': search});
-    context.go(uri.toString());
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-    final search = _searchTerm(context);
-
-    return _Panel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: palette.cardSurfaceAlt,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: palette.borderSubtle),
-                ),
-                child: Icon(
-                  Icons.school_outlined,
-                  color: palette.mint,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      const LocalizedText(
-                        en: 'Projects using this material',
-                        ar: 'مشاريع تستخدم هذه المادة',
-                      ).resolve(context),
-                      style: AppTextStyles.title(
-                        context,
-                      ).copyWith(color: palette.textPrimary),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      LocalizedText(
-                        en: 'Search Learning Hub for "$search" and related project components.',
-                        ar: 'ابحث في مركز التعلم عن "$search" ومكونات المشاريع المرتبطة.',
-                      ).resolve(context),
-                      style: AppTextStyles.body(
-                        context,
-                      ).copyWith(color: palette.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          OutlinedButton.icon(
-            onPressed: () => _openLearningHub(context),
-            style: AppStatusButtonStyle.outlined(
-              context,
-              AppStatusTone.neutral,
-            ),
-            icon: const Icon(Icons.arrow_forward_rounded),
-            label: Text(
-              const LocalizedText(
-                en: 'Find matching projects',
-                ar: 'ابحث عن مشاريع مناسبة',
-              ).resolve(context),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ReservationPanel extends StatelessWidget {
   const _ReservationPanel({
     required this.material,
@@ -2063,7 +1981,7 @@ class _DetailsSideColumn extends StatelessWidget {
           emphasized: showPrimaryReserveButton,
         ),
         const SizedBox(height: _materialDetailsSectionGap),
-        _MaterialProjectHandoffPanel(material: material),
+        MaterialRelatedProjectsSection(materialId: material.id),
         const SizedBox(height: _materialDetailsSectionGap),
         _ReportMaterialSection(materialId: material.id),
       ],

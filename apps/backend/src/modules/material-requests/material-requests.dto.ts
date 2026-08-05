@@ -1,4 +1,10 @@
 import { decimalToNumber } from '../../utils/decimal.js';
+import {
+  countActiveSuggestions,
+  mapMatchForLearner,
+  sortLearnerMatches,
+  type LearnerMatchRow,
+} from './material-requests.match-display.js';
 
 export type BroadLocationDto = {
   country: string;
@@ -40,35 +46,8 @@ type RequestRow = {
     id: string;
     requiredComponent?: { componentName: string } | null;
   } | null;
-  matches?: MatchRow[];
+  matches?: LearnerMatchRow[];
   _count?: { matches: number };
-};
-
-type MatchRow = {
-  id: string;
-  materialRequestId: string;
-  materialId: string;
-  supplierUserId: string;
-  status: string;
-  matchReasonCode: string | null;
-  rankingScore: number | null;
-  reservationId: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  material?: {
-    id: string;
-    title: string;
-    status: string;
-    quantity: { toNumber(): number } | number;
-    unit: string;
-    pickupAllowed: boolean;
-    deliveryAllowed: boolean;
-    location?: { city: string; area: string | null } | null;
-    owner?: {
-      displayName: string;
-      supplierProfile?: { publicName: string | null } | null;
-    } | null;
-  } | null;
 };
 
 const toQuantity = (value: { toNumber(): number } | number) =>
@@ -97,43 +76,21 @@ export const mapAnonymizedProjectContext = (
   };
 };
 
-export const mapMatchForLearner = (match: MatchRow) => ({
-  id: match.id,
-  materialRequestId: match.materialRequestId,
-  materialId: match.materialId,
-  status: match.status,
-  matchReasonCode: match.matchReasonCode,
-  rankingScore: match.rankingScore,
-  reservationId: match.reservationId,
-  createdAt: match.createdAt.toISOString(),
-  updatedAt: match.updatedAt.toISOString(),
-  material: match.material
-    ? {
-        id: match.material.id,
-        title: match.material.title,
-        status: match.material.status,
-        quantity: toQuantity(match.material.quantity),
-        unit: match.material.unit,
-        pickupAllowed: match.material.pickupAllowed,
-        deliveryAllowed: match.material.deliveryAllowed,
-        location: match.material.location
-          ? {
-              city: match.material.location.city,
-              area: match.material.location.area,
-            }
-          : null,
-        supplierPublicName:
-          match.material.owner?.supplierProfile?.publicName ??
-          match.material.owner?.displayName ??
-          null,
-      }
-    : null,
-});
-
 export const mapLearnerRequest = (
   row: RequestRow,
   options?: { includeMatches?: boolean },
-) => ({
+) => {
+  const activeSuggestionCount = countActiveSuggestions(row.matches ?? []);
+  const mappedMatches =
+    options?.includeMatches === false
+      ? undefined
+      : sortLearnerMatches(
+          (row.matches ?? []).map((match) =>
+            mapMatchForLearner(match, row.status),
+          ),
+        );
+
+  return {
   id: row.id,
   categoryId: row.categoryId,
   categoryNameEn: row.category?.nameEn ?? null,
@@ -156,12 +113,11 @@ export const mapLearnerRequest = (
   cancelledAt: row.cancelledAt?.toISOString() ?? null,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
-  suggestionCount: row._count?.matches ?? row.matches?.length ?? 0,
-  matches:
-    options?.includeMatches === false
-      ? undefined
-      : (row.matches ?? []).map(mapMatchForLearner),
-});
+  suggestionCount: activeSuggestionCount || row._count?.matches || 0,
+  activeSuggestionCount,
+  matches: mappedMatches,
+};
+};
 
 export const mapSupplierRequest = (
   row: RequestRow,

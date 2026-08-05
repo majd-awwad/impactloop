@@ -300,6 +300,28 @@ class AdminPeopleApi {
     );
   }
 
+  Future<Map<String, dynamic>> fetchPersonBuilds(String userId) async {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '/api/admin/people/$userId/builds',
+        queryParameters: {'page': 1, 'limit': 10},
+      ),
+      (json) => json,
+    );
+  }
+
+  Future<Map<String, dynamic>> fetchPersonBuildLearning(
+    String userId,
+    String buildId,
+  ) async {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '/api/admin/people/$userId/builds/$buildId/learning',
+      ),
+      (json) => json,
+    );
+  }
+
   Map<String, dynamic> _exportQueryParameters({
     String tab = 'ALL',
     String search = '',

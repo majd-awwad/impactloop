@@ -40,6 +40,19 @@ export const learningProjectsQuerySchema = paginationQuerySchema.extend({
       'difficulty must be one of BEGINNER, INTERMEDIATE, or ADVANCED',
   }).optional(),
   tag: z.string().trim().min(1).max(80).optional(),
+  availability: z
+    .enum(['ANY', 'FULL', 'MOST', 'SOME', 'NONE'])
+    .optional(),
+  sort: z
+    .enum([
+      'DEFAULT',
+      'MOST_AVAILABLE',
+      'SHORTEST_DURATION',
+      'EASIEST',
+      'MOST_POPULAR',
+      'NEWEST',
+    ])
+    .optional(),
 });
 
 export const myLearningProjectsQuerySchema = paginationQuerySchema.extend({
@@ -223,6 +236,11 @@ export const linkBuildItemMaterialSchema = z.object({
 });
 
 export const linkBuildItemReservationSchema = z.object({
+  reservationId: z.string().trim().min(1),
+});
+
+export const removeAcquiredBuildItemAllocationSchema = z.object({
+  materialId: z.string().trim().min(1),
   reservationId: z.string().trim().min(1),
 });
 
