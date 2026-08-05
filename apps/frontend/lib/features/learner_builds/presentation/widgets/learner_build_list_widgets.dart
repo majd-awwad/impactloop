@@ -18,10 +18,12 @@ class LearnerBuildListCard extends StatelessWidget {
     super.key,
     required this.item,
     this.showImpactSummary = false,
+    this.showPortfolioLearning = false,
   });
 
   final LearnerBuildListItem item;
   final bool showImpactSummary;
+  final bool showPortfolioLearning;
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +35,8 @@ class LearnerBuildListCard extends StatelessWidget {
       ProjectBuildStatus.completed => AppStatusTone.success,
       ProjectBuildStatus.archived => AppStatusTone.neutral,
     };
+    final learningChip = _compactLearningLabel(context);
+    final portfolioStory = showPortfolioLearning ? item.portfolioLearning : null;
 
     return Material(
       color: Colors.transparent,
@@ -82,7 +86,8 @@ class LearnerBuildListCard extends StatelessWidget {
                         context,
                       ).copyWith(color: palette.textPrimary),
                     ),
-                    if (item.project.shortDescription.isNotEmpty) ...[
+                    if (item.project.shortDescription.isNotEmpty &&
+                        !showPortfolioLearning) ...[
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         item.project.shortDescription,
@@ -91,6 +96,16 @@ class LearnerBuildListCard extends StatelessWidget {
                         style: AppTextStyles.body(
                           context,
                         ).copyWith(color: palette.textSecondary),
+                      ),
+                    ],
+                    if (showPortfolioLearning && item.completedAt != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        _formatCompletedDate(context, item.completedAt!),
+                        style: AppTextStyles.label(context).copyWith(
+                          color: palette.textMuted,
+                          fontSize: 12.5,
+                        ),
                       ),
                     ],
                     if (item.completionStoryPreview != null &&
@@ -109,9 +124,34 @@ class LearnerBuildListCard extends StatelessWidget {
                       const SizedBox(height: AppSpacing.sm),
                       _ImpactSummaryLine(summary: item.impactSummary!),
                     ],
+                    if (learningChip != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        learningChip,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.label(context).copyWith(
+                          color: palette.textSecondary,
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ],
+                    if (portfolioStory != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        _portfolioLearningPreview(context, portfolioStory),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.label(context).copyWith(
+                          color: palette.textSecondary,
+                          fontSize: 12.5,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      LearnerBuildsL10n.openBuild.resolve(context),
+                      _primaryActionLabel(context),
                       style: AppTextStyles.label(context).copyWith(
                         color: colors.primary,
                         fontWeight: FontWeight.w700,
@@ -130,6 +170,217 @@ class LearnerBuildListCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _primaryActionLabel(BuildContext context) {
+    return switch (item.status) {
+      ProjectBuildStatus.paused =>
+        LearnerBuildsL10n.resumeBuild.resolve(context),
+      ProjectBuildStatus.completed =>
+        LearnerBuildsL10n.viewCompleted.resolve(context),
+      ProjectBuildStatus.archived =>
+        LearnerBuildsL10n.openBuild.resolve(context),
+      ProjectBuildStatus.inProgress =>
+        LearnerBuildsL10n.openBuild.resolve(context),
+    };
+  }
+
+  String _formatCompletedDate(BuildContext context, DateTime date) {
+    return MaterialLocalizations.of(context).formatMediumDate(date.toLocal());
+  }
+
+  String _portfolioLearningPreview(
+    BuildContext context,
+    PortfolioLearningStory story,
+  ) {
+    final languageCode = Localizations.localeOf(context).languageCode;
+    if (story.goalOutcome != null) {
+      return LearnerBuildsL10n.goalOutcomeLabel(story.goalOutcome)
+          .resolve(context);
+    }
+    if (story.reflection != null && story.reflection!.trim().isNotEmpty) {
+      return story.reflection!.trim();
+    }
+    if (story.goal != null && story.goal!.trim().isNotEmpty) {
+      return story.goal!.trim();
+    }
+    if (story.understoodConcepts.isNotEmpty) {
+      return story.understoodConcepts.first.labelFor(languageCode);
+    }
+    return LearnerBuildsL10n.learningJourneyTitle.resolve(context);
+  }
+
+  String? _compactLearningLabel(BuildContext context) {
+    if (showPortfolioLearning) {
+      return null;
+    }
+    final learning = item.learning;
+    if (learning == null ||
+        learning.status == LearnerBuildLearningStatus.notAvailable) {
+      return null;
+    }
+
+    final isTerminal =
+        item.status == ProjectBuildStatus.completed ||
+        item.status == ProjectBuildStatus.archived;
+
+    if (isTerminal) {
+      if (learning.goalOutcome != null) {
+        return LearnerBuildsL10n.goalOutcomeLabel(
+          learning.goalOutcome,
+        ).resolve(context);
+      }
+      if (learning.hasReflection) {
+        return LearnerBuildsL10n.learningReflectionAdded.resolve(context);
+      }
+      return LearnerBuildsL10n.notReviewedYet.resolve(context);
+    }
+
+    if (learning.status == LearnerBuildLearningStatus.reviewRecommended) {
+      return LearnerBuildsL10n.reviewRecommended.resolve(context);
+    }
+    if (learning.checksTotal > 0 && learning.checksHandled > 0) {
+      return LearnerBuildsL10n.learningChecksProgress(
+        learning.checksHandled,
+        learning.checksTotal,
+      ).resolve(context);
+    }
+    if (learning.hasLearningGoal) {
+      return LearnerBuildsL10n.learningGoalAdded.resolve(context);
+    }
+    if (learning.status == LearnerBuildLearningStatus.notStarted) {
+      return LearnerBuildsL10n.startLearningCheck.resolve(context);
+    }
+    return null;
+  }
+}
+
+class PortfolioLearningStorySection extends StatelessWidget {
+  const PortfolioLearningStorySection({super.key, required this.story});
+
+  final PortfolioLearningStory story;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!story.hasMeaningfulContent) {
+      return const SizedBox.shrink();
+    }
+
+    final palette = MaterialsUiPalette.of(context);
+    final languageCode = Localizations.localeOf(context).languageCode;
+    final understood = story.understoodConcepts.take(3).toList(growable: false);
+    final review = story.reviewConcepts.take(3).toList(growable: false);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: palette.borderSubtle.withValues(alpha: 0.35),
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            LearnerBuildsL10n.learningJourneyTitle.resolve(context),
+            style: AppTextStyles.label(context).copyWith(
+              fontWeight: FontWeight.w700,
+              color: palette.textPrimary,
+            ),
+          ),
+          if (story.goal != null && story.goal!.trim().isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              LearnerBuildsL10n.personalGoal.resolve(context),
+              style: AppTextStyles.label(context).copyWith(fontSize: 12),
+            ),
+            Text(
+              story.goal!,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.body(context).copyWith(fontSize: 13),
+            ),
+          ],
+          if (story.goalOutcome != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              '${LearnerBuildsL10n.goalOutcome.resolve(context)}: ${LearnerBuildsL10n.goalOutcomeLabel(story.goalOutcome).resolve(context)}',
+              style: AppTextStyles.label(context).copyWith(fontSize: 12.5),
+            ),
+          ],
+          if (story.confidenceBefore != null ||
+              story.confidenceAfter != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              _confidenceLine(languageCode),
+              style: AppTextStyles.label(context).copyWith(fontSize: 12.5),
+            ),
+          ],
+          if (understood.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              LearnerBuildsL10n.conceptsUnderstood.resolve(context),
+              style: AppTextStyles.label(context).copyWith(fontSize: 12),
+            ),
+            ...understood.map(
+              (concept) => Text(
+                '• ${concept.labelFor(languageCode)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.body(context).copyWith(fontSize: 12.5),
+              ),
+            ),
+          ],
+          if (review.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              LearnerBuildsL10n.conceptsForReview.resolve(context),
+              style: AppTextStyles.label(context).copyWith(fontSize: 12),
+            ),
+            ...review.map(
+              (concept) => Text(
+                '• ${concept.labelFor(languageCode)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.body(context).copyWith(fontSize: 12.5),
+              ),
+            ),
+          ],
+          if (story.reflection != null &&
+              story.reflection!.trim().isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              LearnerBuildsL10n.learningReflection.resolve(context),
+              style: AppTextStyles.label(context).copyWith(fontSize: 12),
+            ),
+            Text(
+              story.reflection!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.body(context).copyWith(fontSize: 12.5),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _confidenceLine(String languageCode) {
+    final before = story.confidenceBefore;
+    final after = story.confidenceAfter;
+    if (before != null && after != null) {
+      return languageCode == 'ar'
+          ? 'مستوى المعرفة: $before ← $after'
+          : 'Confidence: $before → $after';
+    }
+    if (after != null) {
+      return languageCode == 'ar'
+          ? 'مستوى المعرفة بعد الإكمال: $after'
+          : 'Confidence after: $after';
+    }
+    return languageCode == 'ar'
+        ? 'مستوى المعرفة قبل البدء: $before'
+        : 'Confidence before: $before';
   }
 }
 

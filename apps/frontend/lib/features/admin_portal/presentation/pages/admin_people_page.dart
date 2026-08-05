@@ -2132,10 +2132,240 @@ class _PersonDetailDialog extends StatelessWidget {
                 ),
               ),
             ],
+            if (roles.contains('LEARNER')) ...[
+              const SizedBox(height: AppSpacing.md),
+              _AdminLearningActivitySection(
+                userId: detail['userId']?.toString() ??
+                    detail['id']?.toString() ??
+                    '',
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+}
+
+class _AdminLearningActivitySection extends ConsumerStatefulWidget {
+  const _AdminLearningActivitySection({required this.userId});
+
+  final String userId;
+
+  @override
+  ConsumerState<_AdminLearningActivitySection> createState() =>
+      _AdminLearningActivitySectionState();
+}
+
+class _AdminLearningActivitySectionState
+    extends ConsumerState<_AdminLearningActivitySection> {
+  bool _loading = true;
+  String? _error;
+  List<Map<String, dynamic>> _builds = const [];
+  Map<String, dynamic>? _selectedLearning;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    if (widget.userId.isEmpty) {
+      setState(() {
+        _loading = false;
+        _builds = const [];
+      });
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final result = await ref
+          .read(adminPeopleApiProvider)
+          .fetchPersonBuilds(widget.userId);
+      final items = result['items'];
+      setState(() {
+        _builds = items is List
+            ? items
+                  .whereType<Map>()
+                  .map((item) => Map<String, dynamic>.from(item))
+                  .toList(growable: false)
+            : const [];
+        _loading = false;
+      });
+    } catch (_) {
+      setState(() {
+        _loading = false;
+        _error = 'Couldn’t load learning activity.';
+      });
+    }
+  }
+
+  Future<void> _openLearning(String buildId) async {
+    setState(() {
+      _error = null;
+      _selectedLearning = null;
+    });
+    try {
+      final detail = await ref
+          .read(adminPeopleApiProvider)
+          .fetchPersonBuildLearning(widget.userId, buildId);
+      if (!mounted) {
+        return;
+      }
+      setState(() => _selectedLearning = detail);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _error = 'Couldn’t load learning activity.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppDialogSection(
+      title: 'Learning activity',
+      icon: Icons.school_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: LinearProgressIndicator(minHeight: 2),
+            )
+          else if (_error != null)
+            Text(_error!)
+          else if (_builds.isEmpty)
+            const Text('No project builds with learning data.')
+          else ...[
+            ..._builds.take(5).map((build) {
+              final title = build['projectTitle']?.toString() ?? 'Project';
+              final status = build['buildStatus']?.toString() ?? '';
+              final attempt = build['attemptNumber']?.toString() ?? '1';
+              final buildId = build['buildId']?.toString() ?? '';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '$title · Attempt $attempt · $status',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: buildId.isEmpty
+                          ? null
+                          : () => _openLearning(buildId),
+                      child: const Text('View'),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            if (_selectedLearning != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              _DetailRow('Project', _selectedLearning!['projectTitle']),
+              _DetailRow('Build ID', _selectedLearning!['buildId']),
+              _DetailRow('Attempt', _selectedLearning!['attemptNumber']),
+              _DetailRow('Build status', _selectedLearning!['buildStatus']),
+              _DetailRow('Learning goal', _selectedLearning!['learningGoal']),
+              _DetailRow(
+                'Confidence before',
+                _selectedLearning!['confidenceBefore'],
+              ),
+              _DetailRow(
+                'Confidence after',
+                _selectedLearning!['confidenceAfter'],
+              ),
+              _DetailRow('Goal outcome', _selectedLearning!['goalOutcome']),
+              _DetailRow(
+                'Final reflection',
+                _selectedLearning!['finalReflection'],
+              ),
+              _DetailRow('Pack version', _selectedLearning!['packVersion']),
+              _DetailRow(
+                'Start check',
+                _formatCheck(_selectedLearning!['startCheck']),
+              ),
+              _DetailRow(
+                'Step checks',
+                _formatCheck(_selectedLearning!['stepChecks']),
+              ),
+              _DetailRow(
+                'Final check',
+                _formatCheck(_selectedLearning!['finalCheck']),
+              ),
+              _DetailRow(
+                'Understood concepts',
+                _formatConcepts(_selectedLearning!['understoodConcepts']),
+              ),
+              _DetailRow(
+                'Review concepts',
+                _formatConcepts(_selectedLearning!['reviewConcepts']),
+              ),
+              if (_selectedLearning!['packQuality'] is Map) ...[
+                _DetailRow(
+                  'Pack questions',
+                  (_selectedLearning!['packQuality']
+                      as Map)['totalQuestions'],
+                ),
+                _DetailRow(
+                  'Needs review',
+                  (_selectedLearning!['packQuality']
+                      as Map)['needsReviewCount'],
+                ),
+                _DetailRow(
+                  'Unclear reports',
+                  (_selectedLearning!['packQuality']
+                      as Map)['unclearReportCount'],
+                ),
+                _DetailRow(
+                  'Pack review recommended',
+                  (_selectedLearning!['packQuality']
+                              as Map)['reviewRecommended'] ==
+                          true
+                      ? 'Yes'
+                      : 'No',
+                ),
+              ],
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  String? _formatCheck(Object? raw) {
+    if (raw is! Map) {
+      return null;
+    }
+    final handled = raw['handled'];
+    final total = raw['total'];
+    if (handled == null || total == null) {
+      return null;
+    }
+    return '$handled / $total';
+  }
+
+  String? _formatConcepts(Object? raw) {
+    if (raw is! List || raw.isEmpty) {
+      return null;
+    }
+    return raw
+        .whereType<Map>()
+        .map((item) => item['labelEn']?.toString() ?? '')
+        .where((label) => label.isNotEmpty)
+        .take(5)
+        .join(', ');
   }
 }
 

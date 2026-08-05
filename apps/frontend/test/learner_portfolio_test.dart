@@ -16,6 +16,39 @@ import 'package:frontend/features/learning_hub/presentation/pages/learning_proje
 import 'package:frontend/features/notifications/application/notifications_provider.dart';
 
 void main() {
+  testWidgets('portfolio page load triggers one bounded fetch', (tester) async {
+    var fetchCount = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_TestAuthController.new),
+          learnerPortfolioProvider.overrideWith((ref) async {
+            fetchCount += 1;
+            return const LearnerBuildListResult(
+              items: [],
+              page: 1,
+              limit: 20,
+              total: 0,
+              totalPages: 0,
+            );
+          }),
+        ],
+        child: MaterialApp(
+          home: const PortfolioPage(),
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('en')],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(fetchCount, 1);
+    expect(find.text('Your private Portfolio is ready for completed projects.'), findsOneWidget);
+  });
+
   testWidgets('portfolio page shows empty state copy', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -44,11 +77,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Portfolio'), findsOneWidget);
-    expect(find.text('No portfolio entries yet'), findsOneWidget);
     expect(
-      find.text('Complete a project build to showcase your impact here.'),
+      find.text('Your private Portfolio is ready for completed projects.'),
       findsOneWidget,
     );
+    expect(
+      find.text(
+        'Complete a project and add your story, photo, or learning reflection to see it here.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Explore projects'), findsOneWidget);
   });
 
   testWidgets('portfolio page shows Arabic title', (tester) async {
@@ -138,8 +177,9 @@ void main() {
 
     expect(find.text('Solar charger'), findsOneWidget);
     expect(find.text('Attempt 2'), findsOneWidget);
-    expect(find.text('4 of 4 steps completed'), findsOneWidget);
+    expect(find.text('View completed build'), findsOneWidget);
     expect(find.text('It worked on the first sunny day.'), findsOneWidget);
+    expect(find.text('4 of 4 steps completed'), findsNothing);
   });
 
   testWidgets('completed build page shows read-only notice', (tester) async {
