@@ -13,6 +13,7 @@ class AiAssistantShellState {
     this.showHistory = false,
     this.historyTab = AiHistoryTab.active,
     this.buildGuideContext,
+    this.composerPrefill,
   });
 
   final bool isOpen;
@@ -20,6 +21,7 @@ class AiAssistantShellState {
   final bool showHistory;
   final AiHistoryTab historyTab;
   final BuildGuideContext? buildGuideContext;
+  final String? composerPrefill;
 
   AiAssistantShellState copyWith({
     bool? isOpen,
@@ -28,6 +30,8 @@ class AiAssistantShellState {
     AiHistoryTab? historyTab,
     BuildGuideContext? buildGuideContext,
     bool clearBuildGuideContext = false,
+    String? composerPrefill,
+    bool clearComposerPrefill = false,
   }) {
     return AiAssistantShellState(
       isOpen: isOpen ?? this.isOpen,
@@ -37,6 +41,8 @@ class AiAssistantShellState {
       buildGuideContext: clearBuildGuideContext
           ? null
           : buildGuideContext ?? this.buildGuideContext,
+      composerPrefill:
+          clearComposerPrefill ? null : composerPrefill ?? this.composerPrefill,
     );
   }
 }
@@ -54,6 +60,7 @@ class AiAssistantShellNotifier extends Notifier<AiAssistantShellState> {
     String? conversationId,
     BuildGuideContext? buildGuideContext,
     bool? clearBuildGuideContext,
+    String? composerPrefill,
   }) {
     final shouldClearBuildGuideContext =
         clearBuildGuideContext ??
@@ -66,6 +73,7 @@ class AiAssistantShellNotifier extends Notifier<AiAssistantShellState> {
           ? null
           : (buildGuideContext ?? state.buildGuideContext),
       clearBuildGuideContext: shouldClearBuildGuideContext,
+      composerPrefill: composerPrefill ?? state.composerPrefill,
     );
 
     if (conversationId != null && conversationId.isNotEmpty) {
@@ -77,6 +85,10 @@ class AiAssistantShellNotifier extends Notifier<AiAssistantShellState> {
 
   void close() {
     state = const AiAssistantShellState();
+  }
+
+  void clearComposerPrefill() {
+    state = state.copyWith(clearComposerPrefill: true);
   }
 
   void toggleHistory({AiHistoryTab? tab}) {

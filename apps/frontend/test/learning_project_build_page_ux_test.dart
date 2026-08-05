@@ -4,16 +4,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:frontend/app/router/navigation_extensions.dart';
 import 'package:frontend/core/errors/api_exception.dart';
 import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/learning_hub/application/learning_hub_providers.dart';
+import 'package:frontend/features/learning_hub/application/learning_session_providers.dart';
+import 'package:frontend/features/learning_hub/domain/models/learning_session.dart';
 import 'package:frontend/features/learning_hub/domain/learning_project_repository.dart';
 import 'package:frontend/features/learning_hub/domain/models/project_build.dart';
+import 'package:frontend/features/learning_hub/presentation/l10n/final_learning_check_l10n.dart';
 import 'package:frontend/features/learning_hub/presentation/l10n/project_build_page_l10n.dart';
 import 'package:frontend/features/learning_hub/presentation/pages/learning_project_build_page.dart';
+import 'package:frontend/features/learning_hub/presentation/widgets/final_learning_check_section.dart';
 import 'package:frontend/features/learner_builds/application/learner_builds_providers.dart';
 import 'package:frontend/features/learner_builds/data/learner_builds_api.dart';
+import 'package:frontend/features/learner_builds/data/models/learner_build_models.dart';
 import 'package:frontend/features/notifications/application/notifications_provider.dart';
 import 'package:frontend/shared/widgets/app_feedback.dart';
 
@@ -65,32 +71,29 @@ void main() {
     await _pumpBuildPage(
       tester,
       build: _sampleBuild(status: ProjectBuildStatus.completed),
+      sessionBundle: _sampleSessionBundle(),
       viewport: const Size(1024, 900),
     );
 
-    await tester.tap(find.text('Build actions'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Edit completion story'), findsOneWidget);
-    expect(find.text('Build again'), findsOneWidget);
+    expect(find.text('Completed'), findsOneWidget);
+    expect(find.text('Complete step'), findsNothing);
     expect(find.text('Pause build'), findsNothing);
-    expect(find.text('Archive'), findsNothing);
+    expect(find.text('View private Portfolio'), findsWidgets);
+    expect(find.text('Build again'), findsWidgets);
   });
 
   testWidgets('ARCHIVED build menu shows only Build again', (tester) async {
     await _pumpBuildPage(
       tester,
       build: _sampleBuild(status: ProjectBuildStatus.archived),
+      sessionBundle: _sampleSessionBundle(),
       viewport: const Size(1024, 900),
     );
 
-    await tester.tap(find.text('Build actions'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Build again'), findsOneWidget);
     expect(find.text('Pause build'), findsNothing);
     expect(find.text('Resume build'), findsNothing);
     expect(find.text('Archive'), findsNothing);
+    expect(find.text('Build again'), findsWidgets);
   });
 
   testWidgets('desktop does not rely on an unlabeled three-dots icon', (
@@ -406,6 +409,464 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(OverflowBar), findsNothing);
   });
+
+  testWidgets('successful complete build action triggers project celebration', (
+    tester,
+  ) async {
+    final inProgress = _buildWithLastStepRemaining();
+    final completed = _buildCompletedFrom(inProgress);
+    final repository = _CompletingBuildRepository(inProgress, completed);
+
+    await _pumpBuildPage(
+      tester,
+      build: inProgress,
+      repository: repository,
+      sessionBundle: _sampleSessionBundle(),
+      viewport: const Size(1024, 900),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Complete step'),
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Complete step'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Project completed!'), findsOneWidget);
+    expect(find.text('Review completed project'), findsOneWidget);
+    expect(find.text('Great work — learning check completed!'), findsNothing);
+    expect(find.byType(AlertDialog), findsOneWidget);
+  });
+
+  testWidgets('failed complete build does not trigger congratulations', (
+    tester,
+  ) async {
+    await _pumpBuildPage(
+      tester,
+      build: _buildWithLastStepRemaining(),
+      repository: _FailingCompleteBuildRepository(),
+      sessionBundle: _sampleSessionBundle(),
+      viewport: const Size(1024, 900),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Complete step'),
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Complete step'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Project completed!'), findsNothing);
+    expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('completed page does not dump question rows inline', (
+    tester,
+  ) async {
+    await _pumpBuildPage(
+      tester,
+      build: _sampleBuild(status: ProjectBuildStatus.completed),
+      sessionBundle: _sampleSessionBundle(),
+      viewport: const Size(1024, 900),
+    );
+
+    expect(find.text('What is the first step?'), findsNothing);
+    expect(find.text('Review answers'), findsWidgets);
+  });
+
+  testWidgets('project celebration does not show final check celebration', (
+    tester,
+  ) async {
+    final inProgress = _buildWithLastStepRemaining();
+    final completed = _buildCompletedFrom(inProgress);
+    final repository = _CompletingBuildRepository(inProgress, completed);
+
+    await _pumpBuildPage(
+      tester,
+      build: inProgress,
+      repository: repository,
+      sessionBundle: _sampleSessionBundle(),
+      viewport: const Size(1024, 900),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Complete step'),
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Complete step'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Project completed!'), findsOneWidget);
+    expect(
+      find.text('Great work — learning check completed!'),
+      findsNothing,
+    );
+  });
+
+  testWidgets('already completed build does not replay celebration dialog', (
+    tester,
+  ) async {
+    await _pumpBuildPage(
+      tester,
+      build: _sampleBuild(
+        status: ProjectBuildStatus.completed,
+        completedAt: DateTime(2026, 1, 15),
+      ),
+      sessionBundle: _sampleSessionBundle(),
+      viewport: const Size(1024, 900),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Project completed!'), findsNothing);
+    expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('COMPLETED build renders completed-review header', (tester) async {
+    await _pumpBuildPage(
+      tester,
+      build: _sampleBuild(
+        status: ProjectBuildStatus.completed,
+        completedAt: DateTime(2026, 1, 15),
+        stepsCompleted: 2,
+      ),
+      sessionBundle: _sampleSessionBundle(),
+      viewport: const Size(1024, 900),
+    );
+
+    expect(find.text('Completed'), findsOneWidget);
+    expect(
+      find.textContaining('You finished the practical build'),
+      findsOneWidget,
+    );
+    expect(find.text('Pause build'), findsNothing);
+    expect(find.text('Complete step'), findsNothing);
+  });
+
+  testWidgets('ARCHIVED build hides mutation controls in review mode', (
+    tester,
+  ) async {
+    await _pumpBuildPage(
+      tester,
+      build: _sampleBuild(status: ProjectBuildStatus.archived),
+      sessionBundle: _sampleSessionBundle(),
+      viewport: const Size(1024, 900),
+    );
+
+    expect(find.text('Pause build'), findsNothing);
+    expect(find.text('Resume build'), findsNothing);
+  });
+
+  test('learnerPortfolioRoute is the canonical private portfolio path', () {
+    expect(learnerPortfolioRoute, '/learner/portfolio');
+    expect(learnerPortfolioRoute, isNot('/portfolio'));
+  });
+
+  testWidgets('View private Portfolio resolves to registered route', (
+    tester,
+  ) async {
+    await _pumpBuildPage(
+      tester,
+      build: _sampleBuild(status: ProjectBuildStatus.completed),
+      sessionBundle: _sampleSessionBundle(),
+      viewport: const Size(1024, 900),
+    );
+
+    expect(
+      find.widgetWithText(FilledButton, 'View private Portfolio'),
+      findsWidgets,
+    );
+    expect(find.text('View private Portfolio'), findsWidgets);
+  });
+
+  testWidgets('mobile completed review keeps sections collapsed initially', (
+    tester,
+  ) async {
+    await _pumpBuildPage(
+      tester,
+      build: _sampleBuild(status: ProjectBuildStatus.completed),
+      sessionBundle: _sampleSessionBundle(),
+      viewport: const Size(390, 844),
+    );
+
+    expect(find.text('Learning journey'), findsWidgets);
+    expect(find.text('Start check'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('check review shows skipped and incorrect labels', (tester) async {
+    await _pumpBuildPage(
+      tester,
+      build: _sampleBuild(status: ProjectBuildStatus.completed),
+      sessionBundle: _sampleSessionBundle(),
+      viewport: const Size(1024, 900),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Review answers').first,
+      500,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('Review answers').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Skipped for now'), findsOneWidget);
+    expect(find.text('Your answer needs review'), findsOneWidget);
+    expect(find.textContaining('%'), findsNothing);
+    expect(find.textContaining('pass'), findsNothing);
+  });
+
+  testWidgets('Arabic completed review renders RTL labels', (tester) async {
+    await _pumpBuildPage(
+      tester,
+      build: _sampleBuild(
+        status: ProjectBuildStatus.completed,
+        stepsCompleted: 2,
+      ),
+      sessionBundle: _sampleSessionBundleWithRemainingFinal(),
+      locale: const Locale('ar'),
+      viewport: const Size(1024, 3000),
+    );
+
+    expect(find.text('مكتملة'), findsOneWidget);
+    expect(find.text('متابعة التحقق النهائي'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('COMPLETED build with remaining final shows Continue final check', (
+    tester,
+  ) async {
+    await _pumpBuildPage(
+      tester,
+      build: _sampleBuild(
+        status: ProjectBuildStatus.completed,
+        stepsCompleted: 2,
+      ),
+      sessionBundle: _sampleSessionBundleWithRemainingFinal(),
+      viewport: const Size(1024, 3000),
+    );
+
+    expect(find.text('Continue final check'), findsOneWidget);
+    expect(find.text('Start final check'), findsNothing);
+  });
+
+  testWidgets('pressing Continue final check opens existing Final Check UI', (
+    tester,
+  ) async {
+    final completedAt = DateTime(2026, 1, 15, 12);
+    final build = _sampleBuild(
+      status: ProjectBuildStatus.completed,
+      completedAt: completedAt,
+      stepsCompleted: 2,
+    );
+    final repository = _FinalCheckRepository(build);
+
+    await _pumpBuildPage(
+      tester,
+      build: build,
+      repository: repository,
+      sessionBundle: _sampleSessionBundleWithRemainingFinal(),
+      viewport: const Size(1024, 3000),
+    );
+
+    await _openContinueFinalCheck(tester);
+
+    expect(find.byType(FinalLearningCheckSheet), findsOneWidget);
+    expect(repository.fetchFinalCheckCalls, 1);
+  });
+
+  testWidgets('final answer after completion keeps build completed', (
+    tester,
+  ) async {
+    final completedAt = DateTime(2026, 1, 15, 12);
+    const completionStory = ProjectBuildCompletionStory(
+      reflection: 'Built a sturdy stand.',
+      caption: 'My plant stand',
+      updatedAt: null,
+    );
+    final build = ProjectBuild(
+      id: 'build-1',
+      projectId: 'project-1',
+      status: ProjectBuildStatus.completed,
+      completedAt: completedAt,
+      completionStory: completionStory,
+      project: const ProjectBuildProject(
+        id: 'project-1',
+        title: 'PVC Plant Stand',
+        shortDescription: 'A simple plant stand build',
+      ),
+      progress: const ProjectBuildProgress(total: 2, ready: 1, percent: 50),
+      materialReadiness: const ProjectBuildMaterialReadiness(
+        ready: 1,
+        linked: 1,
+        reserved: 0,
+        missing: 1,
+        total: 2,
+      ),
+      stepProgress: const ProjectBuildStepProgress(
+        completed: 2,
+        total: 2,
+        percent: 100,
+        nextAction: ProjectBuildNextAction.buildCompleted,
+        steps: [],
+      ),
+      items: const [],
+    );
+    final sessionHolder = _SessionBundleHolder(
+      _sampleSessionBundleWithRemainingFinal(),
+    );
+    final repository = _InteractiveFinalCheckRepository(build, sessionHolder);
+
+    final router = await _pumpBuildPage(
+      tester,
+      build: build,
+      repository: repository,
+      sessionHolder: sessionHolder,
+      viewport: const Size(1024, 3000),
+    );
+
+    await _openContinueFinalCheck(tester);
+    await tester.tap(find.text('Planning'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Submit answer'));
+    await tester.pumpAndSettle();
+
+    expect(repository.submitCalls, 1);
+    final updatedBuild = await repository.fetchMyBuild('project-1');
+    expect(updatedBuild?.status, ProjectBuildStatus.completed);
+    expect(updatedBuild?.completedAt, completedAt);
+    expect(updatedBuild?.completionStory, completionStory);
+
+    await tester.tap(find.text('Finish check'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View learning summary'));
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routerDelegate.currentConfiguration.uri.path,
+      '/learning/project-1/build',
+    );
+    expect(find.text('Continue final check'), findsNothing);
+    expect(find.text('Great work — learning check completed!'), findsNothing);
+    expect(find.text('Project completed!'), findsNothing);
+  });
+
+  testWidgets('completed check review keeps start and step groups read-only', (
+    tester,
+  ) async {
+    await _pumpBuildPage(
+      tester,
+      build: _sampleBuild(status: ProjectBuildStatus.completed),
+      sessionBundle: _sampleSessionBundle(),
+      viewport: const Size(1024, 1400),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Review answers').first,
+      400,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('Review answers').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Submit answer'), findsNothing);
+    expect(find.text('Show hint'), findsNothing);
+    expect(find.text('Skip for now'), findsNothing);
+    expect(find.text('Try again'), findsNothing);
+  });
+
+  testWidgets('finished final check shows Review final check action', (
+    tester,
+  ) async {
+    await _pumpBuildPage(
+      tester,
+      build: _sampleBuild(
+        status: ProjectBuildStatus.completed,
+        stepsCompleted: 2,
+      ),
+      sessionBundle: _sampleSessionBundleWithCompletedFinal(),
+      viewport: const Size(1024, 1400),
+    );
+
+    expect(find.text('Review final check'), findsOneWidget);
+    expect(find.text('Continue final check'), findsNothing);
+  });
+
+  testWidgets('ARCHIVED build shows review only without final mutation action', (
+    tester,
+  ) async {
+    await _pumpBuildPage(
+      tester,
+      build: _sampleBuild(status: ProjectBuildStatus.archived),
+      sessionBundle: _sampleSessionBundleWithRemainingFinal(),
+      viewport: const Size(1024, 1400),
+    );
+
+    expect(find.text('Review final check'), findsOneWidget);
+    expect(find.text('Continue final check'), findsNothing);
+    expect(find.text('Start final check'), findsNothing);
+  });
+
+  testWidgets('mobile completed review final action has no overflow', (
+    tester,
+  ) async {
+    final build = _sampleBuild(
+      status: ProjectBuildStatus.completed,
+      stepsCompleted: 2,
+    );
+    final sessionBundle = _sampleSessionBundleWithRemainingFinal();
+
+    await _pumpBuildPage(
+      tester,
+      build: build,
+      sessionBundle: sessionBundle,
+      viewport: const Size(390, 844),
+    );
+
+    expect(find.text('Check review'), findsOneWidget);
+    expect(find.text('Continue final check'), findsNothing);
+
+    final ui = resolveCompletedReviewFinalCheckUi(
+      buildRecord: build,
+      session: sessionBundle.session,
+      learningSetup: sessionBundle.learningSetup,
+    );
+    expect(ui.actionLabel, FinalLearningCheckL10n.continueCheck);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+Future<void> _scrollToContinueFinalCheck(WidgetTester tester) async {
+  final button = find.ancestor(
+    of: find.text('Continue final check'),
+    matching: find.byType(FilledButton),
+  );
+  await tester.scrollUntilVisible(
+    button,
+    200,
+    scrollable: find.byType(Scrollable).first,
+  );
+}
+
+Future<void> _openContinueFinalCheck(WidgetTester tester) async {
+  await _scrollToContinueFinalCheck(tester);
+  final button = find.ancestor(
+    of: find.text('Continue final check'),
+    matching: find.byType(FilledButton),
+  );
+  final widget = tester.widget<FilledButton>(button);
+  expect(widget.onPressed, isNotNull);
+  widget.onPressed!.call();
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
 }
 
 Future<GoRouter> _pumpBuildPage(
@@ -415,6 +876,8 @@ Future<GoRouter> _pumpBuildPage(
   Size viewport = const Size(1024, 900),
   LearnerBuildsApi? learnerBuildsApi,
   LearningProjectRepository? repository,
+  LearningSessionBundle? sessionBundle,
+  _SessionBundleHolder? sessionHolder,
   List<GoRoute> extraRoutes = const [],
 }) async {
   tester.view.physicalSize = viewport;
@@ -452,6 +915,23 @@ Future<GoRouter> _pumpBuildPage(
         myNotificationUnreadCountProvider.overrideWith(
           () => _ZeroUnreadCount(),
         ),
+        learnerPortfolioProvider.overrideWith(
+          (ref) async => const LearnerBuildListResult(
+            items: [],
+            page: 1,
+            limit: 20,
+            total: 0,
+            totalPages: 0,
+          ),
+        ),
+        if (sessionHolder != null)
+          buildLearningSessionProvider('project-1').overrideWith(
+            (ref) async => sessionHolder.bundle,
+          )
+        else if (sessionBundle != null)
+          buildLearningSessionProvider('project-1').overrideWith(
+            (ref) async => sessionBundle,
+          ),
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -469,13 +949,104 @@ Future<GoRouter> _pumpBuildPage(
   return router;
 }
 
+ProjectBuild _buildWithLastStepRemaining() {
+  return ProjectBuild(
+    id: 'build-1',
+    projectId: 'project-1',
+    status: ProjectBuildStatus.inProgress,
+    project: const ProjectBuildProject(
+      id: 'project-1',
+      title: 'PVC Plant Stand',
+      shortDescription: 'A simple plant stand build',
+    ),
+    progress: const ProjectBuildProgress(total: 2, ready: 2, percent: 100),
+    materialReadiness: const ProjectBuildMaterialReadiness(
+      ready: 2,
+      linked: 2,
+      reserved: 0,
+      missing: 0,
+      total: 2,
+    ),
+    stepProgress: ProjectBuildStepProgress(
+      completed: 1,
+      total: 2,
+      percent: 50,
+      currentStep: const ProjectBuildCurrentStep(
+        stepId: 'step-2',
+        stepNumber: 2,
+        title: 'Final assembly',
+      ),
+      steps: const [
+        ProjectBuildStepView(
+          stepId: 'step-1',
+          stepNumber: 1,
+          title: 'Cut PVC',
+          description: 'Cut the PVC pipes.',
+          state: ProjectBuildStepState.completed,
+        ),
+        ProjectBuildStepView(
+          stepId: 'step-2',
+          stepNumber: 2,
+          title: 'Final assembly',
+          description: 'Assemble the stand.',
+          state: ProjectBuildStepState.current,
+        ),
+      ],
+    ),
+    items: const [],
+    learningSetup: const ProjectBuildLearningSetup(
+      status: LearningSetupStatus.ready,
+      sessionId: 'session-1',
+    ),
+  );
+}
+
+ProjectBuild _buildCompletedFrom(ProjectBuild source) {
+  return ProjectBuild(
+    id: source.id,
+    projectId: source.projectId,
+    status: ProjectBuildStatus.completed,
+    completedAt: DateTime(2026, 1, 15),
+    project: source.project,
+    progress: source.progress,
+    materialReadiness: source.materialReadiness,
+    stepProgress: ProjectBuildStepProgress(
+      completed: 2,
+      total: 2,
+      percent: 100,
+      steps: const [
+        ProjectBuildStepView(
+          stepId: 'step-1',
+          stepNumber: 1,
+          title: 'Cut PVC',
+          description: 'Cut the PVC pipes.',
+          state: ProjectBuildStepState.completed,
+        ),
+        ProjectBuildStepView(
+          stepId: 'step-2',
+          stepNumber: 2,
+          title: 'Final assembly',
+          description: 'Assemble the stand.',
+          state: ProjectBuildStepState.completed,
+        ),
+      ],
+    ),
+    items: source.items,
+    learningSetup: source.learningSetup,
+  );
+}
+
 ProjectBuild _sampleBuild({
   ProjectBuildStatus status = ProjectBuildStatus.inProgress,
+  DateTime? completedAt,
+  int stepsCompleted = 0,
 }) {
+  final totalSteps = 2;
   return ProjectBuild(
     id: 'build-1',
     projectId: 'project-1',
     status: status,
+    completedAt: completedAt,
     project: const ProjectBuildProject(
       id: 'project-1',
       title: 'PVC Plant Stand',
@@ -489,14 +1060,308 @@ ProjectBuild _sampleBuild({
       missing: 1,
       total: 2,
     ),
-    stepProgress: const ProjectBuildStepProgress(
-      completed: 0,
-      total: 2,
-      percent: 0,
-      steps: [],
+    stepProgress: ProjectBuildStepProgress(
+      completed: stepsCompleted,
+      total: totalSteps,
+      percent: stepsCompleted == 0 ? 0 : 100,
+      steps: const [],
     ),
     items: const [],
   );
+}
+
+LearningSessionBundle _sampleSessionBundle() {
+  const question = LearningQuestion(
+    id: 'q-1',
+    stage: 'START',
+    questionType: 'MULTIPLE_CHOICE',
+    promptEn: 'What is the first step?',
+    promptAr: 'ما الخطوة الأولى؟',
+    explanationEn: 'Review the plan first.',
+    explanationAr: 'راجع الخطة أولًا.',
+    hintEn: 'hint',
+    hintAr: 'تلميح',
+    options: [
+      LearningQuestionOption(
+        optionKey: 'a',
+        textEn: 'Plan',
+        textAr: 'خطة',
+        displayOrder: 1,
+      ),
+      LearningQuestionOption(
+        optionKey: 'b',
+        textEn: 'Skip',
+        textAr: 'تخطي',
+        displayOrder: 2,
+      ),
+    ],
+  );
+
+  return LearningSessionBundle(
+    session: BuildLearningSession(
+      id: 'session-1',
+      buildId: 'build-1',
+      packId: 'pack-1',
+      learningGoal: 'Understand plant stand basics',
+      confidenceBefore: 2,
+      confidenceAfter: 4,
+      goalOutcome: LearningGoalOutcome.partiallyAchieved,
+      assignments: [
+        LearningAssignment(
+          id: 'assign-start-skipped',
+          stage: 'START',
+          status: LearningAssignmentStatus.skipped,
+          displayOrder: 1,
+          question: question,
+          answerAttempts: const [],
+        ),
+        LearningAssignment(
+          id: 'assign-start-wrong',
+          stage: 'START',
+          status: LearningAssignmentStatus.answered,
+          displayOrder: 2,
+          question: question,
+          answerAttempts: [
+            LearningAnswerAttempt(
+              id: 'attempt-1',
+              attemptNumber: 1,
+              selectedOptionKey: 'b',
+              isCorrect: false,
+              submittedAt: DateTime(2026, 1, 15),
+            ),
+          ],
+          reviewCorrectOptionKey: 'a',
+        ),
+      ],
+    ),
+    learningSetup: const ProjectBuildLearningSetup(
+      status: LearningSetupStatus.ready,
+      sessionId: 'session-1',
+    ),
+  );
+}
+
+LearningQuestion _sampleFinalQuestion() {
+  return const LearningQuestion(
+    id: 'q-final',
+    stage: 'FINAL',
+    questionType: 'MULTIPLE_CHOICE',
+    promptEn: 'What did you learn most?',
+    promptAr: 'ما الذي تعلمته أكثر؟',
+    explanationEn: 'Reflect on the core idea.',
+    explanationAr: 'فكّر في الفكرة الأساسية.',
+    hintEn: 'hint',
+    hintAr: 'تلميح',
+    options: [
+      LearningQuestionOption(
+        optionKey: 'a',
+        textEn: 'Planning',
+        textAr: 'التخطيط',
+        displayOrder: 1,
+      ),
+      LearningQuestionOption(
+        optionKey: 'b',
+        textEn: 'Assembly',
+        textAr: 'التجميع',
+        displayOrder: 2,
+      ),
+    ],
+  );
+}
+
+LearningSessionBundle _sampleSessionBundleWithRemainingFinal() {
+  final question = _sampleFinalQuestion();
+  return LearningSessionBundle(
+    session: BuildLearningSession(
+      id: 'session-1',
+      buildId: 'build-1',
+      packId: 'pack-1',
+      assignments: [
+        LearningAssignment(
+          id: 'assign-final-done',
+          stage: 'FINAL',
+          status: LearningAssignmentStatus.answered,
+          displayOrder: 1,
+          question: question,
+          answerAttempts: [
+            LearningAnswerAttempt(
+              id: 'attempt-final-1',
+              attemptNumber: 1,
+              selectedOptionKey: 'a',
+              isCorrect: true,
+              submittedAt: DateTime(2026, 1, 15),
+            ),
+          ],
+        ),
+        LearningAssignment(
+          id: 'assign-final-open',
+          stage: 'FINAL',
+          status: LearningAssignmentStatus.notAttempted,
+          displayOrder: 2,
+          question: question,
+          answerAttempts: const [],
+        ),
+      ],
+    ),
+    learningSetup: const ProjectBuildLearningSetup(
+      status: LearningSetupStatus.ready,
+      sessionId: 'session-1',
+    ),
+  );
+}
+
+LearningSessionBundle _sampleSessionBundleWithCompletedFinal() {
+  final question = _sampleFinalQuestion();
+  return LearningSessionBundle(
+    session: BuildLearningSession(
+      id: 'session-1',
+      buildId: 'build-1',
+      packId: 'pack-1',
+      assignments: [
+        LearningAssignment(
+          id: 'assign-final-done',
+          stage: 'FINAL',
+          status: LearningAssignmentStatus.answered,
+          displayOrder: 1,
+          question: question,
+          answerAttempts: [
+            LearningAnswerAttempt(
+              id: 'attempt-final-1',
+              attemptNumber: 1,
+              selectedOptionKey: 'a',
+              isCorrect: true,
+              submittedAt: DateTime(2026, 1, 15),
+            ),
+          ],
+        ),
+      ],
+    ),
+    learningSetup: const ProjectBuildLearningSetup(
+      status: LearningSetupStatus.ready,
+      sessionId: 'session-1',
+    ),
+  );
+}
+
+FinalLearningCheck _sampleFinalLearningCheck({bool readOnly = false}) {
+  final question = _sampleFinalQuestion();
+  return FinalLearningCheck(
+    available: true,
+    isReadOnly: readOnly,
+    progress: const LearningCheckProgress(
+      total: 1,
+      answered: 0,
+      correct: 0,
+      skipped: 0,
+      remaining: 1,
+      handled: 0,
+    ),
+    assignments: [
+      FinalLearningAssignment(
+        assignmentId: 'assign-final-open',
+        questionId: question.id,
+        stage: 'FINAL',
+        questionType: 'MULTIPLE_CHOICE',
+        displayOrder: 2,
+        status: LearningAssignmentStatus.notAttempted,
+        uiState: StepLearningCheckUiState.notAttempted,
+        attemptCount: 0,
+        hintViewed: false,
+        mayRetry: !readOnly,
+        isReadOnly: readOnly,
+        question: question,
+        answerAttempts: const [],
+        hasCorrectAttempt: false,
+      ),
+    ],
+  );
+}
+
+class _SessionBundleHolder {
+  _SessionBundleHolder(this.bundle);
+
+  LearningSessionBundle bundle;
+}
+
+class _FinalCheckRepository extends _StaticBuildRepository {
+  _FinalCheckRepository(super.build);
+
+  int fetchFinalCheckCalls = 0;
+
+  @override
+  Future<FinalLearningCheck> fetchFinalLearningCheck(String projectId) async {
+    fetchFinalCheckCalls += 1;
+    return _sampleFinalLearningCheck();
+  }
+}
+
+class _InteractiveFinalCheckRepository extends _FinalCheckRepository {
+  _InteractiveFinalCheckRepository(super.build, this._sessionHolder);
+
+  final _SessionBundleHolder _sessionHolder;
+  int submitCalls = 0;
+
+  @override
+  Future<LearningSessionBundle> fetchLearningSession(String projectId) async {
+    return _sessionHolder.bundle;
+  }
+
+  @override
+  Future<FinalLearningCheckAnswerSubmission> submitFinalLearningCheckAnswer(
+    String projectId,
+    String assignmentId, {
+    required String selectedOptionKey,
+  }) async {
+    submitCalls += 1;
+    final question = _sampleFinalQuestion();
+    final attempt = LearningAnswerAttempt(
+      id: 'attempt-final-2',
+      attemptNumber: 1,
+      selectedOptionKey: selectedOptionKey,
+      isCorrect: true,
+      submittedAt: DateTime(2026, 1, 16),
+    );
+    final updatedAssignment = FinalLearningAssignment(
+      assignmentId: 'assign-final-open',
+      questionId: question.id,
+      stage: 'FINAL',
+      questionType: 'MULTIPLE_CHOICE',
+      displayOrder: 2,
+      status: LearningAssignmentStatus.answered,
+      uiState: StepLearningCheckUiState.correct,
+      attemptCount: 1,
+      hintViewed: false,
+      mayRetry: true,
+      isReadOnly: false,
+      question: question,
+      answerAttempts: [attempt],
+      hasCorrectAttempt: true,
+      latestSelectedOptionKey: selectedOptionKey,
+      correctOptionKey: 'a',
+      latestResult: const StepLearningCheckResult(
+        selectedOptionKey: 'a',
+        isCorrect: true,
+        attemptNumber: 1,
+        explanationEn: 'Reflect on the core idea.',
+        explanationAr: 'فكّر في الفكرة الأساسية.',
+        correctOptionKey: 'a',
+        mayRetry: false,
+      ),
+    );
+    _sessionHolder.bundle = _sampleSessionBundleWithCompletedFinal();
+    return FinalLearningCheckAnswerSubmission(
+      assignment: updatedAssignment,
+      attempt: attempt,
+      progress: const LearningCheckProgress(
+        total: 1,
+        answered: 1,
+        correct: 1,
+        skipped: 0,
+        remaining: 0,
+        handled: 1,
+      ),
+    );
+  }
 }
 
 class _TestAuthController extends AuthController {
@@ -516,6 +1381,50 @@ class _TestAuthController extends AuthController {
       hasBootstrapped: true,
     );
   }
+}
+
+class _CompletingBuildRepository implements LearningProjectRepository {
+  _CompletingBuildRepository(this._inProgress, this._completed)
+      : _current = _inProgress;
+
+  final ProjectBuild _inProgress;
+  final ProjectBuild _completed;
+  ProjectBuild _current;
+
+  @override
+  Future<ProjectBuild?> fetchMyBuild(String projectId) async => _current;
+
+  @override
+  Future<ProjectBuild> completeBuildStep(String projectId, String stepId) async {
+    _current = _completed;
+    return _completed;
+  }
+
+  @override
+  Future<StepLearningCheck?> fetchStepLearningCheck(
+    String projectId,
+    String stepId,
+  ) async =>
+      null;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FailingCompleteBuildRepository implements LearningProjectRepository {
+  _FailingCompleteBuildRepository();
+
+  @override
+  Future<ProjectBuild?> fetchMyBuild(String projectId) async =>
+      _buildWithLastStepRemaining();
+
+  @override
+  Future<ProjectBuild> completeBuildStep(String projectId, String stepId) async {
+    throw const ApiException(message: 'Complete failed', code: 'UNKNOWN');
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _StaticBuildRepository implements LearningProjectRepository {

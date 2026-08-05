@@ -98,6 +98,234 @@ class ProjectBuildPageL10n {
     ar: 'تعذر إنشاء طلب المادة.',
   );
 
+  static const completedHeaderTitle = LocalizedText(
+    en: 'Project completed',
+    ar: 'تم إكمال المشروع',
+  );
+
+  static const completedHeaderBody = LocalizedText(
+    en:
+        'You finished the practical build. Review your result and learning journey below.',
+    ar: 'أنهيت تنفيذ المشروع عمليًا. راجع النتيجة ورحلة التعلم أدناه.',
+  );
+
+  static const attemptLabel = LocalizedText(
+    en: 'Attempt',
+    ar: 'المحاولة',
+  );
+
+  static const completedOn = LocalizedText(
+    en: 'Completed on',
+    ar: 'اكتمل في',
+  );
+
+  static const sectionBuildResult = LocalizedText(
+    en: 'Build result',
+    ar: 'نتيجة المشروع',
+  );
+
+  static const sectionCompletionStoryPhotos = LocalizedText(
+    en: 'Completion story and result photos',
+    ar: 'قصة الإنجاز وصور النتيجة',
+  );
+
+  static const overviewPracticalResult = LocalizedText(
+    en: 'Practical result',
+    ar: 'النتيجة العملية',
+  );
+
+  static const overviewLearningJourney = LocalizedText(
+    en: 'Learning journey',
+    ar: 'رحلة التعلم',
+  );
+
+  static const overviewCompletionStory = LocalizedText(
+    en: 'Completion story',
+    ar: 'قصة الإنجاز',
+  );
+
+  static const reviewAnswers = LocalizedText(
+    en: 'Review answers',
+    ar: 'مراجعة الإجابات',
+  );
+
+  static const continueFinalCheck = LocalizedText(
+    en: 'Continue final check',
+    ar: 'متابعة التحقق النهائي',
+  );
+
+  static const addLearningReflection = LocalizedText(
+    en: 'Add learning reflection',
+    ar: 'إضافة مراجعة التعلم',
+  );
+
+  static const editLearningReflection = LocalizedText(
+    en: 'Edit learning reflection',
+    ar: 'تعديل مراجعة التعلم',
+  );
+
+  static const reflectionNotAdded = LocalizedText(
+    en: 'Reflection not added yet',
+    ar: 'لم تُضف مراجعة التعلم بعد',
+  );
+
+  static const storyNotAdded = LocalizedText(
+    en: 'Story not added yet',
+    ar: 'لم تُضف قصة الإنجاز بعد',
+  );
+
+  static const photosNotAdded = LocalizedText(
+    en: 'No result photos yet',
+    ar: 'لا توجد صور نتيجة بعد',
+  );
+
+  static const stepLabel = LocalizedText(
+    en: 'Step',
+    ar: 'الخطوة',
+  );
+
+  static const whyThisStepMatters = LocalizedText(
+    en: 'Why does this step matter?',
+    ar: 'لماذا هذه الخطوة مهمة؟',
+  );
+
+  static const sectionLearningJourney = LocalizedText(
+    en: 'Learning journey',
+    ar: 'رحلة التعلم',
+  );
+
+  static const sectionCheckReview = LocalizedText(
+    en: 'Check review',
+    ar: 'مراجعة الأسئلة',
+  );
+
+  static const sectionNextActions = LocalizedText(
+    en: 'Next actions',
+    ar: 'الخطوات التالية',
+  );
+
+  static const startCheckGroup = LocalizedText(
+    en: 'Start check',
+    ar: 'أسئلة البداية',
+  );
+
+  static const stepCheckGroup = LocalizedText(
+    en: 'Step checks',
+    ar: 'أسئلة الخطوات',
+  );
+
+  static const finalCheckGroup = LocalizedText(
+    en: 'Final check',
+    ar: 'الأسئلة النهائية',
+  );
+
+  static const checkGroupProgress = LocalizedText(
+    en: 'handled',
+    ar: 'تمت معالجتها',
+  );
+
+  static const checkGroupCorrect = LocalizedText(
+    en: 'correct',
+    ar: 'صحيحة',
+  );
+
+  static const checkGroupSkipped = LocalizedText(
+    en: 'skipped',
+    ar: 'متخطاة',
+  );
+
+  static const checkGroupRemaining = LocalizedText(
+    en: 'remaining',
+    ar: 'متبقية',
+  );
+
+  static const statusAnsweredCorrectly = LocalizedText(
+    en: 'Answered correctly',
+    ar: 'تمت الإجابة بشكل صحيح',
+  );
+
+  static const statusNeedsReview = LocalizedText(
+    en: 'Your answer needs review',
+    ar: 'إجابتك بحاجة إلى مراجعة',
+  );
+
+  static const statusSkippedForNow = LocalizedText(
+    en: 'Skipped for now',
+    ar: 'تم التخطي مؤقتًا',
+  );
+
+  static const statusNotAnswered = LocalizedText(
+    en: 'Not answered',
+    ar: 'لم تُجب',
+  );
+
+  static const yourAnswer = LocalizedText(
+    en: 'Your answer',
+    ar: 'إجابتك',
+  );
+
+  static const correctAnswer = LocalizedText(
+    en: 'Correct answer',
+    ar: 'الإجابة الصحيحة',
+  );
+
+  static const explanation = LocalizedText(
+    en: 'Explanation',
+    ar: 'الشرح',
+  );
+
+  static const hintViewed = LocalizedText(
+    en: 'Hint viewed',
+    ar: 'تم عرض التلميح',
+  );
+
+  static const attemptCountLabel = LocalizedText(
+    en: 'Attempts',
+    ar: 'المحاولات',
+  );
+
+  static const completedStepsSummary = LocalizedText(
+    en: 'Completed steps',
+    ar: 'الخطوات المكتملة',
+  );
+
+  static const materialsSummary = LocalizedText(
+    en: 'Materials ready',
+    ar: 'المواد الجاهزة',
+  );
+
+  static const viewPrivatePortfolio = LocalizedText(
+    en: 'View private Portfolio',
+    ar: 'عرض الملف الخاص',
+  );
+
+  static const stayOnBuild = LocalizedText(
+    en: 'Stay on build',
+    ar: 'البقاء في المشروع',
+  );
+
+  static const backToMyBuilds = LocalizedText(
+    en: 'Back to My Builds',
+    ar: 'العودة إلى مشاريعي',
+  );
+
+  static const addResultPhotos = LocalizedText(
+    en: 'Add result photos',
+    ar: 'إضافة صور النتيجة',
+  );
+
+  static const finalCheckUnavailable = LocalizedText(
+    en:
+        'Final check is unavailable right now. You can still review your completed build.',
+    ar:
+        'التحقق النهائي غير متاح الآن. يمكنك متابعة مراجعة مشروعك المكتمل.',
+  );
+
+  static const practicalProgressComplete = LocalizedText(
+    en: 'Practical build complete',
+    ar: 'اكتمل التنفيذ العملي',
+  );
+
   static String lifecycleErrorMessage(
     Object error,
     ProjectBuildLifecycleErrorAction action,
