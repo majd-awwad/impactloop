@@ -17,7 +17,8 @@ import {
   ensureSelfPickupCodeStored,
   verifyHandoverCode,
 } from '../../utils/handover-codes.js';
-import { ensureDeliveryForAcceptedReservation } from '../delivery-groups/delivery-group-operations.service.js';
+import { afterFinalAcceptanceInTransaction } from '../payments/payments.acceptance.js';
+import { assertPickupPaymentSatisfiedOrThrow } from '../payments/payments.readiness.js';
 import {
   computeEarliestDeliveryStart,
   findFeasibleDeliveryWindow,
@@ -505,7 +506,7 @@ const acceptPickupReservation = async (
   );
 
   if (!learnerWindows.length) {
-    return tx.reservation.update({
+    const updated = await tx.reservation.update({
       where: { id: input.reservationId },
       data: {
         status: 'ACCEPTED',
@@ -520,6 +521,10 @@ const acceptPickupReservation = async (
       },
       select: reservationMutationSelect,
     });
+    await afterFinalAcceptanceInTransaction(tx, {
+      reservationId: updated.id,
+    });
+    return updated;
   }
 
   if (input.selectedPreferredWindowIndex != null) {
@@ -532,7 +537,7 @@ const acceptPickupReservation = async (
       throw new Error('Selected preferred pickup window is invalid.');
     }
 
-    return tx.reservation.update({
+    const updated = await tx.reservation.update({
       where: { id: input.reservationId },
       data: {
         status: 'ACCEPTED',
@@ -547,10 +552,14 @@ const acceptPickupReservation = async (
       },
       select: reservationMutationSelect,
     });
+    await afterFinalAcceptanceInTransaction(tx, {
+      reservationId: updated.id,
+    });
+    return updated;
   }
 
   if (windowMatchesLearnerPreference(input.proposedWindow, learnerWindows)) {
-    return tx.reservation.update({
+    const updated = await tx.reservation.update({
       where: { id: input.reservationId },
       data: {
         status: 'ACCEPTED',
@@ -565,6 +574,10 @@ const acceptPickupReservation = async (
       },
       select: reservationMutationSelect,
     });
+    await afterFinalAcceptanceInTransaction(tx, {
+      reservationId: updated.id,
+    });
+    return updated;
   }
 
   return tx.reservation.update({
@@ -631,10 +644,13 @@ const acceptDeliveryWithConfirmedWindow = async (
     select: reservationMutationSelect,
   });
 
-  await ensureDeliveryForAcceptedReservation(tx, {
-    reservation: input.reservation,
-    changedByUserId: input.ownerId,
-    statusHistoryNote: 'Delivery created when supplier accepted reservation',
+  await afterFinalAcceptanceInTransaction(tx, {
+    reservationId: updated.id,
+    ensureDelivery: {
+      reservation: input.reservation,
+      changedByUserId: input.ownerId,
+      statusHistoryNote: 'Delivery created when supplier accepted reservation',
+    },
   });
 
   return updated;
@@ -978,6 +994,8 @@ export const completeSupplierReservation = async (input: {
       return { conflict: true as const, reservation: existing };
     }
 
+    await assertPickupPaymentSatisfiedOrThrow(existing.id, tx);
+
     await ensureSelfPickupCodeStored(tx, existing.id);
 
     const reservationWithCode = await tx.reservation.findUniqueOrThrow({
@@ -1212,6 +1230,10 @@ export const acceptLearnerRescheduleProposal = async (input: {
         ...pickupCodeData.data,
       },
       select: reservationMutationSelect,
+    });
+
+    await afterFinalAcceptanceInTransaction(tx, {
+      reservationId: updated.id,
     });
 
     await tx.reservationStatusHistory.create({

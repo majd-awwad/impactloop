@@ -11,6 +11,7 @@ import {
   handleMockWebhook,
   startPaymentCheckout,
 } from './payments.service.js';
+import { getReservationPaymentRequirement } from './payments.requirement.js';
 import type {
   MockCheckoutActInput,
   PaymentCancelAttemptInput,
@@ -49,6 +50,20 @@ export const getPaymentOrderHandler = async (req: Request, res: Response) => {
     actor,
   );
   res.status(200).json(successResponse('Payment order retrieved.', order));
+};
+
+export const getReservationPaymentRequirementHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  const actor = actorFromRequest(req);
+  const requirement = await getReservationPaymentRequirement(
+    pathParam(req.params.reservationId, 'reservationId'),
+    actor,
+  );
+  res
+    .status(200)
+    .json(successResponse('Reservation payment requirement retrieved.', requirement));
 };
 
 export const startPaymentCheckoutHandler = async (

@@ -13,7 +13,7 @@ import {
   buildSelfPickupCodeData,
   ensureSelfPickupCodeStored,
 } from '../../utils/handover-codes.js';
-import { ensureDeliveryForAcceptedReservation } from '../delivery-groups/delivery-group-operations.service.js';
+import { afterFinalAcceptanceInTransaction } from '../payments/payments.acceptance.js';
 import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
 
 const learnerConfirmationExistingSelect = {
@@ -145,6 +145,10 @@ export const resolveLearnerConfirmation = async (input: {
         select: { id: true },
       });
 
+      await afterFinalAcceptanceInTransaction(tx, {
+        reservationId: existing.id,
+      });
+
       await tx.reservationStatusHistory.create({
         data: {
           reservationId: existing.id,
@@ -157,6 +161,7 @@ export const resolveLearnerConfirmation = async (input: {
       });
 
       await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
+      await applyBuildReservationSyncInTransaction(tx, existing.id);
 
       return { outcome: 'ACCEPTED' as const };
     }
@@ -209,20 +214,23 @@ export const resolveLearnerConfirmation = async (input: {
       select: { id: true },
     });
 
-    await ensureDeliveryForAcceptedReservation(tx, {
-      reservation: {
-        id: existing.id,
-        requesterId: input.requesterId,
-        deliveryGroupId: existing.deliveryGroupId,
-        deliveryAddressText: existing.deliveryAddressText,
-        dropoffCity: existing.dropoffCity,
-        dropoffArea: existing.dropoffArea,
-        deliveryNote: existing.deliveryNote,
-        material: existing.material,
+    await afterFinalAcceptanceInTransaction(tx, {
+      reservationId: existing.id,
+      ensureDelivery: {
+        reservation: {
+          id: existing.id,
+          requesterId: input.requesterId,
+          deliveryGroupId: existing.deliveryGroupId,
+          deliveryAddressText: existing.deliveryAddressText,
+          dropoffCity: existing.dropoffCity,
+          dropoffArea: existing.dropoffArea,
+          deliveryNote: existing.deliveryNote,
+          material: existing.material,
+        },
+        changedByUserId: input.requesterId,
+        statusHistoryNote:
+          'Delivery created when learner confirmed delivery window',
       },
-      changedByUserId: input.requesterId,
-      statusHistoryNote:
-        'Delivery created when learner confirmed delivery window',
     });
 
     await tx.reservationStatusHistory.create({

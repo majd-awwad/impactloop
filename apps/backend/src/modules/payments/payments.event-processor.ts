@@ -1,4 +1,5 @@
 import type { Prisma } from '../../generated/prisma/client.js';
+import { prisma } from '../../database/prisma.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
 import { PROVIDER_EVENT_TYPES } from './payments.constants.js';
@@ -100,11 +101,14 @@ const requireDeclineIdentity = (
   return null;
 };
 
+const DUPLICATE_PROVIDER_EVENT = 'PAY_DUPLICATE_PROVIDER_EVENT';
+
 export const processVerifiedProviderEvent = async (
   event: NormalizedProviderEvent,
   signatureValid: boolean,
 ): Promise<ProcessProviderEventResult> => {
-  return runSerializableTransaction(async (tx) => {
+  try {
+    return await runSerializableTransaction(async (tx) => {
     let eventRow;
     try {
       // Never insert untrusted attempt IDs as FKs before resolution.
@@ -121,7 +125,11 @@ export const processVerifiedProviderEvent = async (
       });
     } catch (error) {
       if (isUniqueConstraintError(error)) {
-        return { processingStatus: 'IGNORED_DUPLICATE' };
+        // PostgreSQL aborts the transaction after a unique conflict; resolve
+        // the existing row outside this transaction (see outer catch).
+        const duplicate = new Error(DUPLICATE_PROVIDER_EVENT);
+        (duplicate as { code?: string }).code = DUPLICATE_PROVIDER_EVENT;
+        throw duplicate;
       }
       throw error;
     }
@@ -631,5 +639,48 @@ export const processVerifiedProviderEvent = async (
       paymentOrderId: order.id,
       paymentAttemptId: attempt.id,
     };
-  });
+    });
+  } catch (error) {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: string }).code === DUPLICATE_PROVIDER_EVENT
+    ) {
+      const existingEvent = await prisma.paymentProviderEvent.findUnique({
+        where: {
+          provider_providerEventId: {
+            provider: event.provider,
+            providerEventId: event.providerEventId,
+          },
+        },
+        select: {
+          paymentAttemptId: true,
+          paymentAttempt: {
+            select: { paymentOrderId: true },
+          },
+        },
+      });
+
+      let paymentOrderId =
+        existingEvent?.paymentAttempt?.paymentOrderId ?? undefined;
+
+      if (!paymentOrderId && event.paymentAttemptId) {
+        const attempt = await prisma.paymentAttempt.findUnique({
+          where: { id: event.paymentAttemptId },
+          select: { paymentOrderId: true },
+        });
+        paymentOrderId = attempt?.paymentOrderId ?? undefined;
+      }
+
+      return {
+        processingStatus: 'IGNORED_DUPLICATE',
+        paymentOrderId,
+        paymentAttemptId:
+          existingEvent?.paymentAttemptId ?? event.paymentAttemptId ?? null,
+        reason: 'DUPLICATE_PROVIDER_EVENT',
+      };
+    }
+    throw error;
+  }
 };

@@ -47,6 +47,34 @@ export async function cleanupPayTest(ids: PayTestIds) {
   }
 
   if (ids.reservations.length) {
+    await prisma.paymentProviderEvent.deleteMany({
+      where: {
+        paymentAttempt: {
+          paymentOrder: { reservationId: { in: ids.reservations } },
+        },
+      },
+    });
+    await prisma.paymentRefund.deleteMany({
+      where: { paymentOrder: { reservationId: { in: ids.reservations } } },
+    });
+    await prisma.paymentAttempt.deleteMany({
+      where: { paymentOrder: { reservationId: { in: ids.reservations } } },
+    });
+    await prisma.paymentOrder.deleteMany({
+      where: { reservationId: { in: ids.reservations } },
+    });
+    await prisma.deliveryStatusHistory.deleteMany({
+      where: { delivery: { reservationId: { in: ids.reservations } } },
+    });
+    await prisma.deliveryAssignment.deleteMany({
+      where: { delivery: { reservationId: { in: ids.reservations } } },
+    });
+    await prisma.deliveryPickupItem.deleteMany({
+      where: { reservationId: { in: ids.reservations } },
+    });
+    await prisma.delivery.deleteMany({
+      where: { reservationId: { in: ids.reservations } },
+    });
     await prisma.reservationStatusHistory.deleteMany({
       where: { reservationId: { in: ids.reservations } },
     });
@@ -56,6 +84,25 @@ export async function cleanupPayTest(ids: PayTestIds) {
   }
 
   if (ids.groups.length) {
+    await prisma.paymentProviderEvent.deleteMany({
+      where: {
+        paymentAttempt: {
+          paymentOrder: { deliveryGroupId: { in: ids.groups } },
+        },
+      },
+    });
+    await prisma.paymentRefund.deleteMany({
+      where: { paymentOrder: { deliveryGroupId: { in: ids.groups } } },
+    });
+    await prisma.paymentAttempt.deleteMany({
+      where: { paymentOrder: { deliveryGroupId: { in: ids.groups } } },
+    });
+    await prisma.paymentOrder.deleteMany({
+      where: { deliveryGroupId: { in: ids.groups } },
+    });
+    await prisma.delivery.deleteMany({
+      where: { deliveryGroupId: { in: ids.groups } },
+    });
     await prisma.deliveryGroup.deleteMany({
       where: { id: { in: ids.groups } },
     });

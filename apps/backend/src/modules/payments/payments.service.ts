@@ -16,6 +16,7 @@ import {
 } from './payments.constants.js';
 import { mapPaymentOrderDto, type CheckoutResponseDto } from './payments.dto.js';
 import { processVerifiedProviderEvent } from './payments.event-processor.js';
+import { afterVerifiedPaymentEventProcessed } from './payments.fulfillment.js';
 import {
   moneyDecimalToMinorUnits,
   moneyDecimalToString,
@@ -790,6 +791,8 @@ export const actOnMockCheckout = async (input: {
     verified.signatureValid,
   );
 
+  await afterVerifiedPaymentEventProcessed(result);
+
   const order = await prisma.paymentOrder.findUniqueOrThrow({
     where: { id: attempt.paymentOrderId },
     include: orderDetailInclude,
@@ -816,6 +819,8 @@ export const handleMockWebhook = async (input: {
     verified.event,
     verified.signatureValid,
   );
+
+  await afterVerifiedPaymentEventProcessed(result);
 
   return {
     received: true,

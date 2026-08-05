@@ -16,13 +16,19 @@ import {
   findCompatibleDeliveryGroupCandidate,
 } from '../delivery-groups/delivery-groups.repository.js';
 import {
-  createOperationalDelivery,
-  ensureDeliveryForAcceptedReservation,
-} from '../delivery-groups/delivery-group-operations.service.js';
-import {
   groupedDeliveryStateConflict,
   loadAndAssertGroupedDeliveryState,
 } from '../delivery-groups/grouped-delivery-state.js';
+import {
+  afterFinalAcceptanceInTransaction,
+  ensureDeliveryForAcceptedReservationIfPaymentReady,
+  ensurePaymentObligationsForAcceptedReservation,
+} from '../payments/payments.acceptance.js';
+import { isElectronicPaymentEnforced } from '../payments/payments.policy.js';
+import {
+  evaluateDeliveryGroupPaymentReadiness,
+  evaluatePickupPaymentReadiness,
+} from '../payments/payments.readiness.js';
 
 const supplierReservationLookupSelect = {
   id: true,
@@ -63,7 +69,11 @@ const parsePreferredDeliveryWindows = (
 const createPartialPickupReplacementDelivery = async (
   tx: Prisma.TransactionClient,
   input: { reservationId: string; supplierUserId: string },
-): Promise<{ deliveryId: string; deliveryGroupId: string | null }> => {
+): Promise<{
+  deliveryId: string | null;
+  deliveryGroupId: string | null;
+  deferredForPayment: boolean;
+}> => {
   const reservation = await tx.reservation.findUniqueOrThrow({
     where: { id: input.reservationId },
     include: {
@@ -147,6 +157,8 @@ const createPartialPickupReplacementDelivery = async (
       where: { id: reservation.id },
       data: { deliveryGroupId },
     });
+    // Group may be newly assigned after acceptance — ensure fee obligation now.
+    await ensurePaymentObligationsForAcceptedReservation(tx, reservation.id);
   }
 
   const deliveryInput = {
@@ -164,36 +176,33 @@ const createPartialPickupReplacementDelivery = async (
     statusHistoryNote: 'New delivery created after partial pickup replacement window',
   };
 
-  if (deliveryGroupId) {
-    const delivery = await ensureDeliveryForAcceptedReservation(
-      tx,
-      deliveryInput,
-    );
+  const gated = await ensureDeliveryForAcceptedReservationIfPaymentReady(
+    tx,
+    deliveryInput,
+  );
+
+  if (gated.deferred) {
     return {
-      deliveryId: delivery.id,
-      deliveryGroupId: delivery.deliveryGroupId,
+      deliveryId: null,
+      deliveryGroupId,
+      deferredForPayment: true,
     };
   }
 
-  const deliveryAddressText = reservation.deliveryAddressText?.trim();
-  if (!deliveryAddressText) {
-    throw new Error('Delivery address is required to create a delivery.');
-  }
+  const delivery = deliveryGroupId
+    ? await tx.delivery.findFirstOrThrow({
+        where: { deliveryGroupId },
+        select: { id: true, deliveryGroupId: true },
+      })
+    : await tx.delivery.findFirstOrThrow({
+        where: { reservationId: reservation.id },
+        select: { id: true, deliveryGroupId: true },
+      });
 
-  const delivery = await createOperationalDelivery(tx, {
-    reservationId: reservation.id,
-    requesterId: reservation.requesterId,
-    changedByUserId: input.supplierUserId,
-    materialLocation: reservation.material.location,
-    deliveryAddressText,
-    dropoffCity: reservation.dropoffCity,
-    dropoffArea: reservation.dropoffArea,
-    deliveryNote: reservation.deliveryNote,
-    statusHistoryNote: deliveryInput.statusHistoryNote,
-  });
   return {
     deliveryId: delivery.id,
     deliveryGroupId: delivery.deliveryGroupId,
+    deferredForPayment: false,
   };
 };
 
@@ -364,63 +373,87 @@ export const submitNoDriverPickupWindowForSupplier = async (input: {
             : 'Supplier submitted new pickup window after admin recovery',
         },
       });
+
+      await afterFinalAcceptanceInTransaction(tx, {
+        reservationId: affected.id,
+      });
     }
 
-    let recoveryDeliveryId: string;
-    let recoveryDeliveryGroupId: string | null;
+    let recoveryDeliveryId: string | null = null;
+    let recoveryDeliveryGroupId: string | null = null;
 
     if (delivery) {
-      const deliveryChanged = await tx.delivery.updateMany({
-        where: {
-          id: delivery.id,
-          status: delivery.status,
-          assignedDriverProfileId: null,
-          deliveryGroupId: delivery.deliveryGroupId,
-        },
-        data: {
-          status: 'WAITING_FOR_DRIVER',
-          assignedDriverProfileId: null,
-          assignedAt: null,
-          failedAt: null,
-          failureReason: null,
-          cancelledAt: null,
-        },
-      });
-      if (deliveryChanged.count !== 1) {
-        groupedDeliveryStateConflict();
-      }
-
-      await tx.deliveryStatusHistory.create({
-        data: {
-          deliveryId: delivery.id,
-          oldStatus: delivery.status,
-          newStatus: 'WAITING_FOR_DRIVER',
-          changedByUserId: input.ownerId,
-          note: 'Supplier submitted new pickup window after no driver available',
-        },
-      });
-
-      if (delivery.deliveryGroupId) {
-        const groupChanged = await tx.deliveryGroup.updateMany({
-          where: {
-            id: delivery.deliveryGroupId,
-            status: 'CANCELLED',
-            assignedDriverProfileId: null,
-          },
-          data: { status: 'OPEN', assignedDriverProfileId: null },
-        });
-        if (groupChanged.count !== 1) {
-          groupedDeliveryStateConflict();
+      let paymentReady = true;
+      if (isElectronicPaymentEnforced()) {
+        if (existing.deliveryGroupId) {
+          const readiness = await evaluateDeliveryGroupPaymentReadiness(
+            existing.deliveryGroupId,
+            tx,
+          );
+          paymentReady = readiness.overallReady;
+        } else {
+          const material = await evaluatePickupPaymentReadiness(existing.id, tx);
+          paymentReady = material.ready;
         }
       }
 
-      await resolvePendingNoDriverReport(
-        tx,
-        existing.id,
-        'Supplier provided new pickup window after no driver available',
-      );
-      recoveryDeliveryId = delivery.id;
-      recoveryDeliveryGroupId = delivery.deliveryGroupId;
+      if (paymentReady) {
+        const deliveryChanged = await tx.delivery.updateMany({
+          where: {
+            id: delivery.id,
+            status: delivery.status,
+            assignedDriverProfileId: null,
+            deliveryGroupId: delivery.deliveryGroupId,
+          },
+          data: {
+            status: 'WAITING_FOR_DRIVER',
+            assignedDriverProfileId: null,
+            assignedAt: null,
+            failedAt: null,
+            failureReason: null,
+            cancelledAt: null,
+          },
+        });
+        if (deliveryChanged.count !== 1) {
+          groupedDeliveryStateConflict();
+        }
+
+        await tx.deliveryStatusHistory.create({
+          data: {
+            deliveryId: delivery.id,
+            oldStatus: delivery.status,
+            newStatus: 'WAITING_FOR_DRIVER',
+            changedByUserId: input.ownerId,
+            note: 'Supplier submitted new pickup window after no driver available',
+          },
+        });
+
+        if (delivery.deliveryGroupId) {
+          const groupChanged = await tx.deliveryGroup.updateMany({
+            where: {
+              id: delivery.deliveryGroupId,
+              status: 'CANCELLED',
+              assignedDriverProfileId: null,
+            },
+            data: { status: 'OPEN', assignedDriverProfileId: null },
+          });
+          if (groupChanged.count !== 1) {
+            groupedDeliveryStateConflict();
+          }
+        }
+
+        recoveryDeliveryId = delivery.id;
+        recoveryDeliveryGroupId = delivery.deliveryGroupId;
+
+        await resolvePendingNoDriverReport(
+          tx,
+          existing.id,
+          'Supplier provided new pickup window after no driver available',
+        );
+      } else {
+        // Keep report pending until payment success reopens Delivery.
+        recoveryDeliveryGroupId = delivery.deliveryGroupId;
+      }
     } else {
       const replacement = await createPartialPickupReplacementDelivery(tx, {
         reservationId: existing.id,
@@ -428,6 +461,13 @@ export const submitNoDriverPickupWindowForSupplier = async (input: {
       });
       recoveryDeliveryId = replacement.deliveryId;
       recoveryDeliveryGroupId = replacement.deliveryGroupId;
+      if (!replacement.deferredForPayment) {
+        await resolvePendingNoDriverReport(
+          tx,
+          existing.id,
+          'Supplier provided replacement pickup window after partial pickup',
+        );
+      }
     }
 
     const recoveryReport = await tx.noShowReport.findFirst({

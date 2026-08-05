@@ -55,6 +55,16 @@ const mapOrder = (order: {
   deliveryGroupId: order.deliveryGroupId,
 });
 
+/**
+ * PAY-02 current-cycle lookup (MVP):
+ * - Initial accepted source uses cycle 1.
+ * - Existing cycle-1 nonterminal or paid order is returned as-is.
+ * - Terminal historical orders are never reopened/mutated.
+ *
+ * Deferred to PAY-03: automatic cycle 2+ creation when a recovery flow
+ * re-accepts a source after its previous order is CANCELLED/REFUNDED.
+ * No production recovery path in PAY-02 requires a new payable cycle yet.
+ */
 const findMaterialCycle1 = (
   tx: Prisma.TransactionClient,
   reservationId: string,

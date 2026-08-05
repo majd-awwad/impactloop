@@ -8,6 +8,7 @@ import {
 } from '../../utils/handover-codes.js';
 import { prisma } from '../../database/prisma.js';
 import { shouldLazyExpire } from '../material-requests/material-requests.lifecycle.js';
+import { isElectronicPaymentEnforced } from '../payments/payments.policy.js';
 
 import {
   mapReservationMessage,
@@ -204,6 +205,7 @@ const resolveReservationOperationalDelivery = (
 export const mapLearnerReservation = (
   reservation: reservationsRepository.LearnerReservationListRecord,
   latestMessage?: ReturnType<typeof mapReservationMessage> | null,
+  options?: { paymentAllowsPickupCode?: boolean },
 ) => {
   const followUp = resolveReservationFollowUp({
     status: reservation.status,
@@ -319,7 +321,9 @@ export const mapLearnerReservation = (
     rejectionReason: reservation.rejectionReason,
     selfPickupCode:
       reservation.status === 'ACCEPTED' &&
-      reservation.fulfillmentMethod === 'PICKUP'
+      reservation.fulfillmentMethod === 'PICKUP' &&
+      (options?.paymentAllowsPickupCode ??
+        !isElectronicPaymentEnforced())
         ? deriveHandoverCode('self-pickup', reservation.id)
         : null,
     activeDelivery: latestDelivery
@@ -432,12 +436,27 @@ export const listMyReservations = async (requesterId: string) => {
     reservations.map((reservation) => reservation.id),
   );
 
+  const pickupCodeAllowedById = await resolvePickupCodeVisibilityByReservationIds(
+    reservations
+      .filter(
+        (reservation) =>
+          reservation.status === 'ACCEPTED' &&
+          reservation.fulfillmentMethod === 'PICKUP',
+      )
+      .map((reservation) => reservation.id),
+  );
+
   return reservations.map((reservation) =>
     mapLearnerReservation(
       reservation,
       latestMessages.has(reservation.id)
         ? mapReservationMessage(latestMessages.get(reservation.id)!)
         : null,
+      {
+        paymentAllowsPickupCode:
+          pickupCodeAllowedById.get(reservation.id) ??
+          !isElectronicPaymentEnforced(),
+      },
     ),
   );
 };
@@ -504,11 +523,22 @@ export const getMyReservationById = async (
     reservationId,
   ]);
 
+  const pickupCodeAllowedById =
+    reservation.status === 'ACCEPTED' &&
+    reservation.fulfillmentMethod === 'PICKUP'
+      ? await resolvePickupCodeVisibilityByReservationIds([reservation.id])
+      : new Map<string, boolean>();
+
   return mapLearnerReservation(
     reservation,
     latestMessages.has(reservation.id)
       ? mapReservationMessage(latestMessages.get(reservation.id)!)
       : null,
+    {
+      paymentAllowsPickupCode:
+        pickupCodeAllowedById.get(reservation.id) ??
+        !isElectronicPaymentEnforced(),
+    },
   );
 };
 
@@ -940,6 +970,69 @@ export const requestLearnerPickupReschedule = async (
   return mapped;
 };
 
+export const resolvePickupCodeVisibilityByReservationIds = async (
+  reservationIds: string[],
+): Promise<Map<string, boolean>> => {
+  const result = new Map<string, boolean>();
+  if (!isElectronicPaymentEnforced() || reservationIds.length === 0) {
+    return result;
+  }
+
+  const uniqueIds = [...new Set(reservationIds)];
+  const reservations = await prisma.reservation.findMany({
+    where: { id: { in: uniqueIds } },
+    select: {
+      id: true,
+      materialSubtotal: true,
+      status: true,
+      fulfillmentMethod: true,
+    },
+  });
+
+  const needsOrderCheck: string[] = [];
+  for (const reservation of reservations) {
+    const subtotal = Number(reservation.materialSubtotal ?? 0);
+    if (subtotal <= 0) {
+      result.set(reservation.id, true);
+      continue;
+    }
+    needsOrderCheck.push(reservation.id);
+  }
+
+  if (needsOrderCheck.length === 0) {
+    return result;
+  }
+
+  const orders = await prisma.paymentOrder.findMany({
+    where: {
+      purpose: 'MATERIAL_SUBTOTAL',
+      reservationId: { in: needsOrderCheck },
+    },
+    orderBy: [{ reservationId: 'asc' }, { cycleNumber: 'desc' }],
+    select: {
+      reservationId: true,
+      status: true,
+      cycleNumber: true,
+    },
+  });
+
+  const currentByReservation = new Map<string, { status: string }>();
+  for (const order of orders) {
+    if (!order.reservationId) continue;
+    if (!currentByReservation.has(order.reservationId)) {
+      currentByReservation.set(order.reservationId, { status: order.status });
+    }
+  }
+
+  for (const reservationId of needsOrderCheck) {
+    const current = currentByReservation.get(reservationId);
+    // Fail closed: missing or non-PAID order hides the code.
+    result.set(reservationId, current?.status === 'PAID');
+  }
+
+  return result;
+};
+
 const mapLearnerReservationById = async (
   requesterId: string,
   reservationId: string,
@@ -957,11 +1050,22 @@ const mapLearnerReservationById = async (
     reservation.id,
   ]);
 
+  const pickupCodeAllowedById =
+    reservation.status === 'ACCEPTED' &&
+    reservation.fulfillmentMethod === 'PICKUP'
+      ? await resolvePickupCodeVisibilityByReservationIds([reservation.id])
+      : new Map<string, boolean>();
+
   return mapLearnerReservation(
     reservation,
     latestMessages.has(reservation.id)
       ? mapReservationMessage(latestMessages.get(reservation.id)!)
       : null,
+    {
+      paymentAllowsPickupCode:
+        pickupCodeAllowedById.get(reservation.id) ??
+        !isElectronicPaymentEnforced(),
+    },
   );
 };
 

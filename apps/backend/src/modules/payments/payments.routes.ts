@@ -12,6 +12,7 @@ import { validate } from '../../middlewares/validate.middleware.js';
 import {
   cancelPaymentAttemptHandler,
   getPaymentOrderHandler,
+  getReservationPaymentRequirementHandler,
   mockCheckoutActHandler,
   mockWebhookHandler,
   startPaymentCheckoutHandler,
@@ -29,6 +30,13 @@ paymentsRouter.get(
   authMiddleware,
   requireRoles('LEARNER', 'ADMIN'),
   asyncHandler(getPaymentOrderHandler),
+);
+
+paymentsRouter.get(
+  '/reservations/:reservationId/requirement',
+  authMiddleware,
+  requireRoles('LEARNER', 'ADMIN'),
+  asyncHandler(getReservationPaymentRequirementHandler),
 );
 
 paymentsRouter.post(

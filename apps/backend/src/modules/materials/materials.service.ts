@@ -22,7 +22,9 @@ import * as materialTypesRepository from '../material-types/material-types.repos
 import {
   expireStalePendingReservationsForMaterials,
   mapLearnerReservation,
+  resolvePickupCodeVisibilityByReservationIds,
 } from '../reservations/reservations.service.js';
+import { isElectronicPaymentEnforced } from '../payments/payments.policy.js';
 import * as reservationsRepository from '../reservations/reservations.repository.js';
 import {
   ACTIVE_HOLD_STATUSES,
@@ -1099,6 +1101,10 @@ export const getMaterialViewerState = async (
     viewer,
   );
 
+  const pickupCodeAllowedById = reservation
+    ? await resolvePickupCodeVisibilityByReservationIds([reservation.id])
+    : new Map<string, boolean>();
+
   return {
     materialId: material.id,
     isLiked: likedMaterialIds.has(material.id),
@@ -1106,7 +1112,13 @@ export const getMaterialViewerState = async (
       ? followedSupplierIds.has(material.supplierProfileId)
       : false,
     ...reserve,
-    reservation: reservation ? mapLearnerReservation(reservation) : null,
+    reservation: reservation
+      ? mapLearnerReservation(reservation, null, {
+          paymentAllowsPickupCode:
+            pickupCodeAllowedById.get(reservation.id) ??
+            !isElectronicPaymentEnforced(),
+        })
+      : null,
   };
 };
 
