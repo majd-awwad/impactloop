@@ -5930,7 +5930,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverJobsTitle => 'مهام السائق';
 
   @override
-  String get driverJobsSubtitle => 'تنسيق التوصيل الداخلي الأساسي';
+  String get driverJobsSubtitle =>
+      'استلم المواد من المورّدين وسلّمها إلى المتعلّمين.';
 
   @override
   String driverActiveDeliveriesCount(int active, int max) {
@@ -6018,6 +6019,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get driverNewest => 'الأحدث';
+
+  @override
+  String get driverDone => 'تم';
 
   @override
   String get driverCityLabel => 'المدينة:';
@@ -6114,8 +6118,12 @@ class AppLocalizationsAr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count مهام',
+      other: '$count مهمة',
+      many: '$count مهمة',
+      few: '$count مهام',
+      two: 'مهمتان',
       one: 'مهمة واحدة',
+      zero: 'لا توجد مهام',
     );
     return '$_temp0 متاحة خارج نطاقك الحالي. جرّب توسيع النطاق أو اختيار أي مسافة.';
   }
@@ -6131,8 +6139,12 @@ class AppLocalizationsAr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count مهام',
+      other: '$count مهمة',
+      many: '$count مهمة',
+      few: '$count مهام',
+      two: 'مهمتان',
       one: 'مهمة واحدة',
+      zero: 'لا توجد مهام',
     );
     return '$_temp0 متاحة بفلاتر أوسع. جرّب كل المناطق أو إعادة تعيين الفلاتر.';
   }
@@ -6216,7 +6228,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverReportDeliveryFailed => 'الإبلاغ عن فشل التوصيل';
 
   @override
-  String get driverReportDriverIssue => 'الإبلاغ عن مشكلة للسائق';
+  String get driverReportDriverIssue => 'الإبلاغ عن تعذّري عن الاستمرار';
 
   @override
   String get driverSupplierHandoverCode => 'رمز تسليم المورّد';
@@ -6243,6 +6255,18 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get driverStatusUpdated => 'تم تحديث حالة التوصيل.';
+
+  @override
+  String get driverStatusArrivedPickupSuccess => 'تم الوصول إلى موقع الاستلام.';
+
+  @override
+  String get driverStatusPickedUpSuccess => 'تم تأكيد الاستلام.';
+
+  @override
+  String get driverStatusOnTheWaySuccess => 'أنت في الطريق إلى المتعلّم.';
+
+  @override
+  String get driverStatusArrivedDropoffSuccess => 'تم الوصول إلى موقع التسليم.';
 
   @override
   String get driverStatusChangedRefresh =>
@@ -6287,7 +6311,27 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String driverPartialPickupSummary(int pickedCount, int pendingCount) {
-    return 'سيُسلَّم $pickedCount عناصر الآن. سيبقى $pendingCount عناصر معلّقة.';
+    String _temp0 = intl.Intl.pluralLogic(
+      pickedCount,
+      locale: localeName,
+      other: 'سيُسلَّم $pickedCount عنصر الآن.',
+      many: 'سيُسلَّم $pickedCount عنصرًا الآن.',
+      few: 'سيُسلَّم $pickedCount عناصر الآن.',
+      two: 'سيُسلَّم عنصران الآن.',
+      one: 'سيُسلَّم عنصر واحد الآن.',
+      zero: 'لن يُسلَّم أي عنصر الآن.',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      pendingCount,
+      locale: localeName,
+      other: 'سيبقى $pendingCount عنصر معلّق.',
+      many: 'ستبقى $pendingCount عنصرًا معلّقًا.',
+      few: 'ستبقى $pendingCount عناصر معلّقة.',
+      two: 'سيبقى عنصران معلّقان.',
+      one: 'سيبقى عنصر واحد معلّق.',
+      zero: 'لن يبقى أي عنصر معلّق.',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override
@@ -6431,8 +6475,12 @@ class AppLocalizationsAr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count أيام',
+      other: '$count يوم',
+      many: '$count يومًا',
+      few: '$count أيام',
+      two: 'يومين',
       one: 'يوم واحد',
+      zero: 'أقل من يوم',
     );
     return 'متاح خلال $_temp0';
   }
@@ -6447,8 +6495,12 @@ class AppLocalizationsAr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count ساعات',
+      other: '$count ساعة',
+      many: '$count ساعة',
+      few: '$count ساعات',
+      two: 'ساعتين',
       one: 'ساعة واحدة',
+      zero: 'أقل من ساعة',
     );
     return 'متاح خلال $_temp0';
   }
@@ -6458,8 +6510,12 @@ class AppLocalizationsAr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count دقائق',
+      other: '$count دقيقة',
+      many: '$count دقيقة',
+      few: '$count دقائق',
+      two: 'دقيقتين',
       one: 'دقيقة واحدة',
+      zero: 'أقل من دقيقة',
     );
     return 'متاح خلال $_temp0';
   }
@@ -6601,10 +6657,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverTransportMotorcycle => 'دراجة نارية';
 
   @override
-  String get driverTransportBicycle => 'دراجة';
+  String get driverTransportBicycle => 'دراجة هوائية';
 
   @override
-  String get driverTransportWalking => 'مشيًا';
+  String get driverTransportWalking => 'سيرًا على الأقدام';
 
   @override
   String get driverPhoneRequired => 'مطلوب للسائقين';
@@ -6682,7 +6738,17 @@ class AppLocalizationsAr extends AppLocalizations {
     String dateLabel,
     String timeRange,
   ) {
-    return 'يبدأ الاستلام خلال $minutes دقيقة · $dateLabel · $timeRange';
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes دقيقة',
+      many: '$minutes دقيقة',
+      few: '$minutes دقائق',
+      two: 'دقيقتين',
+      one: 'دقيقة واحدة',
+      zero: 'أقل من دقيقة',
+    );
+    return 'يبدأ الاستلام خلال $_temp0 · $dateLabel · $timeRange';
   }
 
   @override
@@ -6754,8 +6820,12 @@ class AppLocalizationsAr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count عناصر',
+      other: '$count عنصر',
+      many: '$count عنصرًا',
+      few: '$count عناصر',
+      two: 'عنصران',
       one: 'عنصر واحد',
+      zero: 'لا عناصر',
     );
     return '$_temp0';
   }
@@ -7140,4 +7210,489 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get driverCancelAction => 'إلغاء';
+
+  @override
+  String get driverStatusWaitingForAssignment => 'بانتظار التعيين';
+
+  @override
+  String get driverStatusAssigned => 'معيّن — توجّه للاستلام';
+
+  @override
+  String get driverStatusAtPickup => 'في موقع الاستلام';
+
+  @override
+  String get driverStatusPickedUp => 'تم الاستلام';
+
+  @override
+  String get driverStatusOnTheWay => 'في الطريق إلى المتعلّم';
+
+  @override
+  String get driverStatusAtDropoff => 'في موقع التسليم';
+
+  @override
+  String get driverStatusDelivered => 'تم التسليم';
+
+  @override
+  String get driverStatusCancelled => 'ملغى';
+
+  @override
+  String get driverStatusPickupFailed => 'فشل الاستلام';
+
+  @override
+  String get driverStatusDeliveryFailed => 'فشل التسليم';
+
+  @override
+  String get driverStatusDriverNoShow => 'مُعلَّم كعدم حضور';
+
+  @override
+  String get driverStatusLearnerNoShow => 'المتعلّم لم يحضر';
+
+  @override
+  String get driverStatusAwaitingReview => 'قيد مراجعة الإدارة';
+
+  @override
+  String get driverNavHome => 'الرئيسية';
+
+  @override
+  String get driverNavJobs => 'الوظائف';
+
+  @override
+  String get driverNavActive => 'النشطة';
+
+  @override
+  String get driverNavHistory => 'السجل';
+
+  @override
+  String get driverNavMore => 'المزيد';
+
+  @override
+  String get driverNavGroupOverview => 'نظرة عامة';
+
+  @override
+  String get driverNavGroupWork => 'العمل';
+
+  @override
+  String get driverNavGroupHistory => 'السجل';
+
+  @override
+  String get driverNavGroupAccount => 'الحساب';
+
+  @override
+  String get driverMoreTitle => 'خيارات إضافية';
+
+  @override
+  String get driverMoreProfile => 'ملف السائق';
+
+  @override
+  String get driverMoreNotifications => 'الإشعارات';
+
+  @override
+  String get driverMoreHistory => 'السجل والتقارير';
+
+  @override
+  String get driverMoreAccountSettings => 'إعدادات الحساب';
+
+  @override
+  String get driverAcceptingJobsOnExplicit => 'متاح لاستقبال مهام جديدة';
+
+  @override
+  String get driverAcceptingJobsOffExplicit => 'غير متاح حاليًا';
+
+  @override
+  String get driverEditFilters => 'تعديل الفلاتر';
+
+  @override
+  String get driverPartialPickupSelectAtLeastOne =>
+      'اختر عنصرًا واحدًا على الأقل الذي سلّمه المورّد الآن.';
+
+  @override
+  String get driverEmptyActiveTitle => 'لا توجد توصيلات نشطة';
+
+  @override
+  String get driverEmptyActiveBody =>
+      'عند قبول مهمة، ستظهر هنا حتى يكتمل التسليم.';
+
+  @override
+  String get driverEmptyActiveCta => 'تصفّح الوظائف المتاحة';
+
+  @override
+  String get driverViewNearbyJobs => 'عرض الوظائف القريبة';
+
+  @override
+  String get driverRoutePickupLabel => 'الاستلام';
+
+  @override
+  String get driverRouteDropoffLabel => 'التسليم';
+
+  @override
+  String get driverRouteFrom => 'من';
+
+  @override
+  String get driverRouteTo => 'إلى';
+
+  @override
+  String get driverRouteArrowSemantic => 'اتجاه المسار';
+
+  @override
+  String get driverMapSectionTitle => 'المواقع';
+
+  @override
+  String get driverMapPickupPin => 'موقع الاستلام';
+
+  @override
+  String get driverMapDropoffPin => 'موقع التسليم';
+
+  @override
+  String get driverMapOpenExternal => 'فتح في الخرائط';
+
+  @override
+  String get driverMapUnavailable => 'معاينة الخريطة غير متوفرة لهذا الموقع.';
+
+  @override
+  String get driverUnitPiece => 'قطعة';
+
+  @override
+  String get driverUnitSheet => 'لوح';
+
+  @override
+  String get driverUnitBag => 'كيس';
+
+  @override
+  String get driverUnitKg => 'كغ';
+
+  @override
+  String get driverUnitItem => 'عنصر';
+
+  @override
+  String get driverUnitUnit => 'وحدة';
+
+  @override
+  String get driverUnitPanel => 'لوح';
+
+  @override
+  String get driverUnitCrate => 'صندوق';
+
+  @override
+  String get driverUnitMeter => 'متر';
+
+  @override
+  String get driverUnitLiter => 'لتر';
+
+  @override
+  String get driverUnitRoll => 'لفة';
+
+  @override
+  String get driverUnitBox => 'علبة';
+
+  @override
+  String get driverUnitPack => 'حزمة';
+
+  @override
+  String get driverUnitSet => 'مجموعة';
+
+  @override
+  String driverQuantityPiece(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count قطعة',
+      many: '$count قطعة',
+      few: '$count قطع',
+      two: 'قطعتان',
+      one: 'قطعة واحدة',
+      zero: 'لا قطع',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantitySheet(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count لوح',
+      many: '$count لوحًا',
+      few: '$count ألواح',
+      two: 'لوحان',
+      one: 'لوح واحد',
+      zero: 'لا ألواح',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityBag(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count كيس',
+      many: '$count كيسًا',
+      few: '$count أكياس',
+      two: 'كيسان',
+      one: 'كيس واحد',
+      zero: 'لا أكياس',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityKg(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count كغ',
+      one: '1 كغ',
+      zero: '0 كغ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityItem(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count عنصر',
+      many: '$count عنصرًا',
+      few: '$count عناصر',
+      two: 'عنصران',
+      one: 'عنصر واحد',
+      zero: 'لا عناصر',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityUnit(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count وحدة',
+      many: '$count وحدةً',
+      few: '$count وحدات',
+      two: 'وحدتان',
+      one: 'وحدة واحدة',
+      zero: 'لا وحدات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityPanel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count لوح',
+      many: '$count لوحًا',
+      few: '$count ألواح',
+      two: 'لوحان',
+      one: 'لوح واحد',
+      zero: 'لا ألواح',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityCrate(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count صندوق',
+      many: '$count صندوقًا',
+      few: '$count صناديق',
+      two: 'صندوقان',
+      one: 'صندوق واحد',
+      zero: 'لا صناديق',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityMeter(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count متر',
+      many: '$count مترًا',
+      few: '$count أمتار',
+      two: 'متران',
+      one: 'متر واحد',
+      zero: 'لا أمتار',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityLiter(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count لتر',
+      many: '$count لترًا',
+      few: '$count لترات',
+      two: 'لتران',
+      one: 'لتر واحد',
+      zero: 'لا لترات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityRoll(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count لفة',
+      many: '$count لفةً',
+      few: '$count لفات',
+      two: 'لفتان',
+      one: 'لفة واحدة',
+      zero: 'لا لفات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityBox(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count علبة',
+      many: '$count علبةً',
+      few: '$count علب',
+      two: 'علبتان',
+      one: 'علبة واحدة',
+      zero: 'لا علب',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityPack(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count حزمة',
+      many: '$count حزمةً',
+      few: '$count حزم',
+      two: 'حزمتان',
+      one: 'حزمة واحدة',
+      zero: 'لا حزم',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantitySet(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مجموعة',
+      many: '$count مجموعةً',
+      few: '$count مجموعات',
+      two: 'مجموعتان',
+      one: 'مجموعة واحدة',
+      zero: 'لا مجموعات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get notificationDriverPickupReminderTitle => 'تذكير الاستلام';
+
+  @override
+  String notificationDriverPickupReminderBody(String materialTitle) {
+    return 'تذكير: موعد استلام $materialTitle قريب.';
+  }
+
+  @override
+  String get notificationDriverPickupStartingSoonTitle =>
+      'الاستلام يبدأ قريبًا';
+
+  @override
+  String notificationDriverPickupStartingSoonBody(String materialTitle) {
+    return 'يبدأ استلام $materialTitle خلال دقائق.';
+  }
+
+  @override
+  String get notificationDriverPickupWindowStartedTitle => 'بدأ موعد الاستلام';
+
+  @override
+  String notificationDriverPickupWindowStartedBody(String materialTitle) {
+    return 'موعد استلام $materialTitle مفتوح الآن.';
+  }
+
+  @override
+  String get notificationDriverPickupOverdueTitle => 'تأخّر الاستلام';
+
+  @override
+  String notificationDriverPickupOverdueBody(String materialTitle) {
+    return 'تأخّر استلام $materialTitle. أكمل الاستلام أو أبلغ عن مشكلة.';
+  }
+
+  @override
+  String get notificationDriverDropoffReminderTitle => 'تذكير التسليم';
+
+  @override
+  String notificationDriverDropoffReminderBody(String materialTitle) {
+    return 'تذكير: موعد تسليم $materialTitle قريب.';
+  }
+
+  @override
+  String get notificationDriverDropoffStartingSoonTitle =>
+      'التسليم يبدأ قريبًا';
+
+  @override
+  String notificationDriverDropoffStartingSoonBody(String materialTitle) {
+    return 'يبدأ تسليم $materialTitle خلال دقائق.';
+  }
+
+  @override
+  String get notificationDriverDropoffWindowStartedTitle => 'بدأ موعد التسليم';
+
+  @override
+  String notificationDriverDropoffWindowStartedBody(String materialTitle) {
+    return 'موعد تسليم $materialTitle مفتوح الآن.';
+  }
+
+  @override
+  String get notificationDriverDropoffOverdueTitle => 'تأخّر التسليم';
+
+  @override
+  String notificationDriverDropoffOverdueBody(String materialTitle) {
+    return 'تأخّر تسليم $materialTitle. أكمل التسليم أو أبلغ عن مشكلة.';
+  }
+
+  @override
+  String get notificationDriverDeliveryRequestCreatedTitle => 'طُلب توصيل';
+
+  @override
+  String notificationDriverDeliveryRequestCreatedBody(String materialTitle) {
+    return 'طُلب توصيل لـ $materialTitle.';
+  }
+
+  @override
+  String get notificationDriverDeliveryAcceptedTitle => 'تم قبول التوصيل';
+
+  @override
+  String notificationDriverDeliveryAcceptedBody(String materialTitle) {
+    return 'قبلت توصيل $materialTitle.';
+  }
+
+  @override
+  String get notificationDriverDeliveryNextStepTitle =>
+      'الخطوة التالية للتوصيل';
+
+  @override
+  String notificationDriverDeliveryNextStepBody(String materialTitle) {
+    return 'تابع توصيل $materialTitle.';
+  }
+
+  @override
+  String get notificationDeliveryDriverAssignedTitle => 'تم تعيينك للتوصيل';
+
+  @override
+  String notificationDeliveryDriverAssignedBody(String materialTitle) {
+    return 'عُيّنت لتوصيل $materialTitle.';
+  }
 }

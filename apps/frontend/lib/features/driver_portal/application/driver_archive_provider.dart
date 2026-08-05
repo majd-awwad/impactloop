@@ -120,18 +120,12 @@ final driverHistoryProvider =
     AsyncNotifierProvider<
       DriverHistoryNotifier,
       DriverArchivePage<DriverHistoricalDelivery>
-    >(
-      DriverHistoryNotifier.new,
-      retry: (retryCount, error) => null,
-    );
+    >(DriverHistoryNotifier.new, retry: (retryCount, error) => null);
 final driverIncidentsProvider =
     AsyncNotifierProvider<
       DriverIncidentsNotifier,
       DriverArchivePage<DriverIncident>
-    >(
-      DriverIncidentsNotifier.new,
-      retry: (retryCount, error) => null,
-    );
+    >(DriverIncidentsNotifier.new, retry: (retryCount, error) => null);
 
 final driverHistoricalDeliveryProvider =
     FutureProvider.family<DriverHistoricalDelivery, String>(

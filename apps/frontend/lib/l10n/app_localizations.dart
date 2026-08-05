@@ -10299,7 +10299,7 @@ abstract class AppLocalizations {
   /// No description provided for @driverJobsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Basic internal delivery coordination'**
+  /// **'Pick up supplier materials and deliver them to learners.'**
   String get driverJobsSubtitle;
 
   /// No description provided for @driverActiveDeliveriesCount.
@@ -10451,6 +10451,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Newest'**
   String get driverNewest;
+
+  /// No description provided for @driverDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get driverDone;
 
   /// No description provided for @driverCityLabel.
   ///
@@ -10785,7 +10791,7 @@ abstract class AppLocalizations {
   /// No description provided for @driverReportDriverIssue.
   ///
   /// In en, this message translates to:
-  /// **'Report driver issue'**
+  /// **'Report that I cannot continue'**
   String get driverReportDriverIssue;
 
   /// No description provided for @driverSupplierHandoverCode.
@@ -10835,6 +10841,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delivery status updated.'**
   String get driverStatusUpdated;
+
+  /// No description provided for @driverStatusArrivedPickupSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrived at pickup.'**
+  String get driverStatusArrivedPickupSuccess;
+
+  /// No description provided for @driverStatusPickedUpSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked as picked up.'**
+  String get driverStatusPickedUpSuccess;
+
+  /// No description provided for @driverStatusOnTheWaySuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'On the way to the learner.'**
+  String get driverStatusOnTheWaySuccess;
+
+  /// No description provided for @driverStatusArrivedDropoffSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrived at drop-off.'**
+  String get driverStatusArrivedDropoffSuccess;
 
   /// No description provided for @driverStatusChangedRefresh.
   ///
@@ -10911,7 +10941,7 @@ abstract class AppLocalizations {
   /// No description provided for @driverPartialPickupSummary.
   ///
   /// In en, this message translates to:
-  /// **'{pickedCount} items will be delivered now. {pendingCount} items will remain pending.'**
+  /// **'{pickedCount, plural, =1{1 item will be delivered now.} other{{pickedCount} items will be delivered now.}} {pendingCount, plural, =1{1 item will remain pending.} other{{pendingCount} items will remain pending.}}'**
   String driverPartialPickupSummary(int pickedCount, int pendingCount);
 
   /// No description provided for @driverPartialPickupContinue.
@@ -12349,6 +12379,588 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancel'**
   String get driverCancelAction;
+
+  /// No description provided for @driverStatusWaitingForAssignment.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for assignment'**
+  String get driverStatusWaitingForAssignment;
+
+  /// No description provided for @driverStatusAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned — head to pickup'**
+  String get driverStatusAssigned;
+
+  /// No description provided for @driverStatusAtPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'At pickup location'**
+  String get driverStatusAtPickup;
+
+  /// No description provided for @driverStatusPickedUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Picked up'**
+  String get driverStatusPickedUp;
+
+  /// No description provided for @driverStatusOnTheWay.
+  ///
+  /// In en, this message translates to:
+  /// **'On the way to learner'**
+  String get driverStatusOnTheWay;
+
+  /// No description provided for @driverStatusAtDropoff.
+  ///
+  /// In en, this message translates to:
+  /// **'At drop-off location'**
+  String get driverStatusAtDropoff;
+
+  /// No description provided for @driverStatusDelivered.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered'**
+  String get driverStatusDelivered;
+
+  /// No description provided for @driverStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get driverStatusCancelled;
+
+  /// No description provided for @driverStatusPickupFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup failed'**
+  String get driverStatusPickupFailed;
+
+  /// No description provided for @driverStatusDeliveryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery failed'**
+  String get driverStatusDeliveryFailed;
+
+  /// No description provided for @driverStatusDriverNoShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked as no-show'**
+  String get driverStatusDriverNoShow;
+
+  /// No description provided for @driverStatusLearnerNoShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner no-show'**
+  String get driverStatusLearnerNoShow;
+
+  /// No description provided for @driverStatusAwaitingReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under admin review'**
+  String get driverStatusAwaitingReview;
+
+  /// No description provided for @driverNavHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get driverNavHome;
+
+  /// No description provided for @driverNavJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Jobs'**
+  String get driverNavJobs;
+
+  /// No description provided for @driverNavActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get driverNavActive;
+
+  /// No description provided for @driverNavHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get driverNavHistory;
+
+  /// No description provided for @driverNavMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get driverNavMore;
+
+  /// No description provided for @driverNavGroupOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get driverNavGroupOverview;
+
+  /// No description provided for @driverNavGroupWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Work'**
+  String get driverNavGroupWork;
+
+  /// No description provided for @driverNavGroupHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get driverNavGroupHistory;
+
+  /// No description provided for @driverNavGroupAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get driverNavGroupAccount;
+
+  /// No description provided for @driverMoreTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get driverMoreTitle;
+
+  /// No description provided for @driverMoreProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver profile'**
+  String get driverMoreProfile;
+
+  /// No description provided for @driverMoreNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get driverMoreNotifications;
+
+  /// No description provided for @driverMoreHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History and reports'**
+  String get driverMoreHistory;
+
+  /// No description provided for @driverMoreAccountSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Account settings'**
+  String get driverMoreAccountSettings;
+
+  /// No description provided for @driverAcceptingJobsOnExplicit.
+  ///
+  /// In en, this message translates to:
+  /// **'Available for new jobs'**
+  String get driverAcceptingJobsOnExplicit;
+
+  /// No description provided for @driverAcceptingJobsOffExplicit.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available right now'**
+  String get driverAcceptingJobsOffExplicit;
+
+  /// No description provided for @driverEditFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit filters'**
+  String get driverEditFilters;
+
+  /// No description provided for @driverPartialPickupSelectAtLeastOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least one item that the supplier handed over now.'**
+  String get driverPartialPickupSelectAtLeastOne;
+
+  /// No description provided for @driverEmptyActiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No active deliveries'**
+  String get driverEmptyActiveTitle;
+
+  /// No description provided for @driverEmptyActiveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'When you accept a job, it will appear here until delivery is complete.'**
+  String get driverEmptyActiveBody;
+
+  /// No description provided for @driverEmptyActiveCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse available jobs'**
+  String get driverEmptyActiveCta;
+
+  /// No description provided for @driverViewNearbyJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'View nearby jobs'**
+  String get driverViewNearbyJobs;
+
+  /// No description provided for @driverRoutePickupLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup'**
+  String get driverRoutePickupLabel;
+
+  /// No description provided for @driverRouteDropoffLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop-off'**
+  String get driverRouteDropoffLabel;
+
+  /// No description provided for @driverRouteFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get driverRouteFrom;
+
+  /// No description provided for @driverRouteTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get driverRouteTo;
+
+  /// No description provided for @driverRouteArrowSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'Route direction'**
+  String get driverRouteArrowSemantic;
+
+  /// No description provided for @driverMapSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Locations'**
+  String get driverMapSectionTitle;
+
+  /// No description provided for @driverMapPickupPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup location'**
+  String get driverMapPickupPin;
+
+  /// No description provided for @driverMapDropoffPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop-off location'**
+  String get driverMapDropoffPin;
+
+  /// No description provided for @driverMapOpenExternal.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in maps'**
+  String get driverMapOpenExternal;
+
+  /// No description provided for @driverMapUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Map preview is unavailable for this location.'**
+  String get driverMapUnavailable;
+
+  /// No description provided for @driverUnitPiece.
+  ///
+  /// In en, this message translates to:
+  /// **'piece'**
+  String get driverUnitPiece;
+
+  /// No description provided for @driverUnitSheet.
+  ///
+  /// In en, this message translates to:
+  /// **'sheet'**
+  String get driverUnitSheet;
+
+  /// No description provided for @driverUnitBag.
+  ///
+  /// In en, this message translates to:
+  /// **'bag'**
+  String get driverUnitBag;
+
+  /// No description provided for @driverUnitKg.
+  ///
+  /// In en, this message translates to:
+  /// **'kg'**
+  String get driverUnitKg;
+
+  /// No description provided for @driverUnitItem.
+  ///
+  /// In en, this message translates to:
+  /// **'item'**
+  String get driverUnitItem;
+
+  /// No description provided for @driverUnitUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'unit'**
+  String get driverUnitUnit;
+
+  /// No description provided for @driverUnitPanel.
+  ///
+  /// In en, this message translates to:
+  /// **'panel'**
+  String get driverUnitPanel;
+
+  /// No description provided for @driverUnitCrate.
+  ///
+  /// In en, this message translates to:
+  /// **'crate'**
+  String get driverUnitCrate;
+
+  /// No description provided for @driverUnitMeter.
+  ///
+  /// In en, this message translates to:
+  /// **'meter'**
+  String get driverUnitMeter;
+
+  /// No description provided for @driverUnitLiter.
+  ///
+  /// In en, this message translates to:
+  /// **'liter'**
+  String get driverUnitLiter;
+
+  /// No description provided for @driverUnitRoll.
+  ///
+  /// In en, this message translates to:
+  /// **'roll'**
+  String get driverUnitRoll;
+
+  /// No description provided for @driverUnitBox.
+  ///
+  /// In en, this message translates to:
+  /// **'box'**
+  String get driverUnitBox;
+
+  /// No description provided for @driverUnitPack.
+  ///
+  /// In en, this message translates to:
+  /// **'pack'**
+  String get driverUnitPack;
+
+  /// No description provided for @driverUnitSet.
+  ///
+  /// In en, this message translates to:
+  /// **'set'**
+  String get driverUnitSet;
+
+  /// No description provided for @driverQuantityPiece.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 piece} other{{count} pieces}}'**
+  String driverQuantityPiece(int count);
+
+  /// No description provided for @driverQuantitySheet.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 sheet} other{{count} sheets}}'**
+  String driverQuantitySheet(int count);
+
+  /// No description provided for @driverQuantityBag.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 bag} other{{count} bags}}'**
+  String driverQuantityBag(int count);
+
+  /// No description provided for @driverQuantityKg.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 kg} other{{count} kg}}'**
+  String driverQuantityKg(int count);
+
+  /// No description provided for @driverQuantityItem.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item} other{{count} items}}'**
+  String driverQuantityItem(int count);
+
+  /// No description provided for @driverQuantityUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 unit} other{{count} units}}'**
+  String driverQuantityUnit(int count);
+
+  /// No description provided for @driverQuantityPanel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 panel} other{{count} panels}}'**
+  String driverQuantityPanel(int count);
+
+  /// No description provided for @driverQuantityCrate.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 crate} other{{count} crates}}'**
+  String driverQuantityCrate(int count);
+
+  /// No description provided for @driverQuantityMeter.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 meter} other{{count} meters}}'**
+  String driverQuantityMeter(int count);
+
+  /// No description provided for @driverQuantityLiter.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 liter} other{{count} liters}}'**
+  String driverQuantityLiter(int count);
+
+  /// No description provided for @driverQuantityRoll.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 roll} other{{count} rolls}}'**
+  String driverQuantityRoll(int count);
+
+  /// No description provided for @driverQuantityBox.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 box} other{{count} boxes}}'**
+  String driverQuantityBox(int count);
+
+  /// No description provided for @driverQuantityPack.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 pack} other{{count} packs}}'**
+  String driverQuantityPack(int count);
+
+  /// No description provided for @driverQuantitySet.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 set} other{{count} sets}}'**
+  String driverQuantitySet(int count);
+
+  /// No description provided for @notificationDriverPickupReminderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup reminder'**
+  String get notificationDriverPickupReminderTitle;
+
+  /// No description provided for @notificationDriverPickupReminderBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder: pickup for {materialTitle} is coming up.'**
+  String notificationDriverPickupReminderBody(String materialTitle);
+
+  /// No description provided for @notificationDriverPickupStartingSoonTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup starting soon'**
+  String get notificationDriverPickupStartingSoonTitle;
+
+  /// No description provided for @notificationDriverPickupStartingSoonBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup for {materialTitle} starts in a few minutes.'**
+  String notificationDriverPickupStartingSoonBody(String materialTitle);
+
+  /// No description provided for @notificationDriverPickupWindowStartedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup window started'**
+  String get notificationDriverPickupWindowStartedTitle;
+
+  /// No description provided for @notificationDriverPickupWindowStartedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The pickup window for {materialTitle} is open now.'**
+  String notificationDriverPickupWindowStartedBody(String materialTitle);
+
+  /// No description provided for @notificationDriverPickupOverdueTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup overdue'**
+  String get notificationDriverPickupOverdueTitle;
+
+  /// No description provided for @notificationDriverPickupOverdueBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup for {materialTitle} is overdue. Complete pickup or report an issue.'**
+  String notificationDriverPickupOverdueBody(String materialTitle);
+
+  /// No description provided for @notificationDriverDropoffReminderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop-off reminder'**
+  String get notificationDriverDropoffReminderTitle;
+
+  /// No description provided for @notificationDriverDropoffReminderBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder: drop-off for {materialTitle} is coming up.'**
+  String notificationDriverDropoffReminderBody(String materialTitle);
+
+  /// No description provided for @notificationDriverDropoffStartingSoonTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop-off starting soon'**
+  String get notificationDriverDropoffStartingSoonTitle;
+
+  /// No description provided for @notificationDriverDropoffStartingSoonBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop-off for {materialTitle} starts in a few minutes.'**
+  String notificationDriverDropoffStartingSoonBody(String materialTitle);
+
+  /// No description provided for @notificationDriverDropoffWindowStartedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop-off window started'**
+  String get notificationDriverDropoffWindowStartedTitle;
+
+  /// No description provided for @notificationDriverDropoffWindowStartedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The drop-off window for {materialTitle} is open now.'**
+  String notificationDriverDropoffWindowStartedBody(String materialTitle);
+
+  /// No description provided for @notificationDriverDropoffOverdueTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop-off overdue'**
+  String get notificationDriverDropoffOverdueTitle;
+
+  /// No description provided for @notificationDriverDropoffOverdueBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop-off for {materialTitle} is overdue. Complete delivery or report an issue.'**
+  String notificationDriverDropoffOverdueBody(String materialTitle);
+
+  /// No description provided for @notificationDriverDeliveryRequestCreatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery request created'**
+  String get notificationDriverDeliveryRequestCreatedTitle;
+
+  /// No description provided for @notificationDriverDeliveryRequestCreatedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A delivery request for {materialTitle} was created.'**
+  String notificationDriverDeliveryRequestCreatedBody(String materialTitle);
+
+  /// No description provided for @notificationDriverDeliveryAcceptedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery accepted'**
+  String get notificationDriverDeliveryAcceptedTitle;
+
+  /// No description provided for @notificationDriverDeliveryAcceptedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You accepted the delivery for {materialTitle}.'**
+  String notificationDriverDeliveryAcceptedBody(String materialTitle);
+
+  /// No description provided for @notificationDriverDeliveryNextStepTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Next delivery step'**
+  String get notificationDriverDeliveryNextStepTitle;
+
+  /// No description provided for @notificationDriverDeliveryNextStepBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue the delivery for {materialTitle}.'**
+  String notificationDriverDeliveryNextStepBody(String materialTitle);
+
+  /// No description provided for @notificationDeliveryDriverAssignedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver assigned'**
+  String get notificationDeliveryDriverAssignedTitle;
+
+  /// No description provided for @notificationDeliveryDriverAssignedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You were assigned to deliver {materialTitle}.'**
+  String notificationDeliveryDriverAssignedBody(String materialTitle);
 }
 
 class _AppLocalizationsDelegate

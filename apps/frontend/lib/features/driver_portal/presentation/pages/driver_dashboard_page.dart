@@ -7,11 +7,17 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../shared/l10n/driver_status_labels.dart';
+import '../../../../shared/l10n/driver_ui_labels.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/driver_deliveries_provider.dart';
 import '../../application/driver_profile_provider.dart';
-import '../widgets/driver_active_delivery_card.dart';
+import '../../data/models/driver_delivery.dart';
+import '../driver_delivery_timing_presentation.dart';
+import '../widgets/driver_asset_image.dart';
 import '../widgets/driver_availability_summary_card.dart';
+import '../widgets/driver_page_header.dart';
+import '../widgets/driver_route_block.dart';
 
 class DriverDashboardPage extends ConsumerWidget {
   const DriverDashboardPage({super.key});
@@ -47,25 +53,24 @@ class DriverDashboardPage extends ConsumerWidget {
         children: [
           Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1180),
+              constraints: const BoxConstraints(maxWidth: 1120),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    l10n.driverPortal,
-                    style: AppTextStyles.display(context),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    l10n.driverJobsSubtitle,
-                    style: AppTextStyles.body(context),
+                  DriverPageHeader(
+                    title: l10n.driverPortal,
+                    subtitle: l10n.driverJobsSubtitle,
+                    maxWidth: 1120,
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   profile.when(
-                    loading: () => const Center(
+                    loading: () => Center(
                       child: Padding(
-                        padding: EdgeInsets.all(AppSpacing.lg),
-                        child: CircularProgressIndicator(),
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: Semantics(
+                          label: l10n.driverLoadingActive,
+                          child: const CircularProgressIndicator(),
+                        ),
                       ),
                     ),
                     error: (error, _) => _DashboardNotice(
@@ -77,6 +82,7 @@ class DriverDashboardPage extends ConsumerWidget {
                       isMutating: state.isMutating,
                       isUpdatingAvailability: state.isUpdatingAvailability,
                       compact: true,
+                      heroAssetPath: DriverAssetPaths.readyVan,
                       onPreferenceChanged: (value) async {
                         if (!await confirmDriverAvailabilityPreference(
                               context,
@@ -105,7 +111,7 @@ class DriverDashboardPage extends ConsumerWidget {
                       },
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: AppSpacing.md),
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final stack = constraints.maxWidth < 620;
@@ -131,7 +137,7 @@ class DriverDashboardPage extends ConsumerWidget {
                         return Column(
                           children: [
                             cards.first,
-                            const SizedBox(height: AppSpacing.md),
+                            const SizedBox(height: AppSpacing.sm),
                             cards.last,
                           ],
                         );
@@ -145,34 +151,33 @@ class DriverDashboardPage extends ConsumerWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  OutlinedButton.icon(
-                    onPressed: () => context.go('/driver/history'),
-                    icon: const Icon(Icons.history_rounded),
-                    label: Text(l10n.driverHistoryTitle),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: AppSpacing.md),
+                  _CompactMapCard(),
+                  const SizedBox(height: AppSpacing.md),
                   Row(
                     children: [
                       Expanded(
                         child: Text(
                           l10n.driverMyActiveDeliveries,
-                          style: AppTextStyles.title(context),
+                          style: AppTextStyles.title(context).copyWith(
+                            color: MaterialsUiPalette.of(context).textPrimary,
+                          ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      TextButton(
-                        onPressed: () => context.go('/driver/active'),
-                        child: Text(l10n.driverOpenDelivery),
-                      ),
+                      if (activeResult?.deliveries.isNotEmpty ?? false)
+                        TextButton(
+                          onPressed: () => context.go('/driver/active'),
+                          child: Text(l10n.driverOpenDelivery),
+                        ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   if (active.isLoading && activeResult == null)
                     const Center(
                       child: Padding(
-                        padding: EdgeInsets.all(AppSpacing.xl),
+                        padding: EdgeInsets.all(AppSpacing.lg),
                         child: CircularProgressIndicator(),
                       ),
                     )
@@ -183,9 +188,9 @@ class DriverDashboardPage extends ConsumerWidget {
                           ref.invalidate(activeDriverDeliveriesProvider),
                     )
                   else if (activeResult?.deliveries.isEmpty ?? true)
-                    _DashboardNotice(text: l10n.driverNoActiveDeliveriesHint)
+                    _EmptyActivePreview()
                   else
-                    DriverActiveDeliveryCard(
+                    _ActiveDeliveryPreview(
                       delivery: activeResult!.deliveries.first,
                     ),
                   if (active.isRefreshing || available.isRefreshing) ...[
@@ -194,6 +199,162 @@ class DriverDashboardPage extends ConsumerWidget {
                   ],
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActiveDeliveryPreview extends StatelessWidget {
+  const _ActiveDeliveryPreview({required this.delivery});
+  final DriverDelivery delivery;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final palette = MaterialsUiPalette.of(context);
+    final guidance = buildDriverNextActionGuidance(delivery, l10n: l10n);
+    final labels = DriverUiLabels(l10n);
+    final pickupSummary = _locationLabel(
+      city: delivery.pickupCity ?? delivery.pickupLocation.city,
+      area: delivery.pickupArea ?? delivery.pickupLocation.area,
+      fallback: labels.locationSummary(delivery.pickupLocation.safeSummary),
+    );
+    final dropoffSummary = _locationLabel(
+      city: delivery.dropoffCity ?? delivery.dropoffLocation.city,
+      area: delivery.dropoffArea ?? delivery.dropoffLocation.area,
+      fallback: labels.locationSummary(delivery.dropoffLocation.safeSummary),
+    );
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderStrong),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            driverDeliveryStatusLabel(delivery.status, l10n),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textPrimary, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: [
+              Icon(
+                Directionality.of(context) == TextDirection.rtl
+                    ? Icons.arrow_back_rounded
+                    : Icons.arrow_forward_rounded,
+                size: 16,
+                color: palette.mint,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Text(
+                  l10n.driverNextAction(guidance.actionLabel),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          DriverRouteBlock(
+            pickupSummary: pickupSummary,
+            dropoffSummary: dropoffSummary,
+            compact: true,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          FilledButton(
+            onPressed: () => context.push('/driver/deliveries/${delivery.id}'),
+            child: Text(l10n.driverOpenDelivery),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyActivePreview extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final palette = MaterialsUiPalette.of(context);
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Column(
+        children: [
+          DriverAssetImage(
+            assetPath: DriverAssetPaths.emptyDeliveries,
+            height: 80,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            l10n.driverEmptyActiveTitle,
+            style: AppTextStyles.title(
+              context,
+            ).copyWith(color: palette.textPrimary),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            l10n.driverEmptyActiveBody,
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          FilledButton(
+            onPressed: () => context.go('/driver/jobs'),
+            child: Text(l10n.driverEmptyActiveCta),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactMapCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final palette = MaterialsUiPalette.of(context);
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.cardSurfaceAlt,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Row(
+        children: [
+          DriverAssetImage(
+            assetPath: DriverAssetPaths.locationMap,
+            height: 56,
+            width: 56,
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              l10n.driverMapSectionTitle,
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textPrimary),
             ),
           ),
         ],
@@ -224,18 +385,40 @@ class _DashboardMetric extends StatelessWidget {
         onTap: onTap,
         borderRadius: AppRadius.lgAll,
         child: Container(
-          padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+          padding: const EdgeInsetsDirectional.all(AppSpacing.md),
           decoration: BoxDecoration(
             color: palette.cardSurface,
             borderRadius: AppRadius.lgAll,
             border: Border.all(color: palette.borderStrong),
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: palette.mint),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(child: Text(label, style: AppTextStyles.label(context))),
-              Text(value, style: AppTextStyles.title(context)),
+              Icon(icon, color: palette.mint, size: 22),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      value,
+                      style: AppTextStyles.title(
+                        context,
+                      ).copyWith(color: palette.textPrimary),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      label,
+                      style: AppTextStyles.label(context).copyWith(
+                        color: palette.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -254,7 +437,7 @@ class _DashboardNotice extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
@@ -273,6 +456,14 @@ class _DashboardNotice extends StatelessWidget {
       ),
     );
   }
+}
+
+String _locationLabel({String? city, String? area, required String fallback}) {
+  final parts = [area, city]
+      .where((p) => p != null && p.trim().isNotEmpty)
+      .cast<String>()
+      .toList(growable: false);
+  return parts.isEmpty ? fallback : parts.join(', ');
 }
 
 double _dashboardBottomPadding(BuildContext context) =>

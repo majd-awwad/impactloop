@@ -39,12 +39,7 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(DriverJobsPage), findsOneWidget);
     expect(find.textContaining('overflow material'), findsOneWidget);
-    expect(
-      find.byIcon(Icons.assignment_turned_in_outlined),
-      findsOneWidget,
-    );
-
-
+    expect(find.byIcon(Icons.assignment_turned_in_outlined), findsOneWidget);
 
     await _pumpDriverRoute(
       tester,
@@ -55,14 +50,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(
-      find.byKey(const ValueKey('driver-unselected-bottom-nav')),
-      findsOneWidget,
-    );
     expect(find.byKey(const ValueKey('driver-mobile-nav-0')), findsOneWidget);
     expect(find.byKey(const ValueKey('driver-mobile-nav-1')), findsOneWidget);
     expect(find.byKey(const ValueKey('driver-mobile-nav-2')), findsOneWidget);
     expect(find.byKey(const ValueKey('driver-mobile-nav-3')), findsOneWidget);
+    expect(find.byKey(const ValueKey('driver-mobile-nav-4')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('driver-accepting-new-jobs-switch')),
       findsOneWidget,
@@ -92,10 +84,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(
-      find.byKey(const ValueKey('driver-unselected-bottom-nav')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('driver-mobile-nav-4')), findsOneWidget);
   });
 
   testWidgets('English wide desktop 1.3x and 1.6x have no overflow', (
@@ -122,7 +111,7 @@ void main() {
     }
   });
 
-  testWidgets('Profile keeps four unselected mobile nav actions', (
+  testWidgets('Profile keeps five mobile nav destinations including More', (
     tester,
   ) async {
     await _pumpDriverRoute(
@@ -134,11 +123,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(
-      find.byKey(const ValueKey('driver-unselected-bottom-nav')),
-      findsOneWidget,
-    );
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < 5; i++) {
       expect(find.byKey(ValueKey('driver-mobile-nav-$i')), findsOneWidget);
     }
   });
@@ -265,10 +250,9 @@ Future<void> _pumpDriverRoute(
         ],
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            size: size,
-            textScaler: TextScaler.linear(scale),
-          ),
+          data: MediaQuery.of(
+            context,
+          ).copyWith(size: size, textScaler: TextScaler.linear(scale)),
           child: child!,
         ),
         routerConfig: router,
@@ -333,10 +317,7 @@ class _OverflowDeliveriesRepository extends DriverDeliveriesRepository {
 
   @override
   Future<DriverDeliveriesListResult> fetchActiveDeliveries() async =>
-      DriverDeliveriesListResult(
-        deliveries: const [],
-        meta: _list.meta,
-      );
+      DriverDeliveriesListResult(deliveries: const [], meta: _list.meta);
 
   @override
   Future<DriverArchivePage<DriverHistoricalDelivery>> fetchHistory({

@@ -89,6 +89,97 @@ void main() {
     );
   });
 
+  testWidgets(
+    'Driver Account Settings push keeps back path to /driver/profile',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1100, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final rootNavigatorKey = GlobalKey<NavigatorState>();
+      GoRouter.optionURLReflectsImperativeAPIs = true;
+      final router = GoRouter(
+        navigatorKey: rootNavigatorKey,
+        initialLocation: '/driver/profile',
+        routes: [
+          ShellRoute(
+            builder: (context, state, child) => child,
+            routes: [
+              GoRoute(
+                path: '/driver/profile',
+                builder: (context, _) => Scaffold(
+                  body: Center(
+                    child: TextButton(
+                      onPressed: () => context.push(accountSettingsRoute),
+                      child: const Text('Open account'),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: accountSettingsRoute,
+            parentNavigatorKey: rootNavigatorKey,
+            builder: (context, _) => Scaffold(
+              body: Column(
+                children: [
+                  const Text('Account settings destination'),
+                  TextButton(
+                    onPressed: () => context.pop(),
+                    child: const Text('Back from account'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => _TestAuthController(
+                _user(roles: const ['DRIVER'], activeRole: 'DRIVER'),
+              ),
+            ),
+            myNotificationUnreadCountProvider.overrideWith(
+              _ZeroUnreadCountNotifier.new,
+            ),
+            supplierNotificationsUnreadCountProvider.overrideWith(
+              _ZeroSupplierUnreadCountNotifier.new,
+            ),
+          ],
+          child: MaterialApp.router(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Open account'));
+      await tester.pumpAndSettle();
+      expect(find.text('Account settings destination'), findsOneWidget);
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        accountSettingsRoute,
+      );
+
+      await tester.tap(find.text('Back from account'));
+      await tester.pumpAndSettle();
+      expect(find.text('Open account'), findsOneWidget);
+      expect(router.routeInformationProvider.value.uri.path, '/driver/profile');
+    },
+  );
+
   testWidgets('admin profile menu opens account settings once', (tester) async {
     final router = await _pumpRouter(
       tester,

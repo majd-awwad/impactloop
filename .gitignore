@@ -59,6 +59,8 @@ apps/backend/pnpm-lock.yaml
 *.mp4
 *.zip
 
+!apps/frontend/assets/**
+
 # Logs
 *.log
 

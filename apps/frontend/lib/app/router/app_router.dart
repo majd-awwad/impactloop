@@ -525,12 +525,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   GoRouter.optionURLReflectsImperativeAPIs = true;
 
   final refreshListenable = ValueNotifier<int>(0);
+  final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
   ref.onDispose(refreshListenable.dispose);
   ref.listen<AuthState>(authControllerProvider, (previous, next) {
     refreshListenable.value++;
   });
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     refreshListenable: refreshListenable,
     redirect: (context, state) => _resolveRouteRedirect(ref, state),
     routes: [
@@ -606,6 +608,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: accountSettingsRoute,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const AccountSettingsPage(),
       ),
       GoRoute(

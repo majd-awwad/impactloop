@@ -10,6 +10,8 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../core/format/localized_formatters.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../shared/l10n/driver_quantity_labels.dart';
+import '../../../../shared/l10n/driver_status_labels.dart';
 import '../../../../shared/l10n/driver_ui_labels.dart';
 import '../../../../shared/location/current_location_service.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
@@ -27,6 +29,7 @@ import '../../application/driver_location_auto_ping_controller.dart';
 import '../../data/models/driver_delivery.dart';
 import '../../data/models/update_driver_delivery_status_request.dart';
 import '../driver_delivery_timing_presentation.dart';
+import '../widgets/driver_route_block.dart';
 import '../widgets/partial_pickup_selection_dialog.dart';
 import 'driver_history_detail_page.dart';
 
@@ -168,7 +171,7 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               AppStatusBadge(
-                label: deliveryStatusLabel(delivery.status, l10n: l10n),
+                label: driverDeliveryStatusLabel(delivery.status, l10n),
                 tone: deliveryStatusAppTone(delivery.status),
               ),
               Text(
@@ -197,6 +200,17 @@ class _SummaryPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final labels = DriverUiLabels(l10n);
+    final pickupSummary = _locationLabel(
+      city: delivery.pickupCity ?? delivery.pickupLocation.city,
+      area: delivery.pickupArea ?? delivery.pickupLocation.area,
+      fallback: labels.locationSummary(delivery.pickupLocation.safeSummary),
+    );
+    final dropoffSummary = _locationLabel(
+      city: delivery.dropoffCity ?? delivery.dropoffLocation.city,
+      area: delivery.dropoffArea ?? delivery.dropoffLocation.area,
+      fallback: labels.locationSummary(delivery.dropoffLocation.safeSummary),
+    );
 
     return _Panel(
       child: Column(
@@ -207,11 +221,16 @@ class _SummaryPanel extends StatelessWidget {
             title: delivery.hasGroupedItems ? l10n.materials : l10n.material,
             body: delivery.hasGroupedItems
                 ? [
-                    DriverUiLabels(l10n).groupedItemsCount(delivery.itemCount),
+                    labels.groupedItemsCount(delivery.itemCount),
                     for (final item in delivery.items)
-                      '${bidiIsolate(DriverUiLabels(l10n).materialTitle(item.title))} × ${bidiIsolate(item.quantityLabel)}',
+                      '${bidiIsolate(labels.materialTitle(item.title))} × ${bidiIsolate(driverQuantityLabel(l10n, item.quantity, item.unit))}',
                   ].join('\n')
-                : '${bidiIsolate(DriverUiLabels(l10n).materialTitle(delivery.material.title))} - ${bidiIsolate(delivery.material.quantityLabel)}',
+                : '${bidiIsolate(labels.materialTitle(delivery.material.title))} - ${bidiIsolate(driverQuantityLabel(l10n, delivery.material.quantityRequested, delivery.material.unit))}',
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          DriverRouteBlock(
+            pickupSummary: pickupSummary,
+            dropoffSummary: dropoffSummary,
           ),
           const SizedBox(height: AppSpacing.lg),
           _InfoRow(
@@ -302,9 +321,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
   void _startCountdownTimer() {
     _countdownTimer?.cancel();
     _countdownTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {});
     });
   }
@@ -461,9 +478,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           context: context,
           delivery: widget.delivery,
         );
-        if (selection == null || !mounted) {
-          return;
-        }
+        if (selection == null || !mounted) return;
         pickedReservationIds = selection.pickedReservationIds;
         unpicked = selection.unpicked;
       }
@@ -474,9 +489,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
         message: l10n.driverSupplierHandoverCodeMessage,
         confirmLabel: l10n.driverMarkPickedUp,
       );
-      if (confirmationCode == null || !mounted) {
-        return;
-      }
+      if (confirmationCode == null || !mounted) return;
     } else if (nextStatus == 'DELIVERED') {
       confirmationCode = await HandoverCodeInputDialog.show(
         context,
@@ -485,9 +498,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
         confirmLabel: l10n.driverMarkDelivered,
         confirmTone: AppStatusTone.success,
       );
-      if (confirmationCode == null || !mounted) {
-        return;
-      }
+      if (confirmationCode == null || !mounted) return;
     }
 
     try {
@@ -502,38 +513,34 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             unpicked: unpicked,
           );
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       if (nextStatus == 'DELIVERED') {
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
         context.popOrGo('/driver/active');
         leaveDriverDeliveryDetail(ref);
         showInfoSnackBar(context, l10n.driverDeliveryMarkedDelivered);
         return;
       }
 
-      showInfoSnackBar(context, l10n.driverStatusUpdated);
+      final successMessage = switch (nextStatus) {
+        'ARRIVED_PICKUP' => l10n.driverStatusArrivedPickupSuccess,
+        'PICKED_UP' => l10n.driverStatusPickedUpSuccess,
+        'ON_THE_WAY' => l10n.driverStatusOnTheWaySuccess,
+        'ARRIVED_DROPOFF' => l10n.driverStatusArrivedDropoffSuccess,
+        _ => l10n.driverStatusUpdated,
+      };
+      showInfoSnackBar(context, successMessage);
       _noteController.clear();
     } on ApiException catch (error) {
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       ref.invalidate(driverDeliveryDetailProvider(widget.delivery.id));
-
       final message = error.code == 'INVALID_DELIVERY_TRANSITION'
           ? l10n.driverStatusChangedRefresh
           : localizedApiErrorMessage(error, l10n);
       showInfoSnackBar(context, message);
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       showErrorSnackBar(context, error, l10n: l10n);
     }
   }
@@ -623,7 +630,11 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             hintText: l10n.driverIssueNoteHint,
           ),
         ),
-        footer: AppDialogFooter.form(
+        footer: AppDialogFooter.decision(
+          secondaryAction: TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.driverCancelAction),
+          ),
           primaryAction: FilledButton(
             onPressed: () {
               if (noteController.text.trim().isEmpty) return;
@@ -697,7 +708,11 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
               ),
             ],
           ),
-          footer: AppDialogFooter.form(
+          footer: AppDialogFooter.decision(
+            secondaryAction: TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.driverCancelAction),
+            ),
             primaryAction: FilledButton(
               onPressed: () {
                 if (noteController.text.trim().isEmpty) return;
@@ -719,14 +734,12 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
 
 class _DriverIncidentFormResult {
   const _DriverIncidentFormResult({required this.reason, required this.note});
-
   final String reason;
   final String note;
 }
 
 class _LocationSharingSection extends ConsumerStatefulWidget {
   const _LocationSharingSection({required this.delivery});
-
   final DriverDelivery delivery;
 
   @override
@@ -776,10 +789,7 @@ class _LocationSharingSectionState
           resolveErrorMessage: (error) =>
               DriverUiLabels(context.l10n).locationError(error),
           onStateChanged: (state) {
-            if (!mounted) {
-              return;
-            }
-
+            if (!mounted) return;
             setState(() => _autoPingState = state);
           },
         )..updateDeliveryStatus(
@@ -874,60 +884,42 @@ class _LocationSharingSectionState
   Future<void> _sendManualLocation(BuildContext context) async {
     final l10n = context.l10n;
     setState(() => _isManualPinging = true);
-
     try {
       await ref
           .read(driverDeliveryActionControllerProvider.notifier)
           .captureAndSendLocationPing(widget.delivery.id);
-
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       setState(() {
         _autoPingState = _autoPingState.copyWith(
           lastSharedAt: DateTime.now(),
           clearInlineError: true,
         );
       });
-      if (!context.mounted) {
-        return;
-      }
+      if (!context.mounted) return;
       showInfoSnackBar(context, l10n.driverLocationUpdateSent);
     } on CurrentLocationException catch (error) {
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       setState(() {
         _autoPingState = _autoPingState.copyWith(
           inlineError: DriverUiLabels(l10n).locationError(error),
         );
       });
     } on ApiException catch (error) {
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       setState(() {
         _autoPingState = _autoPingState.copyWith(
           inlineError: localizedApiErrorMessage(error, l10n),
         );
       });
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       setState(() {
         _autoPingState = _autoPingState.copyWith(
           inlineError: DriverUiLabels(l10n).locationError(error),
         );
       });
     } finally {
-      if (mounted) {
-        setState(() => _isManualPinging = false);
-      }
+      if (mounted) setState(() => _isManualPinging = false);
     }
   }
 }
@@ -946,7 +938,7 @@ class _StatusGuidanceCard extends StatelessWidget {
     return _InlineNotice(
       icon: Icons.timeline_outlined,
       title: l10n.driverCurrentStage(
-        deliveryStatusLabel(delivery.status, l10n: l10n),
+        driverDeliveryStatusLabel(delivery.status, l10n),
       ),
       body: delivery.nextStatus == null
           ? l10n.driverNoFurtherSteps
@@ -977,13 +969,11 @@ class _StatusGuidanceCard extends StatelessWidget {
 
 class _RequirementRow extends StatelessWidget {
   const _RequirementRow({required this.text});
-
   final String text;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1004,7 +994,6 @@ class _RequirementRow extends StatelessWidget {
 
 class _StepList extends StatelessWidget {
   const _StepList({required this.currentStatus});
-
   final String currentStatus;
 
   static const _steps = [
@@ -1026,7 +1015,7 @@ class _StepList extends StatelessWidget {
       children: [
         for (var index = 0; index < _steps.length; index++)
           _StatusStep(
-            label: deliveryStatusLabel(_steps[index], l10n: l10n),
+            label: driverDeliveryStatusLabel(_steps[index], l10n),
             complete: currentIndex >= 0 && safeIndex >= index,
             current: currentIndex >= 0 && safeIndex == index,
           ),
@@ -1078,13 +1067,11 @@ class _StatusStep extends StatelessWidget {
 
 class _Panel extends StatelessWidget {
   const _Panel({required this.child});
-
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -1111,7 +1098,6 @@ class _PanelTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1153,7 +1139,6 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Column(
@@ -1195,7 +1180,6 @@ class _InlineNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -1250,7 +1234,6 @@ class _StatePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1299,7 +1282,6 @@ String _disabledActionReason(
       if (gate.remainingLabel != null) gate.remainingLabel!,
     ].join('\n');
   }
-
   return switch (nextStatus) {
     'PICKED_UP' => l10n.driverCompleteArriveBeforePickedUp,
     'ON_THE_WAY' => l10n.driverMarkPickedUpBeforeDelivery,
@@ -1316,30 +1298,18 @@ String _driverPickupWindowDetail(
   final start =
       delivery.supplierPickupWindowStart ?? delivery.pickupWindowStart;
   final end = delivery.supplierPickupWindowEnd ?? delivery.pickupWindowEnd;
-
-  if (start == null && end == null) {
-    return l10n.driverNotSet;
-  }
-
+  if (start == null && end == null) return l10n.driverNotSet;
   final formatters = LocalizedFormatters(l10n);
-  if (start != null && end != null) {
-    return formatters.dateTimeRange(start, end);
-  }
-
+  if (start != null && end != null) return formatters.dateTimeRange(start, end);
   return formatters.dateTime(start ?? end!);
 }
 
 String _deliveryWindowDetail(DriverDelivery delivery, AppLocalizations l10n) {
   final start = delivery.confirmedDeliveryWindowStart;
   final end = delivery.confirmedDeliveryWindowEnd;
-  if (start == null && end == null) {
-    return l10n.driverNotSet;
-  }
-
+  if (start == null && end == null) return l10n.driverNotSet;
   final formatters = LocalizedFormatters(l10n);
-  if (start != null && end != null) {
-    return formatters.dateTimeRange(start, end);
-  }
+  if (start != null && end != null) return formatters.dateTimeRange(start, end);
   return formatters.dateTime(start ?? end!);
 }
 
@@ -1384,4 +1354,12 @@ Widget _locationDetail(
       ],
     ],
   );
+}
+
+String _locationLabel({String? city, String? area, required String fallback}) {
+  final parts = [area, city]
+      .where((p) => p != null && p.trim().isNotEmpty)
+      .cast<String>()
+      .toList(growable: false);
+  return parts.isEmpty ? fallback : parts.join(', ');
 }

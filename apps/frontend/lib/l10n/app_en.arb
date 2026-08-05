@@ -2834,7 +2834,7 @@
   "driverInternalDelivery": "Internal delivery",
   "driverJobs": "Jobs",
   "driverJobsTitle": "Driver jobs",
-  "driverJobsSubtitle": "Basic internal delivery coordination",
+  "driverJobsSubtitle": "Pick up supplier materials and deliver them to learners.",
   "driverActiveDeliveriesCount": "Active deliveries: {active}/{max}",
   "@driverActiveDeliveriesCount": {
     "placeholders": {
@@ -2886,6 +2886,7 @@
   },
   "driverNearest": "Nearest",
   "driverNewest": "Newest",
+  "driverDone": "Done",
   "driverCityLabel": "City:",
   "driverAllCities": "All cities",
   "driverAreaLabel": "Area:",
@@ -2971,7 +2972,7 @@
   "driverUpdating": "Updating...",
   "driverReportPickupFailed": "Report pickup failed",
   "driverReportDeliveryFailed": "Report delivery failed",
-  "driverReportDriverIssue": "Report driver issue",
+  "driverReportDriverIssue": "Report that I cannot continue",
   "driverSupplierHandoverCode": "Supplier handover code",
   "driverSupplierHandoverCodeMessage": "Enter the code the supplier gives you after handing over the material.",
   "driverMarkPickedUp": "Mark picked up",
@@ -2980,6 +2981,10 @@
   "driverMarkDelivered": "Mark delivered",
   "driverDeliveryMarkedDelivered": "Delivery marked delivered.",
   "driverStatusUpdated": "Delivery status updated.",
+  "driverStatusArrivedPickupSuccess": "Arrived at pickup.",
+  "driverStatusPickedUpSuccess": "Marked as picked up.",
+  "driverStatusOnTheWaySuccess": "On the way to the learner.",
+  "driverStatusArrivedDropoffSuccess": "Arrived at drop-off.",
   "driverStatusChangedRefresh": "Delivery status changed. Refresh and try the next valid action.",
   "driverInvalidConfirmationCode": "That confirmation code is incorrect. Check the code and try again.",
   "driverHandoverWindowNotStarted": "The handover window has not started yet.",
@@ -2992,7 +2997,7 @@
   "driverPartialPickupPickedSection": "Will be delivered now",
   "driverPartialPickupPendingSection": "Will remain pending",
   "driverPartialPickupReasonRequired": "Choose a reason for each pending item.",
-  "driverPartialPickupSummary": "{pickedCount} items will be delivered now. {pendingCount} items will remain pending.",
+  "driverPartialPickupSummary": "{pickedCount, plural, =1{1 item will be delivered now.} other{{pickedCount} items will be delivered now.}} {pendingCount, plural, =1{1 item will remain pending.} other{{pendingCount} items will remain pending.}}",
   "@driverPartialPickupSummary": {
     "placeholders": {
       "pickedCount": {
@@ -3396,5 +3401,232 @@
   "driverJobsUnavailableTitle": "Available jobs are unavailable",
   "driverAssignedDeliveriesContinue": "Assigned deliveries, reminders, reports, and notification history remain available.",
   "driverNotAcceptingNewJobsError": "Resume accepting new jobs before accepting this delivery.",
-  "driverCancelAction": "Cancel"
+  "driverCancelAction": "Cancel",
+  "driverStatusWaitingForAssignment": "Waiting for assignment",
+  "driverStatusAssigned": "Assigned — head to pickup",
+  "driverStatusAtPickup": "At pickup location",
+  "driverStatusPickedUp": "Picked up",
+  "driverStatusOnTheWay": "On the way to learner",
+  "driverStatusAtDropoff": "At drop-off location",
+  "driverStatusDelivered": "Delivered",
+  "driverStatusCancelled": "Cancelled",
+  "driverStatusPickupFailed": "Pickup failed",
+  "driverStatusDeliveryFailed": "Delivery failed",
+  "driverStatusDriverNoShow": "Marked as no-show",
+  "driverStatusLearnerNoShow": "Learner no-show",
+  "driverStatusAwaitingReview": "Under admin review",
+  "driverNavHome": "Home",
+  "driverNavJobs": "Jobs",
+  "driverNavActive": "Active",
+  "driverNavHistory": "History",
+  "driverNavMore": "More",
+  "driverNavGroupOverview": "Overview",
+  "driverNavGroupWork": "Work",
+  "driverNavGroupHistory": "History",
+  "driverNavGroupAccount": "Account",
+  "driverMoreTitle": "More options",
+  "driverMoreProfile": "Driver profile",
+  "driverMoreNotifications": "Notifications",
+  "driverMoreHistory": "History and reports",
+  "driverMoreAccountSettings": "Account settings",
+  "driverAcceptingJobsOnExplicit": "Available for new jobs",
+  "driverAcceptingJobsOffExplicit": "Not available right now",
+  "driverEditFilters": "Edit filters",
+  "driverPartialPickupSelectAtLeastOne": "Select at least one item that the supplier handed over now.",
+  "driverEmptyActiveTitle": "No active deliveries",
+  "driverEmptyActiveBody": "When you accept a job, it will appear here until delivery is complete.",
+  "driverEmptyActiveCta": "Browse available jobs",
+  "driverViewNearbyJobs": "View nearby jobs",
+  "driverRoutePickupLabel": "Pickup",
+  "driverRouteDropoffLabel": "Drop-off",
+  "driverRouteFrom": "From",
+  "driverRouteTo": "To",
+  "driverRouteArrowSemantic": "Route direction",
+  "driverMapSectionTitle": "Locations",
+  "driverMapPickupPin": "Pickup location",
+  "driverMapDropoffPin": "Drop-off location",
+  "driverMapOpenExternal": "Open in maps",
+  "driverMapUnavailable": "Map preview is unavailable for this location.",
+  "driverUnitPiece": "piece",
+  "driverUnitSheet": "sheet",
+  "driverUnitBag": "bag",
+  "driverUnitKg": "kg",
+  "driverUnitItem": "item",
+  "driverUnitUnit": "unit",
+  "driverUnitPanel": "panel",
+  "driverUnitCrate": "crate",
+  "driverUnitMeter": "meter",
+  "driverUnitLiter": "liter",
+  "driverUnitRoll": "roll",
+  "driverUnitBox": "box",
+  "driverUnitPack": "pack",
+  "driverUnitSet": "set",
+  "driverQuantityPiece": "{count, plural, =1{1 piece} other{{count} pieces}}",
+  "@driverQuantityPiece": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantitySheet": "{count, plural, =1{1 sheet} other{{count} sheets}}",
+  "@driverQuantitySheet": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityBag": "{count, plural, =1{1 bag} other{{count} bags}}",
+  "@driverQuantityBag": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityKg": "{count, plural, =1{1 kg} other{{count} kg}}",
+  "@driverQuantityKg": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityItem": "{count, plural, =1{1 item} other{{count} items}}",
+  "@driverQuantityItem": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityUnit": "{count, plural, =1{1 unit} other{{count} units}}",
+  "@driverQuantityUnit": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityPanel": "{count, plural, =1{1 panel} other{{count} panels}}",
+  "@driverQuantityPanel": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityCrate": "{count, plural, =1{1 crate} other{{count} crates}}",
+  "@driverQuantityCrate": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityMeter": "{count, plural, =1{1 meter} other{{count} meters}}",
+  "@driverQuantityMeter": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityLiter": "{count, plural, =1{1 liter} other{{count} liters}}",
+  "@driverQuantityLiter": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityRoll": "{count, plural, =1{1 roll} other{{count} rolls}}",
+  "@driverQuantityRoll": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityBox": "{count, plural, =1{1 box} other{{count} boxes}}",
+  "@driverQuantityBox": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityPack": "{count, plural, =1{1 pack} other{{count} packs}}",
+  "@driverQuantityPack": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantitySet": "{count, plural, =1{1 set} other{{count} sets}}",
+  "@driverQuantitySet": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "notificationDriverPickupReminderTitle": "Pickup reminder",
+  "notificationDriverPickupReminderBody": "Reminder: pickup for {materialTitle} is coming up.",
+  "@notificationDriverPickupReminderBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverPickupStartingSoonTitle": "Pickup starting soon",
+  "notificationDriverPickupStartingSoonBody": "Pickup for {materialTitle} starts in a few minutes.",
+  "@notificationDriverPickupStartingSoonBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverPickupWindowStartedTitle": "Pickup window started",
+  "notificationDriverPickupWindowStartedBody": "The pickup window for {materialTitle} is open now.",
+  "@notificationDriverPickupWindowStartedBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverPickupOverdueTitle": "Pickup overdue",
+  "notificationDriverPickupOverdueBody": "Pickup for {materialTitle} is overdue. Complete pickup or report an issue.",
+  "@notificationDriverPickupOverdueBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDropoffReminderTitle": "Drop-off reminder",
+  "notificationDriverDropoffReminderBody": "Reminder: drop-off for {materialTitle} is coming up.",
+  "@notificationDriverDropoffReminderBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDropoffStartingSoonTitle": "Drop-off starting soon",
+  "notificationDriverDropoffStartingSoonBody": "Drop-off for {materialTitle} starts in a few minutes.",
+  "@notificationDriverDropoffStartingSoonBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDropoffWindowStartedTitle": "Drop-off window started",
+  "notificationDriverDropoffWindowStartedBody": "The drop-off window for {materialTitle} is open now.",
+  "@notificationDriverDropoffWindowStartedBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDropoffOverdueTitle": "Drop-off overdue",
+  "notificationDriverDropoffOverdueBody": "Drop-off for {materialTitle} is overdue. Complete delivery or report an issue.",
+  "@notificationDriverDropoffOverdueBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDeliveryRequestCreatedTitle": "Delivery request created",
+  "notificationDriverDeliveryRequestCreatedBody": "A delivery request for {materialTitle} was created.",
+  "@notificationDriverDeliveryRequestCreatedBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDeliveryAcceptedTitle": "Delivery accepted",
+  "notificationDriverDeliveryAcceptedBody": "You accepted the delivery for {materialTitle}.",
+  "@notificationDriverDeliveryAcceptedBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDeliveryNextStepTitle": "Next delivery step",
+  "notificationDriverDeliveryNextStepBody": "Continue the delivery for {materialTitle}.",
+  "@notificationDriverDeliveryNextStepBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDeliveryDriverAssignedTitle": "Driver assigned",
+  "notificationDeliveryDriverAssignedBody": "You were assigned to deliver {materialTitle}.",
+  "@notificationDeliveryDriverAssignedBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  }
 }

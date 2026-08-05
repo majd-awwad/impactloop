@@ -18,7 +18,6 @@ import '../../features/notifications/application/notifications_routes.dart';
 import '../../shared/widgets/app_feedback.dart';
 import '../../shared/widgets/notification_bell_button.dart';
 import '../../shared/widgets/user_avatar.dart';
-import '../../features/notifications/application/notifications_routes.dart';
 import 'impact_loop_logo.dart';
 import 'nav_pill_menu.dart';
 
@@ -63,7 +62,13 @@ class EntryNavBar extends ConsumerWidget {
       return trailingActions;
     }
 
-    return [const NotificationBellButton(compact: true), ...trailingActions];
+    final withoutDuplicateBells = trailingActions
+        .where((action) => action is! NotificationBellButton)
+        .toList(growable: false);
+    return [
+      const NotificationBellButton(compact: true),
+      ...withoutDuplicateBells,
+    ];
   }
 
   @override
@@ -356,8 +361,6 @@ class _DesktopNavLayout extends StatelessWidget {
         ],
         if (isAuthenticated && user != null) ...[
           const SizedBox(width: AppSpacing.sm),
-          const NotificationBellButton(compact: true),
-          const SizedBox(width: AppSpacing.sm),
           _AccountMenu(
             user: user!,
             settings: settings,
@@ -543,7 +546,6 @@ class _MobileNavLayout extends StatelessWidget {
               alignment: WrapAlignment.end,
               children: [
                 if (isAuthenticated && user != null) ...[
-                  const NotificationBellButton(compact: true),
                   _AccountMenu(
                     user: user!,
                     settings: settings,
