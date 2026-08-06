@@ -1,24 +1,31 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/navigation_extensions.dart';
-import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/app_text_styles.dart';
-import '../../../../core/errors/api_exception.dart';
-import '../../../../shared/widgets/app_dialog_footer.dart';
-import '../../../../shared/widgets/app_dialog_shell.dart';
-import '../../../../shared/widgets/app_status_badge.dart';
-import '../../../../app/widgets/entry_nav_bar.dart';
-import '../../../../shared/widgets/materials/materials_ui_palette.dart';
-import '../../../auth/application/auth_controller.dart';
+import '../../application/help_session_mutation_feedback.dart';
+import '../../application/project_help_session_canonical_cache.dart';
+import '../../application/project_help_session_mutation.dart';
 import '../../application/project_help_session_zoom_launcher.dart';
 import '../../application/project_help_sessions_providers.dart';
 import '../../data/models/project_help_session_models.dart';
 import '../l10n/project_help_sessions_l10n.dart';
+import '../widgets/detail/help_session_action_panel.dart';
+import '../widgets/detail/help_session_detail_shell.dart';
+import '../widgets/detail/help_session_hero_header.dart';
+import '../widgets/detail/help_session_problem_section.dart';
+import '../widgets/detail/help_session_proposed_times_section.dart';
+import '../widgets/detail/help_session_selected_time_card.dart';
+import '../widgets/detail/help_session_status_copy.dart';
+import '../widgets/detail/help_session_terminal_state_card.dart';
+import '../widgets/detail/help_session_timeline_section.dart';
+import '../widgets/help_session_cancel_dialog.dart';
+import '../widgets/help_session_live_refresh.dart';
 import '../widgets/help_session_request_flow.dart';
-import '../widgets/help_session_status_utils.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 
 class LearnerHelpSessionDetailPage extends ConsumerStatefulWidget {
   const LearnerHelpSessionDetailPage({super.key, required this.sessionId});
@@ -35,9 +42,44 @@ class _LearnerHelpSessionDetailPageState
   bool _joinInFlight = false;
   bool _notebookInFlight = false;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      prepareHelpSessionDetailNavigation(
+        ref,
+        sessionId: widget.sessionId,
+        authorView: false,
+      );
+    });
+  }
+
   Future<void> _refresh() async {
     ref.invalidate(learnerHelpSessionDetailProvider(widget.sessionId));
     await ref.read(learnerHelpSessionDetailProvider(widget.sessionId).future);
+  }
+
+  Future<void> _runLearnerSessionMutation({
+    required ProjectHelpSession session,
+    required Future<ProjectHelpSession?> Function() mutate,
+    required bool Function(ProjectHelpSession session) recoveryMatches,
+  }) async {
+    try {
+      await runProjectHelpSessionMutationWithRecovery(
+        ref: ref,
+        sessionId: session.id,
+        authorView: false,
+        mutate: mutate,
+        recoveryMatches: recoveryMatches,
+      );
+    } catch (error) {
+      if (mounted) {
+        await handleHelpSessionRequestError(context, error);
+      }
+    }
   }
 
   Future<void> _acceptAlternative(ProjectHelpSession session) async {
@@ -69,18 +111,13 @@ class _LearnerHelpSessionDetailPageState
     if (confirmed != true || !mounted) {
       return;
     }
-    try {
-      await ref
+    await _runLearnerSessionMutation(
+      session: session,
+      mutate: () => ref
           .read(projectHelpSessionActionControllerProvider.notifier)
-          .acceptAlternative(session.id);
-      invalidateLearnerHelpSessionProviders(ref, sessionId: session.id);
-      invalidateBuildHelpSessionProviders(ref, session.build.id);
-      await _refresh();
-    } catch (error) {
-      if (mounted) {
-        await handleHelpSessionRequestError(context, error);
-      }
-    }
+          .acceptAlternative(session.id),
+      recoveryMatches: helpSessionRecoveryAccepted,
+    );
   }
 
   Future<void> _rejectAlternative(ProjectHelpSession session) async {
@@ -112,113 +149,58 @@ class _LearnerHelpSessionDetailPageState
     if (confirmed != true || !mounted) {
       return;
     }
-    try {
-      await ref
+    await _runLearnerSessionMutation(
+      session: session,
+      mutate: () => ref
           .read(projectHelpSessionActionControllerProvider.notifier)
-          .rejectAlternative(session.id);
-      invalidateLearnerHelpSessionProviders(ref, sessionId: session.id);
-      invalidateBuildHelpSessionProviders(ref, session.build.id);
-      await _refresh();
-    } catch (error) {
-      if (mounted) {
-        await handleHelpSessionRequestError(context, error);
-      }
-    }
+          .rejectAlternative(session.id),
+      recoveryMatches: helpSessionRecoveryCancelled,
+    );
   }
 
   Future<void> _cancelSession(ProjectHelpSession session) async {
-    final reasonController = TextEditingController();
+    if (!session.allowedActions.canCancel) {
+      return;
+    }
     final requiresReason = session.status != ProjectHelpSessionStatus.pending;
-    final confirmed = await showDialog<bool>(
+    await showHelpSessionCancelDialog(
       context: context,
-      builder: (context) => AppDialogShell(
-        title: Text(ProjectHelpSessionsL10n.cancelTitle.resolve(context)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (requiresReason)
-              Text(
-                ProjectHelpSessionsL10n.cancelConfirmedWarning.resolve(context),
-              ),
-            const SizedBox(height: AppSpacing.sm),
-            TextField(
-              controller: reasonController,
-              maxLength: 300,
-              decoration: InputDecoration(
-                labelText: requiresReason
-                    ? ProjectHelpSessionsL10n.cancelReasonRequired
-                        .resolve(context)
-                    : ProjectHelpSessionsL10n.cancelReasonLabel.resolve(context),
-              ),
-            ),
-          ],
-        ),
-        footer: AppDialogFooter.decision(
-          secondaryAction: TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(
-              Localizations.localeOf(context).languageCode == 'ar'
-                  ? 'رجوع'
-                  : 'Back',
-            ),
-          ),
-          primaryAction: FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(ProjectHelpSessionsL10n.confirmCancel.resolve(context)),
-          ),
-        ),
-      ),
+      requiresReason: requiresReason,
+      showConfirmedWarning: requiresReason,
+      onSubmit: (reason) async {
+        await completeLearnerHelpSessionCancel(
+          ref: ref,
+          sessionId: session.id,
+          mutate: () => ref
+              .read(projectHelpSessionActionControllerProvider.notifier)
+              .cancelSession(sessionId: session.id, reason: reason),
+        );
+      },
     );
-    if (confirmed != true || !mounted) {
-      reasonController.dispose();
-      return;
-    }
-    final reason = reasonController.text.trim();
-    reasonController.dispose();
-    if (requiresReason && reason.isEmpty) {
-      return;
-    }
-    try {
-      await ref
-          .read(projectHelpSessionActionControllerProvider.notifier)
-          .cancelSession(sessionId: session.id, reason: reason.isEmpty ? null : reason);
-      invalidateLearnerHelpSessionProviders(ref, sessionId: session.id);
-      invalidateBuildHelpSessionProviders(ref, session.build.id);
-      await _refresh();
-    } catch (error) {
-      if (mounted) {
-        await handleHelpSessionRequestError(context, error);
-      }
-    }
   }
 
   Future<void> _join(ProjectHelpSession session) async {
-    if (_joinInFlight || !session.allowedActions.canJoin) {
+    final actions = effectiveLearnerAllowedActions(session);
+    if (_joinInFlight || !actions.canJoin) {
       return;
     }
     setState(() => _joinInFlight = true);
     try {
-      final result = await ref
-          .read(projectHelpSessionActionControllerProvider.notifier)
-          .joinZoom(session.id);
-      if (result == null || !mounted) {
+      final cachedJoinUrl = session.joinUrl?.trim();
+      final joinUrl = cachedJoinUrl != null && cachedJoinUrl.isNotEmpty
+          ? cachedJoinUrl
+          : (await ref.read(projectHelpSessionsApiProvider).joinZoom(session.id))
+              .joinUrl;
+      if (!mounted) {
         return;
       }
-      final launched = await launchProjectHelpSessionZoomUrl(result.joinUrl);
+      final launched = await launchProjectHelpSessionZoomUrl(joinUrl);
       if (!launched && mounted) {
-        await handleHelpSessionRequestError(
-          context,
-          ApiException(
-            message: ProjectHelpSessionsL10n.joinLaunchFailed.resolve(context),
-            code: 'JOIN_LAUNCH_FAILED',
-          ),
-        );
+        showHelpSessionZoomLaunchFailure(context, isStart: false);
       }
     } catch (error) {
       if (mounted) {
         await handleHelpSessionRequestError(context, error);
-        await _refresh();
       }
     } finally {
       if (mounted) {
@@ -233,27 +215,42 @@ class _LearnerHelpSessionDetailPageState
       return;
     }
     setState(() => _notebookInFlight = true);
+    Object? mutationError;
+    ProjectHelpSessionNotebookHandoff? handoff;
     try {
       final locale = Localizations.localeOf(context).languageCode;
-      final handoff = await ref
-          .read(projectHelpSessionActionControllerProvider.notifier)
-          .ensureNotebookNotes(sessionId: session.id, localeCode: locale);
-      if (handoff == null || !mounted) {
-        return;
+      handoff = await runProjectHelpSessionMutation(
+        () => ref
+            .read(projectHelpSessionActionControllerProvider.notifier)
+            .ensureNotebookNotes(sessionId: session.id, localeCode: locale),
+      );
+    } on ProjectHelpSessionMutationFailure catch (failure) {
+      mutationError = failure.error;
+    } finally {
+      if (mounted) {
+        setState(() => _notebookInFlight = false);
       }
+    }
+    if (!mounted) {
+      return;
+    }
+    if (mutationError != null) {
+      await handleHelpSessionRequestError(context, mutationError);
+      return;
+    }
+    if (handoff == null) {
+      return;
+    }
+    try {
       context.go(
         learnerBuildNotebookRoute(
           handoff.buildId,
           pageId: handoff.pageId,
         ),
       );
-    } catch (error) {
-      if (mounted) {
-        await handleHelpSessionRequestError(context, error);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _notebookInFlight = false);
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('help-session notebook navigation failed: $error\n$stackTrace');
       }
     }
   }
@@ -262,334 +259,233 @@ class _LearnerHelpSessionDetailPageState
     context.go(learnerBuildNotebookRoute(session.build.id));
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-    final sessionAsync =
-        ref.watch(learnerHelpSessionDetailProvider(widget.sessionId));
-    final userId = ref.watch(authControllerProvider).user?.id;
+  HelpSessionActionPanel _buildActionPanel(ProjectHelpSession session) {
+    final actions = effectiveLearnerAllowedActions(session);
 
-    return Scaffold(
-      backgroundColor: palette.pageBackground,
-      body: SafeArea(
-        child: Column(
-          children: [
-            EntryNavBar(
-              showSignIn: false,
-              showCreateAccount: false,
-              homeRoute: learnerHelpSessionsRoute,
-              phoneTitle: ProjectHelpSessionsL10n.listTitle.resolve(context),
-            ),
-            Expanded(
-              child: sessionAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, _) => Center(
-                  child: TextButton(
-                    onPressed: _refresh,
-                    child: Text(ProjectHelpSessionsL10n.retry.resolve(context)),
-                  ),
-                ),
-                data: (session) => Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 920),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  session.project.title,
-                                  style: AppTextStyles.title(context),
-                                ),
-                              ),
-                              AppStatusBadge(
-                                label: ProjectHelpSessionsL10n
-                                    .statusLabel(session.status)
-                                    .resolve(context),
-                                tone: helpSessionStatusTone(session.status),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
-                            session.author.displayName,
-                            style: AppTextStyles.body(context).copyWith(
-                              color: palette.textSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                          _Section(
-                            title: Localizations.localeOf(context).languageCode ==
-                                    'ar'
-                                ? 'المشكلة'
-                                : 'Problem',
-                            child: Text(session.problemDescription),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          _TimesSection(session: session),
-                          const SizedBox(height: AppSpacing.md),
-                          _StatusSection(session: session),
-                          const SizedBox(height: AppSpacing.lg),
-                          _ActionsSection(
-                            session: session,
-                            joinInFlight: _joinInFlight,
-                            notebookInFlight: _notebookInFlight,
-                            onAcceptAlternative: () => _acceptAlternative(session),
-                            onRejectAlternative: () => _rejectAlternative(session),
-                            onCancel: () => _cancelSession(session),
-                            onJoin: () => _join(session),
-                            onAddNotebookNotes: () => _openNotebookNotes(session),
-                            onOpenNotebook: () => _openNotebook(session),
-                          ),
-                          if (session.status == ProjectHelpSessionStatus.declined &&
-                              session.declinedReason != null) ...[
-                            const SizedBox(height: AppSpacing.md),
-                            Text(session.declinedReason!),
-                          ],
-                          if (session.status == ProjectHelpSessionStatus.cancelled &&
-                              userId != null) ...[
-                            const SizedBox(height: AppSpacing.md),
-                            Text(
-                              '${cancellationActorLabel(session: session, currentUserId: userId, youLabel: ProjectHelpSessionsL10n.youCancelled.resolve(context), creatorLabel: ProjectHelpSessionsL10n.creatorCancelled.resolve(context))}: ${readableCancellationReason(session.cancellationReason)}',
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+    if (session.status == ProjectHelpSessionStatus.completed) {
+      return HelpSessionActionPanel(
+        title: ProjectHelpSessionsL10n.nextStep.resolve(context),
+        primary: HelpSessionActionSpec(
+          label: ProjectHelpSessionsL10n.addSessionNotesToNotebook.resolve(
+            context,
+          ),
+          onPressed: _notebookInFlight ? null : () => _openNotebookNotes(session),
+          inFlight: _notebookInFlight,
         ),
-      ),
-    );
-  }
-}
-
-class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.child});
-
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: palette.panelSurface,
-        borderRadius: AppRadius.lgAll,
-        border: Border.all(color: palette.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: AppTextStyles.title(context)),
-          const SizedBox(height: AppSpacing.sm),
-          child,
+        secondary: [
+          HelpSessionActionSpec(
+            label: ProjectHelpSessionsL10n.openProjectNotebook.resolve(context),
+            onPressed: () => _openNotebook(session),
+          ),
         ],
-      ),
-    );
-  }
-}
+      );
+    }
 
-class _TimesSection extends StatelessWidget {
-  const _TimesSection({required this.session});
+    HelpSessionActionSpec? primary;
+    final secondary = <HelpSessionActionSpec>[];
+    final management = <HelpSessionActionSpec>[];
 
-  final ProjectHelpSession session;
+    if (actions.canJoin) {
+      primary = HelpSessionActionSpec(
+        label: ProjectHelpSessionsL10n.joinZoom.resolve(context),
+        onPressed: _joinInFlight ? null : () => _join(session),
+        inFlight: _joinInFlight,
+      );
+    } else if (session.status == ProjectHelpSessionStatus.scheduled) {
+      primary = HelpSessionActionSpec(
+        label: ProjectHelpSessionsL10n.joinZoom.resolve(context),
+        onPressed: null,
+        disabledHint: ProjectHelpSessionsL10n.joinOpensLater.resolve(context),
+      );
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
-    return _Section(
-      title: isArabic ? 'المواعيد' : 'Times',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (session.status == ProjectHelpSessionStatus.pending)
-            Text(ProjectHelpSessionsL10n.waitingForCreator.resolve(context)),
-          for (final option in session.timeOptions)
-            Padding(
-              padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
-              child: Text(
-                formatHelpSessionDateTime(
-                  context,
-                  option.startsAt,
-                  session.learnerTimeZone,
-                ),
-              ),
-            ),
-          if (session.selectedStartsAt != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              '${isArabic ? 'الموعد المؤكد' : 'Confirmed time'}: ${formatHelpSessionDateTime(context, session.selectedStartsAt!, session.learnerTimeZone)}',
-              style: AppTextStyles.label(context),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
+    if (actions.canAcceptAlternative) {
+      primary = HelpSessionActionSpec(
+        label: ProjectHelpSessionsL10n.confirmTime.resolve(context),
+        onPressed: () => _acceptAlternative(session),
+      );
+      secondary.add(
+        HelpSessionActionSpec(
+          label: ProjectHelpSessionsL10n.rejectTime.resolve(context),
+          onPressed: actions.canRejectAlternative
+              ? () => _rejectAlternative(session)
+              : null,
+          destructive: true,
+        ),
+      );
+    }
 
-class _StatusSection extends StatelessWidget {
-  const _StatusSection({required this.session});
+    if (actions.canCancel &&
+        !actions.canRejectAlternative &&
+        session.status != ProjectHelpSessionStatus.alternativeProposed) {
+      management.add(
+        HelpSessionActionSpec(
+          label: ProjectHelpSessionsL10n.cancelRequest.resolve(context),
+          onPressed: () => _cancelSession(session),
+        ),
+      );
+    } else if (actions.canCancel &&
+        session.status == ProjectHelpSessionStatus.alternativeProposed) {
+      management.add(
+        HelpSessionActionSpec(
+          label: ProjectHelpSessionsL10n.cancelRequest.resolve(context),
+          onPressed: () => _cancelSession(session),
+        ),
+      );
+    } else if (actions.canCancel) {
+      management.add(
+        HelpSessionActionSpec(
+          label: ProjectHelpSessionsL10n.cancelRequest.resolve(context),
+          onPressed: () => _cancelSession(session),
+        ),
+      );
+    }
 
-  final ProjectHelpSession session;
-
-  @override
-  Widget build(BuildContext context) {
+    Widget? progressChild;
     if (session.status == ProjectHelpSessionStatus.zoomPending) {
-      return _Section(
-        title: ProjectHelpSessionsL10n.zoomPreparing.resolve(context),
-        child: Text(ProjectHelpSessionsL10n.zoomPreparingBody.resolve(context)),
-      );
-    }
-    if (session.status == ProjectHelpSessionStatus.schedulingFailed) {
-      return _Section(
-        title: ProjectHelpSessionsL10n.zoomDelayed.resolve(context),
-        child: Text(ProjectHelpSessionsL10n.zoomDelayedBody.resolve(context)),
-      );
-    }
-    if (session.status == ProjectHelpSessionStatus.scheduled) {
-      return _Section(
-        title: ProjectHelpSessionsL10n.statusLabel(session.status).resolve(context),
-        child: Text(
-          session.allowedActions.canJoin
-              ? ProjectHelpSessionsL10n.joinZoom.resolve(context)
-              : ProjectHelpSessionsL10n.joinOpensLater.resolve(context),
+      progressChild = ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: LinearProgressIndicator(
+          minHeight: 4,
+          value: 0.35,
+          backgroundColor: Theme.of(context).dividerColor,
         ),
       );
     }
-    if (session.status == ProjectHelpSessionStatus.completed) {
-      final isArabic = Localizations.localeOf(context).languageCode == 'ar';
-      return _Section(
-        title: ProjectHelpSessionsL10n.completedTitle.resolve(context),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(ProjectHelpSessionsL10n.completedLearnerBody.resolve(context)),
-            if (session.completedAt != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                '${isArabic ? 'وقت الإكمال' : 'Completed'}: ${formatHelpSessionDateTime(context, session.completedAt!, session.learnerTimeZone)}',
-                style: AppTextStyles.label(context),
-              ),
-            ],
-            if (session.selectedStartsAt != null) ...[
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                '${isArabic ? 'الموعد المجدول' : 'Scheduled time'}: ${formatHelpSessionDateTime(context, session.selectedStartsAt!, session.learnerTimeZone)}',
-              ),
-              Text(
-                '${isArabic ? 'المدة' : 'Duration'}: ${session.durationMinutes} ${isArabic ? 'دقيقة' : 'minutes'}',
-              ),
-              Text(
-                ProjectHelpSessionsL10n.timezoneDisplay(session.learnerTimeZone)
-                    .resolve(context),
-                style: AppTextStyles.label(context),
-              ),
-            ],
-          ],
-        ),
-      );
-    }
-    return const SizedBox.shrink();
+
+    return HelpSessionActionPanel(
+      title: session.status.isActive
+          ? ProjectHelpSessionsL10n.nextStep.resolve(context)
+          : null,
+      overview: HelpSessionStatusCopy.overview(
+        context: context,
+        session: session,
+        role: HelpSessionDetailRole.learner,
+      ),
+      primary: primary,
+      secondary: secondary,
+      management: management,
+      managementTitle: management.isNotEmpty
+          ? ProjectHelpSessionsL10n.sessionManagement.resolve(context)
+          : null,
+      progressChild: progressChild,
+    );
   }
-}
 
-class _ActionsSection extends StatelessWidget {
-  const _ActionsSection({
-    required this.session,
-    required this.joinInFlight,
-    required this.notebookInFlight,
-    required this.onAcceptAlternative,
-    required this.onRejectAlternative,
-    required this.onCancel,
-    required this.onJoin,
-    required this.onAddNotebookNotes,
-    required this.onOpenNotebook,
-  });
-
-  final ProjectHelpSession session;
-  final bool joinInFlight;
-  final bool notebookInFlight;
-  final VoidCallback onAcceptAlternative;
-  final VoidCallback onRejectAlternative;
-  final VoidCallback onCancel;
-  final VoidCallback onJoin;
-  final VoidCallback onAddNotebookNotes;
-  final VoidCallback onOpenNotebook;
-
-  @override
-  Widget build(BuildContext context) {
-    final actions = session.allowedActions;
-    if (session.status == ProjectHelpSessionStatus.completed) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          FilledButton(
-            onPressed: notebookInFlight ? null : onAddNotebookNotes,
-            child: notebookInFlight
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(
-                    ProjectHelpSessionsL10n.addSessionNotesToNotebook.resolve(
-                      context,
-                    ),
-                  ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          OutlinedButton(
-            onPressed: onOpenNotebook,
-            child: Text(
-              ProjectHelpSessionsL10n.openProjectNotebook.resolve(context),
-            ),
-          ),
-        ],
-      );
-    }
+  Widget _buildMainContent(ProjectHelpSession session) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (actions.canJoin)
-          FilledButton(
-            onPressed: joinInFlight ? null : onJoin,
-            child: joinInFlight
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(ProjectHelpSessionsL10n.joinZoom.resolve(context)),
+        HelpSessionProblemSection(session: session),
+        const SizedBox(height: AppSpacing.md),
+        if (session.status == ProjectHelpSessionStatus.pending ||
+            session.status == ProjectHelpSessionStatus.alternativeProposed)
+          HelpSessionProposedTimesSection(
+            session: session,
+            highlightAlternative:
+                session.status == ProjectHelpSessionStatus.alternativeProposed,
           ),
-        if (actions.canAcceptAlternative) ...[
-          FilledButton(
-            onPressed: onAcceptAlternative,
-            child: Text(ProjectHelpSessionsL10n.confirmTime.resolve(context)),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          OutlinedButton(
-            onPressed: onRejectAlternative,
-            child: Text(ProjectHelpSessionsL10n.rejectTime.resolve(context)),
-          ),
-        ],
-        if (actions.canCancel) ...[
-          const SizedBox(height: AppSpacing.sm),
-          OutlinedButton(
-            onPressed: onCancel,
-            child: Text(ProjectHelpSessionsL10n.confirmCancel.resolve(context)),
-          ),
-        ],
+        if (session.selectedStartsAt != null &&
+            session.status != ProjectHelpSessionStatus.pending)
+          ...[
+            const SizedBox(height: AppSpacing.md),
+            HelpSessionSelectedTimeCard(
+              session: session,
+              joinAvailableAt: session.joinAvailableAt,
+              joinClosesAt: session.joinClosesAt,
+              availabilityNote: session.status == ProjectHelpSessionStatus.scheduled &&
+                      !session.allowedActions.canJoin
+                  ? ProjectHelpSessionsL10n.joinOpensLater.resolve(context)
+                  : session.status == ProjectHelpSessionStatus.schedulingFailed
+                      ? ProjectHelpSessionsL10n.zoomDelayedBody.resolve(context)
+                      : null,
+              emphasize: session.status == ProjectHelpSessionStatus.scheduled,
+            ),
+          ],
+        const SizedBox(height: AppSpacing.md),
+        HelpSessionTimelineSection(session: session),
       ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sessionAsync =
+        ref.watch(learnerHelpSessionDetailProvider(widget.sessionId));
+
+    return sessionAsync.when(
+      loading: () => HelpSessionDetailShell(
+        homeRoute: learnerHelpSessionsRoute,
+        listTitle: ProjectHelpSessionsL10n.listTitle.resolve(context),
+        backRoute: learnerHelpSessionsRoute,
+        isLoading: true,
+        isError: false,
+        onRetry: _refresh,
+      ),
+      error: (_, _) => HelpSessionDetailShell(
+        homeRoute: learnerHelpSessionsRoute,
+        listTitle: ProjectHelpSessionsL10n.listTitle.resolve(context),
+        backRoute: learnerHelpSessionsRoute,
+        isLoading: false,
+        isError: true,
+        onRetry: _refresh,
+      ),
+      data: (fetched) {
+        final session = resolveCanonicalHelpSession(
+          ref,
+          widget.sessionId,
+          fetched,
+          authorView: false,
+        );
+        final buildRoute = '/learning/${session.project.id}/build';
+        final isTerminal = session.status == ProjectHelpSessionStatus.declined ||
+            session.status == ProjectHelpSessionStatus.cancelled ||
+            session.status == ProjectHelpSessionStatus.completed;
+
+        return HelpSessionLiveRefresh(
+          sessionId: widget.sessionId,
+          authorView: false,
+          status: session.status,
+          child: HelpSessionDetailShell(
+          homeRoute: learnerHelpSessionsRoute,
+          listTitle: ProjectHelpSessionsL10n.listTitle.resolve(context),
+          backRoute: learnerHelpSessionsRoute,
+          buildRoute: buildRoute,
+          buildRouteLabel: ProjectHelpSessionsL10n.backToProject.resolve(context),
+          isLoading: false,
+          isError: false,
+          onRetry: _refresh,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              HelpSessionHeroHeader(
+                session: session,
+                role: HelpSessionDetailRole.learner,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              if (isTerminal)
+                HelpSessionTerminalStateCard(
+                  session: session,
+                  viewerIsLearner: true,
+                  onBackToBuild: session.status == ProjectHelpSessionStatus.declined
+                      ? () => context.go(buildRoute)
+                      : null,
+                )
+              else
+                HelpSessionDetailLayout(
+                  main: _buildMainContent(session),
+                  sidebar: _buildActionPanel(session),
+                ),
+              if (isTerminal &&
+                  session.status == ProjectHelpSessionStatus.completed) ...[
+                const SizedBox(height: AppSpacing.md),
+                _buildActionPanel(session),
+              ],
+            ],
+          ),
+        ),
+        );
+      },
     );
   }
 }

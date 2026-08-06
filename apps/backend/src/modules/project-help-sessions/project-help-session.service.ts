@@ -1,5 +1,6 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
+import { logger } from '../../observability/logger.js';
 import { AppError } from '../../utils/app-error.js';
 import { isPrismaCode, runSerializableTransaction } from '../../utils/transaction-retry.js';
 
@@ -333,7 +334,7 @@ export const createProjectHelpSessionRequest = async (
     if (!session) {
       throw new AppError('Help session not found.', 500, 'INTERNAL_ERROR');
     }
-    await notifyProjectHelpSessionRequested(session);
+    await safeNotifyProjectHelpSessionRequested(session);
     return mapProjectHelpSessionPrivateDto(session, 'learner');
   } catch (error) {
     if (isPrismaCode(error, 'P2002')) {
@@ -392,7 +393,9 @@ export const authorAcceptProjectHelpSessionOption = async (
     throw notFoundHelpSession();
   }
   if (priorStatus !== 'ZOOM_PENDING' && updated.status === 'ZOOM_PENDING') {
-    await notifyProjectHelpSessionAcceptedByAuthor(updated);
+    await safeProjectHelpSessionNotify('accepted-by-author', updated.id, () =>
+      notifyProjectHelpSessionAcceptedByAuthor(updated),
+    );
   }
   return ensureZoomMeetingForProjectHelpSession(sessionId, 'author', authorId);
 };
@@ -469,7 +472,9 @@ export const authorProposeProjectHelpSessionAlternative = async (
     throw notFoundHelpSession();
   }
   if (priorStatus === 'PENDING' && updated.status === 'ALTERNATIVE_PROPOSED') {
-    await notifyProjectHelpSessionAlternativeProposed(updated);
+    await safeProjectHelpSessionNotify('alternative-proposed', updated.id, () =>
+      notifyProjectHelpSessionAlternativeProposed(updated),
+    );
   }
   return mapProjectHelpSessionPrivateDto(updated, 'author');
 };
@@ -511,7 +516,9 @@ export const authorDeclineProjectHelpSession = async (
   if (!updated) {
     throw notFoundHelpSession();
   }
-  await notifyProjectHelpSessionDeclined(updated);
+  await safeProjectHelpSessionNotify('declined', updated.id, () =>
+    notifyProjectHelpSessionDeclined(updated),
+  );
   return mapProjectHelpSessionPrivateDto(updated, 'author');
 };
 
@@ -564,7 +571,9 @@ export const learnerAcceptProjectHelpSessionAlternative = async (
     updated.status === 'ZOOM_PENDING' &&
     updated.selectedTimeOptionId === alternative.id
   ) {
-    await notifyProjectHelpSessionAlternativeAccepted(updated);
+    await safeProjectHelpSessionNotify('alternative-accepted', updated.id, () =>
+      notifyProjectHelpSessionAlternativeAccepted(updated),
+    );
   }
   return ensureZoomMeetingForProjectHelpSession(sessionId, 'learner', learnerId);
 };
@@ -601,7 +610,9 @@ export const learnerRejectProjectHelpSessionAlternative = async (
   if (!updated) {
     throw notFoundHelpSession();
   }
-  await notifyProjectHelpSessionAlternativeRejected(updated);
+  await safeProjectHelpSessionNotify('alternative-rejected', updated.id, () =>
+    notifyProjectHelpSessionAlternativeRejected(updated),
+  );
   return mapProjectHelpSessionPrivateDto(updated, 'learner');
 };
 
@@ -680,10 +691,12 @@ export const cancelProjectHelpSession = async (input: {
   if (!updated) {
     throw notFoundHelpSession();
   }
-  await notifyProjectHelpSessionCancelled({
-    session: updated,
-    cancelledById: input.actorId,
-  });
+  await safeProjectHelpSessionNotify('cancelled', updated.id, () =>
+    notifyProjectHelpSessionCancelled({
+      session: updated,
+      cancelledById: input.actorId,
+    }),
+  );
   return mapProjectHelpSessionPrivateDto(
     updated,
     input.actorRole === 'learner' ? 'learner' : 'author',
@@ -770,7 +783,9 @@ export const authorCompleteProjectHelpSession = async (
   }
 
   if (transitioned) {
-    await notifyProjectHelpSessionCompleted(updated);
+    await safeProjectHelpSessionNotify('completed', updated.id, () =>
+      notifyProjectHelpSessionCompleted(updated),
+    );
   }
 
   return mapProjectHelpSessionPrivateDto(updated, 'author');
@@ -798,9 +813,37 @@ export const getAuthorProjectHelpSession = async (
   return mapProjectHelpSessionPrivateDto(session, 'author');
 };
 
+const safeNotifyProjectHelpSessionRequested = async (
+  session: NonNullable<Awaited<ReturnType<typeof findProjectHelpSessionDetail>>>,
+) => {
+  await safeProjectHelpSessionNotify('requested', session.id, () =>
+    notifyProjectHelpSessionRequested(session),
+  );
+};
+
+const safeProjectHelpSessionNotify = async (
+  operation: string,
+  sessionId: string,
+  notify: () => Promise<unknown>,
+) => {
+  try {
+    await notify();
+  } catch (error) {
+    logger.warn(
+      {
+        operation: `project-help-session.notify.${operation}`,
+        sessionId,
+        err: error instanceof Error ? error.message : String(error),
+      },
+      'Project help session notification failed after state change was saved',
+    );
+  }
+};
+
 export const listLearnerProjectHelpSessionViews = async (input: {
   learnerId: string;
   status?: ProjectHelpSessionStatus;
+  buildId?: string;
   page: number;
   limit: number;
 }) =>

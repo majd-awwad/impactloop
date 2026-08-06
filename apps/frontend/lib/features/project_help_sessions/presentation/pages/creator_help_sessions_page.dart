@@ -11,11 +11,34 @@ import '../../application/project_help_sessions_providers.dart';
 import '../l10n/project_help_sessions_l10n.dart';
 import '../widgets/author_help_session_list_card.dart';
 
-class CreatorHelpSessionsPage extends ConsumerWidget {
-  const CreatorHelpSessionsPage({super.key});
+class CreatorHelpSessionsPage extends ConsumerStatefulWidget {
+  const CreatorHelpSessionsPage({super.key, this.initialProjectId});
+
+  final String? initialProjectId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CreatorHelpSessionsPage> createState() =>
+      _CreatorHelpSessionsPageState();
+}
+
+class _CreatorHelpSessionsPageState
+    extends ConsumerState<CreatorHelpSessionsPage> {
+  @override
+  void initState() {
+    super.initState();
+    final projectId = widget.initialProjectId?.trim();
+    if (projectId != null && projectId.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        ref.read(authorHelpSessionsQueryProvider.notifier).setProjectId(projectId);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final query = ref.watch(authorHelpSessionsQueryProvider);
     final sessionsAsync = ref.watch(authorHelpSessionsProvider);

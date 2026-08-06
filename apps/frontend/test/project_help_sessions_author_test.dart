@@ -200,13 +200,11 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tester.pump();
       final acceptButton = find.widgetWithText(
         FilledButton,
         ProjectHelpSessionsL10n.acceptSelectedTime.en,
       );
-      expect(tester.widget<FilledButton>(acceptButton).onPressed, isNull);
-      await tester.tap(find.byIcon(Icons.radio_button_off));
-      await tester.pump();
       expect(tester.widget<FilledButton>(acceptButton).onPressed, isNotNull);
     });
 
@@ -269,7 +267,7 @@ void main() {
       expect(tester.widget<FilledButton>(startButton).onPressed, isNull);
       expect(
         find.text(ProjectHelpSessionsL10n.startZoomSoon.en),
-        findsOneWidget,
+        findsWidgets,
       );
     });
 

@@ -28,6 +28,7 @@ class _HelpSessionBoundaryRefreshState
     extends ConsumerState<HelpSessionBoundaryRefresh> {
   Timer? _timer;
   DateTime? _scheduledBoundaryAt;
+  bool _pastBoundaryCatchUpScheduled = false;
 
   @override
   void dispose() {
@@ -38,6 +39,9 @@ class _HelpSessionBoundaryRefreshState
   @override
   void didUpdateWidget(covariant HelpSessionBoundaryRefresh oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.boundaryAt != widget.boundaryAt) {
+      _pastBoundaryCatchUpScheduled = false;
+    }
     _scheduleBoundaryTimer();
   }
 
@@ -52,24 +56,35 @@ class _HelpSessionBoundaryRefreshState
     if (boundary == null || widget.isBoundaryReached) {
       _timer?.cancel();
       _scheduledBoundaryAt = null;
+      _pastBoundaryCatchUpScheduled = false;
       return;
     }
-    if (_scheduledBoundaryAt == boundary) {
+    if (_scheduledBoundaryAt == boundary && _timer != null) {
       return;
     }
     _scheduledBoundaryAt = boundary;
     _timer?.cancel();
     final delay = boundary.difference(DateTime.now());
-    if (!delay.isNegative && delay != Duration.zero) {
-      _timer = Timer(delay, () {
-        if (!mounted) {
+    if (delay.isNegative) {
+      if (_pastBoundaryCatchUpScheduled) {
+        return;
+      }
+      _pastBoundaryCatchUpScheduled = true;
+      _timer = Timer(const Duration(milliseconds: 500), () {
+        if (!mounted || widget.isBoundaryReached) {
           return;
         }
         widget.onBoundary();
       });
       return;
     }
-    widget.onBoundary();
+    _pastBoundaryCatchUpScheduled = false;
+    _timer = Timer(delay, () {
+      if (!mounted) {
+        return;
+      }
+      widget.onBoundary();
+    });
   }
 
   @override

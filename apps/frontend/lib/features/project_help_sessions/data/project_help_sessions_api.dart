@@ -11,6 +11,12 @@ class ProjectHelpSessionsApi {
   static const _learnerSessionsPath = '/api/project-help-sessions/learner';
   static const _authorSessionsPath = '/api/project-help-sessions/author';
 
+  /// Zoom start/join can call the real Zoom API and exceed the default client timeout.
+  static final _zoomRequestOptions = Options(
+    sendTimeout: const Duration(seconds: 60),
+    receiveTimeout: const Duration(seconds: 60),
+  );
+
   String _availabilityPath(String projectId) =>
       '/api/learning-projects/$projectId/help-sessions/availability';
 
@@ -41,6 +47,7 @@ class ProjectHelpSessionsApi {
     int page = 1,
     int limit = 20,
     String? status,
+    String? buildId,
   }) {
     final queryParameters = <String, dynamic>{
       'page': page,
@@ -48,6 +55,9 @@ class ProjectHelpSessionsApi {
     };
     if (status != null) {
       queryParameters['status'] = status;
+    }
+    if (buildId != null) {
+      queryParameters['buildId'] = buildId;
     }
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>(
@@ -90,7 +100,9 @@ class ProjectHelpSessionsApi {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '$_learnerSessionsPath/$sessionId/cancel',
-        data: {'reason': reason},
+        data: reason == null || reason.trim().isEmpty
+            ? const <String, dynamic>{}
+            : {'reason': reason.trim()},
       ),
       ProjectHelpSession.fromJson,
     );
@@ -100,6 +112,7 @@ class ProjectHelpSessionsApi {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '$_learnerSessionsPath/$sessionId/zoom/join',
+        options: _zoomRequestOptions,
       ),
       ProjectHelpSessionJoinResult.fromJson,
     );
@@ -203,7 +216,9 @@ class ProjectHelpSessionsApi {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '$_authorSessionsPath/$sessionId/cancel',
-        data: {'reason': reason},
+        data: reason == null || reason.trim().isEmpty
+            ? const <String, dynamic>{}
+            : {'reason': reason.trim()},
       ),
       ProjectHelpSession.fromJson,
     );
@@ -213,6 +228,7 @@ class ProjectHelpSessionsApi {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '$_authorSessionsPath/$sessionId/zoom/retry',
+        options: _zoomRequestOptions,
       ),
       ProjectHelpSession.fromJson,
     );
@@ -222,6 +238,7 @@ class ProjectHelpSessionsApi {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '$_authorSessionsPath/$sessionId/zoom/start',
+        options: _zoomRequestOptions,
       ),
       ProjectHelpSessionStartResult.fromJson,
     );

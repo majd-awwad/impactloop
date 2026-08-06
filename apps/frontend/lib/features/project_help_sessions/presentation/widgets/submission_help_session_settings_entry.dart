@@ -39,53 +39,75 @@ class SubmissionHelpSessionSettingsEntry extends ConsumerWidget {
             : ProjectHelpSessionsL10n.settingsPaused;
         return Padding(
           padding: const EdgeInsetsDirectional.only(top: AppSpacing.md),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => context.push(
-                creatorProjectHelpSessionSettingsRoute(submission.id),
-              ),
-              borderRadius: AppRadius.mdAll,
-              child: Container(
-                padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  borderRadius: AppRadius.mdAll,
-                  border: Border.all(
-                    color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => context.push(
+                    creatorProjectHelpSessionSettingsRoute(submission.id),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.support_agent_outlined),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            ProjectHelpSessionsL10n.submissionSettingsLink
-                                .resolve(context),
-                            style: AppTextStyles.label(context),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          AppStatusBadge(
-                            label: statusLabel.resolve(context),
-                            tone: settings.isEnabled
-                                ? AppStatusTone.success
-                                : AppStatusTone.neutral,
-                          ),
-                        ],
+                  borderRadius: AppRadius.mdAll,
+                  child: Container(
+                    padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      borderRadius: AppRadius.mdAll,
+                      border: Border.all(
+                        color: Theme.of(context)
+                            .dividerColor
+                            .withValues(alpha: 0.4),
                       ),
                     ),
-                    Icon(
-                      Directionality.of(context) == TextDirection.rtl
-                          ? Icons.chevron_left
-                          : Icons.chevron_right,
+                    child: Row(
+                      children: [
+                        const Icon(Icons.support_agent_outlined),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                ProjectHelpSessionsL10n.submissionSettingsLink
+                                    .resolve(context),
+                                style: AppTextStyles.label(context),
+                              ),
+                              const SizedBox(height: AppSpacing.xs),
+                              AppStatusBadge(
+                                label: statusLabel.resolve(context),
+                                tone: settings.isEnabled
+                                    ? AppStatusTone.success
+                                    : AppStatusTone.neutral,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Directionality.of(context) == TextDirection.rtl
+                              ? Icons.chevron_left
+                              : Icons.chevron_right,
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: AppSpacing.sm),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(
+                  onPressed: () => context.push(
+                    '$creatorHelpSessionsRoute?projectId=${Uri.encodeComponent(submission.id)}',
+                  ),
+                  icon: const Icon(Icons.forum_outlined),
+                  label: Text(
+                    ProjectHelpSessionsL10n.viewHelpRequestsAction.resolve(
+                      context,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },

@@ -80,7 +80,7 @@ final learnerHelpSessionsProvider =
     FutureProvider.autoDispose<ProjectHelpSessionListResult>((ref) async {
   await ensureLearnerBuildsSessionReady(ref);
   final query = ref.watch(learnerHelpSessionsQueryProvider);
-  final api = ref.watch(projectHelpSessionsApiProvider);
+  final api = ref.read(projectHelpSessionsApiProvider);
   final result = await api.fetchSessions(
     page: query.page,
     limit: query.limit,
@@ -106,30 +106,24 @@ final learnerHelpSessionsProvider =
 final learnerHelpSessionDetailProvider = FutureProvider.autoDispose
     .family<ProjectHelpSession, String>((ref, sessionId) async {
   await ensureLearnerBuildsSessionReady(ref);
-  return ref.watch(projectHelpSessionsApiProvider).fetchSession(sessionId);
+  return ref.read(projectHelpSessionsApiProvider).fetchSession(sessionId);
 });
 
 final projectHelpSessionAvailabilityProvider = FutureProvider.autoDispose
     .family<ProjectHelpSessionAvailability, String>((ref, projectId) async {
   await ensureLearnerBuildsSessionReady(ref);
-  return ref
-      .watch(projectHelpSessionsApiProvider)
-      .fetchAvailability(projectId);
+  return ref.read(projectHelpSessionsApiProvider).fetchAvailability(projectId);
 });
 
 final activeHelpSessionForBuildProvider = FutureProvider.autoDispose
     .family<ProjectHelpSession?, String>((ref, buildId) async {
   await ensureLearnerBuildsSessionReady(ref);
-  final result = await ref.watch(projectHelpSessionsApiProvider).fetchSessions(
+  final result = await ref.read(projectHelpSessionsApiProvider).fetchSessions(
         page: 1,
-        limit: 50,
+        limit: 5,
+        buildId: buildId,
       );
-  final matches = result.items
-      .where(
-        (session) =>
-            session.build.id == buildId && session.status.isActive,
-      )
-      .toList();
+  final matches = result.items.where((session) => session.status.isActive).toList();
   if (matches.isEmpty) {
     return null;
   }
@@ -317,11 +311,13 @@ class AuthorHelpSessionsQuery {
     this.filter = AuthorHelpSessionListFilter.all,
     this.page = 1,
     this.limit = 20,
+    this.projectId,
   });
 
   final AuthorHelpSessionListFilter filter;
   final int page;
   final int limit;
+  final String? projectId;
 
   String? get apiStatus => switch (filter) {
         AuthorHelpSessionListFilter.scheduled => 'SCHEDULED',
@@ -339,7 +335,22 @@ class AuthorHelpSessionsQueryNotifier extends Notifier<AuthorHelpSessionsQuery> 
   AuthorHelpSessionsQuery build() => const AuthorHelpSessionsQuery();
 
   void setFilter(AuthorHelpSessionListFilter filter) {
-    state = AuthorHelpSessionsQuery(filter: filter, page: 1, limit: state.limit);
+    state = AuthorHelpSessionsQuery(
+      filter: filter,
+      page: 1,
+      limit: state.limit,
+      projectId: state.projectId,
+    );
+  }
+
+  void setProjectId(String? projectId) {
+    final normalized = projectId?.trim();
+    state = AuthorHelpSessionsQuery(
+      filter: state.filter,
+      page: 1,
+      limit: state.limit,
+      projectId: normalized == null || normalized.isEmpty ? null : normalized,
+    );
   }
 }
 
@@ -378,11 +389,12 @@ final authorHelpSessionsProvider =
     FutureProvider.autoDispose<ProjectHelpSessionListResult>((ref) async {
   await ensureLearnerBuildsSessionReady(ref);
   final query = ref.watch(authorHelpSessionsQueryProvider);
-  final api = ref.watch(projectHelpSessionsApiProvider);
+  final api = ref.read(projectHelpSessionsApiProvider);
   final result = await api.fetchAuthorSessions(
     page: query.page,
     limit: query.limit,
     status: query.apiStatus,
+    projectId: query.projectId,
   );
   Iterable<ProjectHelpSession> items = result.items;
   if (query.filter != AuthorHelpSessionListFilter.all &&
@@ -416,27 +428,29 @@ final authorHelpSessionsProvider =
 final authorHelpSessionDetailProvider = FutureProvider.autoDispose
     .family<ProjectHelpSession, String>((ref, sessionId) async {
   await ensureLearnerBuildsSessionReady(ref);
-  return ref.watch(projectHelpSessionsApiProvider).fetchAuthorSession(sessionId);
+  return ref.read(projectHelpSessionsApiProvider).fetchAuthorSession(sessionId);
 });
 
 final projectHelpSessionSettingsProvider = FutureProvider.autoDispose
     .family<ProjectHelpSessionSettings, String>((ref, projectId) async {
   await ensureLearnerBuildsSessionReady(ref);
-  return ref.watch(projectHelpSessionsApiProvider).fetchSettings(projectId);
+  return ref.read(projectHelpSessionsApiProvider).fetchSettings(projectId);
+});
+
+final hasAuthoredProjectSubmissionsProvider =
+    FutureProvider.autoDispose<bool>((ref) async {
+  final submissions = await ref.read(
+    myLearningProjectSubmissionsProvider(
+      const LearningProjectSubmissionsQuery(page: 1, limit: 1),
+    ).future,
+  );
+  return submissions.total > 0;
 });
 
 final authorHelpSessionsEntryVisibleProvider =
     FutureProvider.autoDispose<bool>((ref) async {
   await ensureLearnerBuildsSessionReady(ref);
-  final submissions = await ref.read(
-    myLearningProjectSubmissionsProvider(const LearningProjectSubmissionsQuery()).future,
-  );
-  final hasPublishedProject = submissions.items.any(
-    (item) =>
-        item.status == LearningProjectSubmissionStatus.published &&
-        item.id.trim().isNotEmpty,
-  );
-  if (hasPublishedProject) {
+  if (await ref.watch(hasAuthoredProjectSubmissionsProvider.future)) {
     return true;
   }
   final sessions = await ref

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +12,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/format/localized_formatters.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -17,6 +20,8 @@ import '../../../auth/data/models/user.dart';
 import '../../application/notification_display.dart';
 import '../../application/notifications_provider.dart';
 import '../../data/models/app_notification.dart';
+import '../../../project_help_sessions/application/help_session_mutation_feedback.dart';
+import '../../../project_help_sessions/presentation/l10n/project_help_sessions_l10n.dart';
 import '../notification_visual_presentation.dart';
 import '../notification_visuals.dart';
 
@@ -95,6 +100,7 @@ class _NotificationsBody extends ConsumerStatefulWidget {
 
 class _NotificationsBodyState extends ConsumerState<_NotificationsBody> {
   bool _refreshInFlight = false;
+  String? _openingNotificationId;
 
   Future<void> _handleRefresh() async {
     if (_refreshInFlight) {
@@ -322,15 +328,7 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody> {
     WidgetRef ref,
     AppNotification notification,
   ) async {
-    if (!notification.isRead) {
-      if (ref.exists(notificationsListProvider)) {
-        await markNotificationRead(ref, notification.id);
-      } else {
-        await markNotificationReadWithoutList(ref, notification.id);
-      }
-    }
-
-    if (!context.mounted) {
+    if (_openingNotificationId == notification.id) {
       return;
     }
 
@@ -346,20 +344,84 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody> {
     );
 
     if (route == null) {
+      if (!context.mounted) {
+        return;
+      }
+      if (isProjectHelpSessionNotification(notification)) {
+        showErrorSnackBar(
+          context,
+          ProjectHelpSessionsL10n.notificationOpenUnavailable.resolve(context),
+        );
+      }
       return;
     }
 
-    if (_isDriverDeliveryRoute(route)) {
-      context.go(route);
-      return;
-    }
+    _openingNotificationId = notification.id;
+    try {
+      if (!context.mounted) {
+        return;
+      }
 
-    context.push(route);
+      _prepareHelpSessionDestination(ref, route);
+
+      if (_isDriverDeliveryRoute(route)) {
+        context.go(route);
+      } else {
+        context.push(route);
+      }
+
+      if (!notification.isRead) {
+        unawaited(_markNotificationReadInBackground(ref, notification.id));
+      }
+    } finally {
+      if (_openingNotificationId == notification.id) {
+        _openingNotificationId = null;
+      }
+    }
+  }
+
+  Future<void> _markNotificationReadInBackground(
+    WidgetRef ref,
+    String notificationId,
+  ) async {
+    try {
+      if (ref.exists(notificationsListProvider)) {
+        await ref
+            .read(notificationsListProvider.notifier)
+            .markReadLocal(notificationId);
+      } else {
+        await markNotificationReadWithoutList(ref, notificationId);
+      }
+    } catch (_) {
+      // Navigation must not depend on mark-read success.
+    }
   }
 }
 
 bool _isDriverDeliveryRoute(String route) {
   return route == '/driver' || route.startsWith('/driver/');
+}
+
+void _prepareHelpSessionDestination(WidgetRef ref, String route) {
+  final learnerMatch =
+      RegExp(r'^/learner/help-sessions/([^/]+)$').firstMatch(route);
+  if (learnerMatch != null) {
+    prepareHelpSessionDetailNavigation(
+      ref,
+      sessionId: learnerMatch.group(1)!,
+      authorView: false,
+    );
+    return;
+  }
+  final authorMatch =
+      RegExp(r'^/creator/help-sessions/([^/]+)$').firstMatch(route);
+  if (authorMatch != null) {
+    prepareHelpSessionDetailNavigation(
+      ref,
+      sessionId: authorMatch.group(1)!,
+      authorView: true,
+    );
+  }
 }
 
 class _NotificationsListView extends StatelessWidget {

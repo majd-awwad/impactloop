@@ -188,12 +188,14 @@ export const getAuthorAlternativeOption = (
 export const listLearnerProjectHelpSessions = async (input: {
   learnerId: string;
   status?: Prisma.EnumProjectHelpSessionStatusFilter['equals'];
+  buildId?: string;
   page: number;
   limit: number;
 }) => {
   const where: Prisma.ProjectHelpSessionWhereInput = {
     learnerId: input.learnerId,
     ...(input.status ? { status: input.status } : {}),
+    ...(input.buildId ? { buildId: input.buildId } : {}),
   };
 
   const [items, total] = await Promise.all([

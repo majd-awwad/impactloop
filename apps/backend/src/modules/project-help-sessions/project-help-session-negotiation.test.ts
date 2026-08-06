@@ -466,6 +466,41 @@ describe('PHS-02 project help session negotiation', { concurrency: 1 }, () => {
       assert.equal(response.status, 400);
     });
 
+    test('17b project step uuid is accepted for same-project step', async () => {
+      const { learner, build, project } = await setupAuthorLearnerProject('step-uuid');
+      const step = await prisma.projectStep.findFirst({
+        where: { projectId: project.id },
+        orderBy: { stepNumber: 'asc' },
+      });
+      assert.ok(step);
+      const response = await postCreateRequestHttp(learner.id, build.id, {
+        ...defaultRequestInput(),
+        projectStepId: step.id,
+      });
+      assert.equal(response.status, 201);
+      const body = (await response.json()) as {
+        data?: { id?: string; projectStep?: { id?: string } | null };
+      };
+      assert.equal(body.data?.projectStep?.id, step.id);
+      assert.ok(body.data?.id);
+      await trackSession(body.data!.id!);
+    });
+
+    test('17c project id cannot be used as build id in request path', async () => {
+      const { learner, project } = await setupAuthorLearnerProject('project-as-build');
+      const response = await postCreateRequestHttp(
+        learner.id,
+        project.id,
+        defaultRequestInput(),
+      );
+      assert.equal(response.status, 400);
+      const body = (await response.json()) as {
+        error?: { code?: string; details?: { issues?: Array<{ path?: string }> } };
+      };
+      assert.equal(body.error?.code, 'VALIDATION_ERROR');
+      assert.equal(body.error?.details?.issues?.[0]?.path, 'buildId');
+    });
+
     test('18 cross-project step id is rejected', async () => {
       const { learner, build } = await setupAuthorLearnerProject('cross-step');
       const otherAuthor = await createLearner('other-step-author');
@@ -1019,6 +1054,7 @@ describe('PHS-02 project help session negotiation', { concurrency: 1 }, () => {
         actorRole: 'learner',
       });
       assert.equal(cancelled.status, 'CANCELLED');
+      assert.equal(cancelled.cancelledByRole, 'LEARNER');
     });
 
     test('52 author can cancel active session', async () => {
@@ -1030,6 +1066,7 @@ describe('PHS-02 project help session negotiation', { concurrency: 1 }, () => {
         actorRole: 'author',
       });
       assert.equal(cancelled.status, 'CANCELLED');
+      assert.equal(cancelled.cancelledByRole, 'AUTHOR');
     });
 
     test('53 unrelated user cannot cancel session', async () => {
@@ -1089,6 +1126,10 @@ describe('PHS-02 project help session negotiation', { concurrency: 1 }, () => {
       assert.equal(stored?.cancelledById, author.id);
       assert.equal(stored?.cancellationReason, 'Schedule changed');
       assert.ok(stored?.cancelledAt);
+      const learnerView = await getLearnerProjectHelpSession(learner.id, session.id);
+      assert.equal(learnerView?.cancelledByRole, 'AUTHOR');
+      const authorView = await getAuthorProjectHelpSession(author.id, session.id);
+      assert.equal(authorView?.cancelledByRole, 'AUTHOR');
     });
 
     test('56 cancellation clears activeKey', async () => {
@@ -1156,6 +1197,21 @@ describe('PHS-02 project help session negotiation', { concurrency: 1 }, () => {
       });
       assert.ok(list.items.every((item) => item.id === sessionA.id));
       assert.equal(list.items.length, 1);
+    });
+
+    test('59b learner list can filter by buildId', async () => {
+      const ctx = await setupAuthorLearnerProject('list-build-filter');
+      const session = await createTrackedRequest(ctx.learner.id, ctx.build.id);
+      const other = await setupAuthorLearnerProject('list-build-filter-other');
+      await createTrackedRequest(other.learner.id, other.build.id);
+      const list = await listLearnerProjectHelpSessionViews({
+        learnerId: ctx.learner.id,
+        buildId: ctx.build.id,
+        page: 1,
+        limit: 20,
+      });
+      assert.equal(list.items.length, 1);
+      assert.equal(list.items[0]?.id, session.id);
     });
 
     test('60 author list returns only authored sessions', async () => {

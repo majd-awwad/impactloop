@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../application/project_help_session_canonical_cache.dart';
+import '../../application/project_help_session_mutation.dart';
+import '../../application/project_help_session_timezone.dart';
 import '../../application/project_help_sessions_providers.dart';
 import '../../data/models/project_help_session_models.dart';
 import '../l10n/project_help_sessions_l10n.dart';
-import '../widgets/help_session_request_flow.dart';
 
 class CreatorProjectHelpSessionSettingsPage extends ConsumerStatefulWidget {
   const CreatorProjectHelpSessionSettingsPage({
@@ -29,7 +33,7 @@ class _CreatorProjectHelpSessionSettingsPageState
     extends ConsumerState<CreatorProjectHelpSessionSettingsPage> {
   ProjectHelpSessionSettings? _draft;
   final _weeklyLimitController = TextEditingController();
-  String? _errorText;
+  String? _inlineError;
 
   @override
   void dispose() {
@@ -44,14 +48,24 @@ class _CreatorProjectHelpSessionSettingsPageState
     }
   }
 
+  void _navigateAfterSave() {
+    final destination = learningProjectSubmissionDetailRoute(widget.projectId);
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go(destination);
+  }
+
   Future<void> _save() async {
     final draft = _draft;
     if (draft == null) {
       return;
     }
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
     if (draft.isEnabled && !draft.allow15Minutes && !draft.allow30Minutes) {
       setState(() {
-        _errorText = ProjectHelpSessionsL10n.errorMessage(
+        _inlineError = ProjectHelpSessionsL10n.errorMessage(
           'HELP_SESSION_NO_DURATION_ENABLED',
         );
       });
@@ -59,30 +73,47 @@ class _CreatorProjectHelpSessionSettingsPageState
     }
     if (draft.weeklyLimit < 1 || draft.weeklyLimit > 10) {
       setState(() {
-        _errorText = ProjectHelpSessionsL10n.errorMessage(
+        _inlineError = ProjectHelpSessionsL10n.errorMessage(
           'HELP_SESSION_WEEKLY_LIMIT_OUT_OF_RANGE',
         );
       });
       return;
     }
-    setState(() => _errorText = null);
+    setState(() => _inlineError = null);
+    Object? mutationError;
+    ProjectHelpSessionSettings? saved;
     try {
-      final saved = await ref
-          .read(projectHelpSessionActionControllerProvider.notifier)
-          .saveSettings(projectId: widget.projectId, settings: draft);
-      if (saved == null || !mounted) {
-        return;
-      }
-      setState(() {
-        _draft = saved;
-        _weeklyLimitController.text = '${saved.weeklyLimit}';
-      });
-      invalidateProjectHelpSessionSettings(ref, widget.projectId);
-    } catch (error) {
-      if (mounted) {
-        await handleHelpSessionRequestError(context, error);
-      }
+      saved = await runProjectHelpSessionMutation(
+        () => ref
+            .read(projectHelpSessionActionControllerProvider.notifier)
+            .saveSettings(projectId: widget.projectId, settings: draft),
+      );
+    } on ProjectHelpSessionMutationFailure catch (failure) {
+      mutationError = failure.error;
     }
+    if (!mounted) {
+      return;
+    }
+    if (mutationError != null) {
+      setState(() {
+        _inlineError = resolveProjectHelpSessionErrorFromObject(
+          mutationError!,
+          isArabic: isArabic,
+        );
+      });
+      return;
+    }
+    if (saved == null) {
+      return;
+    }
+    setState(() => _draft = saved);
+    await completeHelpSessionSettingsMutation(
+      ref: ref,
+      hostContext: context,
+      settings: saved,
+      successMessage: ProjectHelpSessionsL10n.settingsSavedSuccess.resolve(context),
+      onNavigate: _navigateAfterSave,
+    );
   }
 
   @override
@@ -114,7 +145,12 @@ class _CreatorProjectHelpSessionSettingsPageState
                     child: Text(ProjectHelpSessionsL10n.retry.resolve(context)),
                   ),
                 ),
-                data: (settings) {
+                data: (fetched) {
+                  final settings = resolveCanonicalHelpSessionSettings(
+                    ref,
+                    widget.projectId,
+                    fetched,
+                  );
                   _syncDraft(settings);
                   final draft = _draft ?? settings;
                   return Center(
@@ -225,10 +261,10 @@ class _CreatorProjectHelpSessionSettingsPageState
                                 color: palette.textSecondary,
                               ),
                             ),
-                            if (_errorText != null) ...[
+                            if (_inlineError != null) ...[
                               const SizedBox(height: AppSpacing.sm),
                               Text(
-                                _errorText!,
+                                _inlineError!,
                                 style: TextStyle(
                                   color: Theme.of(context).colorScheme.error,
                                 ),

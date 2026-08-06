@@ -36,6 +36,10 @@ String creatorHelpSessionDetailRoute(String sessionId) =>
 String creatorProjectHelpSessionSettingsRoute(String projectId) =>
     '/creator/projects/$projectId/help-sessions/settings';
 
+/// Canonical project submission detail route for a learner-authored project.
+String learningProjectSubmissionDetailRoute(String projectId) =>
+    '/learning/submissions/$projectId';
+
 /// Canonical private project notebook route for a specific build attempt.
 String learnerBuildNotebookRoute(String buildId, {String? pageId}) {
   final base = '/learner/builds/$buildId/notebook';

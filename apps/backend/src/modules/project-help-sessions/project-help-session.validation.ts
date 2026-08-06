@@ -65,7 +65,7 @@ export const projectHelpSessionBuildIdParamSchema = z.object({
 export const createProjectHelpSessionRequestSchema = z
   .object({
     problemDescription: z.string(),
-    projectStepId: z.string().cuid().nullable().optional(),
+    projectStepId: z.string().uuid().nullable().optional(), // ProjectStep.id is UUID (not CUID)
     durationMinutes: z.number().int(),
     learnerTimeZone: z.string().trim().min(1).max(PROJECT_HELP_SESSION_MAX_TIMEZONE_LENGTH),
     proposedTimes: z.array(z.string()).length(3),
@@ -152,6 +152,7 @@ export const cancelProjectHelpSessionSchema = z.object({
 
 export const listLearnerProjectHelpSessionsQuerySchema = paginationQuerySchema.extend({
   status: helpSessionStatusSchema.optional(),
+  buildId: z.string().cuid().optional(),
 });
 
 export const listAuthorProjectHelpSessionsQuerySchema = paginationQuerySchema.extend({

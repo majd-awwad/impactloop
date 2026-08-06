@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:frontend/app/router/navigation_extensions.dart';
+import 'package:frontend/core/errors/api_exception.dart';
 import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/learning_hub/domain/models/project_build.dart';
@@ -13,12 +14,10 @@ import 'package:frontend/features/notifications/data/models/app_notification.dar
 import 'package:frontend/features/project_help_sessions/application/project_help_session_timezone.dart';
 import 'package:frontend/features/project_help_sessions/application/project_help_sessions_providers.dart';
 import 'package:frontend/features/project_help_sessions/data/models/project_help_session_models.dart';
-import 'package:frontend/features/project_help_sessions/presentation/l10n/project_help_sessions_l10n.dart';
 import 'package:frontend/features/project_help_sessions/presentation/pages/learner_help_session_detail_page.dart';
 import 'package:frontend/features/project_help_sessions/presentation/pages/learner_help_sessions_page.dart';
 import 'package:frontend/features/project_help_sessions/presentation/widgets/build_help_session_section.dart';
 import 'package:frontend/features/project_help_sessions/presentation/widgets/help_session_request_form.dart';
-import 'package:frontend/features/profile/presentation/l10n/learner_profile_l10n.dart';
 import 'package:frontend/features/profile/presentation/widgets/learner_profile_dashboard_widgets.dart';
 
 ProjectBuild _testBuild({ProjectBuildStatus status = ProjectBuildStatus.inProgress}) {
@@ -151,6 +150,21 @@ Widget _wrap(Widget child, {List overrides = const []}) {
   );
 }
 
+Widget _requestForm({
+  ProjectBuild? build,
+  ProjectHelpSessionAvailability? availability,
+  bool isCompact = false,
+}) {
+  return Builder(
+    builder: (context) => ProjectHelpSessionRequestForm(
+      hostContext: context,
+      build: build ?? _testBuild(),
+      availability: availability ?? _available,
+      isCompact: isCompact,
+    ),
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -159,6 +173,22 @@ void main() {
       final local = DateTime(2026, 3, 10, 14, 30);
       final utc = projectHelpSessionLocalToUtc(local, 'Asia/Hebron');
       expect(utc.toIso8601String(), '2026-03-10T12:30:00.000Z');
+    });
+
+    test('maps validation envelope from ApiException', () {
+      const error = ApiException(
+        message: 'Validation failed',
+        code: 'VALIDATION_ERROR',
+        details: {
+          'issues': [
+            {'path': 'proposedTimes', 'message': 'Proposed times must be distinct.'},
+          ],
+        },
+      );
+      expect(
+        resolveProjectHelpSessionErrorFromObject(error, isArabic: false),
+        'Proposed times must be distinct.',
+      );
     });
 
     test('maps known backend codes to Arabic messages', () {
@@ -175,6 +205,13 @@ void main() {
           isArabic: false,
         ),
         contains('Meeting setup is delayed'),
+      );
+      expect(
+        resolveProjectHelpSessionErrorMessage(
+          'TIMEOUT',
+          isArabic: false,
+        ),
+        contains('longer than usual'),
       );
     });
   });
@@ -279,10 +316,7 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(
         _wrap(
-          ProjectHelpSessionRequestForm(
-            build: _testBuild(),
-            availability: _available,
-          ),
+          _requestForm(),
         ),
       );
       await tester.pumpAndSettle();
@@ -298,8 +332,7 @@ void main() {
     testWidgets('shows only allowed durations', (tester) async {
       await tester.pumpWidget(
         _wrap(
-          ProjectHelpSessionRequestForm(
-            build: _testBuild(),
+          _requestForm(
             availability: const ProjectHelpSessionAvailability(
               available: true,
               allowedDurations: [15],
@@ -325,10 +358,7 @@ void main() {
             ],
             supportedLocales: const [Locale('ar'), Locale('en')],
             home: Scaffold(
-              body: ProjectHelpSessionRequestForm(
-                build: _testBuild(),
-                availability: _available,
-              ),
+              body: _requestForm(),
             ),
           ),
         ),
@@ -376,8 +406,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Preparing Zoom meeting'), findsOneWidget);
-      expect(find.text('Join Zoom'), findsNothing);
+      expect(find.text('Meeting is being prepared.'), findsWidgets);
+      expect(find.widgetWithText(FilledButton, 'Join Zoom'), findsNothing);
     });
 
     testWidgets('detail disables join before window', (tester) async {
@@ -403,7 +433,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Join Zoom'), findsNothing);
+      expect(find.widgetWithText(FilledButton, 'Join Zoom'), findsOneWidget);
+      expect(
+        tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Join Zoom'),
+        ).onPressed,
+        isNull,
+      );
     });
 
     testWidgets('detail shows join when allowed', (tester) async {

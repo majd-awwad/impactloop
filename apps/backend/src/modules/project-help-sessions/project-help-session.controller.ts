@@ -101,6 +101,7 @@ export const listLearnerProjectHelpSessionsHandler = async (
   const result = await listLearnerProjectHelpSessionViews({
     learnerId: req.auth!.sub,
     status: query.status,
+    buildId: query.buildId,
     page: query.page,
     limit: query.limit,
   });

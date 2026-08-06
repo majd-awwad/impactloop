@@ -183,7 +183,7 @@ String notificationActionLabel(
         isDriverMode: isDriverMode,
       ) ==
       null) {
-    return l10n?.open ?? 'Open';
+    return '';
   }
 
   switch (notification.notificationType) {
@@ -397,6 +397,22 @@ LocalizedNotificationCopy localizedNotificationCopy(
       title: l10n.notificationDriverMovedToAdminTitle,
       body: l10n.notificationDriverMovedToAdminBody,
     ),
+    'PROJECT_HELP_SESSION_REQUESTED' ||
+    'PROJECT_HELP_SESSION_ALTERNATIVE_PROPOSED' ||
+    'PROJECT_HELP_SESSION_ACCEPTED' ||
+    'PROJECT_HELP_SESSION_ALTERNATIVE_ACCEPTED' ||
+    'PROJECT_HELP_SESSION_DECLINED' ||
+    'PROJECT_HELP_SESSION_ALTERNATIVE_REJECTED' ||
+    'PROJECT_HELP_SESSION_ZOOM_SCHEDULED' ||
+    'PROJECT_HELP_SESSION_ZOOM_SCHEDULING_FAILED' ||
+    'PROJECT_HELP_SESSION_ZOOM_SCHEDULING_DELAYED' ||
+    'PROJECT_HELP_SESSION_CANCELLED' ||
+    'PROJECT_HELP_SESSION_COMPLETED' =>
+      _localizedProjectHelpSessionCopy(
+        notification,
+        l10n,
+        safeProjectTitle: safeProjectTitle,
+      ),
     _ when l10n.localeName == 'en' && notification.title.trim().isNotEmpty => (
       title: notification.title,
       body: notification.body,
@@ -586,19 +602,31 @@ String? _supplierMaterialReviewOpenRoute(
   }
 }
 
-/// Learner and author project help session notifications open the private detail route.
-String? projectHelpSessionNotificationRoute(AppNotification notification) {
+bool isProjectHelpSessionNotification(AppNotification notification) {
   final type = notification.notificationType;
-  final entity = notification.relatedEntityType;
-  if (!type.startsWith('PROJECT_HELP_SESSION_') &&
-      entity != 'PROJECT_HELP_SESSION') {
-    return null;
+  return type.startsWith('PROJECT_HELP_SESSION_') ||
+      notification.relatedEntityType == 'PROJECT_HELP_SESSION';
+}
+
+String? _projectHelpSessionId(AppNotification notification) {
+  final metadataSessionId =
+      notification.metadata['sessionId']?.toString().trim() ?? '';
+  if (metadataSessionId.isNotEmpty) {
+    return metadataSessionId;
   }
-  final sessionId = notification.metadata['sessionId']?.toString().trim() ??
-      notification.relatedEntityId?.trim() ??
+  final relatedId = notification.relatedEntityId?.trim() ?? '';
+  return relatedId.isEmpty ? null : relatedId;
+}
+
+String? _projectHelpSessionRecipientRole(
+  AppNotification notification,
+  String type,
+) {
+  final role =
+      notification.metadata['recipientRole']?.toString().trim().toUpperCase() ??
       '';
-  if (sessionId.isEmpty) {
-    return null;
+  if (role == 'AUTHOR' || role == 'LEARNER') {
+    return role;
   }
 
   const authorTypes = {
@@ -613,18 +641,133 @@ String? projectHelpSessionNotificationRoute(AppNotification notification) {
     'PROJECT_HELP_SESSION_DECLINED',
     'PROJECT_HELP_SESSION_ZOOM_SCHEDULING_DELAYED',
     'PROJECT_HELP_SESSION_COMPLETED',
-    'PROJECT_HELP_SESSION_ZOOM_SCHEDULED',
   };
 
-  final role = notification.metadata['recipientRole']?.toString().toUpperCase();
-  if (authorTypes.contains(type) || role == 'AUTHOR') {
-    return creatorHelpSessionDetailRoute(sessionId);
+  if (authorTypes.contains(type)) {
+    return 'AUTHOR';
   }
-  if (learnerTypes.contains(type) || role == 'LEARNER') {
-    return learnerHelpSessionDetailRoute(sessionId);
+  if (learnerTypes.contains(type)) {
+    return 'LEARNER';
   }
 
-  return learnerHelpSessionDetailRoute(sessionId);
+  return null;
+}
+
+String _projectHelpSessionListRouteForRole(String role) {
+  return role == 'AUTHOR'
+      ? creatorHelpSessionsRoute
+      : learnerHelpSessionsRoute;
+}
+
+String _projectHelpSessionDetailRouteForRole(String role, String sessionId) {
+  return role == 'AUTHOR'
+      ? creatorHelpSessionDetailRoute(sessionId)
+      : learnerHelpSessionDetailRoute(sessionId);
+}
+
+LocalizedNotificationCopy _localizedProjectHelpSessionCopy(
+  AppNotification notification,
+  AppLocalizations l10n, {
+  required String safeProjectTitle,
+}) {
+  final actorName = _metadataString(notification.metadata, 'actorDisplayName');
+  final safeActor = actorName.isEmpty
+      ? (l10n.localeName == 'ar' ? 'متعلم' : 'A learner')
+      : actorName;
+
+  if (l10n.localeName == 'ar') {
+    return switch (notification.notificationType) {
+      'PROJECT_HELP_SESSION_REQUESTED' => (
+        title: 'طلب جلسة مساعدة جديد',
+        body: 'طلب $safeActor جلسة مساعدة لمشروع $safeProjectTitle.',
+      ),
+      'PROJECT_HELP_SESSION_ALTERNATIVE_PROPOSED' => (
+        title: 'اقتراح موعد بديل لجلسة المساعدة',
+        body: 'اقترح $safeActor موعدًا جديدًا لجلسة المساعدة على $safeProjectTitle.',
+      ),
+      'PROJECT_HELP_SESSION_ACCEPTED' => (
+        title: 'تم قبول موعد جلسة المساعدة',
+        body: 'قبل $safeActor موعد جلسة المساعدة المقترح على $safeProjectTitle.',
+      ),
+      'PROJECT_HELP_SESSION_ALTERNATIVE_ACCEPTED' => (
+        title: 'تم قبول الموعد البديل',
+        body: 'قبل $safeActor الموعد البديل لجلسة المساعدة على $safeProjectTitle.',
+      ),
+      'PROJECT_HELP_SESSION_DECLINED' => (
+        title: 'تم رفض طلب جلسة المساعدة',
+        body: 'رفض $safeActor طلب جلسة المساعدة على $safeProjectTitle.',
+      ),
+      'PROJECT_HELP_SESSION_ALTERNATIVE_REJECTED' => (
+        title: 'تم رفض الموعد البديل',
+        body: 'رفض $safeActor الموعد البديل لجلسة المساعدة على $safeProjectTitle.',
+      ),
+      'PROJECT_HELP_SESSION_ZOOM_SCHEDULED' => (
+        title: 'تمت جدولة جلسة المساعدة',
+        body: 'تمت جدولة جلسة المساعدة على $safeProjectTitle.',
+      ),
+      'PROJECT_HELP_SESSION_ZOOM_SCHEDULING_FAILED' => (
+        title: 'فشل إعداد اجتماع جلسة المساعدة',
+        body: 'تعذر إعداد اجتماع جلسة المساعدة على $safeProjectTitle. يرجى إعادة المحاولة.',
+      ),
+      'PROJECT_HELP_SESSION_ZOOM_SCHEDULING_DELAYED' => (
+        title: 'تأخر إعداد اجتماع جلسة المساعدة',
+        body: 'تأخر إعداد اجتماع جلسة المساعدة على $safeProjectTitle.',
+      ),
+      'PROJECT_HELP_SESSION_CANCELLED' => (
+        title: 'تم إلغاء جلسة المساعدة',
+        body: 'ألغى $safeActor جلسة المساعدة على $safeProjectTitle.',
+      ),
+      'PROJECT_HELP_SESSION_COMPLETED' => (
+        title: 'اكتملت جلسة المساعدة',
+        body: 'اكتملت جلسة المساعدة على $safeProjectTitle.',
+      ),
+      _ => (
+        title: notification.title.trim().isEmpty
+            ? l10n.notificationFallbackTitle
+            : notification.title,
+        body: notification.body.trim().isEmpty
+            ? l10n.notificationFallbackBody
+            : notification.body,
+      ),
+    };
+  }
+
+  if (notification.title.trim().isNotEmpty &&
+      notification.body.trim().isNotEmpty) {
+    return (title: notification.title, body: notification.body);
+  }
+
+  return switch (notification.notificationType) {
+    'PROJECT_HELP_SESSION_REQUESTED' => (
+      title: 'New help session request',
+      body: '$safeActor requested a help session for $safeProjectTitle.',
+    ),
+    _ => (
+      title: l10n.notificationFallbackTitle,
+      body: l10n.notificationFallbackBody,
+    ),
+  };
+}
+
+/// Learner and author project help session notifications open the private detail
+/// route, or the role-specific list when [sessionId] metadata is missing.
+String? projectHelpSessionNotificationRoute(AppNotification notification) {
+  final type = notification.notificationType;
+  if (!isProjectHelpSessionNotification(notification)) {
+    return null;
+  }
+
+  final role = _projectHelpSessionRecipientRole(notification, type);
+  if (role == null) {
+    return null;
+  }
+
+  final sessionId = _projectHelpSessionId(notification);
+  if (sessionId == null) {
+    return _projectHelpSessionListRouteForRole(role);
+  }
+
+  return _projectHelpSessionDetailRouteForRole(role, sessionId);
 }
 
 /// Learner material-request notifications open the request detail route.

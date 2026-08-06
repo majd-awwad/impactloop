@@ -42,6 +42,18 @@ export const mapProjectHelpSessionPrivateDto = (
   const now = getProjectHelpSessionNow();
   const meetingState = deriveProjectHelpSessionMeetingState(session, now);
   const completionTiming = getProjectHelpSessionCompletionTiming(session, now);
+  const allowedActions = deriveProjectHelpSessionAllowedActions(
+    session,
+    viewerRole,
+    now,
+  );
+  const learnerJoinUrl =
+    viewerRole === 'learner' &&
+    session.status === 'SCHEDULED' &&
+    meetingState.inWindow &&
+    session.zoomJoinUrl
+      ? session.zoomJoinUrl
+      : null;
   return {
   id: session.id,
   status: session.status,
@@ -69,7 +81,8 @@ export const mapProjectHelpSessionPrivateDto = (
   timeOptions: session.timeOptions.map((option) => mapTimeOption(option, session)),
   selectedTimeOptionId: session.selectedTimeOptionId,
   selectedStartsAt: getSelectedStartsAt(session),
-  allowedActions: deriveProjectHelpSessionAllowedActions(session, viewerRole, now),
+  allowedActions,
+  ...(learnerJoinUrl ? { joinUrl: learnerJoinUrl } : {}),
   alternativeProposedAt: session.alternativeProposedAt?.toISOString() ?? null,
   confirmedAt: session.confirmedAt?.toISOString() ?? null,
   declinedReason:
@@ -83,6 +96,14 @@ export const mapProjectHelpSessionPrivateDto = (
   cancellationReason:
     session.status === 'CANCELLED' ? session.cancellationReason : null,
   cancelledAt: session.cancelledAt?.toISOString() ?? null,
+  cancelledByRole:
+    session.cancelledById == null
+      ? null
+      : session.cancelledById === session.learnerId
+        ? ('LEARNER' as const)
+        : session.cancelledById === session.authorId
+          ? ('AUTHOR' as const)
+          : null,
   completedAt: session.completedAt?.toISOString() ?? null,
   scheduledEndsAt: completionTiming.scheduledEndsAt,
   completionAvailableAt: completionTiming.completionAvailableAt,

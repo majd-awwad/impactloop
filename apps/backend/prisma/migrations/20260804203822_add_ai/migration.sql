@@ -1,35 +1,11 @@
--- RenameForeignKey
-ALTER TABLE "learning_project_admin_ai_reviews" RENAME CONSTRAINT "learning_project_admin_ai_reviews_generated_by_admin_user_id_fk" TO "learning_project_admin_ai_reviews_generated_by_admin_user__fkey";
-
--- RenameIndex
-ALTER INDEX "learner_material_requests_normalized_requested_item_name_lea_id" RENAME TO "learner_material_requests_normalized_requested_item_name_le_idx";
-
--- RenameIndex
-ALTER INDEX "project_build_learning_answer_attempts_assignment_id_attempt_nu" RENAME TO "project_build_learning_answer_attempts_assignment_id_attemp_key";
-
--- RenameIndex
-ALTER INDEX "project_build_learning_answer_attempts_assignment_id_submitted_" RENAME TO "project_build_learning_answer_attempts_assignment_id_submit_idx";
-
--- RenameIndex
-ALTER INDEX "project_build_learning_question_assignments_session_id_question" RENAME TO "project_build_learning_question_assignments_session_id_ques_key";
-
--- RenameIndex
-ALTER INDEX "project_build_learning_question_assignments_session_id_stage_or" RENAME TO "project_build_learning_question_assignments_session_id_stag_key";
-
--- RenameIndex
-ALTER INDEX "project_build_learning_question_assignments_session_id_status_i" RENAME TO "project_build_learning_question_assignments_session_id_stat_idx";
-
--- RenameIndex
-ALTER INDEX "project_learning_questions_pack_id_stage_order_scope_key_pack_d" RENAME TO "project_learning_questions_pack_id_stage_order_scope_key_pa_key";
-
--- RenameIndex
-ALTER INDEX "recommendation_actions_entity_type_entity_id_action_type_action" RENAME TO "recommendation_actions_entity_type_entity_id_action_type_ac_idx";
-
--- RenameIndex
-ALTER INDEX "recommendation_candidate_traces_entity_type_entity_id_created_a" RENAME TO "recommendation_candidate_traces_entity_type_entity_id_creat_idx";
-
--- RenameIndex
-ALTER INDEX "recommendation_impressions_learner_entity_surface_shown_at_idx" RENAME TO "recommendation_impressions_learner_id_entity_type_entity_id_idx";
-
--- RenameIndex
-ALTER INDEX "recommendation_impressions_request_item_position_key" RENAME TO "recommendation_impressions_request_id_entity_type_entity_id_key";
+-- No-op migration.
+--
+-- An earlier version of this file contained Prisma drift renames (truncated
+-- PostgreSQL index/constraint names). Those renames are invalid on a clean
+-- migration replay because:
+--   1. Several indexes belong to project-learning tables created in later
+--      migrations (20260805120000_project_learning_foundation and after).
+--   2. Source names referenced truncated identifiers that were never created
+--      by prior migration SQL.
+--
+-- Later migrations already create the correct final index/constraint names.

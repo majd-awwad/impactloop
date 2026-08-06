@@ -142,11 +142,11 @@ void main() {
       await tester.pumpAndSettle();
 
       final button = find.widgetWithText(
-        FilledButton,
+        OutlinedButton,
         ProjectHelpSessionsL10n.markSessionCompleted.en,
       );
       expect(button, findsOneWidget);
-      expect(tester.widget<FilledButton>(button).onPressed, isNull);
+      expect(tester.widget<OutlinedButton>(button).onPressed, isNull);
       expect(find.textContaining('Completion available at'), findsOneWidget);
     });
 
@@ -177,10 +177,10 @@ void main() {
       await tester.pumpAndSettle();
 
       final button = find.widgetWithText(
-        FilledButton,
+        OutlinedButton,
         ProjectHelpSessionsL10n.markSessionCompleted.en,
       );
-      expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
+      expect(tester.widget<OutlinedButton>(button).onPressed, isNotNull);
     });
 
     testWidgets('boundary refresh schedules one-shot timer', (tester) async {

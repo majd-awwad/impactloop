@@ -78,6 +78,18 @@ enum ProjectHelpSessionStatus {
 
 enum ProjectHelpSessionTimeOptionType { learnerProposed, authorAlternative }
 
+enum ProjectHelpSessionCancelledByRole { learner, author }
+
+ProjectHelpSessionCancelledByRole? projectHelpSessionCancelledByRoleFromApi(
+  String? value,
+) {
+  return switch (value) {
+    'LEARNER' => ProjectHelpSessionCancelledByRole.learner,
+    'AUTHOR' => ProjectHelpSessionCancelledByRole.author,
+    _ => null,
+  };
+}
+
 class ProjectHelpSessionUserSummary {
   const ProjectHelpSessionUserSummary({
     required this.id,
@@ -118,7 +130,8 @@ class ProjectHelpSessionTimeOption {
       type: typeValue == 'AUTHOR_ALTERNATIVE'
           ? ProjectHelpSessionTimeOptionType.authorAlternative
           : ProjectHelpSessionTimeOptionType.learnerProposed,
-      startsAt: DateTime.parse(json['startsAt']?.toString() ?? ''),
+      startsAt: _parseDate(json['startsAt']) ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       proposedBy: ProjectHelpSessionUserSummary.fromJson(
         (json['proposedBy'] as Map?)?.cast<String, dynamic>() ?? const {},
       ),
@@ -331,6 +344,7 @@ class ProjectHelpSession {
     this.declinedReason,
     this.declinedAt,
     this.cancelledById,
+    this.cancelledByRole,
     this.cancellationReason,
     this.cancelledAt,
     this.completedAt,
@@ -341,6 +355,7 @@ class ProjectHelpSession {
     this.joinAvailableAt,
     this.joinClosesAt,
     this.zoomFailureState,
+    this.joinUrl,
   });
 
   final String id;
@@ -367,6 +382,7 @@ class ProjectHelpSession {
   final String? declinedReason;
   final DateTime? declinedAt;
   final String? cancelledById;
+  final ProjectHelpSessionCancelledByRole? cancelledByRole;
   final String? cancellationReason;
   final DateTime? cancelledAt;
   final DateTime? completedAt;
@@ -379,6 +395,7 @@ class ProjectHelpSession {
   final DateTime? joinAvailableAt;
   final DateTime? joinClosesAt;
   final String? zoomFailureState;
+  final String? joinUrl;
 
   factory ProjectHelpSession.fromJson(Map<String, dynamic> json) {
     final status =
@@ -427,6 +444,9 @@ class ProjectHelpSession {
       declinedReason: json['declinedReason']?.toString(),
       declinedAt: _parseDate(json['declinedAt']),
       cancelledById: json['cancelledById']?.toString(),
+      cancelledByRole: projectHelpSessionCancelledByRoleFromApi(
+        json['cancelledByRole']?.toString(),
+      ),
       cancellationReason: json['cancellationReason']?.toString(),
       cancelledAt: _parseDate(json['cancelledAt']),
       completedAt: _parseDate(json['completedAt']),
@@ -441,8 +461,45 @@ class ProjectHelpSession {
       joinAvailableAt: _parseDate(json['joinAvailableAt']),
       joinClosesAt: _parseDate(json['joinClosesAt']),
       zoomFailureState: json['zoomFailureState']?.toString(),
+      joinUrl: json['joinUrl']?.toString(),
     );
   }
+}
+
+ProjectHelpSessionLearnerAllowedActions effectiveLearnerAllowedActions(
+  ProjectHelpSession session,
+) {
+  if (session.status == ProjectHelpSessionStatus.alternativeProposed &&
+      !session.learnerAllowedActions.canAcceptAlternative) {
+    return const ProjectHelpSessionLearnerAllowedActions(
+      canAcceptAlternative: true,
+      canRejectAlternative: true,
+      canCancel: true,
+      canJoin: false,
+    );
+  }
+  return session.learnerAllowedActions;
+}
+
+ProjectHelpSessionAuthorAllowedActions effectiveAuthorAllowedActions(
+  ProjectHelpSession session,
+) {
+  if (session.status == ProjectHelpSessionStatus.pending &&
+      !session.authorAllowedActions.canAcceptOption) {
+    final hasAuthorAlternative = session.timeOptions.any(
+      (item) => item.type == ProjectHelpSessionTimeOptionType.authorAlternative,
+    );
+    return ProjectHelpSessionAuthorAllowedActions(
+      canAcceptOption: true,
+      canProposeAlternative: !hasAuthorAlternative,
+      canDecline: true,
+      canCancel: session.authorAllowedActions.canCancel,
+      canStart: session.authorAllowedActions.canStart,
+      canRetryZoom: session.authorAllowedActions.canRetryZoom,
+      canComplete: session.authorAllowedActions.canComplete,
+    );
+  }
+  return session.authorAllowedActions;
 }
 
 class ProjectHelpSessionListResult {
@@ -522,7 +579,7 @@ class CreateProjectHelpSessionRequestPayload {
     final sorted = [...proposedTimes]..sort((a, b) => a.compareTo(b));
     return {
       'problemDescription': problemDescription,
-      'projectStepId': projectStepId,
+      if (projectStepId != null) 'projectStepId': projectStepId,
       'durationMinutes': durationMinutes,
       'learnerTimeZone': learnerTimeZone,
       'proposedTimes': sorted.map((time) => time.toUtc().toIso8601String()).toList(),

@@ -702,7 +702,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/creator/help-sessions',
-        builder: (context, state) => const CreatorHelpSessionsPage(),
+        builder: (context, state) => CreatorHelpSessionsPage(
+          initialProjectId: state.uri.queryParameters['projectId'],
+        ),
       ),
       GoRoute(
         path: '/creator/help-sessions/:sessionId',

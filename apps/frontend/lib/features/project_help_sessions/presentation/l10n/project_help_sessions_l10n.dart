@@ -67,7 +67,33 @@ class ProjectHelpSessionsL10n {
 
   static const selectDate = LocalizedText(en: 'Select date', ar: 'اختر التاريخ');
   static const selectTime = LocalizedText(en: 'Select time', ar: 'اختر الوقت');
+  static const selectDateAndTime = LocalizedText(
+    en: 'Select date and time',
+    ar: 'اختر التاريخ والوقت',
+  );
   static const editSlot = LocalizedText(en: 'Edit', ar: 'تعديل');
+
+  static const privateSessionNote = LocalizedText(
+    en: 'Private session with the project creator',
+    ar: 'جلسة خاصة مع صاحب المشروع',
+  );
+
+  static LocalizedText projectCreatorLabel(String displayName) => LocalizedText(
+        en: 'Project creator: $displayName',
+        ar: 'صاحب المشروع: $displayName',
+      );
+
+  static const requestSubmittedSuccess = LocalizedText(
+    en: 'Help session request sent.',
+    ar: 'تم إرسال طلب الجلسة.',
+  );
+
+  static const settingsSavedSuccess = LocalizedText(
+    en: 'Help session settings saved.',
+    ar: 'تم حفظ إعدادات الجلسات.',
+  );
+
+  static const dismissError = LocalizedText(en: 'Dismiss', ar: 'إغلاق');
 
   static const emptyTitle = LocalizedText(
     en: 'No help sessions yet',
@@ -164,6 +190,11 @@ class ProjectHelpSessionsL10n {
     ar: 'تأكيد الإلغاء',
   );
 
+  static const cancelRequest = LocalizedText(
+    en: 'Cancel request',
+    ar: 'إلغاء الطلب',
+  );
+
   static const cancelReasonLabel = LocalizedText(
     en: 'Reason (optional)',
     ar: 'السبب (اختياري)',
@@ -204,10 +235,80 @@ class ProjectHelpSessionsL10n {
     ar: 'بانتظار صاحب المشروع',
   );
 
+  static const creatorSuggestedDifferentTime = LocalizedText(
+    en: 'The project creator suggested a different time.',
+    ar: 'اقترح صاحب المشروع موعدًا مختلفًا.',
+  );
+
+  static const meetingBeingPrepared = LocalizedText(
+    en: 'Meeting is being prepared.',
+    ar: 'جارٍ تجهيز الاجتماع.',
+  );
+
+  static const zoomBeingCreated = LocalizedText(
+    en: 'Zoom meeting is being created.',
+    ar: 'جارٍ إنشاء اجتماع Zoom.',
+  );
+
+  static const sessionCancelledOverview = LocalizedText(
+    en: 'This help session was cancelled.',
+    ar: 'تم إلغاء جلسة المساعدة هذه.',
+  );
+
+  static const activeSessionTitle = LocalizedText(
+    en: 'Help session request',
+    ar: 'طلب جلسة مساعدة',
+  );
+
+  static const sessionManagement = LocalizedText(
+    en: 'Session management',
+    ar: 'إدارة الجلسة',
+  );
+
+  static const nextStep = LocalizedText(
+    en: 'Next step',
+    ar: 'الخطوة التالية',
+  );
+
+  static const acceptSelectedTimeHint = LocalizedText(
+    en: 'Select one of the proposed times to enable acceptance.',
+    ar: 'اختر أحد المواعيد المقترحة لتفعيل القبول.',
+  );
+
+  static const backToProject = LocalizedText(
+    en: 'Back to project',
+    ar: 'العودة إلى المشروع',
+  );
+
+  static LocalizedText learnerLabel(String displayName) => LocalizedText(
+        en: 'Learner: $displayName',
+        ar: 'المتعلم: $displayName',
+      );
+
   static const youCancelled = LocalizedText(en: 'You', ar: 'أنت');
   static const creatorCancelled = LocalizedText(
     en: 'Project creator',
     ar: 'صاحب المشروع',
+  );
+
+  static const cancelledByYou = LocalizedText(
+    en: 'Cancelled by you',
+    ar: 'ألغيتَ الطلب',
+  );
+
+  static const cancelledByProjectCreator = LocalizedText(
+    en: 'Cancelled by project creator',
+    ar: 'ألغاه صاحب المشروع',
+  );
+
+  static const cancelledByLearner = LocalizedText(
+    en: 'Cancelled by learner',
+    ar: 'ألغاه المتعلم',
+  );
+
+  static const requestAlreadySubmitted = LocalizedText(
+    en: 'Your session request was already submitted.',
+    ar: 'تم إرسال طلب الجلسة بالفعل.',
   );
 
   static const completedTitle = LocalizedText(
@@ -290,6 +391,21 @@ class ProjectHelpSessionsL10n {
   static const authorListSubtitle = LocalizedText(
     en: 'Review learner requests, choose a time, and start scheduled Zoom sessions.',
     ar: 'راجع طلبات المتعلمين، اختر موعدًا مناسبًا، وابدأ جلسات Zoom المجدولة.',
+  );
+
+  static const submissionsHelpRequestsAction = LocalizedText(
+    en: 'Project help requests',
+    ar: 'طلبات جلسات المشاريع',
+  );
+
+  static const viewHelpRequestsAction = LocalizedText(
+    en: 'View help requests',
+    ar: 'عرض طلبات الجلسات',
+  );
+
+  static const notificationOpenUnavailable = LocalizedText(
+    en: 'This help session notification cannot be opened right now.',
+    ar: 'تعذر فتح إشعار جلسة المساعدة حاليًا.',
   );
 
   static const authorEmptyTitle = LocalizedText(
@@ -534,11 +650,27 @@ class ProjectHelpSessionsL10n {
       'ZOOM_CREATE_FAILED' ||
       'ZOOM_UNAVAILABLE' ||
       'ZOOM_AUTH_FAILED' ||
+      'ZOOM_GET_FAILED' ||
+      'ZOOM_RESPONSE_INVALID' ||
       'ZOOM_SCHEDULING_FAILED' ||
       'ZOOM_PERSISTENCE_FAILED' ||
       'ZOOM_DISABLED' ||
       'SCHEDULING_FAILED' =>
         'تعذر تجهيز رابط الاجتماع حاليًا. سيظهر الرابط بعد اكتمال الإعداد.',
+      'TIMEOUT' =>
+        'استغرق تجهيز رابط Zoom وقتًا أطول من المعتاد. انتظر قليلًا ثم حاول مرة أخرى.',
+      'NETWORK_ERROR' =>
+        'تعذر الاتصال بالخادم. تحقق من الاتصال وحاول مرة أخرى.',
+      'VALIDATION_ERROR' =>
+        'تحقق من الحقول المطلوبة وحاول مرة أخرى.',
+      'INVALID_SESSION_STATE' ||
+      'HELP_SESSION_INVALID_STATE' =>
+        'لا يمكن إلغاء الجلسة في حالتها الحالية.',
+      'INTERNAL_ERROR' =>
+        'حدث خطأ غير متوقع. حاول مرة أخرى.',
+      'PROJECT_HELP_SESSION_NOT_FOUND' ||
+      'NOT_FOUND' =>
+        'تعذر العثور على الجلسة.',
       _ => '',
     };
   }
@@ -580,11 +712,27 @@ class ProjectHelpSessionsL10n {
       'ZOOM_CREATE_FAILED' ||
       'ZOOM_UNAVAILABLE' ||
       'ZOOM_AUTH_FAILED' ||
+      'ZOOM_GET_FAILED' ||
+      'ZOOM_RESPONSE_INVALID' ||
       'ZOOM_SCHEDULING_FAILED' ||
       'ZOOM_PERSISTENCE_FAILED' ||
       'ZOOM_DISABLED' ||
       'SCHEDULING_FAILED' =>
         'Meeting setup is delayed. The join link will appear once setup completes.',
+      'TIMEOUT' =>
+        'Zoom is taking longer than usual. Wait a moment and try again.',
+      'NETWORK_ERROR' =>
+        'Could not reach the server. Check your connection and try again.',
+      'VALIDATION_ERROR' =>
+        'Check the required fields and try again.',
+      'INVALID_SESSION_STATE' ||
+      'HELP_SESSION_INVALID_STATE' =>
+        'This session cannot be cancelled in its current state.',
+      'INTERNAL_ERROR' =>
+        'Something unexpected went wrong. Please try again.',
+      'PROJECT_HELP_SESSION_NOT_FOUND' ||
+      'NOT_FOUND' =>
+        'The help session could not be found.',
       _ => '',
     };
   }

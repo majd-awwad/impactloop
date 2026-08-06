@@ -15,6 +15,7 @@ const baseMetadata = (session: ProjectHelpSessionDetailRecord) => ({
   sessionId: session.id,
   projectId: session.projectId,
   buildId: session.buildId,
+  projectTitle: projectTitle(session),
 });
 
 const scheduledStartsAt = (session: ProjectHelpSessionDetailRecord) =>
