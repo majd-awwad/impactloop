@@ -2,30 +2,43 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../auth/application/auth_route_helpers.dart';
 import '../../../deliveries/application/learner_deliveries_provider.dart';
 import '../../../deliveries/data/models/learner_delivery.dart';
 import '../../application/learner_reservation_provider.dart';
-import '../widgets/learner_reservation_card.dart';
+import '../detail/reservation_detail_sticky_action_bar.dart';
+import '../widgets/learner_reservation_details_body.dart';
 
-const _detailMaxWidth = 920.0;
+const _detailMaxWidth = 1240.0;
 const _refreshInterval = Duration(seconds: 10);
 
 class LearnerReservationDetailPage extends ConsumerWidget {
-  const LearnerReservationDetailPage({super.key, required this.reservationId});
+  const LearnerReservationDetailPage({
+    super.key,
+    required this.reservationId,
+    this.focusPayment = false,
+    this.focusPaymentOrderId,
+  });
 
   final String reservationId;
+  final bool focusPayment;
+  final String? focusPaymentOrderId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = MaterialsUiPalette.of(context);
+    final l10n = context.l10n;
     final isLearner =
         ref.watch(authControllerProvider).user?.hasRole('LEARNER') == true;
 
@@ -41,31 +54,27 @@ class LearnerReservationDetailPage extends ConsumerWidget {
               homeRoute: '/home',
             ),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsetsDirectional.fromSTEB(
-                  AppSpacing.md,
-                  AppSpacing.lg,
-                  AppSpacing.md,
-                  AppSpacing.xl,
-                ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxWidth: _detailMaxWidth,
-                    ),
-                    child: !isLearner
-                        ? const _DetailStatePanel(
-                            icon: Icons.lock_outline,
-                            title: 'Learner account required',
-                            subtitle:
-                                'Use a learner account to view reservation details.',
-                          )
-                        : _ReservationDetailContent(
-                            reservationId: reservationId,
+              child: !isLearner
+                  ? Center(
+                      child: Padding(
+                        padding: appMobileAwareScrollPadding(context),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxWidth: _detailMaxWidth,
                           ),
-                  ),
-                ),
-              ),
+                          child: _DetailStatePanel(
+                            icon: Icons.lock_outline,
+                            title: l10n.learnerAccountRequired,
+                            subtitle: l10n.learnerAccountRequiredReservations,
+                          ),
+                        ),
+                      ),
+                    )
+                  : _ReservationDetailContent(
+                      reservationId: reservationId,
+                      focusPayment: focusPayment,
+                      focusPaymentOrderId: focusPaymentOrderId,
+                    ),
             ),
           ],
         ),
@@ -75,9 +84,15 @@ class LearnerReservationDetailPage extends ConsumerWidget {
 }
 
 class _ReservationDetailContent extends ConsumerStatefulWidget {
-  const _ReservationDetailContent({required this.reservationId});
+  const _ReservationDetailContent({
+    required this.reservationId,
+    required this.focusPayment,
+    required this.focusPaymentOrderId,
+  });
 
   final String reservationId;
+  final bool focusPayment;
+  final String? focusPaymentOrderId;
 
   @override
   ConsumerState<_ReservationDetailContent> createState() =>
@@ -87,12 +102,24 @@ class _ReservationDetailContent extends ConsumerStatefulWidget {
 class _ReservationDetailContentState
     extends ConsumerState<_ReservationDetailContent> {
   Timer? _refreshTimer;
+  String? _checkoutableOrderId;
+  final _pickupCodeSectionKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
+    _checkoutableOrderId = widget.focusPaymentOrderId;
     Future.microtask(_refresh);
     _refreshTimer = Timer.periodic(_refreshInterval, (_) => _refresh());
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReservationDetailContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.focusPaymentOrderId != null &&
+        widget.focusPaymentOrderId != oldWidget.focusPaymentOrderId) {
+      _checkoutableOrderId = widget.focusPaymentOrderId;
+    }
   }
 
   @override
@@ -102,73 +129,177 @@ class _ReservationDetailContentState
   }
 
   void _refresh() {
-    if (!mounted) {
-      return;
-    }
-
+    if (!mounted) return;
     ref.invalidate(learnerReservationProvider(widget.reservationId));
     ref.invalidate(learnerDeliveriesProvider);
+  }
+
+  void _onCheckoutOrder(String orderId) {
+    setState(() => _checkoutableOrderId = orderId);
+    context.push(learnerPaymentCheckoutRoute(orderId));
+  }
+
+  void _scrollToPickupCode() {
+    final ctx = _pickupCodeSectionKey.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final l10n = context.l10n;
     final reservationAsync = ref.watch(
       learnerReservationProvider(widget.reservationId),
     );
     final deliveriesAsync = ref.watch(learnerDeliveriesProvider);
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width < 720;
+    final showStickyOnMobile = width < 600;
 
     return Column(
+      key: const Key('reservation-details-layout'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextButton.icon(
-                    onPressed: () => context.popOrGo('/learner/reservations'),
-                    style: AppStatusButtonStyle.text(
-                      context,
-                      AppStatusTone.neutral,
+        Expanded(
+          child: SingleChildScrollView(
+            // Detail route is outside the mobile nav shell — do not reserve
+            // bottom-nav height that is not present on this page.
+            padding: const EdgeInsetsDirectional.fromSTEB(
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.xl,
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: _detailMaxWidth),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              TextButton.icon(
+                                onPressed: () =>
+                                    context.popOrGo('/learner/reservations'),
+                                style: AppStatusButtonStyle.text(
+                                  context,
+                                  AppStatusTone.neutral,
+                                ),
+                                icon: const Icon(
+                                  Icons.arrow_back_rounded,
+                                  size: 18,
+                                ),
+                                label: Text(l10n.allReservations),
+                              ),
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                l10n.reservationDetailsTitle,
+                                style:
+                                    (compact
+                                            ? AppTextStyles.title(context)
+                                            : AppTextStyles.display(context))
+                                        .copyWith(color: palette.textPrimary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (compact)
+                          SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: IconButton(
+                              tooltip: l10n.refresh,
+                              onPressed: _refresh,
+                              icon: const Icon(Icons.refresh_rounded),
+                            ),
+                          )
+                        else
+                          TextButton.icon(
+                            onPressed: _refresh,
+                            style: AppStatusButtonStyle.text(
+                              context,
+                              AppStatusTone.info,
+                            ),
+                            icon: const Icon(Icons.refresh_rounded, size: 18),
+                            label: Text(l10n.refresh),
+                          ),
+                      ],
                     ),
-                    icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                    label: const Text('All reservations'),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Reservation details',
-                    style: AppTextStyles.display(
-                      context,
-                    ).copyWith(color: palette.textPrimary),
-                  ),
-                ],
+                    if (widget.focusPayment &&
+                        _checkoutableOrderId != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        l10n.checkoutableOrderReadyHint,
+                        key: Key('checkoutable-order-$_checkoutableOrderId'),
+                        style: AppTextStyles.label(
+                          context,
+                        ).copyWith(color: palette.textMuted),
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.md),
+                    reservationAsync.when(
+                      skipLoadingOnReload: true,
+                      skipLoadingOnRefresh: true,
+                      loading: () => const _DetailSkeleton(),
+                      error: (_, _) => _DetailStatePanel(
+                        icon: Icons.cloud_off_outlined,
+                        title: l10n.reservationLoadError,
+                        subtitle: l10n.tryAgain,
+                        actionLabel: l10n.tryAgainAction,
+                        onAction: _refresh,
+                      ),
+                      data: (reservation) {
+                        final delivery = deliveriesAsync.maybeWhen(
+                          data: (deliveries) => _latestDeliveryForReservation(
+                            deliveries,
+                            reservation.id,
+                          ),
+                          orElse: () => null,
+                        );
+
+                        final orderId =
+                            widget.focusPaymentOrderId ??
+                            reservation.paymentSummary?.checkoutableOrderId;
+
+                        if (orderId != null && _checkoutableOrderId == null) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted && _checkoutableOrderId == null) {
+                              setState(() => _checkoutableOrderId = orderId);
+                            }
+                          });
+                        }
+
+                        return LearnerReservationDetailsBody(
+                          key: const Key('reservation-details-body'),
+                          reservation: reservation,
+                          delivery: delivery,
+                          highlightPayment: widget.focusPayment,
+                          focusPaymentOrderId: orderId,
+                          onCheckoutOrder: _onCheckoutOrder,
+                          pickupCodeSectionKey: _pickupCodeSectionKey,
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
-            TextButton.icon(
-              onPressed: _refresh,
-              style: AppStatusButtonStyle.text(context, AppStatusTone.info),
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Refresh'),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: AppSpacing.md),
-        reservationAsync.when(
-          loading: () => const _DetailStatePanel(
-            icon: Icons.hourglass_empty_rounded,
-            title: 'Loading reservation',
-            subtitle: 'Checking the latest reservation status.',
-          ),
-          error: (_, _) => _DetailStatePanel(
-            icon: Icons.cloud_off_outlined,
-            title: 'Could not load reservation',
-            subtitle: 'Please try again.',
-            actionLabel: 'Try again',
-            onAction: _refresh,
-          ),
+        reservationAsync.maybeWhen(
+          skipLoadingOnReload: true,
+          skipLoadingOnRefresh: true,
           data: (reservation) {
             final delivery = deliveriesAsync.maybeWhen(
               data: (deliveries) =>
@@ -176,11 +307,22 @@ class _ReservationDetailContentState
               orElse: () => null,
             );
 
-            return LearnerReservationCard(
+            if (!showStickyOnMobile ||
+                !shouldShowReservationDetailStickyBar(
+                  reservation,
+                  delivery: delivery,
+                )) {
+              return const SizedBox.shrink();
+            }
+
+            return ReservationDetailStickyActionBar(
               reservation: reservation,
               delivery: delivery,
+              onCheckoutOrder: _onCheckoutOrder,
+              onScrollToPickupCode: _scrollToPickupCode,
             );
           },
+          orElse: () => const SizedBox.shrink(),
         ),
       ],
     );
@@ -265,6 +407,44 @@ class _DetailStatePanel extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _DetailSkeleton extends StatelessWidget {
+  const _DetailSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          height: 180,
+          decoration: BoxDecoration(
+            color: palette.inputSurface,
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Container(
+          height: 120,
+          decoration: BoxDecoration(
+            color: palette.inputSurface,
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Container(
+          height: 220,
+          decoration: BoxDecoration(
+            color: palette.inputSurface,
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ],
     );
   }
 }

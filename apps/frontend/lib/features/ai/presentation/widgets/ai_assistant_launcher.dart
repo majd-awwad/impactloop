@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_theme_colors.dart';
@@ -19,6 +20,13 @@ class AiAssistantLauncher extends ConsumerWidget {
     final shellState = ref.watch(aiAssistantShellProvider);
 
     if (!isLearner || shellState.isOpen) {
+      return const SizedBox.shrink();
+    }
+
+    // Hide on transaction-heavy reservation surfaces so the FAB cannot cover CTAs.
+    final path = GoRouterState.of(context).uri.path;
+    if (path == '/learner/reservations' ||
+        path.startsWith('/learner/reservations/')) {
       return const SizedBox.shrink();
     }
 

@@ -176,7 +176,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get filterActive => 'نشط';
 
   @override
-  String get filterNeedsAction => 'يتطلب إجراءً';
+  String get filterNeedsAction => 'يتطلب إجراء';
 
   @override
   String get filterPending => 'قيد الانتظار';
@@ -889,7 +889,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get reservationsSubtitle =>
-      'تابع الطلبات ومواعيد الاستلام وتحديثات التوصيل.';
+      'تابع جميع حجوزاتك وطلبات الاستلام والتوصيل والدفع من هنا.';
 
   @override
   String get loadingReservations => 'جارٍ تحميل الحجوزات';
@@ -923,6 +923,698 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get tryAgainAction => 'حاول مرة أخرى';
+
+  @override
+  String get reservationsSummaryActive => 'نشطة';
+
+  @override
+  String get reservationsSummaryActionRequired => 'يتطلب إجراء';
+
+  @override
+  String get reservationsSummaryPaymentsRequired => 'مدفوعات مطلوبة';
+
+  @override
+  String get reservationsSummaryDeliveries => 'توصيل جاهز';
+
+  @override
+  String get reservationsSummaryTotal => 'إجمالي الحجوزات';
+
+  @override
+  String get reservationsSummaryLoadedHint =>
+      'الأعداد تعكس الحجوزات المحمّلة حالياً.';
+
+  @override
+  String get reservationsTimezoneNote =>
+      'جميع التواريخ والأوقات حسب المنطقة الزمنية الخاصة بك.';
+
+  @override
+  String get reservationsFilter => 'تصفية';
+
+  @override
+  String get viewAllReservations => 'عرض كل الحجوزات';
+
+  @override
+  String get reservationMoneyAmountDue => 'المبلغ المطلوب';
+
+  @override
+  String get reservationMoneyRemaining => 'المتبقي';
+
+  @override
+  String get reservationMoneyPaidInFull => 'تم الدفع بالكامل';
+
+  @override
+  String reservationMoneyOrdersRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count دفعة متبقية',
+      many: '$count دفعة متبقية',
+      few: '$count دفعات متبقية',
+      two: 'دفعتان متبقيتان',
+      one: 'دفعة واحدة متبقية',
+      zero: 'لا دفعات متبقية',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get reservationMoneyMaterialPaidDeliveryDue =>
+      'تم دفع دفعة المادة. رسوم التوصيل ما زالت مطلوبة.';
+
+  @override
+  String get reservationMoneyDeliveryPaidMaterialDue =>
+      'تم تسديد رسوم التوصيل. دفعة المادة ما زالت مطلوبة.';
+
+  @override
+  String get reservationMoneyBothOutstanding =>
+      'تُدفع المادة ورسوم التوصيل معًا في دفعة واحدة.';
+
+  @override
+  String get reservationNextStepPayTitle => 'أكمل الدفع لتأكيد الحجز';
+
+  @override
+  String get reservationNextStepPaySupporting =>
+      'سيظهر رمز الاستلام بعد الدفع وبدء نافذة الاستلام.';
+
+  @override
+  String get reservationNextStepPartialTitle => 'أكمل الدفع المتبقي';
+
+  @override
+  String get reservationNextStepPartialSupporting =>
+      'تم استلام دفعة، وما زالت رسوم التوصيل مطلوبة.';
+
+  @override
+  String reservationMoneyAmountWithCurrency(String amount) {
+    return '$amount ₪';
+  }
+
+  @override
+  String get reservationDetailsTitle => 'تفاصيل الحجز';
+
+  @override
+  String get reservationSummaryTitle => 'ملخص الحجز';
+
+  @override
+  String get reservationReference => 'المرجع';
+
+  @override
+  String get reservationStatusLabel => 'الحالة';
+
+  @override
+  String get reservationLocationLabel => 'الموقع';
+
+  @override
+  String get importantNotes => 'ملاحظات مهمة';
+
+  @override
+  String get pickupCodeTitle => 'رمز الاستلام';
+
+  @override
+  String get pickupCodeLockedPayment => 'أكمل الدفع لفتح رمز الاستلام.';
+
+  @override
+  String get pickupCodeWaitingWindow =>
+      'سيظهر رمز الاستلام عند بدء نافذة الاستلام.';
+
+  @override
+  String get pickupCodeAvailableLabel => 'اعرض هذا الرمز للمورّد عند الاستلام.';
+
+  @override
+  String get pickupCodeSafetyNote =>
+      'لا تشارك هذا الرمز قبل وصولك إلى موقع الاستلام.';
+
+  @override
+  String get pickupCodeClosed => 'رمز الاستلام لم يعد متاحًا لهذا الحجز.';
+
+  @override
+  String get pickupCodeProcessing =>
+      'سيصبح رمز الاستلام متاحًا بعد تأكيد الدفع.';
+
+  @override
+  String get pickupCodeUnderReview =>
+      'رمز الاستلام موقوف مؤقتًا أثناء مراجعة الحالة.';
+
+  @override
+  String get pickupCodeRefundProcessing =>
+      'رمز الاستلام غير متاح أثناء معالجة الاسترداد.';
+
+  @override
+  String get pickupCodeRefunded => 'تم استرداد هذا الحجز. لا يلزم رمز استلام.';
+
+  @override
+  String get pickupCodeNotApplicable => 'رمز الاستلام لا ينطبق على هذا الحجز.';
+
+  @override
+  String get pickupWindowNotStarted => 'لم تبدأ بعد';
+
+  @override
+  String get pickupWindowActiveNow => 'متاحة الآن';
+
+  @override
+  String get pickupWindowEnded => 'انتهت';
+
+  @override
+  String get openInMaps => 'فتح في الخرائط';
+
+  @override
+  String get mapApproximateNote => 'تُظهر الخريطة منطقة استلام تقريبية.';
+
+  @override
+  String get followUpMessagesTitle => 'رسائل المتابعة';
+
+  @override
+  String get noFollowUpMessagesYet => 'لا توجد رسائل متابعة بعد.';
+
+  @override
+  String get writeShortFollowUpMessage => 'أرسل رسالة متابعة قصيرة للمورّد…';
+
+  @override
+  String get sendFollowUpMessage => 'إرسال الرسالة';
+
+  @override
+  String get followUpMessagesLoadError => 'تعذّر تحميل رسائل المتابعة.';
+
+  @override
+  String get showFullHistory => 'عرض السجل الكامل';
+
+  @override
+  String get showLessHistory => 'عرض أقل';
+
+  @override
+  String get paymentHistoryTitle => 'سجل الدفع';
+
+  @override
+  String get currentPaymentCycle => 'دورة الدفع الحالية';
+
+  @override
+  String get previousPaymentCycleCancelled => 'تم إلغاء دورة الدفع السابقة.';
+
+  @override
+  String get previousPaymentCycleRefunded => 'تم استرداد دورة الدفع السابقة.';
+
+  @override
+  String get reservationDetailNotesPickupTitle => 'ملاحظات الاستلام';
+
+  @override
+  String get reservationDetailNotesPickupSafety =>
+      'أحضر هوية سارية وصل ضمن نافذة الاستلام المؤكدة.';
+
+  @override
+  String get reservationDetailNotesPickupContact =>
+      'تواصل مع المورّد عبر رسائل المتابعة إذا تأخرت.';
+
+  @override
+  String get reservationDetailTimelineCreated => 'تم إنشاء الحجز';
+
+  @override
+  String get reservationDetailTimelinePending => 'بانتظار رد المورّد';
+
+  @override
+  String get reservationDetailTimelineAwaitingConfirmation => 'يتطلب تأكيدك';
+
+  @override
+  String get reservationDetailTimelinePaymentRequired => 'دفع مطلوب';
+
+  @override
+  String get reservationDetailTimelinePaymentCompleted => 'تم الدفع';
+
+  @override
+  String get reservationDetailTimelineReadyPickup => 'جاهز للاستلام';
+
+  @override
+  String get reservationDetailTimelineReadyDelivery => 'جاهز للتوصيل';
+
+  @override
+  String get reservationDetailTimelineCompleted => 'اكتمل الحجز';
+
+  @override
+  String get reservationDetailTimelineCancelled => 'تم إلغاء الحجز';
+
+  @override
+  String get reservationDetailTimelineRefunded => 'تم استرداد الدفع';
+
+  @override
+  String get reservationDetailTimelineUnderReview => 'قيد مراجعة الإدارة';
+
+  @override
+  String get reservationDetailPaymentTitle => 'الدفع';
+
+  @override
+  String get reservationDetailPaymentRequiredTitle => 'الدفع المطلوب';
+
+  @override
+  String get reservationDetailMaterialAmount => 'مبلغ المادة';
+
+  @override
+  String get reservationDetailDeliveryFeeAmount => 'رسوم التوصيل';
+
+  @override
+  String get reservationDetailPickupFeeAmount => 'رسوم الاستلام';
+
+  @override
+  String get reservationDetailRemainingAmount => 'المتبقي';
+
+  @override
+  String get reservationDetailTotalRequired => 'المبلغ المطلوب';
+
+  @override
+  String get contactSupplier => 'تواصل مع المورد';
+
+  @override
+  String get viewSupplierProfile => 'عرض ملف المورد';
+
+  @override
+  String get reservationDetailFulfillmentTitle => 'التنفيذ';
+
+  @override
+  String get reservationDetailQuickActionsTitle => 'إجراءات سريعة';
+
+  @override
+  String get reservationDetailOverdueBanner =>
+      'فات موعد الاستلام. تواصل مع المورّد أو انتظر المتابعة.';
+
+  @override
+  String get allReservations => 'جميع الحجوزات';
+
+  @override
+  String get loadingReservation => 'جارٍ تحميل الحجز';
+
+  @override
+  String get loadingReservationSubtitle => 'جارٍ التحقق من أحدث حالة للحجز.';
+
+  @override
+  String get reservationLoadError => 'تعذّر تحميل الحجز';
+
+  @override
+  String get checkoutComingSoon => 'صفحة الدفع ستتوفر قريبًا. طلب الدفع جاهز.';
+
+  @override
+  String get checkoutPageTitle => 'إتمام الدفع';
+
+  @override
+  String get checkoutPageSubtitle =>
+      'أنت على وشك تأكيد هذا الحجز بدفع المبلغ المطلوب بشكل آمن.';
+
+  @override
+  String get checkoutBreadcrumbHome => 'الرئيسية';
+
+  @override
+  String get checkoutBreadcrumbReservations => 'حجوزاتي';
+
+  @override
+  String get checkoutBreadcrumbDetails => 'تفاصيل الحجز';
+
+  @override
+  String get checkoutBreadcrumbCheckout => 'الدفع';
+
+  @override
+  String get checkoutStepSummary => 'ملخص الدفع';
+
+  @override
+  String get checkoutStepMethod => 'طريقة الدفع';
+
+  @override
+  String get checkoutStepConfirm => 'تأكيد الطلب';
+
+  @override
+  String get checkoutStepResult => 'النتيجة';
+
+  @override
+  String get checkoutReservationInfo => 'معلومات الحجز';
+
+  @override
+  String get checkoutOrderIdLabel => 'رقم الطلب';
+
+  @override
+  String get checkoutReservationDateLabel => 'التاريخ';
+
+  @override
+  String get checkoutReservationStatusLabel => 'الحالة';
+
+  @override
+  String get checkoutPickupWindowLabel => 'نافذة الاستلام';
+
+  @override
+  String get checkoutViewReservationDetails => 'عرض تفاصيل الحجز';
+
+  @override
+  String checkoutQuantityLabel(int count) {
+    return '$count وحدة';
+  }
+
+  @override
+  String get checkoutFulfillmentPickup => 'استلام من المورّد';
+
+  @override
+  String get checkoutFulfillmentDelivery => 'توصيل';
+
+  @override
+  String get checkoutVerifiedSupplier => 'مورّد موثّق';
+
+  @override
+  String get checkoutAmountSummaryTitle => 'ملخص المبلغ';
+
+  @override
+  String get checkoutItemPrice => 'سعر المادة';
+
+  @override
+  String get checkoutDeliveryFees => 'رسوم التوصيل';
+
+  @override
+  String get checkoutTotalRequired => 'الإجمالي المطلوب';
+
+  @override
+  String get checkoutPreviouslyPaid => 'المدفوع سابقًا';
+
+  @override
+  String get checkoutRemainingAmount => 'المبلغ المتبقي';
+
+  @override
+  String get checkoutChooseWhatToPay => 'اختر ما تريد دفعه';
+
+  @override
+  String get checkoutCombinedPaymentTitle => 'يشمل الدفع';
+
+  @override
+  String get checkoutCombinedPaymentHint =>
+      'تُحصَّل سعر المادة ورسوم التوصيل معًا في عملية الدفع هذه.';
+
+  @override
+  String get checkoutPurposeMaterialTitle => 'سعر المادة';
+
+  @override
+  String get checkoutPurposeMaterialHint =>
+      'يؤكد الحجز. رسوم التوصيل (إن وُجدت) تُدفع لاحقًا بشكل منفصل.';
+
+  @override
+  String get checkoutPurposeDeliveryTitle => 'رسوم التوصيل';
+
+  @override
+  String get checkoutPurposeDeliveryHint =>
+      'يدفع رسوم التوصيل لمجموعة هذا الحجز.';
+
+  @override
+  String get checkoutOtherOrderHint =>
+      'هناك دفعة أخرى مستحقة أيضًا. يمكنك دفعها بعد هذه.';
+
+  @override
+  String get checkoutPaymentIncludesTitle => 'يشمل الدفع';
+
+  @override
+  String get checkoutIncludesConfirmReservation => 'تأكيد الحجز';
+
+  @override
+  String get checkoutIncludesPickupCode => 'إظهار رمز الاستلام عند الجاهزية';
+
+  @override
+  String get checkoutIncludesDeliveryDispatch =>
+      'تمكين إرسال التوصيل عند الجاهزية';
+
+  @override
+  String get checkoutSecurePaymentTitle => 'دفع آمن';
+
+  @override
+  String get checkoutSecurePaymentBody =>
+      'جلسة الدفع مشفّرة. لا يخزّن ImpactLoop بيانات البطاقات — يتم الدفع عبر مزوّد الدفع التجريبي الآمن في هذه البيئة.';
+
+  @override
+  String get checkoutContinueToPayment => 'متابعة إلى الدفع';
+
+  @override
+  String get checkoutReviewOrder => 'مراجعة الطلب';
+
+  @override
+  String get checkoutConfirmPayment => 'تأكيد الدفع';
+
+  @override
+  String get checkoutMockProviderTitle => 'مزوّد الدفع التجريبي';
+
+  @override
+  String get checkoutMockProviderBody =>
+      'تستخدم هذه البيئة مزوّد ImpactLoop التجريبي الآمن. إتمام الدفع يحدّث حالة الدفع الموثّقة في الخادم — الضغط على زر وحده لا يعني النجاح.';
+
+  @override
+  String get checkoutMockPaySecurely => 'إتمام الدفع التجريبي';
+
+  @override
+  String get checkoutMockSimulateDecline => 'محاكاة الرفض';
+
+  @override
+  String get checkoutMockCancelAttempt => 'إلغاء هذه المحاولة';
+
+  @override
+  String get checkoutReviewTitle => 'مراجعة الطلب';
+
+  @override
+  String get checkoutReviewMethodLabel => 'طريقة الدفع';
+
+  @override
+  String get checkoutReviewMethodValue => 'مزوّد ImpactLoop التجريبي';
+
+  @override
+  String get checkoutReviewAmountLabel => 'المبلغ المطلوب';
+
+  @override
+  String get checkoutProcessingTitle => 'جارٍ معالجة الدفع…';
+
+  @override
+  String get checkoutProcessingBody =>
+      'يرجى عدم إغلاق هذه الصفحة. قد يستغرق الأمر بضع ثوانٍ أثناء التحقق من الدفع مع المزوّد.';
+
+  @override
+  String get checkoutSuccessTitle => 'تم الدفع بنجاح!';
+
+  @override
+  String get checkoutSuccessBody =>
+      'تم تأكيد دفع الحجز. ارجع إلى تفاصيل الحجز للخطوة التالية.';
+
+  @override
+  String get checkoutSuccessTransactionLabel => 'طلب الدفع';
+
+  @override
+  String get checkoutBackToReservation => 'العودة إلى تفاصيل الحجز';
+
+  @override
+  String get checkoutViewAllReservations => 'عرض جميع حجوزاتي';
+
+  @override
+  String get checkoutFailureTitle => 'فشل الدفع';
+
+  @override
+  String get checkoutFailureBody =>
+      'تعذّر إتمام الدفع. يمكنك إعادة المحاولة بأمان دون إنشاء إرسال مكرر.';
+
+  @override
+  String get checkoutRetry => 'إعادة المحاولة';
+
+  @override
+  String get checkoutChangeMethod => 'العودة إلى طريقة الدفع';
+
+  @override
+  String get checkoutCancelledTitle => 'تم إلغاء الدفع';
+
+  @override
+  String get checkoutCancelledBody =>
+      'تم إلغاء محاولة الدفع هذه. يمكنك بدء دفع آمن جديد عندما تكون جاهزًا.';
+
+  @override
+  String get checkoutExpiredTitle => 'انتهت صلاحية الدفع';
+
+  @override
+  String get checkoutExpiredBody =>
+      'انتهت صلاحية محاولة الدفع قبل الإتمام. ابدأ دفعًا جديدًا للمتابعة.';
+
+  @override
+  String get checkoutAlreadyPaidTitle => 'مدفوع مسبقًا';
+
+  @override
+  String get checkoutAlreadyPaidBody =>
+      'طلب الدفع هذا مسدّد بالفعل. لا يلزم دفع إضافي.';
+
+  @override
+  String get checkoutRefundPendingTitle => 'استرداد قيد المعالجة';
+
+  @override
+  String get checkoutRefundPendingBody =>
+      'يوجد استرداد قيد المعالجة لطلب الدفع هذا. الدفع غير متاح.';
+
+  @override
+  String get checkoutRefundedTitle => 'تم الاسترداد';
+
+  @override
+  String get checkoutRefundedBody =>
+      'تم استرداد طلب الدفع هذا. قد يلزم بدء دورة دفع جديدة من تفاصيل الحجز.';
+
+  @override
+  String get checkoutOrderCancelledTitle => 'تم إلغاء طلب الدفع';
+
+  @override
+  String get checkoutOrderCancelledBody =>
+      'تم إلغاء طلب الدفع هذا ولا يمكن إتمام الدفع.';
+
+  @override
+  String get checkoutLoadErrorTitle => 'تعذّر تحميل صفحة الدفع';
+
+  @override
+  String get checkoutLoadErrorBody =>
+      'تعذّر تحميل طلب الدفع. تحقق من الاتصال وحاول مرة أخرى.';
+
+  @override
+  String get checkoutMissingTitle => 'طلب الدفع غير متاح';
+
+  @override
+  String get checkoutMissingBody =>
+      'لم يتم العثور على طلب الدفع أو ليس لديك صلاحية الوصول إليه.';
+
+  @override
+  String get checkoutRetryLoad => 'حاول مرة أخرى';
+
+  @override
+  String get checkoutSubmittingGuard =>
+      'الدفع قيد التنفيذ بالفعل. يرجى الانتظار.';
+
+  @override
+  String get checkoutableOrderReadyHint => 'يوجد طلب دفع جاهز لهذا الحجز.';
+
+  @override
+  String get paymentStatusRequired => 'دفع مطلوب';
+
+  @override
+  String get paymentStatusPartial => 'دفعة جزئية';
+
+  @override
+  String get paymentStatusProcessing => 'قيد المعالجة';
+
+  @override
+  String get paymentStatusPaid => 'مدفوع';
+
+  @override
+  String get paymentStatusRefundPending => 'استرداد قيد المعالجة';
+
+  @override
+  String get paymentStatusRefunded => 'تم الاسترداد';
+
+  @override
+  String get paymentStatusNeedsReview => 'يتطلب مراجعة';
+
+  @override
+  String get paymentSummaryUnavailable => 'حالة الدفع غير متاحة';
+
+  @override
+  String get paymentSummaryUnavailableHint =>
+      'تفاصيل الحجز ما زالت متاحة. اسحب للتحديث أو حاول مرة أخرى.';
+
+  @override
+  String get reservationListStatusWaiting => 'قيد الانتظار';
+
+  @override
+  String get reservationListStatusNeedsAction => 'يتطلب إجراء';
+
+  @override
+  String get reservationListStatusAccepted => 'مقبول';
+
+  @override
+  String get reservationListStatusCompleted => 'مكتمل';
+
+  @override
+  String get reservationListStatusClosed => 'مغلق';
+
+  @override
+  String get reservationListStatusNeedsReview => 'يتطلب مراجعة';
+
+  @override
+  String get reservationNextStepPayToConfirm =>
+      'ادفع لتأكيد الحجز وإظهار رمز الاستلام.';
+
+  @override
+  String get reservationNextStepDeliveryFeeRemaining =>
+      'تم استلام دفعة، وما زالت رسوم التوصيل مطلوبة.';
+
+  @override
+  String get reservationNextStepWaitingSupplier => 'بانتظار موافقة المورد.';
+
+  @override
+  String get reservationNextStepConfirmProposal => 'راجع اقتراح المورد وأكّده.';
+
+  @override
+  String get reservationNextStepPickupCodeWindow =>
+      'تم الدفع، وسيصبح رمز الاستلام متاحًا داخل نافذة الاستلام.';
+
+  @override
+  String get reservationNextStepPickupCodeReady =>
+      'رمز الاستلام جاهز في صفحة تفاصيل الحجز.';
+
+  @override
+  String get reservationNextStepFindingDriver => 'جاري البحث عن سائق.';
+
+  @override
+  String get reservationNextStepTrackDelivery =>
+      'التوصيل قيد التنفيذ. تتبّعه للاطلاع على التحديثات.';
+
+  @override
+  String get reservationNextStepRefundProcessing => 'تتم معالجة إعادة المبلغ.';
+
+  @override
+  String get reservationNextStepRefunded => 'تم استرداد هذا الدفع.';
+
+  @override
+  String get reservationNextStepUnderReview =>
+      'الحالة قيد المراجعة، ولا يلزم إجراء منك الآن.';
+
+  @override
+  String get reservationNextStepPaymentProcessing => 'جارٍ معالجة الدفع.';
+
+  @override
+  String get reservationNextStepPaymentUnavailable =>
+      'حالة الدفع غير متاحة مؤقتًا. افتح التفاصيل أو حدّث الصفحة.';
+
+  @override
+  String get reservationNextStepReadyPickup =>
+      'تم قبول الحجز. افتح التفاصيل لمعلومات الاستلام.';
+
+  @override
+  String get reservationNextStepAcceptedDelivery =>
+      'تم قبول الحجز. سيتابع التوصيل عند الجاهزية.';
+
+  @override
+  String get reservationNextStepDelivered => 'تم تسليم المواد بنجاح.';
+
+  @override
+  String get reservationNextStepCompletedPickup => 'تم إكمال الاستلام بنجاح.';
+
+  @override
+  String get reservationNextStepClosed => 'هذا الحجز مغلق.';
+
+  @override
+  String get reservationNextStepViewDetails =>
+      'افتح التفاصيل لعرض الحالة الكاملة.';
+
+  @override
+  String get payNow => 'ادفع الآن';
+
+  @override
+  String get completePayment => 'أكمل الدفع';
+
+  @override
+  String get viewPickupCode => 'عرض رمز الاستلام';
+
+  @override
+  String get reservationDateLabel => 'تاريخ الحجز';
+
+  @override
+  String get supplierLabel => 'المورد';
+
+  @override
+  String get quantityLabelShort => 'الكمية';
+
+  @override
+  String get fulfillmentPickup => 'استلام';
+
+  @override
+  String get fulfillmentDelivery => 'توصيل';
+
+  @override
+  String get skeletonLoadingReservations => 'جارٍ تحميل حجوزاتك';
 
   @override
   String get fulfillmentMethod => 'طريقة استلام الطلب';
@@ -1078,6 +1770,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get acceptProposedTime => 'قبول الموعد المقترح';
 
   @override
+  String get confirmFlexibleDeliveryWindow => 'تأكيد موعد التوصيل';
+
+  @override
+  String get flexibleDeliveryNeedsWindowHint =>
+      'تركت توقيت التوصيل مفتوحًا. أكّد اقتراح المورّد أو اختر أي نافذة توصيل بعد أقرب وقت أدناه.';
+
+  @override
   String get newDeliveryWindow => 'موعد توصيل جديد';
 
   @override
@@ -1102,6 +1801,10 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get reservationScheduleNeedsConfirmation =>
       'اقترح المورّد موعدًا يحتاج إلى تأكيدك.';
+
+  @override
+  String get reservationFlexibleScheduleReady =>
+      'حدّد المورّد موعدًا. أكّد نافذة التوصيل للمتابعة.';
 
   @override
   String get reservationRescheduleWaitingSupplier =>
@@ -1627,6 +2330,17 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get deliveryRequested => 'تم طلب التوصيل.';
+
+  @override
+  String get deliveryRequestedFree =>
+      'تم طلب التوصيل. التوصيل مجاني لهذا الطلب.';
+
+  @override
+  String get deliveryFeePaymentRequired =>
+      'تم إعداد التوصيل. ادفع رسوم التوصيل لبدء التنفيذ.';
+
+  @override
+  String get freeDeliveryLabel => 'توصيل مجاني';
 
   @override
   String get deliveryRequestFailed => 'تعذّر طلب التوصيل. حاول مرة أخرى.';
@@ -3765,6 +4479,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get supplierProposeCustomDeliveryWindow => 'اقتراح نافذة توصيل مخصصة';
+
+  @override
+  String get supplierFlexibleLearnerNeedsDeliveryProposal =>
+      'ترك المتعلّم توقيت التوصيل مفتوحًا. اقترح نافذة توصيل للقبول — ستُعتمد تلقائيًا إذا كانت مناسبة بعد الاستلام.';
 
   @override
   String get supplierProposedLearnerDeliveryWindow =>

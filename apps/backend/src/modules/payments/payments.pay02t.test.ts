@@ -221,7 +221,7 @@ describe('PAY-02T final-ACCEPTED production-path payment coverage', () => {
       supplierPickupStart.getTime() + 2 * 3_600_000,
     );
     const earliestDelivery = new Date(
-      supplierPickupEnd.getTime() + 60 * 60_000,
+      supplierPickupStart.getTime() + 60 * 60_000,
     );
     const learnerDeliveryEnd = new Date(
       earliestDelivery.getTime() + 3 * 3_600_000,
@@ -526,6 +526,71 @@ describe('PAY-02T final-ACCEPTED production-path payment coverage', () => {
     assert.equal(deliveries[0]!.status, 'WAITING_FOR_DRIVER');
   });
 
+  test('5a2: flexible DELIVERY (no preferred windows) still creates material+fee on accept', async () => {
+    const material = await createMaterial({
+      price: 50,
+      deliveryAllowed: true,
+    });
+    const windows = deliveryAcceptWindows();
+    const created = await createReservation(learnerId, {
+      materialId: material.id,
+      quantityRequested: 1,
+      fulfillmentMethod: 'DELIVERY',
+      deliveryAddressText: '12 Flexible Street, Nablus',
+      dropoffCity: 'Nablus',
+      safeDropoffAllowed: false,
+      learnerPreferredDeliveryWindows: [],
+    });
+    await trackCreatedReservation(created.id);
+
+    assert.equal(created.deliveryGroupId, null);
+    assert.ok(Number(created.deliveryFee) > 0);
+
+    const accepted = await acceptSupplierReservation(supplierId, created.id, {
+      pickupWindowStart: windows.supplierPickupStart.toISOString(),
+      pickupWindowEnd: windows.supplierPickupEnd.toISOString(),
+      proposedDeliveryWindowStart: windows.learnerDeliveryStart.toISOString(),
+      proposedDeliveryWindowEnd: windows.learnerDeliveryEnd.toISOString(),
+    });
+    assert.equal(accepted.status, 'ACCEPTED');
+    await assertNoDelivery(created.id);
+
+    const reservation = await prisma.reservation.findUniqueOrThrow({
+      where: { id: created.id },
+    });
+    assert.ok(reservation.deliveryGroupId);
+    ids.groups.push(reservation.deliveryGroupId!);
+
+    await assertMaterialOrder({
+      reservationId: created.id,
+      amount: reservation.materialSubtotal!.toString(),
+    });
+
+    const feeOrders = await prisma.paymentOrder.findMany({
+      where: {
+        deliveryGroupId: reservation.deliveryGroupId!,
+        purpose: 'DELIVERY_FEE',
+      },
+    });
+    assert.equal(feeOrders.length, 1);
+    trackOrder(ids, feeOrders[0]!.id);
+    assert.equal(
+      feeOrders[0]!.amount.toString(),
+      reservation.deliveryFee!.toString(),
+    );
+
+    const mapped = await getMyReservationById(learnerId, created.id);
+    assert.ok(mapped.paymentSummary);
+    assert.equal(mapped.paymentSummary!.hasDeliveryFeeOutstanding, true);
+    assert.equal(mapped.paymentSummary!.outstandingOrderCount, 2);
+    assert.equal(
+      mapped.paymentSummary!.outstandingAmount,
+      (
+        Number(reservation.materialSubtotal) + Number(reservation.deliveryFee)
+      ).toFixed(2),
+    );
+  });
+
   test('5b: supplier delivery accept free material still creates fee order only', async () => {
     const material = await createMaterial({
       isFree: true,
@@ -586,7 +651,7 @@ describe('PAY-02T final-ACCEPTED production-path payment coverage', () => {
       supplierPickupStart.getTime() + 2 * 3_600_000,
     );
     const earliestDelivery = new Date(
-      supplierPickupEnd.getTime() + 60 * 60_000,
+      supplierPickupStart.getTime() + 60 * 60_000,
     );
     // Infeasible learner preference → AWAITING_LEARNER_CONFIRMATION
     const created = await createReservation(learnerId, {
@@ -1474,7 +1539,7 @@ describe('PAY-02T final-ACCEPTED production-path payment coverage', () => {
       supplierPickupStart.getTime() + 2 * 3_600_000,
     );
     const earliestDelivery = new Date(
-      supplierPickupEnd.getTime() + 60 * 60_000,
+      supplierPickupStart.getTime() + 60 * 60_000,
     );
     const created = await createReservation(learnerId, {
       materialId: material.id,

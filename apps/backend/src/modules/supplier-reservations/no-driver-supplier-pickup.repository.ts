@@ -311,7 +311,7 @@ export const submitNoDriverPickupWindowForSupplier = async (input: {
     );
 
     const earliestDeliveryStart = computeEarliestDeliveryStart(
-      input.supplierPickupWindowEnd,
+      input.supplierPickupWindowStart,
     );
 
     const groupedState =

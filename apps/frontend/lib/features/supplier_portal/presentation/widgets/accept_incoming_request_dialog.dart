@@ -62,10 +62,35 @@ class _AcceptIncomingRequestDialogState
 
   bool get _isDelivery => widget.request.isDeliveryFulfillment;
 
+  bool get _learnerLeftDeliveryFlexible =>
+      _isDelivery && widget.request.learnerPreferredDeliveryWindows.isEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_learnerLeftDeliveryFlexible) {
+      _useCustomDeliveryWindow = true;
+    }
+  }
+
   @override
   void dispose() {
     _noteController.dispose();
     super.dispose();
+  }
+
+  DateTime? get _supplierPickupWindowStart {
+    if (_pickupDate == null || _startTime == null) {
+      return null;
+    }
+
+    return DateTime(
+      _pickupDate!.year,
+      _pickupDate!.month,
+      _pickupDate!.day,
+      _startTime!.hour,
+      _startTime!.minute,
+    );
   }
 
   DateTime? get _supplierPickupWindowEnd {
@@ -87,8 +112,8 @@ class _AcceptIncomingRequestDialogState
       return null;
     }
 
-    final supplierPickupWindowEnd = _supplierPickupWindowEnd;
-    if (supplierPickupWindowEnd == null) {
+    final supplierPickupWindowStart = _supplierPickupWindowStart;
+    if (supplierPickupWindowStart == null) {
       return null;
     }
 
@@ -105,7 +130,7 @@ class _AcceptIncomingRequestDialogState
     }
 
     return previewSupplierDeliveryScheduling(
-      supplierPickupWindowEnd: supplierPickupWindowEnd,
+      supplierPickupWindowStart: supplierPickupWindowStart,
       learnerDeliveryWindows: learnerDeliveryWindows,
     );
   }
@@ -263,23 +288,33 @@ class _AcceptIncomingRequestDialogState
                   ],
                   if (_isDelivery) ...[
                     const SizedBox(height: AppSpacing.md),
-                    CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      title: Text(
-                        context.s.proposeCustomDeliveryWindow,
-                        style: context.supplierBody().copyWith(fontSize: 13),
+                    if (_learnerLeftDeliveryFlexible) ...[
+                      Text(
+                        context.s.flexibleLearnerNeedsDeliveryProposal,
+                        style: context.supplierBody().copyWith(
+                          fontSize: 13,
+                          color: colors.textSecondary,
+                        ),
                       ),
-                      value: _useCustomDeliveryWindow,
-                      onChanged: (value) {
-                        setState(() {
-                          _useCustomDeliveryWindow = value ?? false;
-                          if (_useCustomDeliveryWindow) {
-                            _selectedPreferredIndex = null;
-                          }
-                        });
-                      },
-                    ),
+                      const SizedBox(height: AppSpacing.sm),
+                    ] else
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        title: Text(
+                          context.s.proposeCustomDeliveryWindow,
+                          style: context.supplierBody().copyWith(fontSize: 13),
+                        ),
+                        value: _useCustomDeliveryWindow,
+                        onChanged: (value) {
+                          setState(() {
+                            _useCustomDeliveryWindow = value ?? false;
+                            if (_useCustomDeliveryWindow) {
+                              _selectedPreferredIndex = null;
+                            }
+                          });
+                        },
+                      ),
                     if (_useCustomDeliveryWindow) ...[
                       Text(
                         context.s.customDeliveryWindowLabel,
@@ -611,7 +646,7 @@ class _AcceptIncomingRequestDialogState
         return;
       }
 
-      if (_useCustomDeliveryWindow) {
+      if (_useCustomDeliveryWindow || _learnerLeftDeliveryFlexible) {
         if (_customDeliveryDate == null ||
             _customDeliveryStartTime == null ||
             _customDeliveryEndTime == null) {

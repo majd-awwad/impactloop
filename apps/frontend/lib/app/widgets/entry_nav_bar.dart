@@ -252,28 +252,39 @@ class _PhoneAppBarLayout extends StatelessWidget {
           ),
         ] else
           const Spacer(),
-        if (trailingActions.isNotEmpty) ...[
-          const SizedBox(width: AppSpacing.xs),
-          ...trailingActions,
-        ],
-        if (isAuthenticated && user != null && showAccountMenu) ...[
-          const SizedBox(width: AppSpacing.xs),
-          _AccountMenu(
-            user: user!,
-            settings: settings,
-            ref: ref,
-            compact: true,
-            isLoggingOut: isAuthLoading,
+        Flexible(
+          child: Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              reverse: true,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (trailingActions.isNotEmpty) ...trailingActions,
+                  if (isAuthenticated && user != null && showAccountMenu) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    _AccountMenu(
+                      user: user!,
+                      settings: settings,
+                      ref: ref,
+                      compact: true,
+                      isLoggingOut: isAuthLoading,
+                    ),
+                  ] else if (!isAuthenticated)
+                    _GuestMobileMenu(
+                      showSignIn: showSignIn,
+                      showCreateAccount: showCreateAccount,
+                      onSignIn: onSignIn,
+                      onCreateAccount: onCreateAccount,
+                      settings: settings,
+                      ref: ref,
+                    ),
+                ],
+              ),
+            ),
           ),
-        ] else if (!isAuthenticated)
-          _GuestMobileMenu(
-            showSignIn: showSignIn,
-            showCreateAccount: showCreateAccount,
-            onSignIn: onSignIn,
-            onCreateAccount: onCreateAccount,
-            settings: settings,
-            ref: ref,
-          ),
+        ),
       ],
     );
   }

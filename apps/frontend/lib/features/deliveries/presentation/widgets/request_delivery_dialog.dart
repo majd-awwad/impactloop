@@ -11,6 +11,7 @@ import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/location/current_location_service.dart';
+import '../../../auth/application/auth_route_helpers.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../reservations/application/learner_reservation_cache.dart';
 import '../../../reservations/data/models/learner_reservation.dart';
@@ -201,14 +202,43 @@ class _RequestDeliveryDialogState
         return;
       }
 
-      showInfoSnackBar(context, context.l10n.deliveryRequested);
+      final isFreeDelivery =
+          widget.reservation.deliveryFee == null ||
+          widget.reservation.deliveryFee == 0;
+      showInfoSnackBar(
+        context,
+        isFreeDelivery
+            ? context.l10n.deliveryRequestedFree
+            : context.l10n.deliveryRequested,
+      );
       final router = GoRouter.of(context);
       widget.onSubmitted();
-      router.push('/learner/deliveries/${delivery.id}');
+      // Use go (not push) so web history isn't stuck behind a dismissed dialog.
+      router.go('/learner/deliveries/${delivery.id}');
     } on ApiException catch (error) {
       if (!mounted) {
         return;
       }
+
+      invalidateLearnerReservationCaches(
+        ref,
+        reservationId: widget.reservation.id,
+      );
+      ref.invalidate(learnerDeliveriesProvider);
+
+      if (error.code == 'DELIVERY_FEE_REQUIRED') {
+        final paymentOrderId = error.details?['paymentOrderId']?.toString();
+        showInfoSnackBar(context, context.l10n.deliveryFeePaymentRequired);
+        final router = GoRouter.of(context);
+        widget.onSubmitted();
+        if (paymentOrderId != null && paymentOrderId.isNotEmpty) {
+          router.push(learnerPaymentCheckoutRoute(paymentOrderId));
+        } else {
+          router.push(learnerReservationDetailRoute(widget.reservation.id));
+        }
+        return;
+      }
+
       showErrorSnackBar(context, localizedApiErrorMessage(error, context.l10n));
     } catch (_) {
       if (!mounted) {

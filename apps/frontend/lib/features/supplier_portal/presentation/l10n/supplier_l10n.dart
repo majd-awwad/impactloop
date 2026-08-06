@@ -1489,6 +1489,8 @@ class SupplierL10n {
       _l10n.supplierSelectedLearnerDeliveryWindowWillBe;
   String get proposeCustomDeliveryWindow =>
       _l10n.supplierProposeCustomDeliveryWindow;
+  String get flexibleLearnerNeedsDeliveryProposal =>
+      _l10n.supplierFlexibleLearnerNeedsDeliveryProposal;
   String get customDeliveryWindowLabel =>
       _l10n.supplierProposedLearnerDeliveryWindow;
   String get chooseCustomDeliveryWindow =>

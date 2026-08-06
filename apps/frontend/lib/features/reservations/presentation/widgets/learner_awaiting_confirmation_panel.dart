@@ -18,6 +18,9 @@ import '../../data/models/learner_reservation.dart';
 import '../../data/models/reservation_preferred_window.dart';
 import '../learner_reservation_ui_helpers.dart';
 
+/// Default length used when a flexible learner confirms from earliest delivery.
+const _defaultFlexibleDeliveryDuration = Duration(hours: 2);
+
 class LearnerAwaitingConfirmationPanel extends ConsumerStatefulWidget {
   const LearnerAwaitingConfirmationPanel({
     super.key,
@@ -42,6 +45,30 @@ class _LearnerAwaitingConfirmationPanelState
     final confirmingId = ref.watch(confirmingReservationIdProvider);
     final state = ref.watch(reservationConfirmationControllerProvider);
     return confirmingId == reservation.id && state.isLoading;
+  }
+
+  bool get _leftDeliveryFlexible =>
+      reservation.isDeliveryFulfillment &&
+      reservation.learnerPreferredDeliveryWindows.isEmpty;
+
+  ReservationPreferredWindow? get _proposedDeliveryWindow {
+    final start = reservation.confirmedDeliveryWindowStart;
+    final end = reservation.confirmedDeliveryWindowEnd;
+    if (start == null || end == null || !end.isAfter(start)) {
+      return null;
+    }
+    return ReservationPreferredWindow(start: start, end: end);
+  }
+
+  ReservationPreferredWindow? get _earliestDefaultDeliveryWindow {
+    final earliest = reservation.earliestDeliveryStart;
+    if (earliest == null) {
+      return null;
+    }
+    return ReservationPreferredWindow(
+      start: earliest,
+      end: earliest.add(_defaultFlexibleDeliveryDuration),
+    );
   }
 
   Future<void> _refreshAfterSuccess(String successMessage) async {
@@ -96,13 +123,12 @@ class _LearnerAwaitingConfirmationPanelState
     );
   }
 
-  Future<void> _submitDeliveryWindow() {
+  Future<void> _submitDeliveryWindow({
+    required DateTime start,
+    required DateTime end,
+  }) {
     final now = DateTime.now();
-    final start = _deliveryWindow.start;
-    final end = _deliveryWindow.end;
-    final validationError = start == null || end == null
-        ? context.l10n.rescheduleReasonWindowRequired
-        : !end.isAfter(start)
+    final validationError = !end.isAfter(start)
         ? context.l10n.endAfterStart
         : !start.isAfter(now) || !end.isAfter(now)
         ? context.l10n.invalidPickupWindow
@@ -112,11 +138,8 @@ class _LearnerAwaitingConfirmationPanelState
       return Future<void>.value();
     }
 
-    final validStart = start!;
-    final validEnd = end!;
-
     final earliestDelivery = reservation.earliestDeliveryStart;
-    if (earliestDelivery != null && !validEnd.isAfter(earliestDelivery)) {
+    if (earliestDelivery != null && !end.isAfter(earliestDelivery)) {
       setState(() => _errorMessage = context.l10n.deliveryWindowAfterEarliest);
       return Future<void>.value();
     }
@@ -126,10 +149,41 @@ class _LearnerAwaitingConfirmationPanelState
           .read(reservationConfirmationControllerProvider.notifier)
           .submitDeliveryWindow(
             reservationId: reservation.id,
-            start: validStart,
-            end: validEnd,
+            start: start,
+            end: end,
           ),
       successMessage: context.l10n.deliveryWindowSubmitted,
+    );
+  }
+
+  Future<void> _submitCustomDeliveryWindow() {
+    final start = _deliveryWindow.start;
+    final end = _deliveryWindow.end;
+    if (start == null || end == null) {
+      setState(
+        () => _errorMessage = context.l10n.rescheduleReasonWindowRequired,
+      );
+      return Future<void>.value();
+    }
+
+    return _submitDeliveryWindow(start: start, end: end);
+  }
+
+  Future<void> _acceptProposedOrEarliestDelivery() {
+    final proposed = _proposedDeliveryWindow;
+    if (proposed != null) {
+      return _submitDeliveryWindow(start: proposed.start, end: proposed.end);
+    }
+
+    final earliestDefault = _earliestDefaultDeliveryWindow;
+    if (earliestDefault == null) {
+      setState(() => _errorMessage = context.l10n.rescheduleReasonWindowRequired);
+      return Future<void>.value();
+    }
+
+    return _submitDeliveryWindow(
+      start: earliestDefault.start,
+      end: earliestDefault.end,
     );
   }
 
@@ -146,6 +200,9 @@ class _LearnerAwaitingConfirmationPanelState
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final colors = AppThemeColors.of(context);
+    final canAcceptDelivery =
+        _proposedDeliveryWindow != null ||
+        (_leftDeliveryFlexible && _earliestDefaultDeliveryWindow != null);
 
     return Container(
       width: double.infinity,
@@ -221,6 +278,15 @@ class _LearnerAwaitingConfirmationPanelState
               ],
             ),
           ] else ...[
+            if (_leftDeliveryFlexible) ...[
+              Text(
+                context.l10n.flexibleDeliveryNeedsWindowHint,
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
             if (formatAwaitingDeliverySupplierPickupSummary(
                   reservation,
                   l10n: context.l10n,
@@ -273,15 +339,57 @@ class _LearnerAwaitingConfirmationPanelState
               ),
               const SizedBox(height: AppSpacing.xs),
             ],
-            if (formatSchedulingConflictReason(reservation, l10n: context.l10n)
-                case final conflict?) ...[
-              Text(
-                conflict,
-                style: AppTextStyles.label(
-                  context,
-                ).copyWith(color: palette.textMuted),
+            if (!_leftDeliveryFlexible) ...[
+              if (formatSchedulingConflictReason(
+                    reservation,
+                    l10n: context.l10n,
+                  )
+                  case final conflict?) ...[
+                Text(
+                  conflict,
+                  style: AppTextStyles.label(
+                    context,
+                  ).copyWith(color: palette.textMuted),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+            ],
+            if (canAcceptDelivery) ...[
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  FilledButton(
+                    onPressed: _isSubmitting
+                        ? null
+                        : _acceptProposedOrEarliestDelivery,
+                    style: AppStatusButtonStyle.filled(
+                      context,
+                      AppStatusTone.success,
+                    ),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            _proposedDeliveryWindow != null
+                                ? context.l10n.acceptProposedTime
+                                : context.l10n.confirmFlexibleDeliveryWindow,
+                          ),
+                  ),
+                  OutlinedButton(
+                    onPressed: _isSubmitting ? null : _cancelReservation,
+                    style: AppStatusButtonStyle.outlined(
+                      context,
+                      AppStatusTone.danger,
+                    ),
+                    child: Text(context.l10n.cancelReservation),
+                  ),
+                ],
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.md),
             ],
             PreferredWindowInput(
               windows: [_deliveryWindow],
@@ -321,7 +429,7 @@ class _LearnerAwaitingConfirmationPanelState
               runSpacing: AppSpacing.sm,
               children: [
                 FilledButton(
-                  onPressed: _isSubmitting ? null : _submitDeliveryWindow,
+                  onPressed: _isSubmitting ? null : _submitCustomDeliveryWindow,
                   style: AppStatusButtonStyle.filled(
                     context,
                     AppStatusTone.primary,
@@ -334,14 +442,15 @@ class _LearnerAwaitingConfirmationPanelState
                         )
                       : Text(context.l10n.submitNewDeliveryWindow),
                 ),
-                OutlinedButton(
-                  onPressed: _isSubmitting ? null : _cancelReservation,
-                  style: AppStatusButtonStyle.outlined(
-                    context,
-                    AppStatusTone.danger,
+                if (!canAcceptDelivery)
+                  OutlinedButton(
+                    onPressed: _isSubmitting ? null : _cancelReservation,
+                    style: AppStatusButtonStyle.outlined(
+                      context,
+                      AppStatusTone.danger,
+                    ),
+                    child: Text(context.l10n.cancelReservation),
                   ),
-                  child: Text(context.l10n.cancelReservation),
-                ),
               ],
             ),
           ],

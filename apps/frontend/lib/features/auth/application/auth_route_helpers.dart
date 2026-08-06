@@ -21,6 +21,28 @@ const accountSettingsRoute = '/profile/account';
 const learningProfileRoute = '/profile/learning';
 const learnerProfileEditRoute = '/profile/learner/edit';
 const learnerReservationsRoute = '/learner/reservations';
+const learnerPaymentCheckoutRoutePrefix = '/learner/checkout';
+
+String learnerPaymentCheckoutRoute(String orderId) =>
+    '$learnerPaymentCheckoutRoutePrefix/$orderId';
+
+String learnerReservationDetailRoute(
+  String reservationId, {
+  bool focusPayment = false,
+  String? checkoutableOrderId,
+}) {
+  final q = <String, String>{};
+  if (focusPayment) q['focus'] = 'payment';
+  if (checkoutableOrderId != null && checkoutableOrderId.isNotEmpty) {
+    q['orderId'] = checkoutableOrderId;
+  }
+  final uri = Uri(
+    path: '/learner/reservations/$reservationId',
+    queryParameters: q.isEmpty ? null : q,
+  );
+  return uri.toString();
+}
+
 const supplierProfileRoute = '/supplier/profile';
 
 bool userHasRole(User? user, String role) {

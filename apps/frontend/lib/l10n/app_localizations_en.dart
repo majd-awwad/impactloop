@@ -182,7 +182,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filterActive => 'Active';
 
   @override
-  String get filterNeedsAction => 'Needs action';
+  String get filterNeedsAction => 'Action required';
 
   @override
   String get filterPending => 'Pending';
@@ -901,7 +901,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reservationsSubtitle =>
-      'Track requests, pickup windows, and delivery updates.';
+      'Track all your reservations, pickup, delivery, and payment actions from here.';
 
   @override
   String get loadingReservations => 'Loading reservations';
@@ -936,6 +936,716 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tryAgainAction => 'Try again';
+
+  @override
+  String get reservationsSummaryActive => 'Active';
+
+  @override
+  String get reservationsSummaryActionRequired => 'Action required';
+
+  @override
+  String get reservationsSummaryPaymentsRequired => 'Payments required';
+
+  @override
+  String get reservationsSummaryDeliveries => 'Delivery ready';
+
+  @override
+  String get reservationsSummaryTotal => 'Total';
+
+  @override
+  String get reservationsSummaryLoadedHint =>
+      'Counts reflect currently loaded reservations.';
+
+  @override
+  String get reservationsTimezoneNote =>
+      'All dates and times use your local time zone.';
+
+  @override
+  String get reservationsFilter => 'Filter';
+
+  @override
+  String get viewAllReservations => 'View all reservations';
+
+  @override
+  String get reservationMoneyAmountDue => 'Amount due';
+
+  @override
+  String get reservationMoneyRemaining => 'Remaining';
+
+  @override
+  String get reservationMoneyPaidInFull => 'Paid in full';
+
+  @override
+  String reservationMoneyOrdersRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count payments remaining',
+      one: '1 payment remaining',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get reservationMoneyMaterialPaidDeliveryDue =>
+      'Material payment received. Delivery fee is still required.';
+
+  @override
+  String get reservationMoneyDeliveryPaidMaterialDue =>
+      'Delivery fee settled. Material payment is still required.';
+
+  @override
+  String get reservationMoneyBothOutstanding =>
+      'Material and delivery are paid together in one checkout.';
+
+  @override
+  String get reservationNextStepPayTitle =>
+      'Complete payment to confirm the reservation';
+
+  @override
+  String get reservationNextStepPaySupporting =>
+      'The pickup code appears after payment and once the pickup window starts.';
+
+  @override
+  String get reservationNextStepPartialTitle =>
+      'Complete the remaining payment';
+
+  @override
+  String get reservationNextStepPartialSupporting =>
+      'A payment was received; the delivery fee is still required.';
+
+  @override
+  String reservationMoneyAmountWithCurrency(String amount) {
+    return '$amount ₪';
+  }
+
+  @override
+  String get reservationDetailsTitle => 'Reservation details';
+
+  @override
+  String get reservationSummaryTitle => 'Reservation summary';
+
+  @override
+  String get reservationReference => 'Reference';
+
+  @override
+  String get reservationStatusLabel => 'Status';
+
+  @override
+  String get reservationLocationLabel => 'Location';
+
+  @override
+  String get importantNotes => 'Important notes';
+
+  @override
+  String get pickupCodeTitle => 'Pickup code';
+
+  @override
+  String get pickupCodeLockedPayment =>
+      'Complete payment to unlock your pickup code.';
+
+  @override
+  String get pickupCodeWaitingWindow =>
+      'Your pickup code will appear when the pickup window opens.';
+
+  @override
+  String get pickupCodeAvailableLabel =>
+      'Show this code to the supplier at pickup.';
+
+  @override
+  String get pickupCodeSafetyNote =>
+      'Do not share this code before you are at the pickup location.';
+
+  @override
+  String get pickupCodeClosed =>
+      'Pickup code is no longer available for this reservation.';
+
+  @override
+  String get pickupCodeProcessing =>
+      'Pickup code will be available after payment is confirmed.';
+
+  @override
+  String get pickupCodeUnderReview =>
+      'Pickup code is paused while this case is under review.';
+
+  @override
+  String get pickupCodeRefundProcessing =>
+      'Pickup code is unavailable while your refund is processed.';
+
+  @override
+  String get pickupCodeRefunded =>
+      'This reservation was refunded. No pickup code is required.';
+
+  @override
+  String get pickupCodeNotApplicable =>
+      'Pickup code does not apply to this reservation.';
+
+  @override
+  String get pickupWindowNotStarted => 'Not started yet';
+
+  @override
+  String get pickupWindowActiveNow => 'Available now';
+
+  @override
+  String get pickupWindowEnded => 'Window ended';
+
+  @override
+  String get openInMaps => 'Open in maps';
+
+  @override
+  String get mapApproximateNote => 'Map shows an approximate pickup area.';
+
+  @override
+  String get followUpMessagesTitle => 'Follow-up messages';
+
+  @override
+  String get noFollowUpMessagesYet => 'No follow-up messages yet.';
+
+  @override
+  String get writeShortFollowUpMessage =>
+      'Send a short follow-up to the supplier…';
+
+  @override
+  String get sendFollowUpMessage => 'Send message';
+
+  @override
+  String get followUpMessagesLoadError => 'Could not load follow-up messages.';
+
+  @override
+  String get showFullHistory => 'Show full history';
+
+  @override
+  String get showLessHistory => 'Show less';
+
+  @override
+  String get paymentHistoryTitle => 'Payment history';
+
+  @override
+  String get currentPaymentCycle => 'Current payment cycle';
+
+  @override
+  String get previousPaymentCycleCancelled =>
+      'Previous payment cycle was cancelled.';
+
+  @override
+  String get previousPaymentCycleRefunded =>
+      'Previous payment cycle was refunded.';
+
+  @override
+  String get reservationDetailNotesPickupTitle => 'Pickup notes';
+
+  @override
+  String get reservationDetailNotesPickupSafety =>
+      'Bring a valid ID and arrive within the confirmed pickup window.';
+
+  @override
+  String get reservationDetailNotesPickupContact =>
+      'Contact the supplier through follow-up messages if you are delayed.';
+
+  @override
+  String get reservationDetailTimelineCreated => 'Reservation created';
+
+  @override
+  String get reservationDetailTimelinePending =>
+      'Waiting for supplier response';
+
+  @override
+  String get reservationDetailTimelineAwaitingConfirmation =>
+      'Needs your confirmation';
+
+  @override
+  String get reservationDetailTimelinePaymentRequired => 'Payment required';
+
+  @override
+  String get reservationDetailTimelinePaymentCompleted => 'Payment completed';
+
+  @override
+  String get reservationDetailTimelineReadyPickup => 'Ready for pickup';
+
+  @override
+  String get reservationDetailTimelineReadyDelivery => 'Ready for delivery';
+
+  @override
+  String get reservationDetailTimelineCompleted => 'Reservation completed';
+
+  @override
+  String get reservationDetailTimelineCancelled => 'Reservation cancelled';
+
+  @override
+  String get reservationDetailTimelineRefunded => 'Payment refunded';
+
+  @override
+  String get reservationDetailTimelineUnderReview => 'Under admin review';
+
+  @override
+  String get reservationDetailPaymentTitle => 'Payment';
+
+  @override
+  String get reservationDetailPaymentRequiredTitle => 'Payment required';
+
+  @override
+  String get reservationDetailMaterialAmount => 'Material amount';
+
+  @override
+  String get reservationDetailDeliveryFeeAmount => 'Delivery fee';
+
+  @override
+  String get reservationDetailPickupFeeAmount => 'Pickup fee';
+
+  @override
+  String get reservationDetailRemainingAmount => 'Remaining';
+
+  @override
+  String get reservationDetailTotalRequired => 'Total required';
+
+  @override
+  String get contactSupplier => 'Contact supplier';
+
+  @override
+  String get viewSupplierProfile => 'View supplier profile';
+
+  @override
+  String get reservationDetailFulfillmentTitle => 'Fulfillment';
+
+  @override
+  String get reservationDetailQuickActionsTitle => 'Quick actions';
+
+  @override
+  String get reservationDetailOverdueBanner =>
+      'Pickup window passed. Please contact the supplier or wait for follow-up.';
+
+  @override
+  String get allReservations => 'All reservations';
+
+  @override
+  String get loadingReservation => 'Loading reservation';
+
+  @override
+  String get loadingReservationSubtitle =>
+      'Checking the latest reservation status.';
+
+  @override
+  String get reservationLoadError => 'Could not load reservation';
+
+  @override
+  String get checkoutComingSoon =>
+      'Checkout will be available soon. Your payment order is ready.';
+
+  @override
+  String get checkoutPageTitle => 'Complete payment';
+
+  @override
+  String get checkoutPageSubtitle =>
+      'Confirm this reservation by paying the required amount securely.';
+
+  @override
+  String get checkoutBreadcrumbHome => 'Home';
+
+  @override
+  String get checkoutBreadcrumbReservations => 'My reservations';
+
+  @override
+  String get checkoutBreadcrumbDetails => 'Reservation details';
+
+  @override
+  String get checkoutBreadcrumbCheckout => 'Checkout';
+
+  @override
+  String get checkoutStepSummary => 'Payment summary';
+
+  @override
+  String get checkoutStepMethod => 'Payment method';
+
+  @override
+  String get checkoutStepConfirm => 'Confirm order';
+
+  @override
+  String get checkoutStepResult => 'Result';
+
+  @override
+  String get checkoutReservationInfo => 'Reservation information';
+
+  @override
+  String get checkoutOrderIdLabel => 'Order ID';
+
+  @override
+  String get checkoutReservationDateLabel => 'Date';
+
+  @override
+  String get checkoutReservationStatusLabel => 'Status';
+
+  @override
+  String get checkoutPickupWindowLabel => 'Pickup window';
+
+  @override
+  String get checkoutViewReservationDetails => 'View reservation details';
+
+  @override
+  String checkoutQuantityLabel(int count) {
+    return '$count unit(s)';
+  }
+
+  @override
+  String get checkoutFulfillmentPickup => 'Pickup from supplier';
+
+  @override
+  String get checkoutFulfillmentDelivery => 'Delivery';
+
+  @override
+  String get checkoutVerifiedSupplier => 'Verified supplier';
+
+  @override
+  String get checkoutAmountSummaryTitle => 'Amount summary';
+
+  @override
+  String get checkoutItemPrice => 'Item price';
+
+  @override
+  String get checkoutDeliveryFees => 'Delivery fees';
+
+  @override
+  String get checkoutTotalRequired => 'Total required';
+
+  @override
+  String get checkoutPreviouslyPaid => 'Previously paid';
+
+  @override
+  String get checkoutRemainingAmount => 'Remaining amount';
+
+  @override
+  String get checkoutChooseWhatToPay => 'Choose what you want to pay';
+
+  @override
+  String get checkoutCombinedPaymentTitle => 'Payment covers';
+
+  @override
+  String get checkoutCombinedPaymentHint =>
+      'Material and delivery fees are charged together in this checkout.';
+
+  @override
+  String get checkoutPurposeMaterialTitle => 'Material subtotal';
+
+  @override
+  String get checkoutPurposeMaterialHint =>
+      'Confirms the reservation. Delivery fees (if any) are paid separately.';
+
+  @override
+  String get checkoutPurposeDeliveryTitle => 'Delivery fee';
+
+  @override
+  String get checkoutPurposeDeliveryHint =>
+      'Pays the delivery fee for this reservation group.';
+
+  @override
+  String get checkoutOtherOrderHint =>
+      'Another payment is also outstanding. You can pay it after this one.';
+
+  @override
+  String get checkoutPaymentIncludesTitle => 'Payment includes';
+
+  @override
+  String get checkoutIncludesConfirmReservation => 'Confirming the reservation';
+
+  @override
+  String get checkoutIncludesPickupCode =>
+      'Unlocking the pickup code when ready';
+
+  @override
+  String get checkoutIncludesDeliveryDispatch =>
+      'Allowing delivery dispatch when ready';
+
+  @override
+  String get checkoutSecurePaymentTitle => 'Secure payment';
+
+  @override
+  String get checkoutSecurePaymentBody =>
+      'Your payment session is encrypted. ImpactLoop never stores card details — checkout runs through the secure Mock payment provider for this environment.';
+
+  @override
+  String get checkoutContinueToPayment => 'Continue to payment';
+
+  @override
+  String get checkoutReviewOrder => 'Review order';
+
+  @override
+  String get checkoutConfirmPayment => 'Confirm payment';
+
+  @override
+  String get checkoutMockProviderTitle => 'Mock payment provider';
+
+  @override
+  String get checkoutMockProviderBody =>
+      'This environment uses ImpactLoop’s secure Mock provider. Completing payment updates verified backend payment state — a button press alone is not success.';
+
+  @override
+  String get checkoutMockPaySecurely => 'Complete mock payment';
+
+  @override
+  String get checkoutMockSimulateDecline => 'Simulate decline';
+
+  @override
+  String get checkoutMockCancelAttempt => 'Cancel this attempt';
+
+  @override
+  String get checkoutReviewTitle => 'Review order';
+
+  @override
+  String get checkoutReviewMethodLabel => 'Payment method';
+
+  @override
+  String get checkoutReviewMethodValue => 'ImpactLoop Mock provider';
+
+  @override
+  String get checkoutReviewAmountLabel => 'Amount to pay';
+
+  @override
+  String get checkoutProcessingTitle => 'Processing payment…';
+
+  @override
+  String get checkoutProcessingBody =>
+      'Please do not close this page. This may take a few seconds while we verify the payment with the provider.';
+
+  @override
+  String get checkoutSuccessTitle => 'Payment successful!';
+
+  @override
+  String get checkoutSuccessBody =>
+      'Reservation payment is confirmed. Return to reservation details for the next step.';
+
+  @override
+  String get checkoutSuccessTransactionLabel => 'Payment order';
+
+  @override
+  String get checkoutBackToReservation => 'Back to reservation details';
+
+  @override
+  String get checkoutViewAllReservations => 'View all my reservations';
+
+  @override
+  String get checkoutFailureTitle => 'Payment failed';
+
+  @override
+  String get checkoutFailureBody =>
+      'We could not complete this payment. You can retry securely without creating a duplicate submission.';
+
+  @override
+  String get checkoutRetry => 'Retry';
+
+  @override
+  String get checkoutChangeMethod => 'Return to payment method';
+
+  @override
+  String get checkoutCancelledTitle => 'Payment cancelled';
+
+  @override
+  String get checkoutCancelledBody =>
+      'This payment attempt was cancelled. You can start a new secure checkout when ready.';
+
+  @override
+  String get checkoutExpiredTitle => 'Checkout expired';
+
+  @override
+  String get checkoutExpiredBody =>
+      'This payment attempt expired before completion. Start a new checkout to continue.';
+
+  @override
+  String get checkoutAlreadyPaidTitle => 'Already paid';
+
+  @override
+  String get checkoutAlreadyPaidBody =>
+      'This payment order is already settled. No further payment is required.';
+
+  @override
+  String get checkoutRefundPendingTitle => 'Refund pending';
+
+  @override
+  String get checkoutRefundPendingBody =>
+      'A refund is in progress for this payment order. Checkout is not available.';
+
+  @override
+  String get checkoutRefundedTitle => 'Refunded';
+
+  @override
+  String get checkoutRefundedBody =>
+      'This payment order was refunded. A new payment cycle may be required from reservation details.';
+
+  @override
+  String get checkoutOrderCancelledTitle => 'Payment cancelled';
+
+  @override
+  String get checkoutOrderCancelledBody =>
+      'This payment order was cancelled and cannot be checked out.';
+
+  @override
+  String get checkoutLoadErrorTitle => 'Could not load checkout';
+
+  @override
+  String get checkoutLoadErrorBody =>
+      'We could not load this payment order. Check your connection and try again.';
+
+  @override
+  String get checkoutMissingTitle => 'Payment order unavailable';
+
+  @override
+  String get checkoutMissingBody =>
+      'This payment order was not found or you do not have access to it.';
+
+  @override
+  String get checkoutRetryLoad => 'Try again';
+
+  @override
+  String get checkoutSubmittingGuard =>
+      'Payment is already in progress. Please wait.';
+
+  @override
+  String get checkoutableOrderReadyHint =>
+      'A checkoutable payment order is ready for this reservation.';
+
+  @override
+  String get paymentStatusRequired => 'Payment required';
+
+  @override
+  String get paymentStatusPartial => 'Partial payment';
+
+  @override
+  String get paymentStatusProcessing => 'Processing';
+
+  @override
+  String get paymentStatusPaid => 'Paid';
+
+  @override
+  String get paymentStatusRefundPending => 'Refund pending';
+
+  @override
+  String get paymentStatusRefunded => 'Refunded';
+
+  @override
+  String get paymentStatusNeedsReview => 'Needs review';
+
+  @override
+  String get paymentSummaryUnavailable => 'Payment status unavailable';
+
+  @override
+  String get paymentSummaryUnavailableHint =>
+      'Reservation details are still available. Pull to refresh or try again.';
+
+  @override
+  String get reservationListStatusWaiting => 'Waiting';
+
+  @override
+  String get reservationListStatusNeedsAction => 'Action required';
+
+  @override
+  String get reservationListStatusAccepted => 'Accepted';
+
+  @override
+  String get reservationListStatusCompleted => 'Completed';
+
+  @override
+  String get reservationListStatusClosed => 'Closed';
+
+  @override
+  String get reservationListStatusNeedsReview => 'Needs review';
+
+  @override
+  String get reservationNextStepPayToConfirm =>
+      'Pay to confirm the reservation and reveal the pickup code.';
+
+  @override
+  String get reservationNextStepDeliveryFeeRemaining =>
+      'A payment was received, and the delivery fee is still required.';
+
+  @override
+  String get reservationNextStepWaitingSupplier =>
+      'Waiting for supplier approval.';
+
+  @override
+  String get reservationNextStepConfirmProposal =>
+      'Review and confirm the supplier proposal.';
+
+  @override
+  String get reservationNextStepPickupCodeWindow =>
+      'Payment received. The pickup code will become available inside the pickup window.';
+
+  @override
+  String get reservationNextStepPickupCodeReady =>
+      'Pickup code is ready on the reservation details page.';
+
+  @override
+  String get reservationNextStepFindingDriver => 'Looking for a driver.';
+
+  @override
+  String get reservationNextStepTrackDelivery =>
+      'Your delivery is in progress. Track it for live updates.';
+
+  @override
+  String get reservationNextStepRefundProcessing =>
+      'Your refund is being processed.';
+
+  @override
+  String get reservationNextStepRefunded => 'This payment was refunded.';
+
+  @override
+  String get reservationNextStepUnderReview =>
+      'This case is under review. No action is required from you right now.';
+
+  @override
+  String get reservationNextStepPaymentProcessing =>
+      'Payment is being processed.';
+
+  @override
+  String get reservationNextStepPaymentUnavailable =>
+      'Payment status is temporarily unavailable. Open details or refresh.';
+
+  @override
+  String get reservationNextStepReadyPickup =>
+      'Your reservation is accepted. Open details for pickup information.';
+
+  @override
+  String get reservationNextStepAcceptedDelivery =>
+      'Your reservation is accepted. Delivery will continue once ready.';
+
+  @override
+  String get reservationNextStepDelivered =>
+      'Materials were delivered successfully.';
+
+  @override
+  String get reservationNextStepCompletedPickup =>
+      'Pickup was completed successfully.';
+
+  @override
+  String get reservationNextStepClosed => 'This reservation is closed.';
+
+  @override
+  String get reservationNextStepViewDetails =>
+      'Open details for the full status.';
+
+  @override
+  String get payNow => 'Pay now';
+
+  @override
+  String get completePayment => 'Complete payment';
+
+  @override
+  String get viewPickupCode => 'View pickup code';
+
+  @override
+  String get reservationDateLabel => 'Reservation date';
+
+  @override
+  String get supplierLabel => 'Supplier';
+
+  @override
+  String get quantityLabelShort => 'Quantity';
+
+  @override
+  String get fulfillmentPickup => 'Pickup';
+
+  @override
+  String get fulfillmentDelivery => 'Delivery';
+
+  @override
+  String get skeletonLoadingReservations => 'Loading your reservations';
 
   @override
   String get fulfillmentMethod => 'Fulfillment method';
@@ -1091,6 +1801,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get acceptProposedTime => 'Accept proposed time';
 
   @override
+  String get confirmFlexibleDeliveryWindow => 'Confirm delivery window';
+
+  @override
+  String get flexibleDeliveryNeedsWindowHint =>
+      'You left delivery timing open. Confirm the supplier proposal or choose any delivery window after the earliest time below.';
+
+  @override
   String get newDeliveryWindow => 'New delivery window';
 
   @override
@@ -1116,6 +1833,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get reservationScheduleNeedsConfirmation =>
       'The supplier proposed a schedule that needs your confirmation.';
+
+  @override
+  String get reservationFlexibleScheduleReady =>
+      'The supplier set a schedule. Confirm the delivery window to continue.';
 
   @override
   String get reservationRescheduleWaitingSupplier =>
@@ -1650,6 +2371,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deliveryRequested => 'Delivery requested.';
+
+  @override
+  String get deliveryRequestedFree =>
+      'Delivery requested. Delivery is free for this order.';
+
+  @override
+  String get deliveryFeePaymentRequired =>
+      'Delivery was set up. Pay the delivery fee to start fulfillment.';
+
+  @override
+  String get freeDeliveryLabel => 'Free delivery';
 
   @override
   String get deliveryRequestFailed => 'Could not request delivery. Try again.';
@@ -3810,6 +4542,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get supplierProposeCustomDeliveryWindow =>
       'Propose custom delivery window';
+
+  @override
+  String get supplierFlexibleLearnerNeedsDeliveryProposal =>
+      'This learner left delivery timing open. Propose a delivery window to accept — it will be confirmed automatically if it fits after pickup.';
 
   @override
   String get supplierProposedLearnerDeliveryWindow =>

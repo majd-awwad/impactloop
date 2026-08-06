@@ -31,7 +31,9 @@ import {
 import * as supplierReservationsRepository from './supplier-reservations.repository.js';
 import {
   mapPreferredWindowsForResponse,
+  parsePreferredWindowsJson,
   resolvePreferredWindowByIndex,
+  computeEarliestDeliveryStart,
 } from './supplier-reservation-scheduling.js';
 import {
   assertValidPickupWindow,
@@ -526,8 +528,11 @@ export const mapSupplierReservation = (
       reservation.confirmedDeliveryWindowStart?.toISOString() ?? null,
     confirmedDeliveryWindowEnd:
       reservation.confirmedDeliveryWindowEnd?.toISOString() ?? null,
-    earliestDeliveryStart:
-      reservation.earliestDeliveryStart?.toISOString() ?? null,
+    earliestDeliveryStart: reservation.supplierPickupWindowStart
+      ? computeEarliestDeliveryStart(
+          reservation.supplierPickupWindowStart,
+        ).toISOString()
+      : (reservation.earliestDeliveryStart?.toISOString() ?? null),
     schedulingConflictReason: reservation.schedulingConflictReason,
     activeDelivery: latestDelivery
       ? {
@@ -607,7 +612,11 @@ export const mapSupplierReservation = (
       pendingReschedule,
       recoveryContext,
       schedulingConflictReason: reservation.schedulingConflictReason,
-      earliestDeliveryStart: reservation.earliestDeliveryStart?.toISOString() ?? null,
+      earliestDeliveryStart: reservation.supplierPickupWindowStart
+        ? computeEarliestDeliveryStart(
+            reservation.supplierPickupWindowStart,
+          ).toISOString()
+        : (reservation.earliestDeliveryStart?.toISOString() ?? null),
     },
     deliverySummary,
     incidentSummary,
@@ -981,6 +990,16 @@ export const acceptSupplierReservation = async (
       );
     }
 
+    const learnerDeliveryWindows = parsePreferredWindowsJson(
+      existing.learnerPreferredDeliveryWindows,
+    );
+    if (learnerDeliveryWindows.length === 0 && !proposedDeliveryWindow) {
+      throw new AppError(
+        'Learner left delivery timing flexible. Propose a delivery window when accepting.',
+        400,
+        'DELIVERY_WINDOW_REQUIRED',
+      );
+    }
   }
 
   const result = await supplierReservationsRepository.acceptSupplierReservation({

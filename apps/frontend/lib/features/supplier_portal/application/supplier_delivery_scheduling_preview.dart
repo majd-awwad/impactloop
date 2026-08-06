@@ -17,14 +17,16 @@ class SupplierDeliverySchedulingPreview {
 }
 
 SupplierDeliverySchedulingPreview? previewSupplierDeliveryScheduling({
-  required DateTime supplierPickupWindowEnd,
+  required DateTime supplierPickupWindowStart,
   required List<ReservationPreferredWindow> learnerDeliveryWindows,
 }) {
   if (learnerDeliveryWindows.isEmpty) {
     return null;
   }
 
-  final earliestDeliveryStart = supplierPickupWindowEnd.add(
+  // Earliest delivery assumes the driver can leave at the start of the
+  // supplier pickup window, plus the travel buffer.
+  final earliestDeliveryStart = supplierPickupWindowStart.add(
     const Duration(minutes: supplierDeliveryBufferMinutes),
   );
 

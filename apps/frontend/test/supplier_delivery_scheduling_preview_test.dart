@@ -5,12 +5,12 @@ import 'package:frontend/features/supplier_portal/application/supplier_delivery_
 
 void main() {
   test('previewSupplierDeliveryScheduling trims partial overlap', () {
-    final supplierPickupEnd = DateTime.parse('2026-07-10T16:00:00.000Z');
+    final supplierPickupStart = DateTime.parse('2026-07-10T14:00:00.000Z');
     final preview = previewSupplierDeliveryScheduling(
-      supplierPickupWindowEnd: supplierPickupEnd,
+      supplierPickupWindowStart: supplierPickupStart,
       learnerDeliveryWindows: [
         ReservationPreferredWindow(
-          start: DateTime.parse('2026-07-10T15:00:00.000Z'),
+          start: DateTime.parse('2026-07-10T13:00:00.000Z'),
           end: DateTime.parse('2026-07-10T20:00:00.000Z'),
         ),
       ],
@@ -20,16 +20,16 @@ void main() {
     expect(preview!.isFeasible, isTrue);
     expect(
       preview.earliestDeliveryStart,
-      DateTime.parse('2026-07-10T17:00:00.000Z'),
+      DateTime.parse('2026-07-10T15:00:00.000Z'),
     );
-    expect(preview.confirmedStart, DateTime.parse('2026-07-10T17:00:00.000Z'));
+    expect(preview.confirmedStart, DateTime.parse('2026-07-10T15:00:00.000Z'));
     expect(preview.confirmedEnd, DateTime.parse('2026-07-10T20:00:00.000Z'));
   });
 
   test('previewSupplierDeliveryScheduling returns infeasible preview', () {
-    final supplierPickupEnd = DateTime.parse('2026-07-10T16:00:00.000Z');
+    final supplierPickupStart = DateTime.parse('2026-07-10T16:00:00.000Z');
     final preview = previewSupplierDeliveryScheduling(
-      supplierPickupWindowEnd: supplierPickupEnd,
+      supplierPickupWindowStart: supplierPickupStart,
       learnerDeliveryWindows: [
         ReservationPreferredWindow(
           start: DateTime.parse('2026-07-10T12:00:00.000Z'),
@@ -40,5 +40,9 @@ void main() {
 
     expect(preview, isNotNull);
     expect(preview!.isFeasible, isFalse);
+    expect(
+      preview.earliestDeliveryStart,
+      DateTime.parse('2026-07-10T17:00:00.000Z'),
+    );
   });
 }

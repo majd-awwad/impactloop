@@ -84,6 +84,14 @@ const learnerReservationListScalarSelect = {
   supplierNote: true,
   rejectionReason: true,
   selfPickupCodeHash: true,
+  // Pricing / group fields required for batched list paymentSummary.
+  materialSubtotal: true,
+  deliveryFee: true,
+  unitPriceAtReservation: true,
+  totalAmount: true,
+  pricingCurrency: true,
+  deliveryZone: true,
+  deliveryGroupId: true,
 } satisfies Prisma.ReservationSelect;
 
 const learnerReservationListSelect = {

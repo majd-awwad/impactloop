@@ -413,7 +413,7 @@ abstract class AppLocalizations {
   /// No description provided for @filterNeedsAction.
   ///
   /// In en, this message translates to:
-  /// **'Needs action'**
+  /// **'Action required'**
   String get filterNeedsAction;
 
   /// No description provided for @filterPending.
@@ -1601,7 +1601,7 @@ abstract class AppLocalizations {
   /// No description provided for @reservationsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Track requests, pickup windows, and delivery updates.'**
+  /// **'Track all your reservations, pickup, delivery, and payment actions from here.'**
   String get reservationsSubtitle;
 
   /// No description provided for @loadingReservations.
@@ -1663,6 +1663,1266 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try again'**
   String get tryAgainAction;
+
+  /// No description provided for @reservationsSummaryActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get reservationsSummaryActive;
+
+  /// No description provided for @reservationsSummaryActionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Action required'**
+  String get reservationsSummaryActionRequired;
+
+  /// No description provided for @reservationsSummaryPaymentsRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments required'**
+  String get reservationsSummaryPaymentsRequired;
+
+  /// No description provided for @reservationsSummaryDeliveries.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery ready'**
+  String get reservationsSummaryDeliveries;
+
+  /// No description provided for @reservationsSummaryTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get reservationsSummaryTotal;
+
+  /// No description provided for @reservationsSummaryLoadedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Counts reflect currently loaded reservations.'**
+  String get reservationsSummaryLoadedHint;
+
+  /// No description provided for @reservationsTimezoneNote.
+  ///
+  /// In en, this message translates to:
+  /// **'All dates and times use your local time zone.'**
+  String get reservationsTimezoneNote;
+
+  /// No description provided for @reservationsFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter'**
+  String get reservationsFilter;
+
+  /// No description provided for @viewAllReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'View all reservations'**
+  String get viewAllReservations;
+
+  /// No description provided for @reservationMoneyAmountDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount due'**
+  String get reservationMoneyAmountDue;
+
+  /// No description provided for @reservationMoneyRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get reservationMoneyRemaining;
+
+  /// No description provided for @reservationMoneyPaidInFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid in full'**
+  String get reservationMoneyPaidInFull;
+
+  /// No description provided for @reservationMoneyOrdersRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 payment remaining} other{{count} payments remaining}}'**
+  String reservationMoneyOrdersRemaining(int count);
+
+  /// No description provided for @reservationMoneyMaterialPaidDeliveryDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Material payment received. Delivery fee is still required.'**
+  String get reservationMoneyMaterialPaidDeliveryDue;
+
+  /// No description provided for @reservationMoneyDeliveryPaidMaterialDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery fee settled. Material payment is still required.'**
+  String get reservationMoneyDeliveryPaidMaterialDue;
+
+  /// No description provided for @reservationMoneyBothOutstanding.
+  ///
+  /// In en, this message translates to:
+  /// **'Material and delivery are paid together in one checkout.'**
+  String get reservationMoneyBothOutstanding;
+
+  /// No description provided for @reservationNextStepPayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete payment to confirm the reservation'**
+  String get reservationNextStepPayTitle;
+
+  /// No description provided for @reservationNextStepPaySupporting.
+  ///
+  /// In en, this message translates to:
+  /// **'The pickup code appears after payment and once the pickup window starts.'**
+  String get reservationNextStepPaySupporting;
+
+  /// No description provided for @reservationNextStepPartialTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete the remaining payment'**
+  String get reservationNextStepPartialTitle;
+
+  /// No description provided for @reservationNextStepPartialSupporting.
+  ///
+  /// In en, this message translates to:
+  /// **'A payment was received; the delivery fee is still required.'**
+  String get reservationNextStepPartialSupporting;
+
+  /// No description provided for @reservationMoneyAmountWithCurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} ₪'**
+  String reservationMoneyAmountWithCurrency(String amount);
+
+  /// No description provided for @reservationDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation details'**
+  String get reservationDetailsTitle;
+
+  /// No description provided for @reservationSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation summary'**
+  String get reservationSummaryTitle;
+
+  /// No description provided for @reservationReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference'**
+  String get reservationReference;
+
+  /// No description provided for @reservationStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get reservationStatusLabel;
+
+  /// No description provided for @reservationLocationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get reservationLocationLabel;
+
+  /// No description provided for @importantNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Important notes'**
+  String get importantNotes;
+
+  /// No description provided for @pickupCodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup code'**
+  String get pickupCodeTitle;
+
+  /// No description provided for @pickupCodeLockedPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete payment to unlock your pickup code.'**
+  String get pickupCodeLockedPayment;
+
+  /// No description provided for @pickupCodeWaitingWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Your pickup code will appear when the pickup window opens.'**
+  String get pickupCodeWaitingWindow;
+
+  /// No description provided for @pickupCodeAvailableLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Show this code to the supplier at pickup.'**
+  String get pickupCodeAvailableLabel;
+
+  /// No description provided for @pickupCodeSafetyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Do not share this code before you are at the pickup location.'**
+  String get pickupCodeSafetyNote;
+
+  /// No description provided for @pickupCodeClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup code is no longer available for this reservation.'**
+  String get pickupCodeClosed;
+
+  /// No description provided for @pickupCodeProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup code will be available after payment is confirmed.'**
+  String get pickupCodeProcessing;
+
+  /// No description provided for @pickupCodeUnderReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup code is paused while this case is under review.'**
+  String get pickupCodeUnderReview;
+
+  /// No description provided for @pickupCodeRefundProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup code is unavailable while your refund is processed.'**
+  String get pickupCodeRefundProcessing;
+
+  /// No description provided for @pickupCodeRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'This reservation was refunded. No pickup code is required.'**
+  String get pickupCodeRefunded;
+
+  /// No description provided for @pickupCodeNotApplicable.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup code does not apply to this reservation.'**
+  String get pickupCodeNotApplicable;
+
+  /// No description provided for @pickupWindowNotStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Not started yet'**
+  String get pickupWindowNotStarted;
+
+  /// No description provided for @pickupWindowActiveNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Available now'**
+  String get pickupWindowActiveNow;
+
+  /// No description provided for @pickupWindowEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Window ended'**
+  String get pickupWindowEnded;
+
+  /// No description provided for @openInMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in maps'**
+  String get openInMaps;
+
+  /// No description provided for @mapApproximateNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Map shows an approximate pickup area.'**
+  String get mapApproximateNote;
+
+  /// No description provided for @followUpMessagesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-up messages'**
+  String get followUpMessagesTitle;
+
+  /// No description provided for @noFollowUpMessagesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No follow-up messages yet.'**
+  String get noFollowUpMessagesYet;
+
+  /// No description provided for @writeShortFollowUpMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a short follow-up to the supplier…'**
+  String get writeShortFollowUpMessage;
+
+  /// No description provided for @sendFollowUpMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Send message'**
+  String get sendFollowUpMessage;
+
+  /// No description provided for @followUpMessagesLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load follow-up messages.'**
+  String get followUpMessagesLoadError;
+
+  /// No description provided for @showFullHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Show full history'**
+  String get showFullHistory;
+
+  /// No description provided for @showLessHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get showLessHistory;
+
+  /// No description provided for @paymentHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment history'**
+  String get paymentHistoryTitle;
+
+  /// No description provided for @currentPaymentCycle.
+  ///
+  /// In en, this message translates to:
+  /// **'Current payment cycle'**
+  String get currentPaymentCycle;
+
+  /// No description provided for @previousPaymentCycleCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous payment cycle was cancelled.'**
+  String get previousPaymentCycleCancelled;
+
+  /// No description provided for @previousPaymentCycleRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous payment cycle was refunded.'**
+  String get previousPaymentCycleRefunded;
+
+  /// No description provided for @reservationDetailNotesPickupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup notes'**
+  String get reservationDetailNotesPickupTitle;
+
+  /// No description provided for @reservationDetailNotesPickupSafety.
+  ///
+  /// In en, this message translates to:
+  /// **'Bring a valid ID and arrive within the confirmed pickup window.'**
+  String get reservationDetailNotesPickupSafety;
+
+  /// No description provided for @reservationDetailNotesPickupContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact the supplier through follow-up messages if you are delayed.'**
+  String get reservationDetailNotesPickupContact;
+
+  /// No description provided for @reservationDetailTimelineCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation created'**
+  String get reservationDetailTimelineCreated;
+
+  /// No description provided for @reservationDetailTimelinePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for supplier response'**
+  String get reservationDetailTimelinePending;
+
+  /// No description provided for @reservationDetailTimelineAwaitingConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs your confirmation'**
+  String get reservationDetailTimelineAwaitingConfirmation;
+
+  /// No description provided for @reservationDetailTimelinePaymentRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment required'**
+  String get reservationDetailTimelinePaymentRequired;
+
+  /// No description provided for @reservationDetailTimelinePaymentCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment completed'**
+  String get reservationDetailTimelinePaymentCompleted;
+
+  /// No description provided for @reservationDetailTimelineReadyPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for pickup'**
+  String get reservationDetailTimelineReadyPickup;
+
+  /// No description provided for @reservationDetailTimelineReadyDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for delivery'**
+  String get reservationDetailTimelineReadyDelivery;
+
+  /// No description provided for @reservationDetailTimelineCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation completed'**
+  String get reservationDetailTimelineCompleted;
+
+  /// No description provided for @reservationDetailTimelineCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation cancelled'**
+  String get reservationDetailTimelineCancelled;
+
+  /// No description provided for @reservationDetailTimelineRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment refunded'**
+  String get reservationDetailTimelineRefunded;
+
+  /// No description provided for @reservationDetailTimelineUnderReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under admin review'**
+  String get reservationDetailTimelineUnderReview;
+
+  /// No description provided for @reservationDetailPaymentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment'**
+  String get reservationDetailPaymentTitle;
+
+  /// No description provided for @reservationDetailPaymentRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment required'**
+  String get reservationDetailPaymentRequiredTitle;
+
+  /// No description provided for @reservationDetailMaterialAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Material amount'**
+  String get reservationDetailMaterialAmount;
+
+  /// No description provided for @reservationDetailDeliveryFeeAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery fee'**
+  String get reservationDetailDeliveryFeeAmount;
+
+  /// No description provided for @reservationDetailPickupFeeAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup fee'**
+  String get reservationDetailPickupFeeAmount;
+
+  /// No description provided for @reservationDetailRemainingAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get reservationDetailRemainingAmount;
+
+  /// No description provided for @reservationDetailTotalRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Total required'**
+  String get reservationDetailTotalRequired;
+
+  /// No description provided for @contactSupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact supplier'**
+  String get contactSupplier;
+
+  /// No description provided for @viewSupplierProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'View supplier profile'**
+  String get viewSupplierProfile;
+
+  /// No description provided for @reservationDetailFulfillmentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Fulfillment'**
+  String get reservationDetailFulfillmentTitle;
+
+  /// No description provided for @reservationDetailQuickActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick actions'**
+  String get reservationDetailQuickActionsTitle;
+
+  /// No description provided for @reservationDetailOverdueBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup window passed. Please contact the supplier or wait for follow-up.'**
+  String get reservationDetailOverdueBanner;
+
+  /// No description provided for @allReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'All reservations'**
+  String get allReservations;
+
+  /// No description provided for @loadingReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading reservation'**
+  String get loadingReservation;
+
+  /// No description provided for @loadingReservationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the latest reservation status.'**
+  String get loadingReservationSubtitle;
+
+  /// No description provided for @reservationLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load reservation'**
+  String get reservationLoadError;
+
+  /// No description provided for @checkoutComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Checkout will be available soon. Your payment order is ready.'**
+  String get checkoutComingSoon;
+
+  /// No description provided for @checkoutPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete payment'**
+  String get checkoutPageTitle;
+
+  /// No description provided for @checkoutPageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm this reservation by paying the required amount securely.'**
+  String get checkoutPageSubtitle;
+
+  /// No description provided for @checkoutBreadcrumbHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get checkoutBreadcrumbHome;
+
+  /// No description provided for @checkoutBreadcrumbReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'My reservations'**
+  String get checkoutBreadcrumbReservations;
+
+  /// No description provided for @checkoutBreadcrumbDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation details'**
+  String get checkoutBreadcrumbDetails;
+
+  /// No description provided for @checkoutBreadcrumbCheckout.
+  ///
+  /// In en, this message translates to:
+  /// **'Checkout'**
+  String get checkoutBreadcrumbCheckout;
+
+  /// No description provided for @checkoutStepSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment summary'**
+  String get checkoutStepSummary;
+
+  /// No description provided for @checkoutStepMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment method'**
+  String get checkoutStepMethod;
+
+  /// No description provided for @checkoutStepConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm order'**
+  String get checkoutStepConfirm;
+
+  /// No description provided for @checkoutStepResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Result'**
+  String get checkoutStepResult;
+
+  /// No description provided for @checkoutReservationInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation information'**
+  String get checkoutReservationInfo;
+
+  /// No description provided for @checkoutOrderIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Order ID'**
+  String get checkoutOrderIdLabel;
+
+  /// No description provided for @checkoutReservationDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get checkoutReservationDateLabel;
+
+  /// No description provided for @checkoutReservationStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get checkoutReservationStatusLabel;
+
+  /// No description provided for @checkoutPickupWindowLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup window'**
+  String get checkoutPickupWindowLabel;
+
+  /// No description provided for @checkoutViewReservationDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View reservation details'**
+  String get checkoutViewReservationDetails;
+
+  /// No description provided for @checkoutQuantityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} unit(s)'**
+  String checkoutQuantityLabel(int count);
+
+  /// No description provided for @checkoutFulfillmentPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup from supplier'**
+  String get checkoutFulfillmentPickup;
+
+  /// No description provided for @checkoutFulfillmentDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery'**
+  String get checkoutFulfillmentDelivery;
+
+  /// No description provided for @checkoutVerifiedSupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified supplier'**
+  String get checkoutVerifiedSupplier;
+
+  /// No description provided for @checkoutAmountSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount summary'**
+  String get checkoutAmountSummaryTitle;
+
+  /// No description provided for @checkoutItemPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Item price'**
+  String get checkoutItemPrice;
+
+  /// No description provided for @checkoutDeliveryFees.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery fees'**
+  String get checkoutDeliveryFees;
+
+  /// No description provided for @checkoutTotalRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Total required'**
+  String get checkoutTotalRequired;
+
+  /// No description provided for @checkoutPreviouslyPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Previously paid'**
+  String get checkoutPreviouslyPaid;
+
+  /// No description provided for @checkoutRemainingAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining amount'**
+  String get checkoutRemainingAmount;
+
+  /// No description provided for @checkoutChooseWhatToPay.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose what you want to pay'**
+  String get checkoutChooseWhatToPay;
+
+  /// No description provided for @checkoutCombinedPaymentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment covers'**
+  String get checkoutCombinedPaymentTitle;
+
+  /// No description provided for @checkoutCombinedPaymentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Material and delivery fees are charged together in this checkout.'**
+  String get checkoutCombinedPaymentHint;
+
+  /// No description provided for @checkoutPurposeMaterialTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Material subtotal'**
+  String get checkoutPurposeMaterialTitle;
+
+  /// No description provided for @checkoutPurposeMaterialHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirms the reservation. Delivery fees (if any) are paid separately.'**
+  String get checkoutPurposeMaterialHint;
+
+  /// No description provided for @checkoutPurposeDeliveryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery fee'**
+  String get checkoutPurposeDeliveryTitle;
+
+  /// No description provided for @checkoutPurposeDeliveryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pays the delivery fee for this reservation group.'**
+  String get checkoutPurposeDeliveryHint;
+
+  /// No description provided for @checkoutOtherOrderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Another payment is also outstanding. You can pay it after this one.'**
+  String get checkoutOtherOrderHint;
+
+  /// No description provided for @checkoutPaymentIncludesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment includes'**
+  String get checkoutPaymentIncludesTitle;
+
+  /// No description provided for @checkoutIncludesConfirmReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirming the reservation'**
+  String get checkoutIncludesConfirmReservation;
+
+  /// No description provided for @checkoutIncludesPickupCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocking the pickup code when ready'**
+  String get checkoutIncludesPickupCode;
+
+  /// No description provided for @checkoutIncludesDeliveryDispatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowing delivery dispatch when ready'**
+  String get checkoutIncludesDeliveryDispatch;
+
+  /// No description provided for @checkoutSecurePaymentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure payment'**
+  String get checkoutSecurePaymentTitle;
+
+  /// No description provided for @checkoutSecurePaymentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your payment session is encrypted. ImpactLoop never stores card details — checkout runs through the secure Mock payment provider for this environment.'**
+  String get checkoutSecurePaymentBody;
+
+  /// No description provided for @checkoutContinueToPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue to payment'**
+  String get checkoutContinueToPayment;
+
+  /// No description provided for @checkoutReviewOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Review order'**
+  String get checkoutReviewOrder;
+
+  /// No description provided for @checkoutConfirmPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm payment'**
+  String get checkoutConfirmPayment;
+
+  /// No description provided for @checkoutMockProviderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mock payment provider'**
+  String get checkoutMockProviderTitle;
+
+  /// No description provided for @checkoutMockProviderBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This environment uses ImpactLoop’s secure Mock provider. Completing payment updates verified backend payment state — a button press alone is not success.'**
+  String get checkoutMockProviderBody;
+
+  /// No description provided for @checkoutMockPaySecurely.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete mock payment'**
+  String get checkoutMockPaySecurely;
+
+  /// No description provided for @checkoutMockSimulateDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Simulate decline'**
+  String get checkoutMockSimulateDecline;
+
+  /// No description provided for @checkoutMockCancelAttempt.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this attempt'**
+  String get checkoutMockCancelAttempt;
+
+  /// No description provided for @checkoutReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review order'**
+  String get checkoutReviewTitle;
+
+  /// No description provided for @checkoutReviewMethodLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment method'**
+  String get checkoutReviewMethodLabel;
+
+  /// No description provided for @checkoutReviewMethodValue.
+  ///
+  /// In en, this message translates to:
+  /// **'ImpactLoop Mock provider'**
+  String get checkoutReviewMethodValue;
+
+  /// No description provided for @checkoutReviewAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount to pay'**
+  String get checkoutReviewAmountLabel;
+
+  /// No description provided for @checkoutProcessingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing payment…'**
+  String get checkoutProcessingTitle;
+
+  /// No description provided for @checkoutProcessingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Please do not close this page. This may take a few seconds while we verify the payment with the provider.'**
+  String get checkoutProcessingBody;
+
+  /// No description provided for @checkoutSuccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment successful!'**
+  String get checkoutSuccessTitle;
+
+  /// No description provided for @checkoutSuccessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation payment is confirmed. Return to reservation details for the next step.'**
+  String get checkoutSuccessBody;
+
+  /// No description provided for @checkoutSuccessTransactionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment order'**
+  String get checkoutSuccessTransactionLabel;
+
+  /// No description provided for @checkoutBackToReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to reservation details'**
+  String get checkoutBackToReservation;
+
+  /// No description provided for @checkoutViewAllReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'View all my reservations'**
+  String get checkoutViewAllReservations;
+
+  /// No description provided for @checkoutFailureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment failed'**
+  String get checkoutFailureTitle;
+
+  /// No description provided for @checkoutFailureBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not complete this payment. You can retry securely without creating a duplicate submission.'**
+  String get checkoutFailureBody;
+
+  /// No description provided for @checkoutRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get checkoutRetry;
+
+  /// No description provided for @checkoutChangeMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to payment method'**
+  String get checkoutChangeMethod;
+
+  /// No description provided for @checkoutCancelledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment cancelled'**
+  String get checkoutCancelledTitle;
+
+  /// No description provided for @checkoutCancelledBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This payment attempt was cancelled. You can start a new secure checkout when ready.'**
+  String get checkoutCancelledBody;
+
+  /// No description provided for @checkoutExpiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Checkout expired'**
+  String get checkoutExpiredTitle;
+
+  /// No description provided for @checkoutExpiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This payment attempt expired before completion. Start a new checkout to continue.'**
+  String get checkoutExpiredBody;
+
+  /// No description provided for @checkoutAlreadyPaidTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Already paid'**
+  String get checkoutAlreadyPaidTitle;
+
+  /// No description provided for @checkoutAlreadyPaidBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This payment order is already settled. No further payment is required.'**
+  String get checkoutAlreadyPaidBody;
+
+  /// No description provided for @checkoutRefundPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund pending'**
+  String get checkoutRefundPendingTitle;
+
+  /// No description provided for @checkoutRefundPendingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A refund is in progress for this payment order. Checkout is not available.'**
+  String get checkoutRefundPendingBody;
+
+  /// No description provided for @checkoutRefundedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Refunded'**
+  String get checkoutRefundedTitle;
+
+  /// No description provided for @checkoutRefundedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This payment order was refunded. A new payment cycle may be required from reservation details.'**
+  String get checkoutRefundedBody;
+
+  /// No description provided for @checkoutOrderCancelledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment cancelled'**
+  String get checkoutOrderCancelledTitle;
+
+  /// No description provided for @checkoutOrderCancelledBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This payment order was cancelled and cannot be checked out.'**
+  String get checkoutOrderCancelledBody;
+
+  /// No description provided for @checkoutLoadErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load checkout'**
+  String get checkoutLoadErrorTitle;
+
+  /// No description provided for @checkoutLoadErrorBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not load this payment order. Check your connection and try again.'**
+  String get checkoutLoadErrorBody;
+
+  /// No description provided for @checkoutMissingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment order unavailable'**
+  String get checkoutMissingTitle;
+
+  /// No description provided for @checkoutMissingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This payment order was not found or you do not have access to it.'**
+  String get checkoutMissingBody;
+
+  /// No description provided for @checkoutRetryLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get checkoutRetryLoad;
+
+  /// No description provided for @checkoutSubmittingGuard.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment is already in progress. Please wait.'**
+  String get checkoutSubmittingGuard;
+
+  /// No description provided for @checkoutableOrderReadyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A checkoutable payment order is ready for this reservation.'**
+  String get checkoutableOrderReadyHint;
+
+  /// No description provided for @paymentStatusRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment required'**
+  String get paymentStatusRequired;
+
+  /// No description provided for @paymentStatusPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial payment'**
+  String get paymentStatusPartial;
+
+  /// No description provided for @paymentStatusProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get paymentStatusProcessing;
+
+  /// No description provided for @paymentStatusPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get paymentStatusPaid;
+
+  /// No description provided for @paymentStatusRefundPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund pending'**
+  String get paymentStatusRefundPending;
+
+  /// No description provided for @paymentStatusRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'Refunded'**
+  String get paymentStatusRefunded;
+
+  /// No description provided for @paymentStatusNeedsReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs review'**
+  String get paymentStatusNeedsReview;
+
+  /// No description provided for @paymentSummaryUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment status unavailable'**
+  String get paymentSummaryUnavailable;
+
+  /// No description provided for @paymentSummaryUnavailableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation details are still available. Pull to refresh or try again.'**
+  String get paymentSummaryUnavailableHint;
+
+  /// No description provided for @reservationListStatusWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting'**
+  String get reservationListStatusWaiting;
+
+  /// No description provided for @reservationListStatusNeedsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Action required'**
+  String get reservationListStatusNeedsAction;
+
+  /// No description provided for @reservationListStatusAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted'**
+  String get reservationListStatusAccepted;
+
+  /// No description provided for @reservationListStatusCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get reservationListStatusCompleted;
+
+  /// No description provided for @reservationListStatusClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get reservationListStatusClosed;
+
+  /// No description provided for @reservationListStatusNeedsReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs review'**
+  String get reservationListStatusNeedsReview;
+
+  /// No description provided for @reservationNextStepPayToConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay to confirm the reservation and reveal the pickup code.'**
+  String get reservationNextStepPayToConfirm;
+
+  /// No description provided for @reservationNextStepDeliveryFeeRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'A payment was received, and the delivery fee is still required.'**
+  String get reservationNextStepDeliveryFeeRemaining;
+
+  /// No description provided for @reservationNextStepWaitingSupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for supplier approval.'**
+  String get reservationNextStepWaitingSupplier;
+
+  /// No description provided for @reservationNextStepConfirmProposal.
+  ///
+  /// In en, this message translates to:
+  /// **'Review and confirm the supplier proposal.'**
+  String get reservationNextStepConfirmProposal;
+
+  /// No description provided for @reservationNextStepPickupCodeWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment received. The pickup code will become available inside the pickup window.'**
+  String get reservationNextStepPickupCodeWindow;
+
+  /// No description provided for @reservationNextStepPickupCodeReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup code is ready on the reservation details page.'**
+  String get reservationNextStepPickupCodeReady;
+
+  /// No description provided for @reservationNextStepFindingDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for a driver.'**
+  String get reservationNextStepFindingDriver;
+
+  /// No description provided for @reservationNextStepTrackDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Your delivery is in progress. Track it for live updates.'**
+  String get reservationNextStepTrackDelivery;
+
+  /// No description provided for @reservationNextStepRefundProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Your refund is being processed.'**
+  String get reservationNextStepRefundProcessing;
+
+  /// No description provided for @reservationNextStepRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'This payment was refunded.'**
+  String get reservationNextStepRefunded;
+
+  /// No description provided for @reservationNextStepUnderReview.
+  ///
+  /// In en, this message translates to:
+  /// **'This case is under review. No action is required from you right now.'**
+  String get reservationNextStepUnderReview;
+
+  /// No description provided for @reservationNextStepPaymentProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment is being processed.'**
+  String get reservationNextStepPaymentProcessing;
+
+  /// No description provided for @reservationNextStepPaymentUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment status is temporarily unavailable. Open details or refresh.'**
+  String get reservationNextStepPaymentUnavailable;
+
+  /// No description provided for @reservationNextStepReadyPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'Your reservation is accepted. Open details for pickup information.'**
+  String get reservationNextStepReadyPickup;
+
+  /// No description provided for @reservationNextStepAcceptedDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Your reservation is accepted. Delivery will continue once ready.'**
+  String get reservationNextStepAcceptedDelivery;
+
+  /// No description provided for @reservationNextStepDelivered.
+  ///
+  /// In en, this message translates to:
+  /// **'Materials were delivered successfully.'**
+  String get reservationNextStepDelivered;
+
+  /// No description provided for @reservationNextStepCompletedPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup was completed successfully.'**
+  String get reservationNextStepCompletedPickup;
+
+  /// No description provided for @reservationNextStepClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'This reservation is closed.'**
+  String get reservationNextStepClosed;
+
+  /// No description provided for @reservationNextStepViewDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Open details for the full status.'**
+  String get reservationNextStepViewDetails;
+
+  /// No description provided for @payNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay now'**
+  String get payNow;
+
+  /// No description provided for @completePayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete payment'**
+  String get completePayment;
+
+  /// No description provided for @viewPickupCode.
+  ///
+  /// In en, this message translates to:
+  /// **'View pickup code'**
+  String get viewPickupCode;
+
+  /// No description provided for @reservationDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation date'**
+  String get reservationDateLabel;
+
+  /// No description provided for @supplierLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier'**
+  String get supplierLabel;
+
+  /// No description provided for @quantityLabelShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity'**
+  String get quantityLabelShort;
+
+  /// No description provided for @fulfillmentPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup'**
+  String get fulfillmentPickup;
+
+  /// No description provided for @fulfillmentDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery'**
+  String get fulfillmentDelivery;
+
+  /// No description provided for @skeletonLoadingReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your reservations'**
+  String get skeletonLoadingReservations;
 
   /// No description provided for @fulfillmentMethod.
   ///
@@ -1934,6 +3194,18 @@ abstract class AppLocalizations {
   /// **'Accept proposed time'**
   String get acceptProposedTime;
 
+  /// No description provided for @confirmFlexibleDeliveryWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm delivery window'**
+  String get confirmFlexibleDeliveryWindow;
+
+  /// No description provided for @flexibleDeliveryNeedsWindowHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You left delivery timing open. Confirm the supplier proposal or choose any delivery window after the earliest time below.'**
+  String get flexibleDeliveryNeedsWindowHint;
+
   /// No description provided for @newDeliveryWindow.
   ///
   /// In en, this message translates to:
@@ -1975,6 +3247,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The supplier proposed a schedule that needs your confirmation.'**
   String get reservationScheduleNeedsConfirmation;
+
+  /// No description provided for @reservationFlexibleScheduleReady.
+  ///
+  /// In en, this message translates to:
+  /// **'The supplier set a schedule. Confirm the delivery window to continue.'**
+  String get reservationFlexibleScheduleReady;
 
   /// No description provided for @reservationRescheduleWaitingSupplier.
   ///
@@ -2923,6 +4201,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delivery requested.'**
   String get deliveryRequested;
+
+  /// No description provided for @deliveryRequestedFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery requested. Delivery is free for this order.'**
+  String get deliveryRequestedFree;
+
+  /// No description provided for @deliveryFeePaymentRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery was set up. Pay the delivery fee to start fulfillment.'**
+  String get deliveryFeePaymentRequired;
+
+  /// No description provided for @freeDeliveryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Free delivery'**
+  String get freeDeliveryLabel;
 
   /// No description provided for @deliveryRequestFailed.
   ///
@@ -6649,6 +7945,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Propose custom delivery window'**
   String get supplierProposeCustomDeliveryWindow;
+
+  /// No description provided for @supplierFlexibleLearnerNeedsDeliveryProposal.
+  ///
+  /// In en, this message translates to:
+  /// **'This learner left delivery timing open. Propose a delivery window to accept — it will be confirmed automatically if it fits after pickup.'**
+  String get supplierFlexibleLearnerNeedsDeliveryProposal;
 
   /// No description provided for @supplierProposedLearnerDeliveryWindow.
   ///

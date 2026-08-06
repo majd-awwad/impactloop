@@ -696,7 +696,7 @@ const acceptDeliveryReservation = async (
     input.learnerPreferredDeliveryWindows,
   );
   const earliestDeliveryStart = computeEarliestDeliveryStart(
-    input.supplierPickupWindow.end,
+    input.supplierPickupWindow.start,
   );
 
   if (input.proposedDeliveryWindow) {
@@ -705,7 +705,9 @@ const acceptDeliveryReservation = async (
       learnerWindows,
     );
 
-    if (!isLearnerPreference) {
+    // Learner listed preferences and supplier proposed a different window → confirm.
+    // Empty preferences mean the learner is flexible: auto-accept if feasible.
+    if (!isLearnerPreference && learnerWindows.length > 0) {
       return tx.reservation.update({
         where: { id: input.reservation.id },
         data: {
@@ -724,7 +726,7 @@ const acceptDeliveryReservation = async (
     }
 
     const feasible = findFeasibleDeliveryWindow(
-      input.supplierPickupWindow.end,
+      input.supplierPickupWindow.start,
       [input.proposedDeliveryWindow],
     );
 
@@ -746,10 +748,32 @@ const acceptDeliveryReservation = async (
         supplierPickupWindowStart: input.supplierPickupWindow.start,
         supplierPickupWindowEnd: input.supplierPickupWindow.end,
         earliestDeliveryStart,
+        confirmedDeliveryWindowStart: input.proposedDeliveryWindow.start,
+        confirmedDeliveryWindowEnd: input.proposedDeliveryWindow.end,
+        schedulingConflictReason:
+          learnerWindows.length === 0
+            ? 'Proposed delivery window is not feasible after supplier pickup and delivery buffer.'
+            : 'Selected learner delivery window is not feasible after supplier pickup and delivery buffer.',
+        supplierNote: input.supplierNote,
+        acceptedAt: new Date(),
+      },
+      select: reservationMutationSelect,
+    });
+  }
+
+  // Flexible learner with no delivery proposal: do not invent a fake conflict.
+  // Service layer should require a proposed delivery window when prefs are empty.
+  if (learnerWindows.length === 0) {
+    return tx.reservation.update({
+      where: { id: input.reservation.id },
+      data: {
+        status: 'AWAITING_LEARNER_CONFIRMATION',
+        supplierPickupWindowStart: input.supplierPickupWindow.start,
+        supplierPickupWindowEnd: input.supplierPickupWindow.end,
+        earliestDeliveryStart,
         confirmedDeliveryWindowStart: null,
         confirmedDeliveryWindowEnd: null,
-        schedulingConflictReason:
-          'Selected learner delivery window is not feasible after supplier pickup and delivery buffer.',
+        schedulingConflictReason: null,
         supplierNote: input.supplierNote,
         acceptedAt: new Date(),
       },
@@ -773,7 +797,7 @@ const acceptDeliveryReservation = async (
   }
 
   const feasible = findFeasibleDeliveryWindow(
-    input.supplierPickupWindow.end,
+    input.supplierPickupWindow.start,
     windowsToEvaluate,
   );
 

@@ -57,6 +57,7 @@ import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/profile_security_page.dart';
 import '../../features/notifications/presentation/pages/user_notifications_page.dart';
 import '../../features/notifications/application/notifications_routes.dart';
+import '../../features/payments/presentation/pages/learner_checkout_page.dart';
 import '../../features/reservations/presentation/pages/learner_reservation_detail_page.dart';
 import '../../features/reservations/presentation/pages/learner_reservations_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
@@ -208,6 +209,7 @@ _RouteAccessLevel _routeAccessForPath(String path) {
       (path.startsWith('/learning/') && path.endsWith('/build')) ||
       path == '/learner/reservations' ||
       path.startsWith('/learner/reservations/') ||
+      path.startsWith('/learner/checkout/') ||
       path.startsWith('/learner/deliveries/') ||
       path == '/learner/material-requests' ||
       path.startsWith('/learner/material-requests/') ||
@@ -664,8 +666,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/learner/reservations/:id',
-        builder: (context, state) => LearnerReservationDetailPage(
-          reservationId: state.pathParameters['id']!,
+        builder: (context, state) {
+          final focus = state.uri.queryParameters['focus'];
+          final orderId = state.uri.queryParameters['orderId'];
+          return LearnerReservationDetailPage(
+            reservationId: state.pathParameters['id']!,
+            focusPayment: focus == 'payment',
+            focusPaymentOrderId: orderId,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/learner/checkout/:orderId',
+        builder: (context, state) => LearnerCheckoutPage(
+          orderId: state.pathParameters['orderId']!,
         ),
       ),
       GoRoute(
@@ -678,9 +692,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/learner/builds/:buildId/notebook',
-        builder: (context, state) => ProjectNotebookPage(
-          buildId: state.pathParameters['buildId']!,
-        ),
+        builder: (context, state) =>
+            ProjectNotebookPage(buildId: state.pathParameters['buildId']!),
       ),
       GoRoute(
         path: '/learner/portfolio',

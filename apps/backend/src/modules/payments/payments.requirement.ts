@@ -13,6 +13,7 @@ import {
   evaluatePickupPaymentReadiness,
   type PaymentReadinessStatus,
 } from './payments.readiness.js';
+import { isPickupCodeVisibilityWindowOpen } from './payments.list-summary.js';
 
 export type ReservationPaymentRequirementDto = {
   reservationId: string;
@@ -165,6 +166,8 @@ export const getReservationPaymentRequirement = async (
       deliveryGroupId: true,
       materialSubtotal: true,
       pricingCurrency: true,
+      pickupWindowStart: true,
+      pickupWindowEnd: true,
     },
   });
 
@@ -283,7 +286,13 @@ export const getReservationPaymentRequirement = async (
       paymentReady: pickup.ready,
       fulfillmentReady:
         reservation.status === 'ACCEPTED' && pickup.ready,
-      pickupCodeAvailable: reservation.status === 'ACCEPTED' && pickup.ready,
+      pickupCodeAvailable:
+        reservation.status === 'ACCEPTED' &&
+        pickup.ready &&
+        isPickupCodeVisibilityWindowOpen(
+          reservation.pickupWindowStart,
+          reservation.pickupWindowEnd,
+        ),
       deliveryExists: false,
       deliveryStatus: null,
       deliveryDispatchable: false,

@@ -5,6 +5,7 @@ import {
   ensureDeliveryFeePaymentOrder,
   ensureMaterialPaymentOrder,
 } from './payments.ensure.js';
+import { isPositiveMoney, toMoneyDecimal } from './payments.money.js';
 import { isElectronicPaymentEnforced } from './payments.policy.js';
 import { evaluateDeliveryGroupPaymentReadiness } from './payments.readiness.js';
 import { ensureDeliveryForAcceptedReservation } from '../delivery-groups/delivery-group-operations.service.js';
@@ -33,6 +34,97 @@ export const setObligationCreationFailureForTests = (
 };
 
 /**
+ * Native DELIVERY without preferred windows can reach ACCEPTED with a priced
+ * deliveryFee but no DeliveryGroup. Payment aggregation only treats fees as
+ * applicable when deliveryGroupId is set, so attach a solo group from the
+ * confirmed delivery window before ensuring PaymentOrders.
+ */
+export const ensureDeliveryGroupAttachedForAcceptedReservation = async (
+  tx: Prisma.TransactionClient,
+  reservationId: string,
+): Promise<string | null> => {
+  const reservation = await tx.reservation.findUnique({
+    where: { id: reservationId },
+    select: {
+      id: true,
+      status: true,
+      fulfillmentMethod: true,
+      deliveryGroupId: true,
+      requesterId: true,
+      deliveryFee: true,
+      deliveryZone: true,
+      pricingCurrency: true,
+      deliveryAddressText: true,
+      dropoffCity: true,
+      dropoffArea: true,
+      confirmedDeliveryWindowStart: true,
+      confirmedDeliveryWindowEnd: true,
+      material: {
+        select: { supplierProfileId: true },
+      },
+    },
+  });
+
+  if (!reservation || reservation.status !== 'ACCEPTED') {
+    return null;
+  }
+
+  if (reservation.fulfillmentMethod !== 'DELIVERY') {
+    return null;
+  }
+
+  if (reservation.deliveryGroupId) {
+    return reservation.deliveryGroupId;
+  }
+
+  const feeAmount = toMoneyDecimal(reservation.deliveryFee ?? 0);
+  const supplierProfileId = reservation.material.supplierProfileId;
+  const dropoffCity = reservation.dropoffCity?.trim() || null;
+  const windowStart = reservation.confirmedDeliveryWindowStart;
+  const windowEnd = reservation.confirmedDeliveryWindowEnd;
+
+  if (!isPositiveMoney(feeAmount)) {
+    // Free delivery: group is optional for fee collection.
+    return null;
+  }
+
+  if (
+    !supplierProfileId ||
+    !dropoffCity ||
+    !reservation.deliveryZone ||
+    !windowStart ||
+    !windowEnd ||
+    !reservation.deliveryAddressText?.trim()
+  ) {
+    // Incomplete recovery / mid-transition rows stay ungrouped until fields exist.
+    return null;
+  }
+
+  const group = await tx.deliveryGroup.create({
+    data: {
+      learnerId: reservation.requesterId,
+      supplierProfileId,
+      dropoffCity,
+      dropoffArea: reservation.dropoffArea,
+      deliveryAddressText: reservation.deliveryAddressText,
+      deliveryFee: feeAmount,
+      currency: reservation.pricingCurrency ?? 'NIS',
+      deliveryZone: reservation.deliveryZone,
+      status: 'OPEN',
+      windowStart,
+      windowEnd,
+    },
+  });
+
+  await tx.reservation.update({
+    where: { id: reservation.id },
+    data: { deliveryGroupId: group.id },
+  });
+
+  return group.id;
+};
+
+/**
  * After a Reservation reaches final ACCEPTED, ensure required PaymentOrders
  * from authoritative snapshots. No provider I/O.
  */
@@ -48,6 +140,8 @@ export const ensurePaymentObligationsForAcceptedReservation = async (
     throw obligationCreationFailureForTests;
   }
 
+  await ensureDeliveryGroupAttachedForAcceptedReservation(tx, reservationId);
+
   const reservation = await tx.reservation.findUnique({
     where: { id: reservationId },
     select: {
@@ -55,6 +149,7 @@ export const ensurePaymentObligationsForAcceptedReservation = async (
       status: true,
       fulfillmentMethod: true,
       deliveryGroupId: true,
+      deliveryFee: true,
       materialSubtotal: true,
     },
   });
@@ -110,9 +205,17 @@ export const ensureDeliveryForAcceptedReservationIfPaymentReady = async (
     return { createdOrExisting: true, deferred: false };
   }
 
-  if (input.reservation.deliveryGroupId) {
+  let deliveryGroupId = input.reservation.deliveryGroupId;
+  if (!deliveryGroupId && input.reservation.id) {
+    deliveryGroupId = await ensureDeliveryGroupAttachedForAcceptedReservation(
+      tx,
+      input.reservation.id,
+    );
+  }
+
+  if (deliveryGroupId) {
     const readiness = await evaluateDeliveryGroupPaymentReadiness(
-      input.reservation.deliveryGroupId,
+      deliveryGroupId,
       tx,
     );
 
@@ -122,7 +225,7 @@ export const ensureDeliveryForAcceptedReservationIfPaymentReady = async (
         500,
         'PAYMENT_SOURCE_INVARIANT_VIOLATION',
         {
-          deliveryGroupId: input.reservation.deliveryGroupId,
+          deliveryGroupId,
           violations: readiness.invariantViolations,
         },
       );
@@ -132,7 +235,8 @@ export const ensureDeliveryForAcceptedReservationIfPaymentReady = async (
       return { createdOrExisting: false, deferred: true };
     }
   } else {
-    // Ungrouped delivery: material obligation only.
+    // Ungrouped delivery is only allowed when there is no positive delivery fee
+    // (free delivery / zero-fee). Material must still be paid.
     const material = await ensureMaterialPaymentOrder(input.reservation.id, tx);
     if (material.outcome === 'CREATED' || material.outcome === 'EXISTING') {
       if (material.order.status !== 'PAID') {
@@ -141,7 +245,13 @@ export const ensureDeliveryForAcceptedReservationIfPaymentReady = async (
     }
   }
 
-  await ensureDeliveryForAcceptedReservation(tx, input);
+  await ensureDeliveryForAcceptedReservation(tx, {
+    ...input,
+    reservation: {
+      ...input.reservation,
+      deliveryGroupId,
+    },
+  });
   return { createdOrExisting: true, deferred: false };
 };
 
@@ -161,9 +271,19 @@ export const afterFinalAcceptanceInTransaction = async (
     return { deliveryDeferred: false };
   }
 
-  const result = await ensureDeliveryForAcceptedReservationIfPaymentReady(
-    tx,
-    input.ensureDelivery,
-  );
+  const fresh = await tx.reservation.findUnique({
+    where: { id: input.reservationId },
+    select: { deliveryGroupId: true },
+  });
+
+  const result = await ensureDeliveryForAcceptedReservationIfPaymentReady(tx, {
+    ...input.ensureDelivery,
+    reservation: {
+      ...input.ensureDelivery.reservation,
+      deliveryGroupId:
+        fresh?.deliveryGroupId ??
+        input.ensureDelivery.reservation.deliveryGroupId,
+    },
+  });
   return { deliveryDeferred: result.deferred };
 };

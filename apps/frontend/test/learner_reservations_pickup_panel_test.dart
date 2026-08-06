@@ -30,6 +30,7 @@ void main() {
       'longitude': 35.2544,
       'isApproximate': false,
     },
+    'canLearnerRequestDelivery': true,
     'material': {
       'id': 'mat-1',
       'title': 'Wood panels',
@@ -39,12 +40,26 @@ void main() {
       'deliveryAllowed': true,
     },
     'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+    'paymentSummary': {
+      'enforcementEnabled': false,
+      'overallStatus': 'PAYMENT_DISABLED',
+      'outstandingOrderCount': 0,
+      'outstandingAmount': null,
+      'currency': 'NIS',
+      'hasMaterialPaymentOutstanding': false,
+      'hasDeliveryFeeOutstanding': false,
+      'checkoutableOrderId': null,
+      'fulfillmentReady': true,
+      'pickupCodeAvailable': true,
+      'deliveryDispatchable': false,
+    },
   });
 
   final deliveryReservation = LearnerReservation.fromJson({
     'id': reservationId,
     'status': 'ACCEPTED',
     'quantityRequested': 1,
+    'fulfillmentMethod': 'DELIVERY',
     'activeDelivery': {'id': 'del-1', 'status': 'WAITING_FOR_DRIVER'},
     'createdAt': '2026-01-01T00:00:00.000Z',
     'updatedAt': '2026-01-01T00:00:00.000Z',
@@ -57,6 +72,19 @@ void main() {
       'deliveryAllowed': true,
     },
     'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+    'paymentSummary': {
+      'enforcementEnabled': false,
+      'overallStatus': 'PAYMENT_DISABLED',
+      'outstandingOrderCount': 0,
+      'outstandingAmount': null,
+      'currency': 'NIS',
+      'hasMaterialPaymentOutstanding': false,
+      'hasDeliveryFeeOutstanding': false,
+      'checkoutableOrderId': null,
+      'fulfillmentReady': true,
+      'pickupCodeAvailable': false,
+      'deliveryDispatchable': true,
+    },
   });
 
   LearnerDelivery buildDelivery() {
@@ -107,34 +135,32 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('accepted reservation shows compact pickup info block', (
+  testWidgets('accepted reservation shows redesigned list card without map', (
     tester,
   ) async {
     await pumpPage(tester, reservations: [acceptedReservation]);
 
-    expect(find.text('Request delivery'), findsNothing);
     expect(find.text('Wood panels'), findsOneWidget);
-    expect(find.textContaining('Confirmed pickup:'), findsOneWidget);
-    expect(find.textContaining('Pickup address:'), findsOneWidget);
-    expect(find.bySemanticsLabel('Pickup location map'), findsOneWidget);
-    expect(find.text('Delivery available'), findsOneWidget);
-  });
-
-  testWidgets('accepted reservation with delivery shows View delivery action', (
-    tester,
-  ) async {
-    await pumpPage(
-      tester,
-      reservations: [acceptedReservation],
-      deliveries: [buildDelivery()],
-    );
-
-    expect(find.text('View delivery'), findsOneWidget);
-    expect(find.text('Delivery in progress'), findsOneWidget);
+    expect(find.text('View pickup code'), findsOneWidget);
+    expect(find.bySemanticsLabel('Pickup location map'), findsNothing);
+    expect(find.textContaining('Confirmed pickup:'), findsNothing);
   });
 
   testWidgets(
-    'accepted reservation with active delivery shows delivery requested label',
+    'accepted reservation with delivery shows Track delivery action',
+    (tester) async {
+      await pumpPage(
+        tester,
+        reservations: [acceptedReservation],
+        deliveries: [buildDelivery()],
+      );
+
+      expect(find.text('Track delivery'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'accepted reservation with active delivery shows track delivery CTA',
     (tester) async {
       await pumpPage(
         tester,
@@ -143,8 +169,8 @@ void main() {
       );
 
       expect(find.text('Request delivery'), findsNothing);
-      expect(find.text('Delivery requested'), findsOneWidget);
-      expect(find.text('View material'), findsOneWidget);
+      expect(find.text('Track delivery'), findsOneWidget);
+      expect(find.text('Wood panels'), findsOneWidget);
     },
   );
 }

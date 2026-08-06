@@ -205,7 +205,7 @@ export const resolveLearnerConfirmation = async (input: {
     }
 
     const feasible = findFeasibleDeliveryWindow(
-      existing.supplierPickupWindowEnd,
+      existing.supplierPickupWindowStart,
       [input.deliveryWindow],
     );
 

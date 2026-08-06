@@ -47,13 +47,13 @@ export const windowMatchesLearnerPreference = (
 ) => learnerWindows.some((window) => windowsEqual(window, proposed));
 
 export const computeEarliestDeliveryStart = (
-  supplierPickupWindowEnd: Date,
+  supplierPickupWindowStart: Date,
   bufferMinutes = DELIVERY_BUFFER_MINUTES,
 ) =>
-  new Date(supplierPickupWindowEnd.getTime() + bufferMinutes * 60_000);
+  new Date(supplierPickupWindowStart.getTime() + bufferMinutes * 60_000);
 
 export const findFeasibleDeliveryWindow = (
-  supplierPickupWindowEnd: Date,
+  supplierPickupWindowStart: Date,
   learnerWindows: PreferredWindow[],
   bufferMinutes = DELIVERY_BUFFER_MINUTES,
 ): {
@@ -61,7 +61,7 @@ export const findFeasibleDeliveryWindow = (
   earliestDeliveryStart: Date;
 } | null => {
   const earliestDeliveryStart = computeEarliestDeliveryStart(
-    supplierPickupWindowEnd,
+    supplierPickupWindowStart,
     bufferMinutes,
   );
 
