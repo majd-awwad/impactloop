@@ -1,5 +1,6 @@
 import '../data/models/app_notification.dart';
 import '../../supplier_portal/data/models/supplier_action_notification.dart';
+import '../../../app/router/navigation_extensions.dart';
 import '../../../l10n/app_localizations.dart';
 
 final RegExp _testTagPattern = RegExp(r'\[test[^\]]*\]', caseSensitive: false);
@@ -82,6 +83,18 @@ NotificationVisualCategory categoryForNotification(
       return NotificationVisualCategory.materialRequest;
     case 'LEARNING_PROJECT_MODERATION':
       return NotificationVisualCategory.learning;
+    case 'PROJECT_HELP_SESSION_ALTERNATIVE_PROPOSED':
+    case 'PROJECT_HELP_SESSION_ACCEPTED':
+    case 'PROJECT_HELP_SESSION_REQUESTED':
+    case 'PROJECT_HELP_SESSION_ALTERNATIVE_ACCEPTED':
+    case 'PROJECT_HELP_SESSION_ALTERNATIVE_REJECTED':
+    case 'PROJECT_HELP_SESSION_ZOOM_SCHEDULING_FAILED':
+    case 'PROJECT_HELP_SESSION_ZOOM_SCHEDULED':
+    case 'PROJECT_HELP_SESSION_ZOOM_SCHEDULING_DELAYED':
+    case 'PROJECT_HELP_SESSION_DECLINED':
+    case 'PROJECT_HELP_SESSION_CANCELLED':
+    case 'PROJECT_HELP_SESSION_COMPLETED':
+      return NotificationVisualCategory.learning;
     case 'SUPPLIER_VERIFICATION_UPDATE':
       return NotificationVisualCategory.account;
     default:
@@ -95,6 +108,10 @@ NotificationVisualCategory categoryForNotification(
     return NotificationVisualCategory.deliveryUpdate;
   }
   if (entity == 'LEARNING_PROJECT' || type.contains('LEARNING_PROJECT')) {
+    return NotificationVisualCategory.learning;
+  }
+  if (entity == 'PROJECT_HELP_SESSION' ||
+      type.startsWith('PROJECT_HELP_SESSION_')) {
     return NotificationVisualCategory.learning;
   }
   if (entity == 'MATERIAL_REQUEST' || type.startsWith('MATERIAL_REQUEST_')) {
@@ -484,6 +501,11 @@ String? notificationOpenRoute(
   }
 
   if (!isSupplierMode && !isDriverMode) {
+    final helpSessionRoute = projectHelpSessionNotificationRoute(notification);
+    if (helpSessionRoute != null) {
+      return helpSessionRoute;
+    }
+
     final materialRequestRoute = materialRequestNotificationRoute(notification);
     if (materialRequestRoute != null) {
       return materialRequestRoute;
@@ -562,6 +584,47 @@ String? _supplierMaterialReviewOpenRoute(
       }
       return null;
   }
+}
+
+/// Learner and author project help session notifications open the private detail route.
+String? projectHelpSessionNotificationRoute(AppNotification notification) {
+  final type = notification.notificationType;
+  final entity = notification.relatedEntityType;
+  if (!type.startsWith('PROJECT_HELP_SESSION_') &&
+      entity != 'PROJECT_HELP_SESSION') {
+    return null;
+  }
+  final sessionId = notification.metadata['sessionId']?.toString().trim() ??
+      notification.relatedEntityId?.trim() ??
+      '';
+  if (sessionId.isEmpty) {
+    return null;
+  }
+
+  const authorTypes = {
+    'PROJECT_HELP_SESSION_REQUESTED',
+    'PROJECT_HELP_SESSION_ALTERNATIVE_ACCEPTED',
+    'PROJECT_HELP_SESSION_ALTERNATIVE_REJECTED',
+    'PROJECT_HELP_SESSION_ZOOM_SCHEDULING_FAILED',
+  };
+  const learnerTypes = {
+    'PROJECT_HELP_SESSION_ALTERNATIVE_PROPOSED',
+    'PROJECT_HELP_SESSION_ACCEPTED',
+    'PROJECT_HELP_SESSION_DECLINED',
+    'PROJECT_HELP_SESSION_ZOOM_SCHEDULING_DELAYED',
+    'PROJECT_HELP_SESSION_COMPLETED',
+    'PROJECT_HELP_SESSION_ZOOM_SCHEDULED',
+  };
+
+  final role = notification.metadata['recipientRole']?.toString().toUpperCase();
+  if (authorTypes.contains(type) || role == 'AUTHOR') {
+    return creatorHelpSessionDetailRoute(sessionId);
+  }
+  if (learnerTypes.contains(type) || role == 'LEARNER') {
+    return learnerHelpSessionDetailRoute(sessionId);
+  }
+
+  return learnerHelpSessionDetailRoute(sessionId);
 }
 
 /// Learner material-request notifications open the request detail route.

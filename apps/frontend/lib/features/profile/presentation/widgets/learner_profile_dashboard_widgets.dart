@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -11,6 +13,7 @@ import '../../../../shared/widgets/account_status_presentation.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/user_avatar.dart';
 import '../../../auth/data/models/user.dart';
+import '../../../project_help_sessions/application/project_help_sessions_providers.dart';
 import '../../data/models/learner_profile_summary.dart';
 import '../l10n/learner_profile_l10n.dart';
 import 'learner_profile_hub_widgets.dart';
@@ -1514,11 +1517,62 @@ class DashboardQuickActions extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              const Expanded(child: SizedBox.shrink()),
+              Expanded(
+                child: _QuickActionTile(
+                  icon: Icons.support_agent_outlined,
+                  label: l10n.helpSessions,
+                  semanticLabel: l10n.openHelpSessions,
+                  onTap: () => onOpen(
+                    '/learner/help-sessions',
+                    refreshOnReturn: true,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
+        const SizedBox(height: AppSpacing.sm),
+        AuthorHelpSessionsQuickActionRow(onOpen: onOpen),
       ],
+    );
+  }
+}
+
+class AuthorHelpSessionsQuickActionRow extends ConsumerWidget {
+  const AuthorHelpSessionsQuickActionRow({super.key, required this.onOpen});
+
+  final void Function(String route, {bool refreshOnReturn}) onOpen;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final visibleAsync = ref.watch(authorHelpSessionsEntryVisibleProvider);
+    return visibleAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (visible) {
+        if (!visible) {
+          return const SizedBox.shrink();
+        }
+        final l10n = LearnerProfileL10n.of(context);
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _QuickActionTile(
+                  icon: Icons.forum_outlined,
+                  label: l10n.authorHelpSessions,
+                  semanticLabel: l10n.openAuthorHelpSessions,
+                  onTap: () => onOpen(
+                    creatorHelpSessionsRoute,
+                    refreshOnReturn: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

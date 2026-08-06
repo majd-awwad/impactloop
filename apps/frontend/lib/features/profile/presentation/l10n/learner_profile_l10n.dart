@@ -91,6 +91,13 @@ class LearnerProfileL10n {
   String get savedLocations => t('Saved locations', 'المواقع المحفوظة');
   String get openSavedLocations =>
       t('Open saved locations', 'فتح المواقع المحفوظة');
+  String get helpSessions => t('Help sessions', 'جلسات المساعدة');
+  String get openHelpSessions =>
+      t('Open help sessions', 'فتح جلسات المساعدة');
+  String get authorHelpSessions =>
+      t('Project help requests', 'طلبات جلسات المشاريع');
+  String get openAuthorHelpSessions =>
+      t('Open project help requests', 'فتح طلبات جلسات المشاريع');
   String get openAccountSettings =>
       t('Open Account and Settings', 'فتح الحساب والإعدادات');
 

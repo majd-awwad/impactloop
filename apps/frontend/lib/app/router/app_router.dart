@@ -41,6 +41,11 @@ import '../../features/learner_material_requests/presentation/pages/learner_mate
 import '../../features/learner_material_requests/presentation/pages/learner_material_requests_page.dart';
 import '../../features/learner_builds/presentation/pages/my_builds_page.dart';
 import '../../features/learner_builds/presentation/pages/portfolio_page.dart';
+import '../../features/project_help_sessions/presentation/pages/creator_help_session_detail_page.dart';
+import '../../features/project_help_sessions/presentation/pages/creator_help_sessions_page.dart';
+import '../../features/project_help_sessions/presentation/pages/creator_project_help_session_settings_page.dart';
+import '../../features/project_help_sessions/presentation/pages/learner_help_session_detail_page.dart';
+import '../../features/project_help_sessions/presentation/pages/learner_help_sessions_page.dart';
 import '../../features/project_notebook/presentation/pages/project_notebook_page.dart';
 import '../../features/locations/presentation/pages/saved_locations_page.dart';
 import '../../features/material_discovery/domain/material_discovery_query.dart';
@@ -212,6 +217,12 @@ _RouteAccessLevel _routeAccessForPath(String path) {
       path.startsWith('/learner/material-requests/') ||
       path == '/learner/builds' ||
       (path.startsWith('/learner/builds/') && path.endsWith('/notebook')) ||
+      path == '/learner/help-sessions' ||
+      path.startsWith('/learner/help-sessions/') ||
+      path == '/creator/help-sessions' ||
+      path.startsWith('/creator/help-sessions/') ||
+      (path.startsWith('/creator/projects/') &&
+          path.endsWith('/help-sessions/settings')) ||
       path == '/learner/portfolio' ||
       path.startsWith('/home/recommendations/') ||
       path == '/materials/liked' ||
@@ -676,6 +687,33 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/learner/builds/:buildId/notebook',
         builder: (context, state) => ProjectNotebookPage(
           buildId: state.pathParameters['buildId']!,
+          initialPageId: state.uri.queryParameters['pageId'],
+        ),
+      ),
+      GoRoute(
+        path: '/learner/help-sessions',
+        builder: (context, state) => const LearnerHelpSessionsPage(),
+      ),
+      GoRoute(
+        path: '/learner/help-sessions/:sessionId',
+        builder: (context, state) => LearnerHelpSessionDetailPage(
+          sessionId: state.pathParameters['sessionId']!,
+        ),
+      ),
+      GoRoute(
+        path: '/creator/help-sessions',
+        builder: (context, state) => const CreatorHelpSessionsPage(),
+      ),
+      GoRoute(
+        path: '/creator/help-sessions/:sessionId',
+        builder: (context, state) => CreatorHelpSessionDetailPage(
+          sessionId: state.pathParameters['sessionId']!,
+        ),
+      ),
+      GoRoute(
+        path: '/creator/projects/:projectId/help-sessions/settings',
+        builder: (context, state) => CreatorProjectHelpSessionSettingsPage(
+          projectId: state.pathParameters['projectId']!,
         ),
       ),
       GoRoute(

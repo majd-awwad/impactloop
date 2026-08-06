@@ -31,6 +31,7 @@ import '../../../ai/application/ai_chat_controller.dart';
 import '../../../ai/domain/ai_models.dart';
 import '../../domain/models/learning_project_draft_component.dart';
 import '../../domain/models/learning_project_step_text.dart';
+import '../../../project_help_sessions/presentation/widgets/submission_help_session_settings_entry.dart';
 import '../../domain/models/learning_project_submission.dart';
 import '../models/authoring_workspace_state.dart';
 import '../theme/learning_ui_palette.dart';
@@ -604,6 +605,7 @@ class _SubmissionDetailContentState extends ConsumerState<_SubmissionDetailConte
                     ],
                     const SizedBox(height: AppSpacing.lg),
                     _SubmissionActions(submission: submission),
+                    SubmissionHelpSessionSettingsEntry(submission: submission),
                   ],
                 ),
               ),
