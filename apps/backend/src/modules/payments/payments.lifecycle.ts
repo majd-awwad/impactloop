@@ -40,9 +40,16 @@ export type FlushPostCommitRefundResult = {
   failed: Array<{ orderId: string; code: string }>;
 };
 
+export type PostCommitResolutionTask = {
+  reservationId: string;
+  episodeKey: string;
+  paymentOrderId?: string | null;
+};
+
 export type ReservationPaymentLifecycleResult = {
   actions: PaymentLifecycleAction[];
   postCommitRefunds: PostCommitRefundTask[];
+  postCommitResolution?: PostCommitResolutionTask | null;
 };
 
 export type DeliveryGroupPaymentLifecycleResult = {
@@ -638,6 +645,7 @@ export const handleReservationPaymentLifecycleTransition = async (
     return {
       actions: [{ kind: 'NONE', detail: 'PAYMENT_DISABLED' }],
       postCommitRefunds,
+      postCommitResolution: null,
     };
   }
 
@@ -664,17 +672,32 @@ export const handleReservationPaymentLifecycleTransition = async (
     return {
       actions: [{ kind: 'SKIPPED_FULFILLED', detail: input.newStatus }],
       postCommitRefunds,
+      postCommitResolution: null,
     };
   }
 
   if (classification === 'RESOLUTION_REQUIRED') {
+    const history = await tx.reservationStatusHistory.findFirst({
+      where: {
+        reservationId: reservation.id,
+        newStatus: input.newStatus,
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
     return {
       actions: [
         { kind: 'SKIPPED_RESOLUTION_REQUIRED', detail: input.newStatus },
       ],
       postCommitRefunds,
+      postCommitResolution: {
+        reservationId: reservation.id,
+        episodeKey: history?.id ?? `status-history-missing:${reservation.id}:${input.newStatus}`,
+      },
     };
   }
+
+  let postCommitResolution: PostCommitResolutionTask | null = null;
 
   if (classification === 'PRE_FULFILLMENT_TERMINAL') {
     const material = await evaluateMaterialRefundEligibility(
@@ -710,6 +733,17 @@ export const handleReservationPaymentLifecycleTransition = async (
         kind: 'SKIPPED_RESOLUTION_REQUIRED',
         detail: material.eligibility,
       });
+      const orderCycle = material.orderId
+        ? await tx.paymentOrder.findUnique({
+            where: { id: material.orderId },
+            select: { cycleNumber: true },
+          })
+        : null;
+      postCommitResolution = {
+        reservationId: reservation.id,
+        episodeKey: `material:${material.eligibility}:${material.orderId ?? 'none'}:c${orderCycle?.cycleNumber ?? 0}`,
+        paymentOrderId: material.orderId,
+      };
     } else if (material.eligibility === 'FULFILLED_NO_REFUND') {
       actions.push({
         kind: 'SKIPPED_FULFILLED',
@@ -742,10 +776,32 @@ export const handleReservationPaymentLifecycleTransition = async (
       });
       actions.push(...groupResult.actions);
       postCommitRefunds.push(...groupResult.postCommitRefunds);
+      if (
+        !postCommitResolution &&
+        groupResult.eligibility === 'FULFILLMENT_STARTED_RESOLUTION_REQUIRED'
+      ) {
+        actions.push({
+          kind: 'SKIPPED_RESOLUTION_REQUIRED',
+          detail: groupResult.eligibility,
+        });
+        const feeOrder = await tx.paymentOrder.findFirst({
+          where: {
+            purpose: 'DELIVERY_FEE',
+            deliveryGroupId: reservation.deliveryGroupId,
+          },
+          orderBy: { cycleNumber: 'desc' },
+          select: { id: true, cycleNumber: true },
+        });
+        postCommitResolution = {
+          reservationId: reservation.id,
+          episodeKey: `fee:${groupResult.eligibility}:${feeOrder?.id ?? reservation.deliveryGroupId}:c${feeOrder?.cycleNumber ?? 0}`,
+          paymentOrderId: feeOrder?.id ?? null,
+        };
+      }
     }
   }
 
-  return { actions, postCommitRefunds };
+  return { actions, postCommitRefunds, postCommitResolution };
 };
 
 export const evaluateDeliveryFeeRefundEligibility = async (
@@ -1038,12 +1094,36 @@ export const handleDeliveryGroupPaymentLifecycleTransition = async (
  */
 export const flushPostCommitPaymentRefunds = async (
   tasks: PostCommitRefundTask[],
+  resolution?:
+    | PostCommitResolutionTask
+    | PostCommitResolutionTask[]
+    | null,
 ): Promise<FlushPostCommitRefundResult> => {
   const result: FlushPostCommitRefundResult = {
     attemptedOrderIds: [],
     succeededOrderIds: [],
     failed: [],
   };
+
+  if (resolution && isElectronicPaymentEnforced()) {
+    const { notifyPaymentResolutionRequired } = await import(
+      './payments.notifications.js'
+    );
+    const resolutions = Array.isArray(resolution) ? resolution : [resolution];
+    const seen = new Set<string>();
+    for (const item of resolutions) {
+      const key = `${item.reservationId}:${item.episodeKey}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      await notifyPaymentResolutionRequired({
+        reservationId: item.reservationId,
+        paymentOrderId: item.paymentOrderId,
+        episodeKey: item.episodeKey,
+      });
+    }
+  }
 
   if (!tasks.length || !isElectronicPaymentEnforced()) {
     return result;

@@ -384,6 +384,8 @@ export const cancelAndReleaseHoldForPickupRecoveryReport = async (input: {
         ? 'Admin cancelled and released hold after no driver available'
         : 'Admin cancelled and released hold after pickup was not completed';
     const postCommitRefunds: PostCommitRefundTask[] = [];
+    const postCommitResolutions: import('../payments/payments.lifecycle.js').PostCommitResolutionTask[] =
+      [];
 
     const groupedState =
       !partialRecovery && delivery.deliveryGroupId
@@ -492,6 +494,16 @@ export const cancelAndReleaseHoldForPickupRecoveryReport = async (input: {
         reason: input.adminNote?.trim() || defaultNote,
       });
       postCommitRefunds.push(...payment.postCommitRefunds);
+      if (
+        payment.postCommitResolution &&
+        postCommitResolutions.length === 0
+      ) {
+        postCommitResolutions.push({
+          reservationId: payment.postCommitResolution.reservationId,
+          paymentOrderId: payment.postCommitResolution.paymentOrderId,
+          episodeKey: `recovery:${report.id}`,
+        });
+      }
     }
 
     if (!partialRecovery && delivery.deliveryGroupId) {
@@ -531,6 +543,7 @@ export const cancelAndReleaseHoldForPickupRecoveryReport = async (input: {
       reportId,
       recoveryKind: kind,
       postCommitRefunds,
+      postCommitResolutions,
     };
   });
 
@@ -539,7 +552,12 @@ export const cancelAndReleaseHoldForPickupRecoveryReport = async (input: {
   }
 
   if ('postCommitRefunds' in outcome && outcome.postCommitRefunds) {
-    await flushPostCommitPaymentRefunds(outcome.postCommitRefunds);
+    await flushPostCommitPaymentRefunds(
+      outcome.postCommitRefunds,
+      'postCommitResolutions' in outcome
+        ? outcome.postCommitResolutions
+        : null,
+    );
   }
 
   const report = await findNoShowReportByIdForAdmin(outcome.reportId);

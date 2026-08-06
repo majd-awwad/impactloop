@@ -962,6 +962,7 @@ export const declineSupplierReservation = async (input: {
       conflict: false as const,
       reservationId: updated.id,
       postCommitRefunds: payment.postCommitRefunds,
+      postCommitResolution: payment.postCommitResolution ?? null,
     };
   });
 
@@ -974,7 +975,12 @@ export const declineSupplierReservation = async (input: {
   }
 
   if ('postCommitRefunds' in outcome && outcome.postCommitRefunds) {
-    await flushPostCommitPaymentRefunds(outcome.postCommitRefunds);
+    await flushPostCommitPaymentRefunds(
+      outcome.postCommitRefunds,
+      'postCommitResolution' in outcome
+        ? outcome.postCommitResolution
+        : null,
+    );
   }
 
   const reservation = await loadSupplierReservationRecord(outcome.reservationId);
@@ -1351,6 +1357,7 @@ export const cancelSupplierAcceptedReservation = async (input: {
         conflict: false as const,
         reservationId: updated.id,
         postCommitRefunds: payment.postCommitRefunds,
+        postCommitResolution: payment.postCommitResolution ?? null,
       };
     }
 
@@ -1410,6 +1417,7 @@ export const cancelSupplierAcceptedReservation = async (input: {
       conflict: false as const,
       reservationId: updated.id,
       postCommitRefunds: payment.postCommitRefunds,
+      postCommitResolution: payment.postCommitResolution ?? null,
     };
   });
 
@@ -1426,7 +1434,12 @@ export const cancelSupplierAcceptedReservation = async (input: {
   }
 
   if ('postCommitRefunds' in outcome && outcome.postCommitRefunds) {
-    await flushPostCommitPaymentRefunds(outcome.postCommitRefunds);
+    await flushPostCommitPaymentRefunds(
+      outcome.postCommitRefunds,
+      'postCommitResolution' in outcome
+        ? outcome.postCommitResolution
+        : null,
+    );
   }
 
   const reservation = await loadSupplierReservationRecord(outcome.reservationId);

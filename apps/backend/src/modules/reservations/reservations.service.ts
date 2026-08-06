@@ -2,6 +2,7 @@ import { AppError } from '../../utils/app-error.js';
 import { ACTIVE_DELIVERY_STATUSES } from '../deliveries/deliveries.service.js';
 import { notifyNewJobForReservationWaitingDelivery } from '../notifications/driver-notification-events.service.js';
 import { notifyReservationCancelledByLearner } from '../notifications/reservation-notifications.js';
+import { notifyPaymentRequiredAfterAcceptance } from '../payments/payments.notifications.js';
 import {
   deriveHandoverCode,
   ensureSelfPickupCodeStored,
@@ -1097,6 +1098,7 @@ export const resolveLearnerConfirmation = async (
 
       if (result.outcome === 'ACCEPTED') {
         await notifyNewJobForReservationWaitingDelivery(reservationId);
+        await notifyPaymentRequiredAfterAcceptance(reservationId);
       }
 
       const reservation = await mapLearnerReservationById(

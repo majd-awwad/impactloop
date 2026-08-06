@@ -69,6 +69,7 @@ import {
   notifyReservationAccepted,
   notifyReservationDeclined,
 } from '../notifications/reservation-notifications.js';
+import { notifyPaymentRequiredAfterAcceptance } from '../payments/payments.notifications.js';
 import { notifyNewJobForReservationWaitingDelivery } from '../notifications/driver-notification-events.service.js';
 import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 import { classifyAdminReportContract } from '../admin-no-show-reports/admin-no-show-reports.classifier.js';
@@ -1006,6 +1007,7 @@ export const acceptSupplierReservation = async (
   }
 
   void notifyReservationAccepted(result.reservation.id);
+  await notifyPaymentRequiredAfterAcceptance(result.reservation.id);
   await notifyNewJobForReservationWaitingDelivery(result.reservation.id);
 
   return mapSupplierReservation(result.reservation);
@@ -1264,6 +1266,8 @@ export const acceptLearnerRescheduleProposal = async (
     );
   }
 
+  await notifyPaymentRequiredAfterAcceptance(result.reservation.id);
+
   return mapSupplierReservation(result.reservation);
 };
 
@@ -1480,6 +1484,7 @@ export const submitNoDriverPickupWindow = async (
   }
 
   await notifyNewJobForReservationWaitingDelivery(reservationId);
+  await notifyPaymentRequiredAfterAcceptance(reservationId);
 
   return mapSupplierReservation(result.reservation);
 };

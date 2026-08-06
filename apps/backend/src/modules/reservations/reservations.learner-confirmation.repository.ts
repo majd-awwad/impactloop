@@ -119,6 +119,7 @@ export const resolveLearnerConfirmation = async (input: {
       return {
         outcome: 'CANCELLED' as const,
         postCommitRefunds: payment.postCommitRefunds,
+        postCommitResolution: payment.postCommitResolution ?? null,
       };
     }
 
@@ -268,7 +269,12 @@ export const resolveLearnerConfirmation = async (input: {
     'postCommitRefunds' in result &&
     result.postCommitRefunds
   ) {
-    await flushPostCommitPaymentRefunds(result.postCommitRefunds);
+    await flushPostCommitPaymentRefunds(
+      result.postCommitRefunds,
+      'postCommitResolution' in result
+        ? result.postCommitResolution
+        : null,
+    );
   }
 
   return result;

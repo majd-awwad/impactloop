@@ -13,6 +13,16 @@ import {
   ensureNextPaymentCycleAfterVerifiedRefund,
   flushPostCommitPaymentRefunds,
 } from './payments.lifecycle.js';
+import {
+  notifyFulfillmentUnlockedDelivery,
+  notifyFulfillmentUnlockedPickup,
+  notifyLatePaymentAutoRefund,
+  notifyPaymentCompleted,
+  notifyPaymentResolutionRequired,
+  notifyRefundCompleted,
+  notifyRefundFailed,
+} from './payments.notifications.js';
+import { LIFECYCLE_REFUND_REASONS } from './payments.lifecycle.policy.js';
 
 const REOPENABLE_DELIVERY_STATUSES = [
   'AWAITING_RESOLUTION',
@@ -32,6 +42,7 @@ export const reevaluateFulfillmentAfterPaymentOrderPaid = async (
   evaluated: boolean;
   deliveryCreated: boolean;
   deliveryReopened: boolean;
+  deliveryAlreadyDispatchable: boolean;
   deliveryGroupId: string | null;
   reservationId: string | null;
 }> => {
@@ -40,6 +51,7 @@ export const reevaluateFulfillmentAfterPaymentOrderPaid = async (
       evaluated: false,
       deliveryCreated: false,
       deliveryReopened: false,
+      deliveryAlreadyDispatchable: false,
       deliveryGroupId: null,
       reservationId: null,
     };
@@ -61,6 +73,7 @@ export const reevaluateFulfillmentAfterPaymentOrderPaid = async (
       evaluated: false,
       deliveryCreated: false,
       deliveryReopened: false,
+      deliveryAlreadyDispatchable: false,
       deliveryGroupId: null,
       reservationId: null,
     };
@@ -81,6 +94,7 @@ export const reevaluateFulfillmentAfterPaymentOrderPaid = async (
         evaluated: true,
         deliveryCreated: false,
         deliveryReopened: false,
+        deliveryAlreadyDispatchable: false,
         deliveryGroupId: reservation?.deliveryGroupId ?? null,
         reservationId: order.reservationId,
       };
@@ -105,6 +119,7 @@ export const reevaluateFulfillmentAfterPaymentOrderPaid = async (
         evaluated: true,
         deliveryCreated: false,
         deliveryReopened: false,
+        deliveryAlreadyDispatchable: false,
         deliveryGroupId: order.deliveryGroupId,
         reservationId: null,
       };
@@ -117,6 +132,7 @@ export const reevaluateFulfillmentAfterPaymentOrderPaid = async (
     evaluated: true,
     deliveryCreated: false,
     deliveryReopened: false,
+    deliveryAlreadyDispatchable: false,
     deliveryGroupId: order.deliveryGroupId,
     reservationId: order.reservationId,
   };
@@ -186,6 +202,7 @@ const createOrReopenDeliveryIfReady = async (
         evaluated: true,
         deliveryCreated: false,
         deliveryReopened: false,
+        deliveryAlreadyDispatchable: false,
         deliveryGroupId: reservation.deliveryGroupId,
         reservationId: reservation.id,
       };
@@ -197,6 +214,7 @@ const createOrReopenDeliveryIfReady = async (
         evaluated: true,
         deliveryCreated: false,
         deliveryReopened: false,
+        deliveryAlreadyDispatchable: false,
         deliveryGroupId: null,
         reservationId: reservation.id,
       };
@@ -205,6 +223,7 @@ const createOrReopenDeliveryIfReady = async (
 
   let deliveryCreated = false;
   let deliveryReopened = false;
+  let deliveryAlreadyDispatchable = false;
 
   try {
     await runSerializableTransaction(async (tx) => {
@@ -284,10 +303,12 @@ const createOrReopenDeliveryIfReady = async (
           });
 
       if (existing) {
-        if (
-          existing.assignedDriverProfileId != null ||
-          existing.status === 'WAITING_FOR_DRIVER'
-        ) {
+        if (existing.status === 'WAITING_FOR_DRIVER') {
+          deliveryAlreadyDispatchable = true;
+          return;
+        }
+
+        if (existing.assignedDriverProfileId != null) {
           return;
         }
 
@@ -390,6 +411,7 @@ const createOrReopenDeliveryIfReady = async (
         evaluated: true,
         deliveryCreated: false,
         deliveryReopened: false,
+        deliveryAlreadyDispatchable: false,
         deliveryGroupId: reservation.deliveryGroupId,
         reservationId: reservation.id,
       };
@@ -405,6 +427,7 @@ const createOrReopenDeliveryIfReady = async (
     evaluated: true,
     deliveryCreated,
     deliveryReopened,
+    deliveryAlreadyDispatchable,
     deliveryGroupId: reservation.deliveryGroupId,
     reservationId: reservation.id,
   };
@@ -419,6 +442,7 @@ export const afterVerifiedPaymentEventProcessed = async (input: {
   processingStatus: string;
   paymentOrderId?: string;
   postCommitAutoRefund?: boolean;
+  reason?: string;
 }): Promise<void> => {
   if (
     (input.processingStatus !== 'PROCESSED' &&
@@ -430,25 +454,134 @@ export const afterVerifiedPaymentEventProcessed = async (input: {
   }
 
   if (input.postCommitAutoRefund) {
+    await notifyLatePaymentAutoRefund(input.paymentOrderId);
     await flushPostCommitPaymentRefunds([
       {
         orderId: input.paymentOrderId,
-        reason: 'LATE_SUCCESS_AFTER_SOURCE_TERMINAL',
+        reason:
+          input.reason ??
+          LIFECYCLE_REFUND_REASONS.LATE_SUCCESS_AFTER_SOURCE_TERMINAL,
         actorUserId: 'payment-lifecycle',
       },
     ]);
     return;
   }
 
-  const order = await prisma.paymentOrder.findUnique({
-    where: { id: input.paymentOrderId },
-    select: { id: true, status: true },
-  });
-
-  if (order?.status === 'REFUNDED') {
-    await ensureNextPaymentCycleAfterVerifiedRefund(order.id);
+  if (
+    input.reason === LIFECYCLE_REFUND_REASONS.LATE_SUCCESS_RESOLUTION_REQUIRED ||
+    input.reason === 'LATE_SUCCESS_AFTER_FULFILLED_NO_REFUND'
+  ) {
+    const order = await prisma.paymentOrder.findUnique({
+      where: { id: input.paymentOrderId },
+      select: { reservationId: true, deliveryGroupId: true, purpose: true },
+    });
+    let reservationId = order?.reservationId ?? null;
+    if (!reservationId && order?.deliveryGroupId) {
+      const member = await prisma.reservation.findFirst({
+        where: { deliveryGroupId: order.deliveryGroupId },
+        select: { id: true },
+        orderBy: { createdAt: 'asc' },
+      });
+      reservationId = member?.id ?? null;
+    }
+    if (reservationId) {
+      await notifyPaymentResolutionRequired({
+        reservationId,
+        paymentOrderId: input.paymentOrderId,
+        episodeKey: input.paymentOrderId,
+      });
+    }
     return;
   }
 
-  await reevaluateFulfillmentAfterPaymentOrderPaid(input.paymentOrderId);
+  const order = await prisma.paymentOrder.findUnique({
+    where: { id: input.paymentOrderId },
+    select: {
+      id: true,
+      status: true,
+      purpose: true,
+      cycleNumber: true,
+      reservationId: true,
+      deliveryGroupId: true,
+    },
+  });
+
+  if (!order) {
+    return;
+  }
+
+  if (order.status === 'REFUNDED') {
+    const cycle = await ensureNextPaymentCycleAfterVerifiedRefund(order.id);
+    const newCycleCreated = cycle.outcome === 'CREATED';
+    await notifyRefundCompleted({
+      paymentOrderId: order.id,
+      newCycleCreated,
+      newCycleNumber: cycle.cycleNumber,
+    });
+    return;
+  }
+
+  if (order.status !== 'PAID') {
+    return;
+  }
+
+  const existingRefund = await prisma.paymentRefund.findUnique({
+    where: { paymentOrderId: order.id },
+    select: { id: true, status: true },
+  });
+  if (existingRefund?.status === 'FAILED') {
+    await notifyRefundFailed({
+      paymentOrderId: order.id,
+      refundId: existingRefund.id,
+    });
+    return;
+  }
+  if (
+    existingRefund?.status === 'PENDING' ||
+    existingRefund?.status === 'REQUESTED'
+  ) {
+    return;
+  }
+
+  await notifyPaymentCompleted(order.id);
+
+  const fulfillment = await reevaluateFulfillmentAfterPaymentOrderPaid(
+    order.id,
+  );
+
+  if (
+    order.purpose === 'MATERIAL_SUBTOTAL' &&
+    order.reservationId &&
+    fulfillment.evaluated
+  ) {
+    const reservation = await prisma.reservation.findUnique({
+      where: { id: order.reservationId },
+      select: { fulfillmentMethod: true, status: true },
+    });
+    if (
+      reservation?.fulfillmentMethod === 'PICKUP' &&
+      reservation.status === 'ACCEPTED'
+    ) {
+      const pickup = await evaluatePickupPaymentReadiness(order.reservationId);
+      if (pickup.ready) {
+        await notifyFulfillmentUnlockedPickup({
+          reservationId: order.reservationId,
+          paymentOrderId: order.id,
+          cycleNumber: order.cycleNumber,
+        });
+      }
+    }
+  }
+
+  if (
+    (fulfillment.deliveryCreated ||
+      fulfillment.deliveryReopened ||
+      fulfillment.deliveryAlreadyDispatchable) &&
+    fulfillment.deliveryGroupId
+  ) {
+    await notifyFulfillmentUnlockedDelivery({
+      deliveryGroupId: fulfillment.deliveryGroupId,
+      paymentOrderId: order.id,
+    });
+  }
 };

@@ -139,6 +139,9 @@ export const reconcileAcceptedPaymentObligations = async (input?: {
 
   result.scannedAcceptedReservations = reservations.length;
   const seenFeeGroups = new Set<string>();
+  const createdMaterialOrderIds: string[] = [];
+  const createdFeeOrderIds: string[] = [];
+  const createdNewCycleOrderIds: string[] = [];
 
   for (const reservation of reservations) {
     if (
@@ -216,6 +219,9 @@ export const reconcileAcceptedPaymentObligations = async (input?: {
         result.materialCreated.push(reservation.id);
         if (material.order.cycleNumber > 1) {
           result.missingCyclesCreated.push(reservation.id);
+          createdNewCycleOrderIds.push(material.order.id);
+        } else {
+          createdMaterialOrderIds.push(material.order.id);
         }
       } else if (material.outcome === 'EXISTING') {
         result.materialExisting.push(reservation.id);
@@ -277,6 +283,9 @@ export const reconcileAcceptedPaymentObligations = async (input?: {
           result.feeGroupsCreated.push(groupId);
           if (fee.order.cycleNumber > 1) {
             result.missingCyclesCreated.push(groupId);
+            createdNewCycleOrderIds.push(fee.order.id);
+          } else {
+            createdFeeOrderIds.push(fee.order.id);
           }
         } else if (fee.outcome === 'EXISTING') {
           result.feeGroupsExisting.push(groupId);
@@ -291,6 +300,20 @@ export const reconcileAcceptedPaymentObligations = async (input?: {
           );
         }
       }
+    }
+  }
+
+  if (!dryRun) {
+    const {
+      notifyPaymentRequiredForCreatedOrders,
+      notifyNewPaymentCycleRequired,
+    } = await import('./payments.notifications.js');
+    await notifyPaymentRequiredForCreatedOrders({
+      materialOrderIds: createdMaterialOrderIds,
+      feeOrderIds: createdFeeOrderIds,
+    });
+    for (const orderId of createdNewCycleOrderIds) {
+      await notifyNewPaymentCycleRequired(orderId);
     }
   }
 

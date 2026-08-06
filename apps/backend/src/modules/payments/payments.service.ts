@@ -17,6 +17,11 @@ import {
 import { mapPaymentOrderDto, type CheckoutResponseDto } from './payments.dto.js';
 import { processVerifiedProviderEvent } from './payments.event-processor.js';
 import { afterVerifiedPaymentEventProcessed } from './payments.fulfillment.js';
+import { LIFECYCLE_REFUND_REASONS } from './payments.lifecycle.policy.js';
+import {
+  notifyRefundFailed,
+  notifyRefundRequested,
+} from './payments.notifications.js';
 import {
   moneyDecimalToMinorUnits,
   moneyDecimalToString,
@@ -860,6 +865,10 @@ const applyProviderRefundOutcome = async (input: {
       where: { id: input.orderId },
       data: { status: 'PAID' },
     });
+    await notifyRefundFailed({
+      paymentOrderId: input.orderId,
+      refundId: input.refundId,
+    });
     return {
       kind: 'CREATED' as const,
       orderId: input.orderId,
@@ -1091,6 +1100,16 @@ export const requestFullRefundForPaidOrder = async (input: {
     return prepared;
   }
 
+  const isLateSuccess =
+    prepared.reason ===
+      LIFECYCLE_REFUND_REASONS.LATE_SUCCESS_AFTER_SOURCE_TERMINAL ||
+    prepared.reason ===
+      LIFECYCLE_REFUND_REASONS.LATE_SUCCESS_RESOLUTION_REQUIRED;
+
+  if (!isLateSuccess) {
+    await notifyRefundRequested(prepared.orderId);
+  }
+
   let refundRequest;
   try {
     refundRequest = await provider.requestRefund({
@@ -1116,6 +1135,11 @@ export const requestFullRefundForPaidOrder = async (input: {
     await prisma.paymentOrder.update({
       where: { id: prepared.orderId },
       data: { status: 'PAID' },
+    });
+
+    await notifyRefundFailed({
+      paymentOrderId: prepared.orderId,
+      refundId: prepared.refundId,
     });
 
     return {

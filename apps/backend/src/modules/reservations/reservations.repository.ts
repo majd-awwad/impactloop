@@ -380,6 +380,7 @@ export const createLearnerReservation = async (input: {
       ...result,
       availabilityChanged,
       postCommitRefunds: missedPickupExpiry.postCommitRefunds,
+      postCommitResolutions: missedPickupExpiry.postCommitResolutions,
     });
 
     const openLearnerReservationCount = await tx.reservation.count({
@@ -579,7 +580,17 @@ export const createLearnerReservation = async (input: {
     'postCommitRefunds' in result &&
     Array.isArray(result.postCommitRefunds)
   ) {
-    await flushPostCommitPaymentRefunds(result.postCommitRefunds);
+    const resolutions =
+      'postCommitResolutions' in result &&
+      Array.isArray(result.postCommitResolutions)
+        ? (result.postCommitResolutions as import('../payments/payments.lifecycle.js').PostCommitResolutionTask[])
+        : 'postCommitResolution' in result
+          ? (result.postCommitResolution as
+              | import('../payments/payments.lifecycle.js').PostCommitResolutionTask
+              | null
+              | undefined)
+          : null;
+    await flushPostCommitPaymentRefunds(result.postCommitRefunds, resolutions);
   }
 
   if (result.outcome !== 'CREATED') {
@@ -662,6 +673,7 @@ export const cancelLearnerReservation = async (input: {
       outcome: 'CANCELLED' as const,
       reservationId: existing.id,
       postCommitRefunds: payment.postCommitRefunds,
+      postCommitResolution: payment.postCommitResolution ?? null,
     };
   });
 
@@ -669,7 +681,10 @@ export const cancelLearnerReservation = async (input: {
     return result;
   }
 
-  await flushPostCommitPaymentRefunds(result.postCommitRefunds);
+  await flushPostCommitPaymentRefunds(
+    result.postCommitRefunds,
+    result.postCommitResolution,
+  );
 
   const reservation = await loadLearnerCancelledReservationRecord(
     result.reservationId,

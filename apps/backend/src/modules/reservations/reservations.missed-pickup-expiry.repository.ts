@@ -21,6 +21,7 @@ import {
   flushPostCommitPaymentRefunds,
   handleReservationPaymentLifecycleTransition,
   type PostCommitRefundTask,
+  type PostCommitResolutionTask,
 } from '../payments/payments.lifecycle.js';
 
 const missedPickupExpirySelect = {
@@ -48,9 +49,11 @@ export const expireStaleMissedPickupsInTransaction = async (
 ): Promise<{
   expiredIds: string[];
   postCommitRefunds: PostCommitRefundTask[];
+  postCommitResolutions: PostCommitResolutionTask[];
 }> => {
   const expiredIds: string[] = [];
   const postCommitRefunds: PostCommitRefundTask[] = [];
+  const postCommitResolutions: PostCommitResolutionTask[] = [];
   const reservationIdsWithDeliveries = await loadReservationIdsWithAnyDelivery(
     tx,
     reservations.map((reservation) => reservation.id),
@@ -111,11 +114,14 @@ export const expireStaleMissedPickupsInTransaction = async (
       reason: MISSED_PICKUP_EXPIRY_REASON,
     });
     postCommitRefunds.push(...payment.postCommitRefunds);
+    if (payment.postCommitResolution) {
+      postCommitResolutions.push(payment.postCommitResolution);
+    }
 
     expiredIds.push(reservation.id);
   }
 
-  return { expiredIds, postCommitRefunds };
+  return { expiredIds, postCommitRefunds, postCommitResolutions };
 };
 
 const findMissedPickupExpiryCandidates = async (
@@ -144,12 +150,15 @@ const runMissedPickupExpiry = async (
     return [];
   }
 
-  const { expiredIds, postCommitRefunds } = await runSerializableTransaction(
-    async (tx) =>
+  const { expiredIds, postCommitRefunds, postCommitResolutions } =
+    await runSerializableTransaction(async (tx) =>
       expireStaleMissedPickupsInTransaction(tx, candidates, changedBy),
-  );
+    );
 
-  await flushPostCommitPaymentRefunds(postCommitRefunds);
+  await flushPostCommitPaymentRefunds(
+    postCommitRefunds,
+    postCommitResolutions,
+  );
 
   if (expiredIds.length > 0) {
     invalidateLearnerHomeForReservationTransition('ACCEPTED', 'EXPIRED');
@@ -218,9 +227,14 @@ export const expireStaleMissedPickupsForMaterialIdsInTransaction = async (
 ): Promise<{
   expiredIds: string[];
   postCommitRefunds: PostCommitRefundTask[];
+  postCommitResolutions: PostCommitResolutionTask[];
 }> => {
   if (materialIds.length === 0) {
-    return { expiredIds: [], postCommitRefunds: [] };
+    return {
+      expiredIds: [],
+      postCommitRefunds: [],
+      postCommitResolutions: [],
+    };
   }
 
   const candidates = await findMissedPickupExpiryCandidates(tx, {

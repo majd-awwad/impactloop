@@ -255,6 +255,7 @@ export const markLearnerPickupNoShow = async (input: {
       outcome: 'UPDATED' as const,
       reservation,
       postCommitRefunds: payment.postCommitRefunds,
+      postCommitResolution: payment.postCommitResolution ?? null,
     };
   });
 
@@ -264,7 +265,15 @@ export const markLearnerPickupNoShow = async (input: {
     'postCommitRefunds' in result &&
     Array.isArray(result.postCommitRefunds)
   ) {
-    await flushPostCommitPaymentRefunds(result.postCommitRefunds);
+    await flushPostCommitPaymentRefunds(
+      result.postCommitRefunds,
+      'postCommitResolution' in result
+        ? (result.postCommitResolution as
+            | import('../payments/payments.lifecycle.js').PostCommitResolutionTask
+            | null
+            | undefined)
+        : null,
+    );
   }
 
   return result;

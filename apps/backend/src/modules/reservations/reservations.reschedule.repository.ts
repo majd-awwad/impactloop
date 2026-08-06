@@ -166,11 +166,15 @@ export const cancelLearnerRescheduleRequest = async (input: {
     return {
       conflict: false as const,
       postCommitRefunds: payment.postCommitRefunds,
+      postCommitResolution: payment.postCommitResolution ?? null,
     };
   });
 
   if (result && result.conflict === false) {
-    await flushPostCommitPaymentRefunds(result.postCommitRefunds);
+    await flushPostCommitPaymentRefunds(
+      result.postCommitRefunds,
+      result.postCommitResolution,
+    );
   }
 
   return result;
