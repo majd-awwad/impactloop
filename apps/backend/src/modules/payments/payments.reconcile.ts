@@ -1,10 +1,20 @@
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
 import {
   ensureDeliveryFeePaymentOrder,
   ensureMaterialPaymentOrder,
 } from './payments.ensure.js';
+import {
+  cancelUnpaidPaymentOrder,
+  evaluateMaterialRefundEligibility,
+  flushPostCommitPaymentRefunds,
+  handleDeliveryGroupPaymentLifecycleTransition,
+  prepareFullRefundForPaidOrderInTransaction,
+  type PostCommitRefundTask,
+} from './payments.lifecycle.js';
+import { classifyReservationPaymentLifecycle } from './payments.lifecycle.policy.js';
 import { isElectronicPaymentEnforced } from './payments.policy.js';
 
 export type ReconcilePaymentObligationsResult = {
@@ -21,6 +31,18 @@ export type ReconcilePaymentObligationsResult = {
   feeGroupsNotRequired: string[];
   skippedTerminal: number;
   skippedFulfillmentStarted: string[];
+  unpaidCancelCandidates: string[];
+  unpaidCancelled: string[];
+  refundCandidates: string[];
+  refundsPrepared: string[];
+  materialResolutionRequiredSkipped: string[];
+  materialFulfilledSkipped: string[];
+  resolutionRequiredSkipped: string[];
+  emptyGroupFeeCandidates: string[];
+  emptyGroupFeesApplied: string[];
+  missingCycleCandidates: string[];
+  missingCyclesCreated: string[];
+  cyclesCreatedAfterRefund: string[];
 };
 
 const TERMINAL_RESERVATION_STATUSES = [
@@ -39,14 +61,25 @@ const FULFILLMENT_STARTED_DELIVERY_STATUSES = [
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
   'DELIVERED',
+  'FAILED_PICKUP',
+  'FAILED_DELIVERY',
+  'DRIVER_NO_SHOW',
+  'LEARNER_NO_SHOW',
+  'AWAITING_RESOLUTION',
+] as const;
+
+const PRE_FULFILLMENT_TERMINAL = [
+  'CANCELLED',
+  'REJECTED',
+  'EXPIRED',
+  'NO_SHOW',
 ] as const;
 
 /**
- * Explicit admin/dev reconciliation for already-ACCEPTED rows.
+ * Explicit admin/dev reconciliation for payment obligations.
  * Does not create obligations merely by reading a reservation.
- * Does not invoke provider checkout.
- * Skips reservations whose Delivery is already assigned/in progress.
- * Prefer reseeding local demo DBs when practical.
+ * Does not invoke provider checkout inside the scan transaction.
+ * Skips assigned/in-progress Delivery and resolution holds for auto-apply.
  */
 export const reconcileAcceptedPaymentObligations = async (input?: {
   dryRun?: boolean;
@@ -68,11 +101,25 @@ export const reconcileAcceptedPaymentObligations = async (input?: {
     feeGroupsNotRequired: [],
     skippedTerminal: 0,
     skippedFulfillmentStarted: [],
+    unpaidCancelCandidates: [],
+    unpaidCancelled: [],
+    refundCandidates: [],
+    refundsPrepared: [],
+    materialResolutionRequiredSkipped: [],
+    materialFulfilledSkipped: [],
+    resolutionRequiredSkipped: [],
+    emptyGroupFeeCandidates: [],
+    emptyGroupFeesApplied: [],
+    missingCycleCandidates: [],
+    missingCyclesCreated: [],
+    cyclesCreatedAfterRefund: [],
   };
 
   if (!isElectronicPaymentEnforced()) {
     return result;
   }
+
+  const postCommitRefunds: PostCommitRefundTask[] = [];
 
   const reservations = await prisma.reservation.findMany({
     where: {
@@ -140,15 +187,26 @@ export const reconcileAcceptedPaymentObligations = async (input?: {
         where: {
           purpose: 'MATERIAL_SUBTOTAL',
           reservationId: reservation.id,
-          cycleNumber: 1,
         },
-        select: { id: true },
+        orderBy: { cycleNumber: 'desc' },
+        select: { id: true, status: true, cycleNumber: true },
       });
       const subtotal = Number(reservation.materialSubtotal ?? 0);
       if (subtotal <= 0) {
         result.materialNotRequired.push(reservation.id);
-      } else if (existingMaterial) {
+      } else if (
+        existingMaterial &&
+        existingMaterial.status !== 'CANCELLED' &&
+        existingMaterial.status !== 'REFUNDED'
+      ) {
         result.materialExisting.push(reservation.id);
+      } else if (
+        existingMaterial &&
+        (existingMaterial.status === 'CANCELLED' ||
+          existingMaterial.status === 'REFUNDED')
+      ) {
+        result.missingCycleCandidates.push(reservation.id);
+        result.materialWouldCreate.push(reservation.id);
       } else {
         result.materialWouldCreate.push(reservation.id);
       }
@@ -156,6 +214,9 @@ export const reconcileAcceptedPaymentObligations = async (input?: {
       const material = await ensureMaterialPaymentOrder(reservation.id);
       if (material.outcome === 'CREATED') {
         result.materialCreated.push(reservation.id);
+        if (material.order.cycleNumber > 1) {
+          result.missingCyclesCreated.push(reservation.id);
+        }
       } else if (material.outcome === 'EXISTING') {
         result.materialExisting.push(reservation.id);
       } else if (material.outcome === 'NOT_REQUIRED') {
@@ -187,15 +248,26 @@ export const reconcileAcceptedPaymentObligations = async (input?: {
           where: {
             purpose: 'DELIVERY_FEE',
             deliveryGroupId: groupId,
-            cycleNumber: 1,
           },
-          select: { id: true },
+          orderBy: { cycleNumber: 'desc' },
+          select: { id: true, status: true, cycleNumber: true },
         });
         const fee = Number(group?.deliveryFee ?? 0);
         if (fee <= 0) {
           result.feeGroupsNotRequired.push(groupId);
-        } else if (existingFee) {
+        } else if (
+          existingFee &&
+          existingFee.status !== 'CANCELLED' &&
+          existingFee.status !== 'REFUNDED'
+        ) {
           result.feeGroupsExisting.push(groupId);
+        } else if (
+          existingFee &&
+          (existingFee.status === 'CANCELLED' ||
+            existingFee.status === 'REFUNDED')
+        ) {
+          result.missingCycleCandidates.push(groupId);
+          result.feeGroupsWouldCreate.push(groupId);
         } else {
           result.feeGroupsWouldCreate.push(groupId);
         }
@@ -203,6 +275,9 @@ export const reconcileAcceptedPaymentObligations = async (input?: {
         const fee = await ensureDeliveryFeePaymentOrder(groupId);
         if (fee.outcome === 'CREATED') {
           result.feeGroupsCreated.push(groupId);
+          if (fee.order.cycleNumber > 1) {
+            result.missingCyclesCreated.push(groupId);
+          }
         } else if (fee.outcome === 'EXISTING') {
           result.feeGroupsExisting.push(groupId);
         } else if (fee.outcome === 'NOT_REQUIRED') {
@@ -217,6 +292,161 @@ export const reconcileAcceptedPaymentObligations = async (input?: {
         }
       }
     }
+  }
+
+  // Terminal sources with active unpaid / paid-needing-refund material orders.
+  const terminalReservations = await prisma.reservation.findMany({
+    where: {
+      status: { in: [...PRE_FULFILLMENT_TERMINAL] },
+      ...(input?.reservationIds?.length
+        ? { id: { in: input.reservationIds } }
+        : {}),
+    },
+    select: { id: true, status: true },
+  });
+
+  for (const reservation of terminalReservations) {
+    const classif = classifyReservationPaymentLifecycle(reservation.status);
+    if (classif === 'RESOLUTION_REQUIRED') {
+      result.resolutionRequiredSkipped.push(reservation.id);
+      continue;
+    }
+    if (classif !== 'PRE_FULFILLMENT_TERMINAL') {
+      continue;
+    }
+
+    const eligibility = await runSerializableTransaction(async (tx) =>
+      evaluateMaterialRefundEligibility(tx, reservation.id),
+    );
+
+    if (
+      eligibility.eligibility === 'FULFILLMENT_STARTED_RESOLUTION_REQUIRED' ||
+      eligibility.eligibility === 'SOURCE_RESOLUTION_REQUIRED'
+    ) {
+      result.materialResolutionRequiredSkipped.push(reservation.id);
+      continue;
+    }
+
+    if (eligibility.eligibility === 'FULFILLED_NO_REFUND') {
+      result.materialFulfilledSkipped.push(reservation.id);
+      continue;
+    }
+
+    if (eligibility.eligibility === 'CANCEL_UNPAID' && eligibility.orderId) {
+      result.unpaidCancelCandidates.push(eligibility.orderId);
+      if (!dryRun) {
+        await runSerializableTransaction(async (tx) => {
+          await cancelUnpaidPaymentOrder(tx, {
+            orderId: eligibility.orderId!,
+            reason: 'RECONCILE_TERMINAL_SOURCE_UNPAID',
+          });
+        });
+        result.unpaidCancelled.push(eligibility.orderId);
+      }
+      continue;
+    }
+
+    if (eligibility.eligibility === 'REFUND_PAID' && eligibility.orderId) {
+      result.refundCandidates.push(eligibility.orderId);
+      if (!dryRun) {
+        const prepared = await runSerializableTransaction(async (tx) =>
+          prepareFullRefundForPaidOrderInTransaction(tx, {
+            orderId: eligibility.orderId!,
+            reason: 'RECONCILE_TERMINAL_SOURCE_REFUND',
+          }),
+        );
+        if (prepared.postCommit) {
+          postCommitRefunds.push(prepared.postCommit);
+        }
+        result.refundsPrepared.push(eligibility.orderId);
+      }
+    }
+  }
+
+  // Empty delivery groups retaining fee orders (safe auto-apply only).
+  const scopedGroupIds =
+    input?.reservationIds?.length
+      ? (
+          await prisma.reservation.findMany({
+            where: { id: { in: input.reservationIds } },
+            select: { deliveryGroupId: true },
+          })
+        )
+          .map((row) => row.deliveryGroupId)
+          .filter((id): id is string => id != null)
+      : null;
+
+  const feeOrders = await prisma.paymentOrder.findMany({
+    where: {
+      purpose: 'DELIVERY_FEE',
+      status: {
+        in: ['REQUIRES_PAYMENT', 'CHECKOUT_PENDING', 'PAID', 'REFUND_PENDING'],
+      },
+      deliveryGroupId: scopedGroupIds
+        ? { in: scopedGroupIds }
+        : { not: null },
+    },
+    select: { id: true, deliveryGroupId: true, status: true },
+  });
+
+  const seenEmptyGroups = new Set<string>();
+  for (const feeOrder of feeOrders) {
+    const groupId = feeOrder.deliveryGroupId;
+    if (!groupId || seenEmptyGroups.has(groupId)) {
+      continue;
+    }
+    seenEmptyGroups.add(groupId);
+
+    const started = await prisma.delivery.findFirst({
+      where: {
+        deliveryGroupId: groupId,
+        OR: [
+          { assignedDriverProfileId: { not: null } },
+          { status: { in: [...FULFILLMENT_STARTED_DELIVERY_STATUSES] } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (started) {
+      result.resolutionRequiredSkipped.push(groupId);
+      continue;
+    }
+
+    const activeMembers = await prisma.reservation.count({
+      where: {
+        deliveryGroupId: groupId,
+        status: {
+          in: [
+            'ACCEPTED',
+            'AWAITING_LEARNER_CONFIRMATION',
+            'AWAITING_SUPPLIER_CONFIRMATION',
+            'AWAITING_RESOLUTION',
+            'FULFILLMENT_FAILED',
+          ],
+        },
+        fulfillmentMethod: 'DELIVERY',
+      },
+    });
+    if (activeMembers > 0) {
+      continue;
+    }
+
+    result.emptyGroupFeeCandidates.push(groupId);
+    if (!dryRun) {
+      const groupResult = await runSerializableTransaction(async (tx) =>
+        handleDeliveryGroupPaymentLifecycleTransition(tx, {
+          deliveryGroupId: groupId,
+          actorUserId: null,
+          reason: 'RECONCILE_EMPTY_GROUP_FEE',
+        }),
+      );
+      postCommitRefunds.push(...groupResult.postCommitRefunds);
+      result.emptyGroupFeesApplied.push(groupId);
+    }
+  }
+
+  if (!dryRun) {
+    await flushPostCommitPaymentRefunds(postCommitRefunds);
   }
 
   return result;

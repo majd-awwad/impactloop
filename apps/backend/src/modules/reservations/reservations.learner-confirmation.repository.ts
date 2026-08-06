@@ -13,6 +13,10 @@ import {
   buildSelfPickupCodeData,
   ensureSelfPickupCodeStored,
 } from '../../utils/handover-codes.js';
+import {
+  flushPostCommitPaymentRefunds,
+  handleReservationPaymentLifecycleTransition,
+} from '../payments/payments.lifecycle.js';
 import { afterFinalAcceptanceInTransaction } from '../payments/payments.acceptance.js';
 import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
 
@@ -59,7 +63,7 @@ export const resolveLearnerConfirmation = async (input: {
   action: 'ACCEPT_PROPOSED_PICKUP' | 'SUBMIT_DELIVERY_WINDOW' | 'CANCEL';
   deliveryWindow?: PreferredWindow;
 }) => {
-  return runSerializableTransaction(async (tx) => {
+  const result = await runSerializableTransaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
       where: {
         id: input.reservationId,
@@ -105,7 +109,17 @@ export const resolveLearnerConfirmation = async (input: {
       await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
       await applyBuildReservationSyncInTransaction(tx, existing.id);
 
-      return { outcome: 'CANCELLED' as const };
+      const payment = await handleReservationPaymentLifecycleTransition(tx, {
+        reservationId: existing.id,
+        newStatus: 'CANCELLED',
+        actorUserId: input.requesterId,
+        reason: 'Cancelled by learner while awaiting confirmation',
+      });
+
+      return {
+        outcome: 'CANCELLED' as const,
+        postCommitRefunds: payment.postCommitRefunds,
+      };
     }
 
     if (input.action === 'ACCEPT_PROPOSED_PICKUP') {
@@ -248,4 +262,14 @@ export const resolveLearnerConfirmation = async (input: {
 
     return { outcome: 'ACCEPTED' as const };
   });
+
+  if (
+    result.outcome === 'CANCELLED' &&
+    'postCommitRefunds' in result &&
+    result.postCommitRefunds
+  ) {
+    await flushPostCommitPaymentRefunds(result.postCommitRefunds);
+  }
+
+  return result;
 };

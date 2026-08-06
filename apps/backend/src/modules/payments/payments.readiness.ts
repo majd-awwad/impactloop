@@ -407,10 +407,20 @@ export const assertPickupPaymentSatisfiedOrThrow = async (
   }
 
   if (!readiness.ready) {
+    const code =
+      readiness.status === 'REFUND_PENDING'
+        ? 'REFUND_IN_PROGRESS'
+        : readiness.status === 'TERMINAL_OR_INVALID'
+          ? 'PAYMENT_ORDER_CANCELLED'
+          : 'PAYMENT_REQUIRED';
     throw new AppError(
-      'Payment is required before pickup can be completed.',
+      readiness.status === 'REFUND_PENDING'
+        ? 'Payment refund is in progress; pickup cannot be completed.'
+        : readiness.status === 'TERMINAL_OR_INVALID'
+          ? 'Payment order is cancelled or refunded; pickup cannot be completed.'
+          : 'Payment is required before pickup can be completed.',
       409,
-      'PAYMENT_REQUIRED',
+      code,
       {
         reservationId,
         paymentOrderId: readiness.paymentOrderId,

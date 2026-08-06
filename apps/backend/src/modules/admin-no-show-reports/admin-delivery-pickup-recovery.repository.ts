@@ -20,6 +20,12 @@ import {
   groupedDeliveryStateConflict,
   loadAndAssertGroupedDeliveryState,
 } from '../delivery-groups/grouped-delivery-state.js';
+import {
+  flushPostCommitPaymentRefunds,
+  handleDeliveryGroupPaymentLifecycleTransition,
+  handleReservationPaymentLifecycleTransition,
+  type PostCommitRefundTask,
+} from '../payments/payments.lifecycle.js';
 
 export type PickupRecoveryKind =
   | 'NO_DRIVER'
@@ -377,6 +383,7 @@ export const cancelAndReleaseHoldForPickupRecoveryReport = async (input: {
       kind === 'NO_DRIVER'
         ? 'Admin cancelled and released hold after no driver available'
         : 'Admin cancelled and released hold after pickup was not completed';
+    const postCommitRefunds: PostCommitRefundTask[] = [];
 
     const groupedState =
       !partialRecovery && delivery.deliveryGroupId
@@ -429,6 +436,8 @@ export const cancelAndReleaseHoldForPickupRecoveryReport = async (input: {
         },
       });
       await recomputeAndUpdateMaterialStatus(tx, affected.materialId);
+      // Material refund deferred until Delivery is closed below — custody may
+      // still show FULFILLMENT_STARTED while the incident Delivery is open.
     }
 
     if (!partialRecovery) {
@@ -473,6 +482,28 @@ export const cancelAndReleaseHoldForPickupRecoveryReport = async (input: {
       }
     }
 
+    // After Delivery close (or partial path with no Delivery), apply material
+    // cancel/refund and group fee eligibility against authoritative state.
+    for (const affected of recoveryReservations) {
+      const payment = await handleReservationPaymentLifecycleTransition(tx, {
+        reservationId: affected.id,
+        newStatus: 'EXPIRED',
+        actorUserId: input.adminUserId,
+        reason: input.adminNote?.trim() || defaultNote,
+      });
+      postCommitRefunds.push(...payment.postCommitRefunds);
+    }
+
+    if (!partialRecovery && delivery.deliveryGroupId) {
+      const feeLifecycle =
+        await handleDeliveryGroupPaymentLifecycleTransition(tx, {
+          deliveryGroupId: delivery.deliveryGroupId,
+          actorUserId: input.adminUserId,
+          reason: input.adminNote?.trim() || defaultNote,
+        });
+      postCommitRefunds.push(...feeLifecycle.postCommitRefunds);
+    }
+
     const reportId =
       report.status === 'PENDING_REVIEW'
         ? (
@@ -499,11 +530,16 @@ export const cancelAndReleaseHoldForPickupRecoveryReport = async (input: {
       outcome: 'CANCELLED' as const,
       reportId,
       recoveryKind: kind,
+      postCommitRefunds,
     };
   });
 
   if (outcome.outcome !== 'CANCELLED') {
     return outcome;
+  }
+
+  if ('postCommitRefunds' in outcome && outcome.postCommitRefunds) {
+    await flushPostCommitPaymentRefunds(outcome.postCommitRefunds);
   }
 
   const report = await findNoShowReportByIdForAdmin(outcome.reportId);

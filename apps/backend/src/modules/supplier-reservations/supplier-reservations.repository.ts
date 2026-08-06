@@ -18,6 +18,11 @@ import {
   verifyHandoverCode,
 } from '../../utils/handover-codes.js';
 import { afterFinalAcceptanceInTransaction } from '../payments/payments.acceptance.js';
+import {
+  flushPostCommitPaymentRefunds,
+  handleReservationPaymentLifecycleTransition,
+  type PostCommitRefundTask,
+} from '../payments/payments.lifecycle.js';
 import { assertPickupPaymentSatisfiedOrThrow } from '../payments/payments.readiness.js';
 import {
   computeEarliestDeliveryStart,
@@ -946,7 +951,18 @@ export const declineSupplierReservation = async (input: {
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
     await applyBuildReservationSyncInTransaction(tx, updated.id);
 
-    return { conflict: false as const, reservationId: updated.id };
+    const payment = await handleReservationPaymentLifecycleTransition(tx, {
+      reservationId: updated.id,
+      newStatus: 'REJECTED',
+      actorUserId: input.ownerId,
+      reason: reason ?? 'Rejected by supplier',
+    });
+
+    return {
+      conflict: false as const,
+      reservationId: updated.id,
+      postCommitRefunds: payment.postCommitRefunds,
+    };
   });
 
   if (!outcome) {
@@ -955,6 +971,10 @@ export const declineSupplierReservation = async (input: {
 
   if (outcome.conflict) {
     return outcome;
+  }
+
+  if ('postCommitRefunds' in outcome && outcome.postCommitRefunds) {
+    await flushPostCommitPaymentRefunds(outcome.postCommitRefunds);
   }
 
   const reservation = await loadSupplierReservationRecord(outcome.reservationId);
@@ -1320,7 +1340,18 @@ export const cancelSupplierAcceptedReservation = async (input: {
       await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
       await applyBuildReservationSyncInTransaction(tx, updated.id);
 
-      return { conflict: false as const, reservationId: updated.id };
+      const payment = await handleReservationPaymentLifecycleTransition(tx, {
+        reservationId: updated.id,
+        newStatus: 'CANCELLED',
+        actorUserId: input.ownerId,
+        reason,
+      });
+
+      return {
+        conflict: false as const,
+        reservationId: updated.id,
+        postCommitRefunds: payment.postCommitRefunds,
+      };
     }
 
     if (
@@ -1368,7 +1399,18 @@ export const cancelSupplierAcceptedReservation = async (input: {
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
     await applyBuildReservationSyncInTransaction(tx, updated.id);
 
-    return { conflict: false as const, reservationId: updated.id };
+    const payment = await handleReservationPaymentLifecycleTransition(tx, {
+      reservationId: updated.id,
+      newStatus: 'CANCELLED',
+      actorUserId: input.ownerId,
+      reason,
+    });
+
+    return {
+      conflict: false as const,
+      reservationId: updated.id,
+      postCommitRefunds: payment.postCommitRefunds,
+    };
   });
 
   if (!outcome) {
@@ -1381,6 +1423,10 @@ export const cancelSupplierAcceptedReservation = async (input: {
     ('deliveryBlocked' in outcome && outcome.deliveryBlocked)
   ) {
     return outcome;
+  }
+
+  if ('postCommitRefunds' in outcome && outcome.postCommitRefunds) {
+    await flushPostCommitPaymentRefunds(outcome.postCommitRefunds);
   }
 
   const reservation = await loadSupplierReservationRecord(outcome.reservationId);

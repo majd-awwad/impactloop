@@ -9,6 +9,10 @@ import {
   evaluateDeliveryGroupPaymentReadiness,
   evaluatePickupPaymentReadiness,
 } from './payments.readiness.js';
+import {
+  ensureNextPaymentCycleAfterVerifiedRefund,
+  flushPostCommitPaymentRefunds,
+} from './payments.lifecycle.js';
 
 const REOPENABLE_DELIVERY_STATUSES = [
   'AWAITING_RESOLUTION',
@@ -414,6 +418,7 @@ const createOrReopenDeliveryIfReady = async (
 export const afterVerifiedPaymentEventProcessed = async (input: {
   processingStatus: string;
   paymentOrderId?: string;
+  postCommitAutoRefund?: boolean;
 }): Promise<void> => {
   if (
     (input.processingStatus !== 'PROCESSED' &&
@@ -421,6 +426,27 @@ export const afterVerifiedPaymentEventProcessed = async (input: {
     !input.paymentOrderId ||
     !isElectronicPaymentEnforced()
   ) {
+    return;
+  }
+
+  if (input.postCommitAutoRefund) {
+    await flushPostCommitPaymentRefunds([
+      {
+        orderId: input.paymentOrderId,
+        reason: 'LATE_SUCCESS_AFTER_SOURCE_TERMINAL',
+        actorUserId: 'payment-lifecycle',
+      },
+    ]);
+    return;
+  }
+
+  const order = await prisma.paymentOrder.findUnique({
+    where: { id: input.paymentOrderId },
+    select: { id: true, status: true },
+  });
+
+  if (order?.status === 'REFUNDED') {
+    await ensureNextPaymentCycleAfterVerifiedRefund(order.id);
     return;
   }
 

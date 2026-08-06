@@ -14,6 +14,10 @@ import {
 } from '../reservations/reservations.quantity.js';
 import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
 import {
+  flushPostCommitPaymentRefunds,
+  handleReservationPaymentLifecycleTransition,
+} from '../payments/payments.lifecycle.js';
+import {
   groupedDeliveryStateConflict,
   loadAndAssertGroupedDeliveryState,
 } from '../delivery-groups/grouped-delivery-state.js';
@@ -155,8 +159,8 @@ export const markLearnerPickupNoShow = async (input: {
   reservationId: string;
   reasonCode: 'LEARNER_DID_NOT_ARRIVE' | 'OTHER';
   note?: string;
-}) =>
-  runSerializableTransaction(async (tx) => {
+}) => {
+  const result = await runSerializableTransaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
       where: {
         id: input.reservationId,
@@ -240,8 +244,31 @@ export const markLearnerPickupNoShow = async (input: {
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
     await applyBuildReservationSyncInTransaction(tx, reservation.id);
 
-    return { outcome: 'UPDATED' as const, reservation };
+    const payment = await handleReservationPaymentLifecycleTransition(tx, {
+      reservationId: reservation.id,
+      newStatus: 'NO_SHOW',
+      actorUserId: input.ownerId,
+      reason: input.note?.trim() || 'Learner no-show after pickup window',
+    });
+
+    return {
+      outcome: 'UPDATED' as const,
+      reservation,
+      postCommitRefunds: payment.postCommitRefunds,
+    };
   });
+
+  if (
+    result &&
+    typeof result === 'object' &&
+    'postCommitRefunds' in result &&
+    Array.isArray(result.postCommitRefunds)
+  ) {
+    await flushPostCommitPaymentRefunds(result.postCommitRefunds);
+  }
+
+  return result;
+};
 
 export const markDeliveryPickupWindowExpired = async (input: {
   ownerId: string;

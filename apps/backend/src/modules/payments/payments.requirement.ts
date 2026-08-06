@@ -5,6 +5,10 @@ import { isPayablePaymentOrderStatus } from './payments.constants.js';
 import { moneyDecimalToString } from './payments.money.js';
 import { isElectronicPaymentEnforced } from './payments.policy.js';
 import {
+  classifyReservationPaymentLifecycle,
+  isTerminalPaymentOrderForNewCycle,
+} from './payments.lifecycle.policy.js';
+import {
   evaluateDeliveryGroupPaymentReadiness,
   evaluatePickupPaymentReadiness,
   type PaymentReadinessStatus,
@@ -14,7 +18,15 @@ export type ReservationPaymentRequirementDto = {
   reservationId: string;
   reservationStatus: string;
   paymentEnforcementEnabled: boolean;
-  overallStatus: PaymentReadinessStatus | 'BLOCKED' | 'AWAITING_ACCEPTANCE';
+  overallStatus:
+    | PaymentReadinessStatus
+    | 'BLOCKED'
+    | 'AWAITING_ACCEPTANCE'
+    | 'CANCELLED'
+    | 'REFUNDED'
+    | 'NEW_PAYMENT_CYCLE_REQUIRED'
+    | 'RESOLUTION_REQUIRED'
+    | 'PAYMENT_FAILED';
   fulfillmentMethod: 'PICKUP' | 'DELIVERY';
   material: {
     required: boolean;
@@ -43,6 +55,7 @@ export type ReservationPaymentRequirementDto = {
     currency: string;
     status: string;
     cycleNumber: number;
+    isCurrent: boolean;
     canStartCheckout: boolean;
     paidAt: string | null;
     createdAt: string;
@@ -105,32 +118,38 @@ const mapOrderRows = (
     createdAt: Date;
     updatedAt: Date;
   }>,
-) => [
-  ...materialOrders.map((order) => ({
-    id: order.id,
-    purpose: 'MATERIAL_SUBTOTAL' as const,
-    amount: moneyDecimalToString(order.amount as never),
-    currency: order.currency,
-    status: order.status,
-    cycleNumber: order.cycleNumber,
-    canStartCheckout: isPayablePaymentOrderStatus(order.status),
-    paidAt: order.paidAt?.toISOString() ?? null,
-    createdAt: order.createdAt.toISOString(),
-    updatedAt: order.updatedAt.toISOString(),
-  })),
-  ...feeOrders.map((order) => ({
-    id: order.id,
-    purpose: 'DELIVERY_FEE' as const,
-    amount: moneyDecimalToString(order.amount as never),
-    currency: order.currency,
-    status: order.status,
-    cycleNumber: order.cycleNumber,
-    canStartCheckout: isPayablePaymentOrderStatus(order.status),
-    paidAt: order.paidAt?.toISOString() ?? null,
-    createdAt: order.createdAt.toISOString(),
-    updatedAt: order.updatedAt.toISOString(),
-  })),
-];
+) => {
+  const currentMaterialCycle = materialOrders[0]?.cycleNumber ?? null;
+  const currentFeeCycle = feeOrders[0]?.cycleNumber ?? null;
+  return [
+    ...materialOrders.map((order) => ({
+      id: order.id,
+      purpose: 'MATERIAL_SUBTOTAL' as const,
+      amount: moneyDecimalToString(order.amount as never),
+      currency: order.currency,
+      status: order.status,
+      cycleNumber: order.cycleNumber,
+      isCurrent: order.cycleNumber === currentMaterialCycle,
+      canStartCheckout: isPayablePaymentOrderStatus(order.status),
+      paidAt: order.paidAt?.toISOString() ?? null,
+      createdAt: order.createdAt.toISOString(),
+      updatedAt: order.updatedAt.toISOString(),
+    })),
+    ...feeOrders.map((order) => ({
+      id: order.id,
+      purpose: 'DELIVERY_FEE' as const,
+      amount: moneyDecimalToString(order.amount as never),
+      currency: order.currency,
+      status: order.status,
+      cycleNumber: order.cycleNumber,
+      isCurrent: order.cycleNumber === currentFeeCycle,
+      canStartCheckout: isPayablePaymentOrderStatus(order.status),
+      paidAt: order.paidAt?.toISOString() ?? null,
+      createdAt: order.createdAt.toISOString(),
+      updatedAt: order.updatedAt.toISOString(),
+    })),
+  ];
+};
 
 export const getReservationPaymentRequirement = async (
   reservationId: string,
@@ -211,12 +230,34 @@ export const getReservationPaymentRequirement = async (
 
   if (reservation.fulfillmentMethod === 'PICKUP') {
     const pickup = await evaluatePickupPaymentReadiness(reservation.id);
-    const overallStatus =
+    const lifecycleClass = classifyReservationPaymentLifecycle(
+      reservation.status,
+    );
+    let overallStatus: ReservationPaymentRequirementDto['overallStatus'] =
       pickup.status === 'INVARIANT_VIOLATION'
         ? 'BLOCKED'
         : pickup.status === 'NOT_YET_PAYABLE'
           ? 'AWAITING_ACCEPTANCE'
           : pickup.status;
+
+    if (lifecycleClass === 'PRE_FULFILLMENT_TERMINAL') {
+      overallStatus =
+        currentMaterial?.status === 'REFUNDED'
+          ? 'REFUNDED'
+          : currentMaterial?.status === 'REFUND_PENDING'
+            ? 'REFUND_PENDING'
+            : currentMaterial?.status === 'CANCELLED'
+              ? 'CANCELLED'
+              : 'CANCELLED';
+    } else if (lifecycleClass === 'RESOLUTION_REQUIRED') {
+      overallStatus = 'RESOLUTION_REQUIRED';
+    } else if (
+      reservation.status === 'ACCEPTED' &&
+      currentMaterial &&
+      isTerminalPaymentOrderForNewCycle(currentMaterial.status)
+    ) {
+      overallStatus = 'NEW_PAYMENT_CYCLE_REQUIRED';
+    }
 
     return {
       reservationId: reservation.id,
@@ -240,7 +281,8 @@ export const getReservationPaymentRequirement = async (
       deliveryFee: null,
       orders: mapOrderRows(materialOrders, []),
       paymentReady: pickup.ready,
-      fulfillmentReady: pickup.ready,
+      fulfillmentReady:
+        reservation.status === 'ACCEPTED' && pickup.ready,
       pickupCodeAvailable: reservation.status === 'ACCEPTED' && pickup.ready,
       deliveryExists: false,
       deliveryStatus: null,
@@ -270,15 +312,8 @@ export const getReservationPaymentRequirement = async (
     ? groupReadiness.overallReady
     : materialReady && feeReady;
 
-  const fulfillmentReady = paymentReady;
-
-  const deliveryDispatchable =
-    paymentReady &&
-    delivery != null &&
-    delivery.assignedDriverProfileId == null &&
-    DISPATCHABLE_DELIVERY_STATUSES.has(delivery.status);
-
-  const overallStatus: ReservationPaymentRequirementDto['overallStatus'] =
+  const lifecycleClass = classifyReservationPaymentLifecycle(reservation.status);
+  let overallStatus: ReservationPaymentRequirementDto['overallStatus'] =
     groupReadiness?.invariantViolations.length ||
     materialPickup.status === 'INVARIANT_VIOLATION'
       ? 'BLOCKED'
@@ -289,6 +324,35 @@ export const getReservationPaymentRequirement = async (
             ? 'BLOCKED'
             : groupReadiness.overallStatus
           : materialPickup.status;
+
+  if (lifecycleClass === 'PRE_FULFILLMENT_TERMINAL') {
+    overallStatus =
+      currentMaterial?.status === 'REFUNDED'
+        ? 'REFUNDED'
+        : currentMaterial?.status === 'REFUND_PENDING'
+          ? 'REFUND_PENDING'
+          : currentMaterial?.status === 'CANCELLED'
+            ? 'CANCELLED'
+            : 'CANCELLED';
+  } else if (lifecycleClass === 'RESOLUTION_REQUIRED') {
+    overallStatus = 'RESOLUTION_REQUIRED';
+  } else if (
+    reservation.status === 'ACCEPTED' &&
+    ((currentMaterial &&
+      isTerminalPaymentOrderForNewCycle(currentMaterial.status)) ||
+      (currentFee && isTerminalPaymentOrderForNewCycle(currentFee.status)))
+  ) {
+    overallStatus = 'NEW_PAYMENT_CYCLE_REQUIRED';
+  }
+
+  const fulfillmentReady =
+    reservation.status === 'ACCEPTED' && paymentReady;
+
+  const deliveryDispatchable =
+    fulfillmentReady &&
+    delivery != null &&
+    delivery.assignedDriverProfileId == null &&
+    DISPATCHABLE_DELIVERY_STATUSES.has(delivery.status);
 
   return {
     reservationId: reservation.id,

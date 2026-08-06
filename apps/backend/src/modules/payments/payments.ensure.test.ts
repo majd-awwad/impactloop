@@ -176,7 +176,7 @@ if (b.outcome !== 'CREATED' && b.outcome !== 'EXISTING') assert.fail('expected b
     assert.equal(second.order.status, 'CHECKOUT_PENDING');
   });
 
-  test('terminal order is not reopened by ensure', async () => {
+  test('terminal order is not reopened by ensure; ACCEPTED source gets next cycle', async () => {
     const reservation = await createPayReservationFixture(ids, {
       learnerId,
       supplierId,
@@ -192,11 +192,18 @@ if (b.outcome !== 'CREATED' && b.outcome !== 'EXISTING') assert.fail('expected b
     });
 
     const second = await ensureMaterialPaymentOrder(reservation.id);
-    assert.equal(second.outcome, 'EXISTING');
-    if (second.outcome !== 'EXISTING') {
-      assert.fail('expected existing');
+    assert.equal(second.outcome, 'CREATED');
+    if (second.outcome !== 'CREATED') {
+      assert.fail('expected created');
     }
-    assert.equal(second.order.status, 'CANCELLED');
+    assert.equal(second.order.cycleNumber, 2);
+    assert.equal(second.order.status, 'REQUIRES_PAYMENT');
+    trackOrder(ids, second.order.id);
+
+    const cycle1 = await prisma.paymentOrder.findUniqueOrThrow({
+      where: { id: first.order.id },
+    });
+    assert.equal(cycle1.status, 'CANCELLED');
   });
 
   test('schema rejects invalid purpose/source shapes', async () => {

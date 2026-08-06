@@ -21,6 +21,11 @@ import {
   validateBuildItemForReservationLink,
 } from '../learning-projects/learning-projects.build-reservation-linking.js';
 import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
+import {
+  flushPostCommitPaymentRefunds,
+  handleReservationPaymentLifecycleTransition,
+  type PostCommitRefundTask,
+} from '../payments/payments.lifecycle.js';
 
 const reservationInclude = {
   material: {
@@ -360,12 +365,13 @@ export const createLearnerReservation = async (input: {
       },
     );
 
-    const expiredMissedPickupReservationIds =
+    const missedPickupExpiry =
       await expireStaleMissedPickupsForMaterialIdsInTransaction(
         tx,
         [material.id],
         input.requesterId,
       );
+    const expiredMissedPickupReservationIds = missedPickupExpiry.expiredIds;
 
     const availabilityChanged =
       expiredPendingReservationIds.length > 0 ||
@@ -373,6 +379,7 @@ export const createLearnerReservation = async (input: {
     const withAvailabilityChange = <T extends object>(result: T) => ({
       ...result,
       availabilityChanged,
+      postCommitRefunds: missedPickupExpiry.postCommitRefunds,
     });
 
     const openLearnerReservationCount = await tx.reservation.count({
@@ -568,6 +575,13 @@ export const createLearnerReservation = async (input: {
     });
   });
 
+  if (
+    'postCommitRefunds' in result &&
+    Array.isArray(result.postCommitRefunds)
+  ) {
+    await flushPostCommitPaymentRefunds(result.postCommitRefunds);
+  }
+
   if (result.outcome !== 'CREATED') {
     return result;
   }
@@ -637,12 +651,25 @@ export const cancelLearnerReservation = async (input: {
 
     await applyBuildReservationSyncInTransaction(tx, existing.id);
 
-    return { outcome: 'CANCELLED' as const, reservationId: existing.id };
+    const payment = await handleReservationPaymentLifecycleTransition(tx, {
+      reservationId: existing.id,
+      newStatus: 'CANCELLED',
+      actorUserId: input.requesterId,
+      reason: 'Cancelled by learner',
+    });
+
+    return {
+      outcome: 'CANCELLED' as const,
+      reservationId: existing.id,
+      postCommitRefunds: payment.postCommitRefunds,
+    };
   });
 
   if (result.outcome !== 'CANCELLED') {
     return result;
   }
+
+  await flushPostCommitPaymentRefunds(result.postCommitRefunds);
 
   const reservation = await loadLearnerCancelledReservationRecord(
     result.reservationId,

@@ -1194,5 +1194,10 @@ export const completeMockRefundViaEvent = async (input: {
     throw new AppError(verified.message, 400, verified.code);
   }
 
-  return processVerifiedProviderEvent(verified.event, verified.signatureValid);
+  const result = await processVerifiedProviderEvent(
+    verified.event,
+    verified.signatureValid,
+  );
+  await afterVerifiedPaymentEventProcessed(result);
+  return result;
 };

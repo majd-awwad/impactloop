@@ -5,12 +5,133 @@ import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 import { PROVIDER_EVENT_TYPES } from './payments.constants.js';
 import { moneyDecimalToMinorUnits, moneyEquals } from './payments.money.js';
 import type { NormalizedProviderEvent } from './providers/payment-provider.js';
+import {
+  evaluateMaterialLateSuccessAction,
+  evaluateDeliveryFeeRefundEligibility,
+  isSourceTerminalForLateSuccess,
+  prepareLateSuccessAutoRefundInTransaction,
+} from './payments.lifecycle.js';
+import { LIFECYCLE_REFUND_REASONS } from './payments.lifecycle.policy.js';
 
 const isUniqueConstraintError = (error: unknown): boolean =>
   typeof error === 'object' &&
   error !== null &&
   'code' in error &&
   (error as { code?: string }).code === 'P2002';
+
+const decideLateSuccessAutoRefund = async (
+  tx: Prisma.TransactionClient,
+  order: {
+    id: string;
+    purpose: string;
+    reservationId: string | null;
+    deliveryGroupId: string | null;
+  },
+): Promise<{
+  autoRefund: boolean;
+  reason: string;
+}> => {
+  if (order.purpose === 'MATERIAL_SUBTOTAL' && order.reservationId) {
+    const action = await evaluateMaterialLateSuccessAction(
+      tx,
+      order.reservationId,
+      order.id,
+    );
+    if (action === 'AUTO_REFUND') {
+      return {
+        autoRefund: true,
+        reason: LIFECYCLE_REFUND_REASONS.LATE_SUCCESS_AFTER_SOURCE_TERMINAL,
+      };
+    }
+    if (action === 'FULFILLED_NO_REFUND') {
+      return {
+        autoRefund: false,
+        reason: 'LATE_SUCCESS_AFTER_FULFILLED_NO_REFUND',
+      };
+    }
+    if (action === 'RESOLUTION_REQUIRED') {
+      return {
+        autoRefund: false,
+        reason: LIFECYCLE_REFUND_REASONS.LATE_SUCCESS_RESOLUTION_REQUIRED,
+      };
+    }
+    return { autoRefund: false, reason: 'LATE_SUCCESS_SOURCE_ACTIVE' };
+  }
+
+  if (order.purpose === 'DELIVERY_FEE' && order.deliveryGroupId) {
+    const eligibility = await evaluateDeliveryFeeRefundEligibility(
+      tx,
+      order.deliveryGroupId,
+    );
+    if (
+      eligibility.eligibility === 'GROUP_EMPTY_CANCEL_UNPAID' ||
+      eligibility.eligibility === 'GROUP_EMPTY_REFUND_PAID' ||
+      eligibility.eligibility === 'FEE_ALREADY_CANCELLED' ||
+      eligibility.eligibility === 'NO_FEE_ORDER'
+    ) {
+      return {
+        autoRefund: true,
+        reason: LIFECYCLE_REFUND_REASONS.LATE_SUCCESS_AFTER_SOURCE_TERMINAL,
+      };
+    }
+    if (
+      eligibility.eligibility === 'FULFILLMENT_STARTED_RESOLUTION_REQUIRED'
+    ) {
+      return {
+        autoRefund: false,
+        reason: LIFECYCLE_REFUND_REASONS.LATE_SUCCESS_RESOLUTION_REQUIRED,
+      };
+    }
+    return { autoRefund: false, reason: 'LATE_SUCCESS_FEE_STILL_REQUIRED' };
+  }
+
+  return { autoRefund: false, reason: 'LATE_SUCCESS_UNKNOWN_PURPOSE' };
+};
+
+const applyLateSuccessOutcome = async (
+  tx: Prisma.TransactionClient,
+  input: {
+    eventRowId: string;
+    order: {
+      id: string;
+      purpose: string;
+      reservationId: string | null;
+      deliveryGroupId: string | null;
+    };
+    attempt: { id: string; providerRef: string | null };
+    eventProviderRef: string | null;
+    now: Date;
+  },
+): Promise<ProcessProviderEventResult> => {
+  await tx.paymentAttempt.update({
+    where: { id: input.attempt.id },
+    data: {
+      status: 'SUCCEEDED',
+      succeededAt: input.now,
+      failureCode: null,
+      failureMessage: null,
+      providerRef: input.attempt.providerRef ?? input.eventProviderRef,
+    },
+  });
+
+  const decision = await decideLateSuccessAutoRefund(tx, input.order);
+  if (decision.autoRefund) {
+    await prepareLateSuccessAutoRefundInTransaction(tx, {
+      orderId: input.order.id,
+      succeededAttemptId: input.attempt.id,
+      paidAt: input.now,
+    });
+  }
+
+  await markProcessed(tx, input.eventRowId, decision.reason);
+  return {
+    processingStatus: 'PROCESSED',
+    reason: decision.reason,
+    paymentOrderId: input.order.id,
+    paymentAttemptId: input.attempt.id,
+    postCommitAutoRefund: decision.autoRefund,
+  };
+};
 
 const redactedPayload = (
   event: NormalizedProviderEvent,
@@ -39,6 +160,8 @@ export type ProcessProviderEventResult = {
   paymentOrderId?: string;
   paymentAttemptId?: string | null;
   reason?: string;
+  /** When set, post-commit hook must start refund orchestration (not fulfillment). */
+  postCommitAutoRefund?: boolean;
 };
 
 const markRejected = async (
@@ -279,13 +402,21 @@ export const processVerifiedProviderEvent = async (
       }
 
       if (order.status === 'CANCELLED') {
-        await markProcessed(tx, eventRow.id, 'ORPHAN_SUCCESS_TERMINAL_ORDER');
-        return {
-          processingStatus: 'PROCESSED',
-          reason: 'ORPHAN_SUCCESS_TERMINAL_ORDER',
-          paymentOrderId: order.id,
-          paymentAttemptId: attempt.id,
-        };
+        return applyLateSuccessOutcome(tx, {
+          eventRowId: eventRow.id,
+          order: {
+            id: order.id,
+            purpose: order.purpose,
+            reservationId: order.reservationId,
+            deliveryGroupId: order.deliveryGroupId,
+          },
+          attempt: {
+            id: attempt.id,
+            providerRef: attempt.providerRef,
+          },
+          eventProviderRef: event.providerRef,
+          now,
+        });
       }
 
       if (attempt.status !== 'CREATED' && attempt.status !== 'PENDING') {
@@ -296,6 +427,32 @@ export const processVerifiedProviderEvent = async (
           paymentOrderId: order.id,
           paymentAttemptId: attempt.id,
         };
+      }
+
+      // Source already terminal / resolution while order still unpaid.
+      if (
+        await isSourceTerminalForLateSuccess(tx, {
+          id: order.id,
+          purpose: order.purpose,
+          reservationId: order.reservationId,
+          deliveryGroupId: order.deliveryGroupId,
+        })
+      ) {
+        return applyLateSuccessOutcome(tx, {
+          eventRowId: eventRow.id,
+          order: {
+            id: order.id,
+            purpose: order.purpose,
+            reservationId: order.reservationId,
+            deliveryGroupId: order.deliveryGroupId,
+          },
+          attempt: {
+            id: attempt.id,
+            providerRef: attempt.providerRef,
+          },
+          eventProviderRef: event.providerRef,
+          now,
+        });
       }
 
       await tx.paymentAttempt.update({

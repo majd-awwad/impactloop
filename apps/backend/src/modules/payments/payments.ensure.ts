@@ -8,6 +8,7 @@ import {
   moneyDecimalToString,
   toMoneyDecimal,
 } from './payments.money.js';
+import { isTerminalPaymentOrderForNewCycle } from './payments.lifecycle.policy.js';
 
 const isUniqueConstraintError = (error: unknown): boolean =>
   typeof error === 'object' &&
@@ -56,16 +57,13 @@ const mapOrder = (order: {
 });
 
 /**
- * PAY-02 current-cycle lookup (MVP):
- * - Initial accepted source uses cycle 1.
- * - Existing cycle-1 nonterminal or paid order is returned as-is.
- * - Terminal historical orders are never reopened/mutated.
- *
- * Deferred to PAY-03: automatic cycle 2+ creation when a recovery flow
- * re-accepts a source after its previous order is CANCELLED/REFUNDED.
- * No production recovery path in PAY-02 requires a new payable cycle yet.
+ * Current-cycle lookup:
+ * - Nonterminal / PAID / REFUND_PENDING current cycle is returned as-is.
+ * - Terminal CANCELLED / REFUNDED cycles are never reopened.
+ * - When the latest cycle is terminal and the source is again payable,
+ *   create cycleNumber = max(cycle) + 1 (PAY-03).
  */
-const findMaterialCycle1 = (
+const findLatestMaterialOrder = (
   tx: Prisma.TransactionClient,
   reservationId: string,
 ) =>
@@ -73,11 +71,11 @@ const findMaterialCycle1 = (
     where: {
       purpose: 'MATERIAL_SUBTOTAL',
       reservationId,
-      cycleNumber: 1,
     },
+    orderBy: { cycleNumber: 'desc' },
   });
 
-const findDeliveryFeeCycle1 = (
+const findLatestDeliveryFeeOrder = (
   tx: Prisma.TransactionClient,
   deliveryGroupId: string,
 ) =>
@@ -85,7 +83,33 @@ const findDeliveryFeeCycle1 = (
     where: {
       purpose: 'DELIVERY_FEE',
       deliveryGroupId,
-      cycleNumber: 1,
+    },
+    orderBy: { cycleNumber: 'desc' },
+  });
+
+const findMaterialByCycle = (
+  tx: Prisma.TransactionClient,
+  reservationId: string,
+  cycleNumber: number,
+) =>
+  tx.paymentOrder.findFirst({
+    where: {
+      purpose: 'MATERIAL_SUBTOTAL',
+      reservationId,
+      cycleNumber,
+    },
+  });
+
+const findFeeByCycle = (
+  tx: Prisma.TransactionClient,
+  deliveryGroupId: string,
+  cycleNumber: number,
+) =>
+  tx.paymentOrder.findFirst({
+    where: {
+      purpose: 'DELIVERY_FEE',
+      deliveryGroupId,
+      cycleNumber,
     },
   });
 
@@ -101,6 +125,7 @@ export const ensureMaterialPaymentOrder = async (
         requesterId: true,
         materialSubtotal: true,
         pricingCurrency: true,
+        status: true,
       },
     });
 
@@ -113,8 +138,17 @@ export const ensureMaterialPaymentOrder = async (
       return { outcome: 'NOT_REQUIRED' as const };
     }
 
-    const existing = await findMaterialCycle1(tx, reservation.id);
-    if (existing) {
+    const existing = await findLatestMaterialOrder(tx, reservation.id);
+    if (existing && !isTerminalPaymentOrderForNewCycle(existing.status)) {
+      return {
+        outcome: 'EXISTING' as const,
+        order: mapOrder(existing),
+      };
+    }
+
+    // New cycle only when source is accepted/payable again after a terminal cycle.
+    const nextCycle = existing ? existing.cycleNumber + 1 : 1;
+    if (existing && reservation.status !== 'ACCEPTED') {
       return {
         outcome: 'EXISTING' as const,
         order: mapOrder(existing),
@@ -128,7 +162,7 @@ export const ensureMaterialPaymentOrder = async (
         data: {
           payerUserId: reservation.requesterId,
           purpose: 'MATERIAL_SUBTOTAL',
-          cycleNumber: 1,
+          cycleNumber: nextCycle,
           status: 'REQUIRES_PAYMENT',
           currency,
           amount,
@@ -146,7 +180,7 @@ export const ensureMaterialPaymentOrder = async (
         throw error;
       }
 
-      const winner = await findMaterialCycle1(tx, reservation.id);
+      const winner = await findMaterialByCycle(tx, reservation.id, nextCycle);
       if (!winner) {
         throw error;
       }
@@ -181,6 +215,7 @@ export const ensureDeliveryFeePaymentOrder = async (
           select: {
             id: true,
             requesterId: true,
+            status: true,
           },
         },
       },
@@ -211,8 +246,19 @@ export const ensureDeliveryFeePaymentOrder = async (
       return { outcome: 'NOT_REQUIRED' as const };
     }
 
-    const existing = await findDeliveryFeeCycle1(tx, group.id);
-    if (existing) {
+    const existing = await findLatestDeliveryFeeOrder(tx, group.id);
+    if (existing && !isTerminalPaymentOrderForNewCycle(existing.status)) {
+      return {
+        outcome: 'EXISTING' as const,
+        order: mapOrder(existing),
+      };
+    }
+
+    const hasActiveAccepted = group.reservations.some(
+      (row) => row.status === 'ACCEPTED',
+    );
+    const nextCycle = existing ? existing.cycleNumber + 1 : 1;
+    if (existing && !hasActiveAccepted) {
       return {
         outcome: 'EXISTING' as const,
         order: mapOrder(existing),
@@ -226,7 +272,7 @@ export const ensureDeliveryFeePaymentOrder = async (
         data: {
           payerUserId: group.learnerId,
           purpose: 'DELIVERY_FEE',
-          cycleNumber: 1,
+          cycleNumber: nextCycle,
           status: 'REQUIRES_PAYMENT',
           currency,
           amount,
@@ -244,7 +290,7 @@ export const ensureDeliveryFeePaymentOrder = async (
         throw error;
       }
 
-      const winner = await findDeliveryFeeCycle1(tx, group.id);
+      const winner = await findFeeByCycle(tx, group.id, nextCycle);
       if (!winner) {
         throw error;
       }
@@ -262,3 +308,7 @@ export const ensureDeliveryFeePaymentOrder = async (
 
   return runSerializableTransaction(run);
 };
+
+/** Explicit aliases for PAY-03 recovery callers / documentation. */
+export const ensureNextMaterialPaymentCycle = ensureMaterialPaymentOrder;
+export const ensureNextDeliveryFeePaymentCycle = ensureDeliveryFeePaymentOrder;
