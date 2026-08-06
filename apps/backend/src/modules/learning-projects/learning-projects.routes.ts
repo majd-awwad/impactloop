@@ -88,6 +88,10 @@ import {
   updateLearningSessionBodySchema,
 } from '../project-learning/project-learning.validation.js';
 import { attachCommentRoutes } from '../comments/comments.routes.js';
+import {
+  projectHelpSessionAuthorRouter,
+  projectHelpSessionAvailabilityRouter,
+} from '../project-help-sessions/project-help-session.routes.js';
 
 export const learningProjectsRouter = Router();
 
@@ -178,6 +182,11 @@ learningProjectsRouter.post(
   validate(learningProjectIdParamSchema, 'params'),
   validate(authoringConversationSchema),
   asyncHandler(getOrCreateAuthoringConversation),
+);
+
+learningProjectsRouter.use(
+  '/mine/:id/help-sessions',
+  projectHelpSessionAuthorRouter,
 );
 
 learningProjectsRouter.get(
@@ -497,6 +506,11 @@ learningProjectsRouter.delete(
 );
 
 attachCommentRoutes(learningProjectsRouter);
+
+learningProjectsRouter.use(
+  '/:id/help-sessions',
+  projectHelpSessionAvailabilityRouter,
+);
 
 learningProjectsRouter.get(
   '/:id',

@@ -42,6 +42,11 @@ const notebookStrokeSchema = z.object({
     .max(NOTEBOOK_MAX_POINTS_PER_STROKE),
 });
 
+const notebookPageSourceSchema = z.object({
+  type: z.literal('PROJECT_HELP_SESSION'),
+  id: z.string().min(1).max(128),
+});
+
 const notebookPageSchema = z.object({
   id: z.string().min(1).max(128),
   title: z.string().max(NOTEBOOK_MAX_PAGE_TITLE_LENGTH),
@@ -49,6 +54,7 @@ const notebookPageSchema = z.object({
   strokes: z.array(notebookStrokeSchema).max(NOTEBOOK_MAX_STROKES_PER_PAGE),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  source: notebookPageSourceSchema.optional(),
 });
 
 export const notebookDocumentSchema = z
@@ -61,6 +67,7 @@ export const notebookDocumentSchema = z
   })
   .superRefine((value, ctx) => {
     const pageIds = new Set<string>();
+    const helpSessionSources = new Set<string>();
     for (const page of value.pages) {
       if (pageIds.has(page.id)) {
         ctx.addIssue({
@@ -71,6 +78,26 @@ export const notebookDocumentSchema = z
         return;
       }
       pageIds.add(page.id);
+
+      if (page.source) {
+        if (page.source.type !== 'PROJECT_HELP_SESSION') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Unsupported notebook page source type.',
+            path: ['pages'],
+          });
+          return;
+        }
+        if (helpSessionSources.has(page.source.id)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Duplicate help session notebook pages are not allowed.',
+            path: ['pages'],
+          });
+          return;
+        }
+        helpSessionSources.add(page.source.id);
+      }
 
       const strokeIds = new Set<string>();
       for (const stroke of page.strokes) {
