@@ -278,7 +278,12 @@ const reserveCheckoutAttempt = async (input: {
       include: { paymentOrder: true },
     });
 
-    if (!winning || winning.paymentOrder.payerUserId !== input.payerUserId) {
+    if (
+      !winning ||
+      !winning.paymentOrderId ||
+      !winning.paymentOrder ||
+      winning.paymentOrder.payerUserId !== input.payerUserId
+    ) {
       throw new AppError(
         'Checkout is already in progress for this payment order.',
         409,
@@ -345,6 +350,8 @@ const finalizeCheckoutWithProvider = async (
 
     if (
       current?.providerRef &&
+      current.paymentOrderId &&
+      current.paymentOrder &&
       readCheckoutUrlFromMetadata(current.providerMetadata)
     ) {
       return {
@@ -1359,7 +1366,8 @@ export const completeMockRefundViaEvent = async (input: {
     throw new AppError('Refundable paid order not found.', 404, 'NOT_FOUND');
   }
 
-  let succeededAttempt = order.attempts[0] ?? null;
+  let succeededAttempt: (typeof order.attempts)[number] | null =
+    order.attempts[0] ?? null;
   if (!succeededAttempt?.providerRef) {
     const item = await prisma.paymentCheckoutSessionItem.findFirst({
       where: {

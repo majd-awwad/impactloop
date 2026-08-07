@@ -178,7 +178,7 @@ export type ProcessProviderEventResult = {
 const markRejected = async (
   tx: Prisma.TransactionClient,
   eventRowId: string,
-  error: string,
+  error: string = 'REJECTED',
 ) => {
   await tx.paymentProviderEvent.update({
     where: { id: eventRowId },

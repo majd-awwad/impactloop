@@ -678,15 +678,12 @@ describe('PAY-05D reservation checkout orchestration (enforcement ON)', () => {
       },
     });
 
-    await assert.rejects(
-      () =>
-        prisma.$transaction((tx) =>
-          ensureDeliveryGroupAttachedForAcceptedReservation(tx, reservation.id),
-        ),
-      (err: unknown) =>
-        err instanceof AppError &&
-        err.code === 'PAYMENT_SOURCE_INVARIANT_VIOLATION',
+    // Mid-transition rows stay ungrouped (soft-null) so recovery writers can
+    // continue; reads must still fail closed without fabricating a group.
+    const attached = await prisma.$transaction((tx) =>
+      ensureDeliveryGroupAttachedForAcceptedReservation(tx, reservation.id),
     );
+    assert.equal(attached, null);
 
     const summaries = await resolvePaymentSummariesByReservations([
       {

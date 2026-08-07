@@ -464,6 +464,45 @@ Logistics (driver, delivery status, dropoff location, cost) live on `deliveries`
 
 ---
 
+## `payment_orders` — model `PaymentOrder`
+
+Accounting obligation (not a checkout session). Positive amounts only.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| purpose | PaymentPurpose | `MATERIAL_SUBTOTAL` \| `DELIVERY_FEE` |
+| status | PaymentOrderStatus | REQUIRES_PAYMENT → … → PAID / CANCELLED / REFUNDED / … |
+| amount | Decimal | |
+| currency | String | |
+| payerUserId | String | FK → users |
+| reservationId | String? | required for MATERIAL_SUBTOTAL (CHECK) |
+| deliveryGroupId | String? | required for DELIVERY_FEE (CHECK) |
+| cycleNumber | Int | payment cycle; unique with source |
+| paidAt, cancelledAt, … | DateTime? | |
+
+**Constraints:** purpose↔source CHECK; one open material order per reservation/cycle; one open fee order per DeliveryGroup/cycle.
+
+---
+
+## `payment_checkout_sessions` — model `PaymentCheckoutSession`
+
+Reservation-scoped combined charge. One provider attempt per active session.
+
+Related: `payment_checkout_session_items` (`PaymentCheckoutSessionItem`) — unique per session+order; one active PENDING item per order.
+
+---
+
+## `payment_attempts` — model `PaymentAttempt`
+
+Provider attempt. Exactly one owner: `paymentOrderId` XOR `checkoutSessionId` (CHECK). Unique `providerRef`. Partial unique for one active attempt per owner.
+
+Related: `payment_provider_events`, `payment_refunds` (idempotent refund uniqueness per order).
+
+See [features/payments.md](../features/payments.md).
+
+---
+
 ## `deliveries` — model `Delivery`
 
 | Field | Type | Notes |

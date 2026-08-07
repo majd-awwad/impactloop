@@ -308,11 +308,24 @@ describe('PAY-02T final-ACCEPTED production-path payment coverage', () => {
     await assertNoMaterialOrder(created.id);
     await assertNoDelivery(created.id);
 
+    // PAY-05B: pickup code stays hidden until the handover window is open.
+    const beforeWindow = await getMyReservationById(learnerId, created.id);
+    assert.equal(beforeWindow.selfPickupCode, null);
+    assert.equal(beforeWindow.paymentSummary?.pickupCodeAvailable, false);
+
+    await prisma.reservation.update({
+      where: { id: created.id },
+      data: {
+        pickupWindowStart: new Date(Date.now() - 30 * 60_000),
+        pickupWindowEnd: new Date(Date.now() + 90 * 60_000),
+      },
+    });
     const mapped = await getMyReservationById(learnerId, created.id);
     assert.equal(
       mapped.selfPickupCode,
       deriveHandoverCode('self-pickup', created.id),
     );
+    assert.equal(mapped.paymentSummary?.pickupCodeAvailable, true);
   });
 
   // ---------------------------------------------------------------------------
@@ -1054,7 +1067,14 @@ describe('PAY-02T final-ACCEPTED production-path payment coverage', () => {
       price: 25,
       deliveryAllowed: true,
     });
-    const windows = deliveryAcceptWindows();
+    // Far-future windows reduce chance of joining leftover OPEN groups from
+    // earlier suite cases (same learner+supplier+city+overlapping window).
+    const windows = {
+      supplierPickupStart: new Date(Date.now() + 200 * 3_600_000),
+      supplierPickupEnd: new Date(Date.now() + 202 * 3_600_000),
+      learnerDeliveryStart: new Date(Date.now() + 204 * 3_600_000),
+      learnerDeliveryEnd: new Date(Date.now() + 207 * 3_600_000),
+    };
     const preferredWindows = [
       {
         start: windows.learnerDeliveryStart.toISOString(),
@@ -1097,7 +1117,10 @@ describe('PAY-02T final-ACCEPTED production-path payment coverage', () => {
       },
     });
 
-    const replacement = futureWindow(80);
+    const replacement = {
+      start: new Date(Date.now() + 210 * 3_600_000).toISOString(),
+      end: new Date(Date.now() + 212 * 3_600_000).toISOString(),
+    };
     await submitNoDriverPickupWindow(supplierId, created.id, {
       pickupWindowStart: replacement.start,
       pickupWindowEnd: replacement.end,
@@ -1471,11 +1494,24 @@ describe('PAY-02T final-ACCEPTED production-path payment coverage', () => {
       await prisma.paymentOrder.count({ where: { reservationId: created.id } }),
       0,
     );
+    // PAY-05B: window gate still applies when electronic payment is disabled.
+    const beforeWindow = await getMyReservationById(learnerId, created.id);
+    assert.equal(beforeWindow.selfPickupCode, null);
+    assert.equal(beforeWindow.paymentSummary?.pickupCodeAvailable, false);
+
+    await prisma.reservation.update({
+      where: { id: created.id },
+      data: {
+        pickupWindowStart: new Date(Date.now() - 30 * 60_000),
+        pickupWindowEnd: new Date(Date.now() + 90 * 60_000),
+      },
+    });
     const mapped = await getMyReservationById(learnerId, created.id);
     assert.equal(
       mapped.selfPickupCode,
       deriveHandoverCode('self-pickup', created.id),
     );
+    assert.equal(mapped.paymentSummary?.pickupCodeAvailable, true);
   });
 
   test('disabled: delivery accept creates Delivery immediately with no PaymentOrders', async () => {

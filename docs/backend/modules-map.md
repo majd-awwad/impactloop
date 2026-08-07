@@ -27,6 +27,7 @@ Maps each folder under `apps/backend/src/modules/` to its responsibility and key
 | `materials` | `/api/materials` | No |
 | `price-rule-requests` | `/api/price-rule-requests`, `/api/supplier/price-rule-requests` | Partial |
 | `profile` | `/api/profile` | No |
+| `payments` | `/api/payments` | No |
 | `reservations` | `/api/reservations` | No |
 | `supplier` | `/api/supplier` | — (parent) |
 | `supplier-notifications` | `/api/supplier/notifications` | Yes |
@@ -253,9 +254,25 @@ Mount order: `apps/backend/src/app.ts`
 
 **Prisma:** `Reservation`, `ReservationStatusHistory`, `Material`
 
-**Behavior:** `POST /api/reservations` requires a `LEARNER`, validates the material and requested quantity, prevents own-material reservations, enforces one open reservation per learner/material, creates a `PENDING` reservation hold, and recomputes material status from held/remaining quantity. `GET /api/reservations/my` returns the current learner's reservations newest first with safe material, supplier, status, delivery, and pickup-window summary fields. `PATCH /api/reservations/:id/cancel` supports learner cancellation while `PENDING`.
+**Behavior:** `POST /api/reservations` requires a `LEARNER`, validates the material and requested quantity, prevents own-material reservations, enforces one open reservation per learner/material, creates a `PENDING` reservation hold, and recomputes material status from held/remaining quantity. `GET /api/reservations/my` returns the current learner's reservations newest first with safe material, supplier, status, delivery, pickup-window, and batched `paymentSummary` fields. `PATCH /api/reservations/:id/cancel` supports learner cancellation while `PENDING`.
 
-**Not implemented:** Payment and reviews.
+**Payments:** Electronic payment obligations and reservation-scoped checkout live in the `payments` module (see below). Reviews remain out of scope.
+
+---
+
+## `payments`
+
+**Purpose:** Mock electronic payment for reservation material and delivery-fee obligations, reservation-scoped checkout sessions, fulfillment gating, refunds, and payment notifications.
+
+**Mounted at:** `/api/payments` (+ Mock webhook router when enabled)
+
+**Key files:** `payments.routes.ts`, `payments.controller.ts`, `payments.checkout-session.ts`, `payments.service.ts`, `payments.ensure.ts`, `payments.fulfillment.ts`, `payments.lifecycle.ts`, `payments.requirement.ts`, `payments.list-summary.ts`, `payments.notifications.ts`, `payments.policy.ts`, `payments.env.ts`, `providers/mock/*`
+
+**Prisma:** `PaymentOrder`, `PaymentCheckoutSession`, `PaymentCheckoutSessionItem`, `PaymentAttempt`, `PaymentProviderEvent`, `PaymentRefund`
+
+**Behavior:** Creates positive-amount obligations on accept / request-delivery; learner starts reservation-scoped checkout with Idempotency-Key; Mock success settles included orders atomically and unlocks pickup code or Delivery `WAITING_FOR_DRIVER`. Legacy `POST /orders/:id/checkout` remains for compatibility; Flutter uses reservation-scoped routes only.
+
+**Not implemented:** Real PSP, Admin Payment Center, payment cron/TTL worker.
 
 ---
 
