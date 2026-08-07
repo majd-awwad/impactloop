@@ -55,11 +55,13 @@ import {
   ensureBuildCompletionUploadsDir,
   BUILD_COMPLETION_UPLOADS_DIR,
 } from './modules/learning-projects/build-completion-uploads.storage.js';
+import { ensureUploadTempDir } from './modules/uploads/secure-upload.js';
 
 ensureMaterialUploadsDir();
 ensureProfileUploadsDir();
 ensureSupplierVerificationUploadsDir();
 ensureBuildCompletionUploadsDir();
+ensureUploadTempDir();
 
 export type CreateAppOptions = {
   recommendationEventOrigin: WritableRecommendationEventSource;

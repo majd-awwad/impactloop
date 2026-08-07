@@ -1,16 +1,27 @@
+import fsp from 'node:fs/promises';
+import path from 'node:path';
+
 import { AppError } from '../../utils/app-error.js';
 import sharp from 'sharp';
 
+import { PROFILE_UPLOAD_ALLOWED_MIME_TYPES } from '../../constants/profile-upload.js';
+
+import {
+  buildProfileImageFilename,
+  PROFILE_UPLOADS_DIR,
+  publicProfileImageUrl,
+} from './profile-uploads.storage.js';
+import {
+  finalizeTempUpload,
+  safeUnlink,
+  validateImageFileAtPath,
+} from './secure-upload.js';
 import {
   isAllowedMaterialImageMime,
   publicMaterialImageUrl,
   publicMaterialThumbnailUrl,
   materialThumbnailPath,
 } from './uploads.storage.js';
-import {
-  isAllowedProfileImageMime,
-  publicProfileImageUrl,
-} from './profile-uploads.storage.js';
 
 export type UploadedMaterialImage = {
   url: string;
@@ -54,25 +65,36 @@ export const mapUploadedMaterialImages = async (
   }));
 };
 
-export const mapUploadedProfileImage = (
+export const mapUploadedProfileImage = async (
   file: Express.Multer.File | undefined,
-): UploadedProfileImage => {
-  if (!file) {
+  userId: string,
+): Promise<UploadedProfileImage> => {
+  if (!file?.path) {
     throw new AppError('Select an image to upload.', 400, 'VALIDATION_ERROR');
   }
 
-  if (!isAllowedProfileImageMime(file.mimetype)) {
-    throw new AppError(
-      'Only JPG, PNG, and WebP images are allowed.',
-      400,
-      'VALIDATION_ERROR',
-    );
-  }
+  const tempPath = file.path;
 
-  return {
-    url: publicProfileImageUrl(file.filename),
-    filename: file.filename,
-    mimeType: file.mimetype,
-    sizeBytes: file.size,
-  };
+  try {
+    const mimeType = await validateImageFileAtPath(
+      tempPath,
+      PROFILE_UPLOAD_ALLOWED_MIME_TYPES,
+    );
+    const filename = buildProfileImageFilename(userId, mimeType);
+    const finalPath = path.join(PROFILE_UPLOADS_DIR, filename);
+
+    await finalizeTempUpload(tempPath, finalPath);
+
+    const stat = await fsp.stat(finalPath);
+
+    return {
+      url: publicProfileImageUrl(filename),
+      filename,
+      mimeType,
+      sizeBytes: stat.size,
+    };
+  } catch (error) {
+    await safeUnlink(tempPath);
+    throw error;
+  }
 };

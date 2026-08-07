@@ -4,27 +4,22 @@ import multer, { type FileFilterCallback } from 'multer';
 import { PROFILE_UPLOAD_MAX_BYTES } from '../../constants/profile-upload.js';
 import { AppError } from '../../utils/app-error.js';
 
+import { isAllowedProfileImageMime } from './profile-uploads.storage.js';
 import {
-  buildProfileImageFilename,
-  ensureProfileUploadsDir,
-  isAllowedProfileImageMime,
-  PROFILE_UPLOADS_DIR,
-} from './profile-uploads.storage.js';
+  buildTempUploadFilename,
+  ensureUploadTempDir,
+  UPLOAD_TEMP_DIR,
+} from './secure-upload.js';
 
-ensureProfileUploadsDir();
+ensureUploadTempDir();
 
 const storage = multer.diskStorage({
   destination: (_req, _file, callback) => {
-    ensureProfileUploadsDir();
-    callback(null, PROFILE_UPLOADS_DIR);
+    ensureUploadTempDir();
+    callback(null, UPLOAD_TEMP_DIR);
   },
-  filename: (req, file, callback) => {
-    try {
-      const userId = req.auth?.sub ?? 'anonymous';
-      callback(null, buildProfileImageFilename(userId, file.mimetype));
-    } catch (error) {
-      callback(error as Error, '');
-    }
+  filename: (_req, _file, callback) => {
+    callback(null, buildTempUploadFilename());
   },
 });
 

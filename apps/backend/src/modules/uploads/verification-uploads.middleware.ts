@@ -5,25 +5,21 @@ import { SUPPLIER_VERIFICATION_UPLOAD_MAX_BYTES } from '../../constants/supplier
 import { AppError } from '../../utils/app-error.js';
 
 import {
-  buildSupplierVerificationDocumentFilename,
-  isAllowedSupplierVerificationDocumentMime,
-  SUPPLIER_VERIFICATION_UPLOADS_DIR,
-} from './verification-uploads.storage.js';
+  buildTempUploadFilename,
+  ensureUploadTempDir,
+  UPLOAD_TEMP_DIR,
+} from './secure-upload.js';
+import { isAllowedSupplierVerificationDocumentMime } from './verification-uploads.storage.js';
+
+ensureUploadTempDir();
 
 const storage = multer.diskStorage({
   destination: (_req, _file, callback) => {
-    callback(null, SUPPLIER_VERIFICATION_UPLOADS_DIR);
+    ensureUploadTempDir();
+    callback(null, UPLOAD_TEMP_DIR);
   },
-  filename: (req, file, callback) => {
-    try {
-      const filename = buildSupplierVerificationDocumentFilename(
-        req.auth!.sub,
-        file.mimetype,
-      );
-      callback(null, filename);
-    } catch (error) {
-      callback(error as Error, '');
-    }
+  filename: (_req, _file, callback) => {
+    callback(null, buildTempUploadFilename());
   },
 });
 

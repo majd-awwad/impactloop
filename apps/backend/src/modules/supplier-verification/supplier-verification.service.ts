@@ -6,6 +6,7 @@ import {
   normalizeSupplierVerificationStatus,
   requiresOrganizationVerification,
 } from '../supplier/supplier-verification.status.js';
+import { deleteReplacedVerificationUpload } from '../uploads/local-upload-cleanup.js';
 import { resolveLocalSupplierVerificationDocument } from '../uploads/verification-uploads.storage.js';
 
 import * as repository from './supplier-verification.repository.js';
@@ -107,6 +108,10 @@ export const submitSupplierVerification = async (
     );
   }
 
+  const existing = await repository.findSupplierVerificationContext(userId);
+  const previousDocumentUrl =
+    existing?.organizationProfile?.verificationDocumentUrl ?? null;
+
   const profile = await repository.submitSupplierVerificationRecord({
     userId,
     supplierType: input.supplierType,
@@ -119,6 +124,11 @@ export const submitSupplierVerification = async (
     verificationDocumentUrl: input.verificationDocumentUrl,
     verificationDocumentName: input.verificationDocumentName,
   });
+
+  deleteReplacedVerificationUpload(
+    previousDocumentUrl,
+    input.verificationDocumentUrl,
+  );
 
   return mapStatusDto(profile);
 };
@@ -153,6 +163,9 @@ export const resubmitSupplierVerification = async (
     );
   }
 
+  const previousDocumentUrl =
+    existing.organizationProfile?.verificationDocumentUrl ?? null;
+
   const profile = await repository.resubmitSupplierVerificationRecord({
     userId,
     verificationDocumentUrl: input.verificationDocumentUrl,
@@ -164,6 +177,11 @@ export const resubmitSupplierVerification = async (
     defaultPickupLocation: input.defaultPickupLocation,
     businessLocation: input.businessLocation,
   });
+
+  deleteReplacedVerificationUpload(
+    previousDocumentUrl,
+    input.verificationDocumentUrl,
+  );
 
   return mapStatusDto(profile);
 };

@@ -9,6 +9,7 @@ export const findUserProfileContext = async (userId: string) => {
       id: true,
       phone: true,
       phoneVerifiedAt: true,
+      profileImageUrl: true,
       roles: {
         select: { role: true },
       },

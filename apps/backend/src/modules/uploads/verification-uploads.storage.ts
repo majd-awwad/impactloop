@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
+import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -8,6 +9,12 @@ import {
   SUPPLIER_VERIFICATION_UPLOAD_PUBLIC_PREFIX,
 } from '../../constants/supplier-verification-upload.js';
 import { AppError } from '../../utils/app-error.js';
+
+import {
+  finalizeTempUpload,
+  safeUnlink,
+  validateVerificationDocumentAtPath,
+} from './secure-upload.js';
 
 const backendRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -160,10 +167,11 @@ export const buildInlineContentDisposition = (filename: string): string => {
   return `inline; filename="${safeAscii}"; filename*=UTF-8''${encoded}`;
 };
 
-export const mapUploadedVerificationDocument = (
+export const mapUploadedVerificationDocument = async (
   file: Express.Multer.File | undefined,
-): UploadedVerificationDocument => {
-  if (!file) {
+  userId: string,
+): Promise<UploadedVerificationDocument> => {
+  if (!file?.path) {
     throw new AppError(
       'Select a verification document to upload.',
       400,
@@ -171,19 +179,29 @@ export const mapUploadedVerificationDocument = (
     );
   }
 
-  if (!isAllowedSupplierVerificationDocumentMime(file.mimetype)) {
-    throw new AppError(
-      'Verification document must be a PDF, JPG, or PNG file.',
-      400,
-      'VALIDATION_ERROR',
-    );
-  }
+  const tempPath = file.path;
 
-  return {
-    url: publicSupplierVerificationDocumentUrl(file.filename),
-    filename: file.filename,
-    name: file.originalname.trim() || file.filename,
-    mimeType: file.mimetype,
-    sizeBytes: file.size,
-  };
+  try {
+    const mimeType = await validateVerificationDocumentAtPath(
+      tempPath,
+      SUPPLIER_VERIFICATION_UPLOAD_ALLOWED_MIME_TYPES,
+    );
+    const filename = buildSupplierVerificationDocumentFilename(userId, mimeType);
+    const finalPath = path.join(SUPPLIER_VERIFICATION_UPLOADS_DIR, filename);
+
+    await finalizeTempUpload(tempPath, finalPath);
+
+    const stat = await fsp.stat(finalPath);
+
+    return {
+      url: publicSupplierVerificationDocumentUrl(filename),
+      filename,
+      name: file.originalname.trim() || filename,
+      mimeType,
+      sizeBytes: stat.size,
+    };
+  } catch (error) {
+    await safeUnlink(tempPath);
+    throw error;
+  }
 };
