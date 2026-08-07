@@ -695,6 +695,8 @@ model User {
   helpSessionsCancelled                  ProjectHelpSession[]                   @relation("ProjectHelpSessionCancelledBy")
   helpSessionTimeOptionsProposed         ProjectHelpSessionTimeOption[]         @relation("ProjectHelpSessionTimeOptionProposedBy")
   helpSessionStatusHistoryActions        ProjectHelpSessionStatusHistory[]      @relation("ProjectHelpSessionStatusHistoryActor")
+  handoverCodeAttempts                   HandoverCodeAttempt[]
+  handoverCodeVerificationAudits         HandoverCodeVerificationAudit[]
 
   @@index([suspendedById])
   @@index([reactivatedById])
@@ -2025,6 +2027,37 @@ model Delivery {
   @@index([dropoffLocationId])
   @@index([updatedAt(sort: Desc), id(sort: Desc)])
   @@map("deliveries")
+}
+
+model HandoverCodeAttempt {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  scope        String
+  entityId     String    @map("entity_id")
+  failedCount  Int       @default(0) @map("failed_count")
+  lockedUntil  DateTime? @map("locked_until")
+  lastFailedAt DateTime? @map("last_failed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, scope, entityId])
+  @@index([lockedUntil])
+  @@map("handover_code_attempts")
+}
+
+model HandoverCodeVerificationAudit {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  scope     String
+  entityId  String   @map("entity_id")
+  outcome   String
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([entityId, scope, createdAt(sort: Desc)])
+  @@map("handover_code_verification_audits")
 }
 
 model DeliveryPickupItem {

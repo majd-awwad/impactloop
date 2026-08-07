@@ -1116,6 +1116,17 @@ export const completeSupplierReservation = async (
     );
   }
 
+  if ('locked' in result && result.locked) {
+    throw new AppError(
+      'Too many incorrect confirmation code attempts. Please try again later.',
+      429,
+      'HANDOVER_CODE_LOCKED',
+      {
+        retryAfterSeconds: result.retryAfterSeconds,
+      },
+    );
+  }
+
   if ('windowNotStarted' in result && result.windowNotStarted) {
     throw new AppError(pickupWindowNotStartedMessage(), 400, 'VALIDATION_ERROR');
   }

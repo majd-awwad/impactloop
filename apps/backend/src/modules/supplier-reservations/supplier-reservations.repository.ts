@@ -15,8 +15,8 @@ import { resolveReservationFollowUp } from '../reservations/reservation-follow-u
 import {
   buildSelfPickupCodeData,
   ensureSelfPickupCodeStored,
-  verifyHandoverCode,
 } from '../../utils/handover-codes.js';
+import { verifyHandoverCodeWithAttemptLimit } from '../../utils/handover-code-attempts.js';
 import { afterFinalAcceptanceInTransaction } from '../payments/payments.acceptance.js';
 import {
   flushPostCommitPaymentRefunds,
@@ -1053,12 +1053,23 @@ export const completeSupplierReservation = async (input: {
       select: { selfPickupCodeHash: true },
     });
 
-    const codeValid = await verifyHandoverCode(
-      input.confirmationCode,
-      reservationWithCode.selfPickupCodeHash,
-    );
+    const codeVerification = await verifyHandoverCodeWithAttemptLimit(tx, {
+      userId: input.ownerId,
+      scope: 'self-pickup',
+      entityId: existing.id,
+      providedCode: input.confirmationCode,
+      storedHash: reservationWithCode.selfPickupCodeHash,
+    });
 
-    if (!codeValid) {
+    if (codeVerification.outcome === 'LOCKED') {
+      return {
+        locked: true as const,
+        reservation: existing,
+        retryAfterSeconds: codeVerification.retryAfterSeconds,
+      };
+    }
+
+    if (codeVerification.outcome !== 'VALID') {
       return { invalidCode: true as const, reservation: existing };
     }
 
@@ -1117,6 +1128,10 @@ export const completeSupplierReservation = async (input: {
   }
 
   if ('invalidCode' in outcome && outcome.invalidCode) {
+    return outcome;
+  }
+
+  if ('locked' in outcome && outcome.locked) {
     return outcome;
   }
 
