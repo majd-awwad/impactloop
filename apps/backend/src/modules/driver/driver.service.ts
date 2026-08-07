@@ -16,8 +16,8 @@ import {
 } from '../fulfillment-failures/fulfillment-failures.eligibility.js';
 import {
   ensureDeliveryHandoverCodesStored,
-  verifyHandoverCode,
 } from '../../utils/handover-codes.js';
+import { verifyHandoverCodeWithAttemptLimit } from '../../utils/handover-code-attempts.js';
 import {
   deliveryWindowNotStartedMessage,
   deliveryWindowPassedMessage,
@@ -1118,12 +1118,25 @@ export const updateDriverDeliveryStatus = async (
           ? deliveryWithCodes.supplierHandoverCodeHash
           : deliveryWithCodes.learnerDeliveryCodeHash;
 
-      const codeValid = await verifyHandoverCode(
-        input.confirmationCode ?? '',
-        codeHash,
-      );
+      const codeScope =
+        input.status === 'PICKED_UP' ? 'supplier-handover' : 'learner-delivery';
 
-      if (!codeValid) {
+      const codeVerification = await verifyHandoverCodeWithAttemptLimit(tx, {
+        userId: driverUserId,
+        scope: codeScope,
+        entityId: delivery.id,
+        providedCode: input.confirmationCode ?? '',
+        storedHash: codeHash,
+      });
+
+      if (codeVerification.outcome === 'LOCKED') {
+        return {
+          outcome: 'LOCKED' as const,
+          retryAfterSeconds: codeVerification.retryAfterSeconds,
+        };
+      }
+
+      if (codeVerification.outcome !== 'VALID') {
         return { outcome: 'INVALID_CODE' as const };
       }
 
@@ -1422,6 +1435,15 @@ export const updateDriverDeliveryStatus = async (
         'The confirmation code is incorrect.',
         400,
         'INVALID_CONFIRMATION_CODE',
+      );
+    case 'LOCKED':
+      throw new AppError(
+        'Too many incorrect confirmation code attempts. Please try again later.',
+        429,
+        'HANDOVER_CODE_LOCKED',
+        {
+          retryAfterSeconds: result.retryAfterSeconds,
+        },
       );
     case 'WINDOW_NOT_STARTED':
       throw new AppError(
