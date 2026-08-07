@@ -8,6 +8,7 @@ import {
   parseRecommendationScorerVersion,
   type RecommendationScorerVersion,
 } from './recommendation-scoring-version.js';
+import { resolveHandoverCodeSecretConfig } from './handover-code-secret.env.js';
 import { resolveJwtSecretsConfig } from './jwt-secrets.env.js';
 import { resolvePaymentRuntimeConfig } from '../modules/payments/payments.env.js';
 
@@ -631,6 +632,7 @@ export const resolveRecommendationMlRuntimeConfig = (
 const recommendationMlRuntime = resolveRecommendationMlRuntimeConfig(process.env);
 
 const jwtSecrets = resolveJwtSecretsConfig(process.env);
+const handoverCodeSecretConfig = resolveHandoverCodeSecretConfig(process.env);
 
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -654,6 +656,7 @@ export const env = {
   databaseUrl: requireEnv('DATABASE_URL'),
   jwtAccessSecret: jwtSecrets.jwtAccessSecret,
   jwtRefreshSecret: jwtSecrets.jwtRefreshSecret,
+  handoverCodeSecret: handoverCodeSecretConfig.handoverCodeSecret,
   jwtAccessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN ?? '15m',
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
   passwordResetExpiresIn: process.env.PASSWORD_RESET_EXPIRES_IN ?? '30m',
