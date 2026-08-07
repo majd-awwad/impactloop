@@ -4,6 +4,8 @@ import { randomUUID } from 'node:crypto';
 
 import type { Prisma } from '../generated/prisma/client.js';
 
+import { resolveHandoverCodeSecretConfig } from '../config/handover-code-secret.env.js';
+
 import { comparePassword, hashPassword } from './password.js';
 
 export const HANDOVER_CODE_LENGTH = 6;
@@ -15,19 +17,9 @@ export type HandoverCodeScope =
 
 const handoverCodePattern = /^\d{6}$/;
 
-const getHandoverCodeSecret = (): string => {
-  const secret =
-    process.env.HANDOVER_CODE_SECRET?.trim() ||
-    process.env.JWT_ACCESS_SECRET?.trim();
+const { handoverCodeSecret } = resolveHandoverCodeSecretConfig(process.env);
 
-  if (!secret) {
-    throw new Error(
-      'HANDOVER_CODE_SECRET or JWT_ACCESS_SECRET must be configured for handover codes.',
-    );
-  }
-
-  return secret;
-};
+const getHandoverCodeSecret = (): string => handoverCodeSecret;
 
 export const deriveHandoverCode = (
   scope: HandoverCodeScope,
