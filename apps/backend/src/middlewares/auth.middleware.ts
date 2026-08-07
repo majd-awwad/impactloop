@@ -60,11 +60,11 @@ export const authMiddleware = async (
   }
 };
 
-export const optionalAuthMiddleware = (
+export const optionalAuthMiddleware = async (
   req: Request,
   _res: Response,
   next: NextFunction,
-): void => {
+): Promise<void> => {
   const authorization = req.headers.authorization;
 
   if (!authorization?.startsWith('Bearer ')) {
@@ -82,7 +82,13 @@ export const optionalAuthMiddleware = (
   try {
     req.auth = verifyAccessToken(token);
     enrichAuthenticatedRequestContext(req.auth.sub);
-  } catch {
+    await assertActiveAccount(req.auth.sub);
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
+      return;
+    }
+
     // Ignore invalid tokens on public routes; treat the request as anonymous.
   }
 
