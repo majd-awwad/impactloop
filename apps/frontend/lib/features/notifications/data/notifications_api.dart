@@ -12,6 +12,7 @@ class NotificationsApi {
     int page = 1,
     int limit = 20,
     bool? isRead,
+    String? category,
   }) {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>(
@@ -20,6 +21,7 @@ class NotificationsApi {
           'page': page,
           'limit': limit,
           if (isRead != null) 'isRead': isRead.toString(),
+          if (category != null && category.isNotEmpty) 'category': category,
         },
       ),
       AppNotificationsPage.fromJson,

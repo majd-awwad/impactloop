@@ -672,6 +672,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final orderId = state.uri.queryParameters['orderId'];
           return LearnerReservationDetailPage(
             reservationId: state.pathParameters['id']!,
+            focusSection: focus,
             focusPayment: focus == 'payment',
             focusPaymentOrderId: orderId,
           );

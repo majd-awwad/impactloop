@@ -385,7 +385,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get notificationsSubtitle =>
-      'تحديثات الحجوزات والتوصيل والمشاريع والحساب.';
+      'تحديثات الدفع والحجوزات والتوصيل والمشاريع والحساب.';
 
   @override
   String get notificationsLoading => 'جارٍ تحميل الإشعارات…';
@@ -467,6 +467,275 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get notificationChipUpdate => 'تحديث';
+
+  @override
+  String get notificationChipPayment => 'دفع';
+
+  @override
+  String get notificationChipRefund => 'استرداد';
+
+  @override
+  String get notificationsFilterPayments => 'المدفوعات';
+
+  @override
+  String get notificationsFilterDelivery => 'التوصيل';
+
+  @override
+  String get notificationsFilterRefunds => 'الاستردادات';
+
+  @override
+  String notificationsUnreadCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count غير مقروءة',
+      one: 'إشعار واحد غير مقروء',
+      zero: 'لا يوجد غير مقروء',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get notificationPaymentRequiredTitle => 'الدفع مطلوب';
+
+  @override
+  String notificationPaymentRequiredBody(String materialTitle) {
+    return 'أكمل الدفع مقابل $materialTitle للمتابعة.';
+  }
+
+  @override
+  String notificationPaymentRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'ادفع $amount مقابل $materialTitle للمتابعة.';
+  }
+
+  @override
+  String get notificationPaymentDeliveryFeeRequiredTitle =>
+      'رسوم التوصيل مطلوبة';
+
+  @override
+  String notificationPaymentDeliveryFeeRequiredBody(String materialTitle) {
+    return 'مطلوب دفع رسوم التوصيل قبل متابعة توصيل $materialTitle.';
+  }
+
+  @override
+  String notificationPaymentDeliveryFeeRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'ادفع رسوم التوصيل بقيمة $amount قبل متابعة توصيل $materialTitle.';
+  }
+
+  @override
+  String get notificationPaymentCompletedTitle => 'اكتمل الدفع';
+
+  @override
+  String notificationPaymentCompletedBody(String materialTitle) {
+    return 'تم استلام الدفع مقابل $materialTitle.';
+  }
+
+  @override
+  String notificationPaymentCompletedBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'تم استلام دفع بقيمة $amount مقابل $materialTitle.';
+  }
+
+  @override
+  String get notificationPaymentCompletedMoreRequiredTitle =>
+      'تم استلام دفعة — ما زال هناك مبلغ مستحق';
+
+  @override
+  String notificationPaymentCompletedMoreRequiredBody(String materialTitle) {
+    return 'تم استلام دفعة مقابل $materialTitle، لكن ما زال هناك دفع مطلوب قبل متابعة التنفيذ.';
+  }
+
+  @override
+  String notificationPaymentCompletedMoreRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'تم استلام $amount مقابل $materialTitle، لكن ما زال هناك دفع مطلوب قبل متابعة التنفيذ.';
+  }
+
+  @override
+  String get notificationPaymentFulfillmentReadyTitle => 'جاهز للتوصيل';
+
+  @override
+  String notificationPaymentFulfillmentReadyBody(String materialTitle) {
+    return '$materialTitle جاهزة للانتقال إلى التنفيذ.';
+  }
+
+  @override
+  String get notificationPaymentPickupReadyTitle => 'جاهز للاستلام';
+
+  @override
+  String notificationPaymentPickupReadyBody(String materialTitle) {
+    return '$materialTitle جاهزة للاستلام. اعرض رمز الاستلام.';
+  }
+
+  @override
+  String get notificationPaymentRefundRequestedTitle => 'جاري معالجة الاسترداد';
+
+  @override
+  String notificationPaymentRefundRequestedBody(String materialTitle) {
+    return 'يتم معالجة استرداد لـ $materialTitle.';
+  }
+
+  @override
+  String notificationPaymentRefundRequestedBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'يتم معالجة استرداد بقيمة $amount لـ $materialTitle.';
+  }
+
+  @override
+  String get notificationPaymentRefundedTitle => 'تم الاسترداد';
+
+  @override
+  String notificationPaymentRefundedBody(String materialTitle) {
+    return 'اكتمل استردادك مقابل $materialTitle.';
+  }
+
+  @override
+  String notificationPaymentRefundedBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'اكتمل استردادك بقيمة $amount مقابل $materialTitle.';
+  }
+
+  @override
+  String get notificationPaymentRefundedNewCycleTitle =>
+      'تم الاسترداد — مطلوب دفع جديد';
+
+  @override
+  String notificationPaymentRefundedNewCycleBody(String materialTitle) {
+    return 'تم استرداد دفعتك السابقة مقابل $materialTitle. مطلوب الآن دفع جديد للمتابعة.';
+  }
+
+  @override
+  String notificationPaymentRefundedNewCycleBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'تم استرداد دفعتك السابقة بقيمة $amount مقابل $materialTitle. مطلوب الآن دفع جديد للمتابعة.';
+  }
+
+  @override
+  String get notificationPaymentRefundFailedTitle => 'الاسترداد يحتاج متابعة';
+
+  @override
+  String notificationPaymentRefundFailedBody(String materialTitle) {
+    return 'تعذّر إكمال الاسترداد مقابل $materialTitle. راجع تفاصيل الحجز.';
+  }
+
+  @override
+  String get notificationPaymentLateSuccessRefundTitle => 'استرداد دفعة متأخرة';
+
+  @override
+  String notificationPaymentLateSuccessRefundBody(String materialTitle) {
+    return 'تم استرداد دفعة متأخرة تلقائيًا مقابل $materialTitle.';
+  }
+
+  @override
+  String get notificationPaymentNewCycleRequiredTitle =>
+      'دورة دفع جديدة مطلوبة';
+
+  @override
+  String notificationPaymentNewCycleRequiredBody(String materialTitle) {
+    return 'مطلوب دورة دفع جديدة مقابل $materialTitle.';
+  }
+
+  @override
+  String notificationPaymentNewCycleRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'ادفع $amount للدورة الجديدة من $materialTitle.';
+  }
+
+  @override
+  String get notificationPaymentResolutionRequiredTitle =>
+      'مطلوب حل لمشكلة الدفع';
+
+  @override
+  String notificationPaymentResolutionRequiredBody(String materialTitle) {
+    return 'حجزك لـ $materialTitle يحتاج إلى حل لمشكلة الدفع.';
+  }
+
+  @override
+  String get notificationPaymentShowPickupCode => 'عرض رمز الاستلام';
+
+  @override
+  String get notificationPaymentStatusUnpaid => 'لم يُدفع بعد';
+
+  @override
+  String get notificationPaymentStatusPaid => 'مدفوع';
+
+  @override
+  String get notificationPaymentStatusRefundProcessing =>
+      'جاري معالجة الاسترداد';
+
+  @override
+  String get notificationPaymentStatusRefunded => 'تم الاسترداد';
+
+  @override
+  String get notificationPaymentStatusRefundFailed => 'فشل الاسترداد';
+
+  @override
+  String get notificationPaymentStatusResolutionRequired => 'مطلوب حل';
+
+  @override
+  String get notificationPaymentStatusLateRefund => 'تم استرداد دفعة متأخرة';
+
+  @override
+  String get notificationPaymentStatusPickupReady => 'جاهز للاستلام';
+
+  @override
+  String get notificationPaymentStatusFulfillmentReady => 'جاهز للتنفيذ';
+
+  @override
+  String get notificationPaymentNextStepPay =>
+      'تابع إلى الدفع لإكمال هذه العملية.';
+
+  @override
+  String get notificationPaymentNextStepViewReservation =>
+      'افتح تفاصيل الحجز لمراجعة سجل الدفع.';
+
+  @override
+  String get notificationPaymentNextStepPickup =>
+      'افتح تفاصيل الحجز لعرض رمز الاستلام.';
+
+  @override
+  String get notificationPaymentNextStepTrack =>
+      'افتح تفاصيل الحجز لمتابعة التنفيذ.';
+
+  @override
+  String get notificationPaymentNextStepRefundProcessing =>
+      'افتح تفاصيل الحجز لمتابعة الاسترداد.';
+
+  @override
+  String get notificationPaymentNextStepRefunded =>
+      'افتح تفاصيل الحجز لمراجعة الدفعة المستردة.';
+
+  @override
+  String get notificationPaymentNextStepResolution =>
+      'افتح تفاصيل الحجز لحل مشكلة الدفع.';
+
+  @override
+  String get notificationPaymentNextStepLateRefund =>
+      'افتح تفاصيل الحجز لمراجعة الاسترداد التلقائي.';
+
+  @override
+  String get notificationPaymentDetailSecondary => 'تفاصيل الحجز';
+
+  @override
+  String get notificationPaymentAmountLabel => 'المبلغ';
 
   @override
   String get notificationsBack => 'رجوع';

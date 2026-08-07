@@ -381,7 +381,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationsSubtitle =>
-      'Reservation, delivery, project, and account updates.';
+      'Payment, reservation, delivery, project, and account updates.';
 
   @override
   String get notificationsLoading => 'Loading notifications…';
@@ -463,6 +463,277 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationChipUpdate => 'Update';
+
+  @override
+  String get notificationChipPayment => 'Payment';
+
+  @override
+  String get notificationChipRefund => 'Refund';
+
+  @override
+  String get notificationsFilterPayments => 'Payments';
+
+  @override
+  String get notificationsFilterDelivery => 'Delivery';
+
+  @override
+  String get notificationsFilterRefunds => 'Refunds';
+
+  @override
+  String notificationsUnreadCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count unread',
+      one: '1 unread',
+      zero: 'No unread',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get notificationPaymentRequiredTitle => 'Payment required';
+
+  @override
+  String notificationPaymentRequiredBody(String materialTitle) {
+    return 'Complete payment for $materialTitle to continue.';
+  }
+
+  @override
+  String notificationPaymentRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'Pay $amount for $materialTitle to continue.';
+  }
+
+  @override
+  String get notificationPaymentDeliveryFeeRequiredTitle =>
+      'Delivery fee required';
+
+  @override
+  String notificationPaymentDeliveryFeeRequiredBody(String materialTitle) {
+    return 'A delivery fee is required before delivery for $materialTitle can proceed.';
+  }
+
+  @override
+  String notificationPaymentDeliveryFeeRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'Pay the delivery fee of $amount before delivery for $materialTitle can proceed.';
+  }
+
+  @override
+  String get notificationPaymentCompletedTitle => 'Payment completed';
+
+  @override
+  String notificationPaymentCompletedBody(String materialTitle) {
+    return 'Payment for $materialTitle was received.';
+  }
+
+  @override
+  String notificationPaymentCompletedBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'Payment of $amount for $materialTitle was received.';
+  }
+
+  @override
+  String get notificationPaymentCompletedMoreRequiredTitle =>
+      'Payment received — more still due';
+
+  @override
+  String notificationPaymentCompletedMoreRequiredBody(String materialTitle) {
+    return 'We received a payment for $materialTitle, but more payment is still required before fulfillment can continue.';
+  }
+
+  @override
+  String notificationPaymentCompletedMoreRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'We received $amount for $materialTitle, but more payment is still required before fulfillment can continue.';
+  }
+
+  @override
+  String get notificationPaymentFulfillmentReadyTitle => 'Ready for delivery';
+
+  @override
+  String notificationPaymentFulfillmentReadyBody(String materialTitle) {
+    return '$materialTitle is ready to move to fulfillment.';
+  }
+
+  @override
+  String get notificationPaymentPickupReadyTitle => 'Ready for pickup';
+
+  @override
+  String notificationPaymentPickupReadyBody(String materialTitle) {
+    return '$materialTitle is ready for pickup. Show your pickup code.';
+  }
+
+  @override
+  String get notificationPaymentRefundRequestedTitle => 'Refund processing';
+
+  @override
+  String notificationPaymentRefundRequestedBody(String materialTitle) {
+    return 'A refund for $materialTitle is being processed.';
+  }
+
+  @override
+  String notificationPaymentRefundRequestedBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'A refund of $amount for $materialTitle is being processed.';
+  }
+
+  @override
+  String get notificationPaymentRefundedTitle => 'Refunded';
+
+  @override
+  String notificationPaymentRefundedBody(String materialTitle) {
+    return 'Your refund for $materialTitle is complete.';
+  }
+
+  @override
+  String notificationPaymentRefundedBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'Your refund of $amount for $materialTitle is complete.';
+  }
+
+  @override
+  String get notificationPaymentRefundedNewCycleTitle =>
+      'Refunded — new payment required';
+
+  @override
+  String notificationPaymentRefundedNewCycleBody(String materialTitle) {
+    return 'Your previous payment for $materialTitle was refunded. A new payment is now required to continue.';
+  }
+
+  @override
+  String notificationPaymentRefundedNewCycleBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'Your previous payment of $amount for $materialTitle was refunded. A new payment is now required to continue.';
+  }
+
+  @override
+  String get notificationPaymentRefundFailedTitle => 'Refund needs attention';
+
+  @override
+  String notificationPaymentRefundFailedBody(String materialTitle) {
+    return 'The refund for $materialTitle could not be completed. Review reservation details.';
+  }
+
+  @override
+  String get notificationPaymentLateSuccessRefundTitle =>
+      'Late payment refunded';
+
+  @override
+  String notificationPaymentLateSuccessRefundBody(String materialTitle) {
+    return 'A late payment for $materialTitle was automatically refunded.';
+  }
+
+  @override
+  String get notificationPaymentNewCycleRequiredTitle =>
+      'New payment cycle required';
+
+  @override
+  String notificationPaymentNewCycleRequiredBody(String materialTitle) {
+    return 'A new payment cycle is required for $materialTitle.';
+  }
+
+  @override
+  String notificationPaymentNewCycleRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'Pay $amount for the new cycle of $materialTitle.';
+  }
+
+  @override
+  String get notificationPaymentResolutionRequiredTitle =>
+      'Payment resolution required';
+
+  @override
+  String notificationPaymentResolutionRequiredBody(String materialTitle) {
+    return 'Your reservation for $materialTitle needs payment resolution.';
+  }
+
+  @override
+  String get notificationPaymentShowPickupCode => 'Show pickup code';
+
+  @override
+  String get notificationPaymentStatusUnpaid => 'Not paid yet';
+
+  @override
+  String get notificationPaymentStatusPaid => 'Paid';
+
+  @override
+  String get notificationPaymentStatusRefundProcessing => 'Refund processing';
+
+  @override
+  String get notificationPaymentStatusRefunded => 'Refunded';
+
+  @override
+  String get notificationPaymentStatusRefundFailed => 'Refund failed';
+
+  @override
+  String get notificationPaymentStatusResolutionRequired =>
+      'Resolution required';
+
+  @override
+  String get notificationPaymentStatusLateRefund => 'Late payment refunded';
+
+  @override
+  String get notificationPaymentStatusPickupReady => 'Ready for pickup';
+
+  @override
+  String get notificationPaymentStatusFulfillmentReady =>
+      'Ready for fulfillment';
+
+  @override
+  String get notificationPaymentNextStepPay =>
+      'Continue to checkout to complete this payment.';
+
+  @override
+  String get notificationPaymentNextStepViewReservation =>
+      'Open reservation details to review payment history.';
+
+  @override
+  String get notificationPaymentNextStepPickup =>
+      'Open reservation details to show your pickup code.';
+
+  @override
+  String get notificationPaymentNextStepTrack =>
+      'Open reservation details to follow fulfillment.';
+
+  @override
+  String get notificationPaymentNextStepRefundProcessing =>
+      'Open reservation details to follow the refund.';
+
+  @override
+  String get notificationPaymentNextStepRefunded =>
+      'Open reservation details to review the refunded payment.';
+
+  @override
+  String get notificationPaymentNextStepResolution =>
+      'Open reservation details to resolve this payment issue.';
+
+  @override
+  String get notificationPaymentNextStepLateRefund =>
+      'Open reservation details to review the automatic refund.';
+
+  @override
+  String get notificationPaymentDetailSecondary => 'Reservation details';
+
+  @override
+  String get notificationPaymentAmountLabel => 'Amount';
 
   @override
   String get notificationsBack => 'Back';

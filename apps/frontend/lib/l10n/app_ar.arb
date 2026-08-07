@@ -166,7 +166,7 @@
     }
   },
   "notificationsTitle": "الإشعارات",
-  "notificationsSubtitle": "تحديثات الحجوزات والتوصيل والمشاريع والحساب.",
+  "notificationsSubtitle": "تحديثات الدفع والحجوزات والتوصيل والمشاريع والحساب.",
   "notificationsLoading": "جارٍ تحميل الإشعارات…",
   "notificationsLoadingSubtitle": "جارٍ جلب أحدث التحديثات.",
   "notificationsLoadError": "تعذّر تحميل الإشعارات.",
@@ -203,6 +203,186 @@
   "notificationChipMaterialRequest": "طلب مادة",
   "notificationChipAccount": "الحساب",
   "notificationChipUpdate": "تحديث",
+  "notificationChipPayment": "دفع",
+  "notificationChipRefund": "استرداد",
+  "notificationsFilterPayments": "المدفوعات",
+  "notificationsFilterDelivery": "التوصيل",
+  "notificationsFilterRefunds": "الاستردادات",
+  "notificationsUnreadCount": "{count, plural, =0{لا يوجد غير مقروء} =1{إشعار واحد غير مقروء} other{{count} غير مقروءة}}",
+  "@notificationsUnreadCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationPaymentRequiredTitle": "الدفع مطلوب",
+  "notificationPaymentRequiredBody": "أكمل الدفع مقابل {materialTitle} للمتابعة.",
+  "@notificationPaymentRequiredBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRequiredBodyWithAmount": "ادفع {amount} مقابل {materialTitle} للمتابعة.",
+  "@notificationPaymentRequiredBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentDeliveryFeeRequiredTitle": "رسوم التوصيل مطلوبة",
+  "notificationPaymentDeliveryFeeRequiredBody": "مطلوب دفع رسوم التوصيل قبل متابعة توصيل {materialTitle}.",
+  "@notificationPaymentDeliveryFeeRequiredBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentDeliveryFeeRequiredBodyWithAmount": "ادفع رسوم التوصيل بقيمة {amount} قبل متابعة توصيل {materialTitle}.",
+  "@notificationPaymentDeliveryFeeRequiredBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentCompletedTitle": "اكتمل الدفع",
+  "notificationPaymentCompletedBody": "تم استلام الدفع مقابل {materialTitle}.",
+  "@notificationPaymentCompletedBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentCompletedBodyWithAmount": "تم استلام دفع بقيمة {amount} مقابل {materialTitle}.",
+  "@notificationPaymentCompletedBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentCompletedMoreRequiredTitle": "تم استلام دفعة — ما زال هناك مبلغ مستحق",
+  "notificationPaymentCompletedMoreRequiredBody": "تم استلام دفعة مقابل {materialTitle}، لكن ما زال هناك دفع مطلوب قبل متابعة التنفيذ.",
+  "@notificationPaymentCompletedMoreRequiredBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentCompletedMoreRequiredBodyWithAmount": "تم استلام {amount} مقابل {materialTitle}، لكن ما زال هناك دفع مطلوب قبل متابعة التنفيذ.",
+  "@notificationPaymentCompletedMoreRequiredBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentFulfillmentReadyTitle": "جاهز للتوصيل",
+  "notificationPaymentFulfillmentReadyBody": "{materialTitle} جاهزة للانتقال إلى التنفيذ.",
+  "@notificationPaymentFulfillmentReadyBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentPickupReadyTitle": "جاهز للاستلام",
+  "notificationPaymentPickupReadyBody": "{materialTitle} جاهزة للاستلام. اعرض رمز الاستلام.",
+  "@notificationPaymentPickupReadyBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundRequestedTitle": "جاري معالجة الاسترداد",
+  "notificationPaymentRefundRequestedBody": "يتم معالجة استرداد لـ {materialTitle}.",
+  "@notificationPaymentRefundRequestedBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundRequestedBodyWithAmount": "يتم معالجة استرداد بقيمة {amount} لـ {materialTitle}.",
+  "@notificationPaymentRefundRequestedBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundedTitle": "تم الاسترداد",
+  "notificationPaymentRefundedBody": "اكتمل استردادك مقابل {materialTitle}.",
+  "@notificationPaymentRefundedBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundedBodyWithAmount": "اكتمل استردادك بقيمة {amount} مقابل {materialTitle}.",
+  "@notificationPaymentRefundedBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundedNewCycleTitle": "تم الاسترداد — مطلوب دفع جديد",
+  "notificationPaymentRefundedNewCycleBody": "تم استرداد دفعتك السابقة مقابل {materialTitle}. مطلوب الآن دفع جديد للمتابعة.",
+  "@notificationPaymentRefundedNewCycleBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundedNewCycleBodyWithAmount": "تم استرداد دفعتك السابقة بقيمة {amount} مقابل {materialTitle}. مطلوب الآن دفع جديد للمتابعة.",
+  "@notificationPaymentRefundedNewCycleBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundFailedTitle": "الاسترداد يحتاج متابعة",
+  "notificationPaymentRefundFailedBody": "تعذّر إكمال الاسترداد مقابل {materialTitle}. راجع تفاصيل الحجز.",
+  "@notificationPaymentRefundFailedBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentLateSuccessRefundTitle": "استرداد دفعة متأخرة",
+  "notificationPaymentLateSuccessRefundBody": "تم استرداد دفعة متأخرة تلقائيًا مقابل {materialTitle}.",
+  "@notificationPaymentLateSuccessRefundBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentNewCycleRequiredTitle": "دورة دفع جديدة مطلوبة",
+  "notificationPaymentNewCycleRequiredBody": "مطلوب دورة دفع جديدة مقابل {materialTitle}.",
+  "@notificationPaymentNewCycleRequiredBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentNewCycleRequiredBodyWithAmount": "ادفع {amount} للدورة الجديدة من {materialTitle}.",
+  "@notificationPaymentNewCycleRequiredBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentResolutionRequiredTitle": "مطلوب حل لمشكلة الدفع",
+  "notificationPaymentResolutionRequiredBody": "حجزك لـ {materialTitle} يحتاج إلى حل لمشكلة الدفع.",
+  "@notificationPaymentResolutionRequiredBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentShowPickupCode": "عرض رمز الاستلام",
+  "notificationPaymentStatusUnpaid": "لم يُدفع بعد",
+  "notificationPaymentStatusPaid": "مدفوع",
+  "notificationPaymentStatusRefundProcessing": "جاري معالجة الاسترداد",
+  "notificationPaymentStatusRefunded": "تم الاسترداد",
+  "notificationPaymentStatusRefundFailed": "فشل الاسترداد",
+  "notificationPaymentStatusResolutionRequired": "مطلوب حل",
+  "notificationPaymentStatusLateRefund": "تم استرداد دفعة متأخرة",
+  "notificationPaymentStatusPickupReady": "جاهز للاستلام",
+  "notificationPaymentStatusFulfillmentReady": "جاهز للتنفيذ",
+  "notificationPaymentNextStepPay": "تابع إلى الدفع لإكمال هذه العملية.",
+  "notificationPaymentNextStepViewReservation": "افتح تفاصيل الحجز لمراجعة سجل الدفع.",
+  "notificationPaymentNextStepPickup": "افتح تفاصيل الحجز لعرض رمز الاستلام.",
+  "notificationPaymentNextStepTrack": "افتح تفاصيل الحجز لمتابعة التنفيذ.",
+  "notificationPaymentNextStepRefundProcessing": "افتح تفاصيل الحجز لمتابعة الاسترداد.",
+  "notificationPaymentNextStepRefunded": "افتح تفاصيل الحجز لمراجعة الدفعة المستردة.",
+  "notificationPaymentNextStepResolution": "افتح تفاصيل الحجز لحل مشكلة الدفع.",
+  "notificationPaymentNextStepLateRefund": "افتح تفاصيل الحجز لمراجعة الاسترداد التلقائي.",
+  "notificationPaymentDetailSecondary": "تفاصيل الحجز",
+  "notificationPaymentAmountLabel": "المبلغ",
   "notificationsBack": "رجوع",
   "refreshNotifications": "تحديث الإشعارات",
   "viewJobs": "عرض المهام",

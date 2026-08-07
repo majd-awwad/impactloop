@@ -1,11 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/api_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../deliveries/application/learner_deliveries_provider.dart';
+import '../../payments/application/learner_checkout_controller.dart';
+import '../../reservations/application/learner_reservation_cache.dart';
 import '../data/notifications_api.dart';
 import '../data/models/app_notification.dart';
 import 'notification_display.dart';
+import 'payment_notification_presentation.dart';
 
 const notificationsPageSize = 20;
 
@@ -37,6 +43,8 @@ class NotificationsListState {
     required this.unreadCount,
     required this.isLoadingMore,
     required this.filter,
+    this.categoryFilter = PaymentNotificationCategoryFilter.all,
+    this.isBackgroundRefreshing = false,
   });
 
   final List<AppNotification> items;
@@ -46,8 +54,21 @@ class NotificationsListState {
   final int unreadCount;
   final bool isLoadingMore;
   final NotificationReadFilter filter;
+  final PaymentNotificationCategoryFilter categoryFilter;
+  final bool isBackgroundRefreshing;
 
   bool get hasMore => page < totalPages;
+
+  List<AppNotification> get visibleItems {
+    if (categoryFilter == PaymentNotificationCategoryFilter.all) {
+      return items;
+    }
+    return items
+        .where(
+          (item) => notificationMatchesCategoryFilter(item, categoryFilter),
+        )
+        .toList(growable: false);
+  }
 
   NotificationsListState copyWith({
     List<AppNotification>? items,
@@ -57,6 +78,8 @@ class NotificationsListState {
     int? unreadCount,
     bool? isLoadingMore,
     NotificationReadFilter? filter,
+    PaymentNotificationCategoryFilter? categoryFilter,
+    bool? isBackgroundRefreshing,
   }) {
     return NotificationsListState(
       items: items ?? this.items,
@@ -66,6 +89,9 @@ class NotificationsListState {
       unreadCount: unreadCount ?? this.unreadCount,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       filter: filter ?? this.filter,
+      categoryFilter: categoryFilter ?? this.categoryFilter,
+      isBackgroundRefreshing:
+          isBackgroundRefreshing ?? this.isBackgroundRefreshing,
     );
   }
 }
@@ -92,6 +118,26 @@ class NotificationReadFilterNotifier extends Notifier<NotificationReadFilter> {
   }
 }
 
+final notificationCategoryFilterProvider =
+    NotifierProvider.autoDispose<
+      NotificationCategoryFilterNotifier,
+      PaymentNotificationCategoryFilter
+    >(NotificationCategoryFilterNotifier.new);
+
+class NotificationCategoryFilterNotifier
+    extends Notifier<PaymentNotificationCategoryFilter> {
+  @override
+  PaymentNotificationCategoryFilter build() =>
+      PaymentNotificationCategoryFilter.all;
+
+  void setFilter(PaymentNotificationCategoryFilter filter) {
+    if (state == filter) {
+      return;
+    }
+    state = filter;
+  }
+}
+
 final notificationsListProvider =
     AsyncNotifierProvider.autoDispose<
       NotificationsListNotifier,
@@ -103,6 +149,7 @@ class NotificationsListNotifier extends AsyncNotifier<NotificationsListState> {
   Future<NotificationsListState> build() async {
     final authKey = ref.watch(authControllerProvider.select(_authListWatchKey));
     final filter = ref.watch(notificationReadFilterProvider);
+    final categoryFilter = ref.watch(notificationCategoryFilterProvider);
 
     if (authKey.$1 == AuthStatus.unknown) {
       throw const ApiException(
@@ -118,19 +165,39 @@ class NotificationsListNotifier extends AsyncNotifier<NotificationsListState> {
       );
     }
 
-    return _fetchPage(filter, page: 1);
+    final page = await _fetchPage(
+      filter,
+      categoryFilter: categoryFilter,
+      page: 1,
+    );
+    return page.copyWith(categoryFilter: categoryFilter);
+  }
+
+  void applyCategoryFilter(PaymentNotificationCategoryFilter filter) {
+    if (!ref.mounted) {
+      return;
+    }
+    final current = state.value;
+    if (current == null || current.categoryFilter == filter) {
+      return;
+    }
+    state = AsyncData(current.copyWith(categoryFilter: filter));
   }
 
   Future<NotificationsListState> _fetchPage(
     NotificationReadFilter filter, {
     required int page,
+    PaymentNotificationCategoryFilter? categoryFilter,
   }) async {
+    final PaymentNotificationCategoryFilter resolvedCategory =
+        categoryFilter ?? ref.read(notificationCategoryFilterProvider);
     final result = await ref
         .read(notificationsApiProvider)
         .fetchNotifications(
           page: page,
           limit: notificationsPageSize,
           isRead: isReadQueryForFilter(filter),
+          category: apiCategoryForFilter(resolvedCategory),
         );
 
     if (!ref.mounted) {
@@ -141,13 +208,16 @@ class NotificationsListNotifier extends AsyncNotifier<NotificationsListState> {
     }
 
     return NotificationsListState(
-      items: result.items.map(sanitizeNotification).toList(growable: false),
+      items: dedupeNotificationsById(
+        result.items.map(sanitizeNotification),
+      ),
       page: result.page,
       totalPages: result.totalPages,
       total: result.total,
       unreadCount: result.unreadCount,
       isLoadingMore: false,
       filter: filter,
+      categoryFilter: resolvedCategory,
     );
   }
 
@@ -160,7 +230,11 @@ class NotificationsListNotifier extends AsyncNotifier<NotificationsListState> {
     state = AsyncData(current.copyWith(isLoadingMore: true));
 
     try {
-      final nextPage = await _fetchPage(current.filter, page: current.page + 1);
+      final nextPage = await _fetchPage(
+        current.filter,
+        categoryFilter: current.categoryFilter,
+        page: current.page + 1,
+      );
       if (!ref.mounted) {
         return;
       }
@@ -168,7 +242,10 @@ class NotificationsListNotifier extends AsyncNotifier<NotificationsListState> {
       final latest = state.value ?? current;
       state = AsyncData(
         latest.copyWith(
-          items: [...latest.items, ...nextPage.items],
+          items: dedupeNotificationsById([
+            ...latest.items,
+            ...nextPage.items,
+          ]),
           page: nextPage.page,
           totalPages: nextPage.totalPages,
           total: nextPage.total,
@@ -186,6 +263,48 @@ class NotificationsListNotifier extends AsyncNotifier<NotificationsListState> {
         state = AsyncData(latest.copyWith(isLoadingMore: false));
       }
       rethrow;
+    }
+  }
+
+  /// Background refresh that preserves the currently rendered list.
+  Future<void> refreshInBackground() async {
+    final current = state.value;
+    if (current == null) {
+      if (ref.exists(notificationsListProvider)) {
+        ref.invalidateSelf();
+      }
+      return;
+    }
+
+    state = AsyncData(current.copyWith(isBackgroundRefreshing: true));
+
+    try {
+      final next = await _fetchPage(
+        current.filter,
+        categoryFilter: current.categoryFilter,
+        page: 1,
+      );
+      if (!ref.mounted) {
+        return;
+      }
+
+      state = AsyncData(
+        next.copyWith(
+          categoryFilter: current.categoryFilter,
+          isBackgroundRefreshing: false,
+        ),
+      );
+      ref
+          .read(myNotificationUnreadCountProvider.notifier)
+          .setCount(next.unreadCount);
+    } catch (_) {
+      if (!ref.mounted) {
+        return;
+      }
+      final latest = state.value;
+      if (latest != null) {
+        state = AsyncData(latest.copyWith(isBackgroundRefreshing: false));
+      }
     }
   }
 
@@ -272,6 +391,8 @@ final myNotificationUnreadCountProvider =
     );
 
 class NotificationUnreadCountNotifier extends AsyncNotifier<int> {
+  static const _pollInterval = Duration(seconds: 30);
+
   @override
   Future<int> build() async {
     final authKey = ref.watch(authControllerProvider.select(_authListWatchKey));
@@ -283,6 +404,16 @@ class NotificationUnreadCountNotifier extends AsyncNotifier<int> {
     if (authKey.$1 != AuthStatus.authenticated || authKey.$2 == null) {
       return 0;
     }
+
+    // Light polling so the bell badge updates without opening /notifications.
+    // Reuses the existing unread-count endpoint — no new WebSocket system.
+    final timer = Timer.periodic(_pollInterval, (_) {
+      if (!ref.mounted) {
+        return;
+      }
+      ref.invalidateSelf();
+    });
+    ref.onDispose(timer.cancel);
 
     return ref.read(notificationsApiProvider).fetchUnreadCount();
   }
@@ -303,6 +434,13 @@ class NotificationUnreadCountNotifier extends AsyncNotifier<int> {
 
 Future<void> refreshNotifications(WidgetRef ref) async {
   if (ref.exists(notificationsListProvider)) {
+    final hasData = ref.read(notificationsListProvider).hasValue;
+    if (hasData) {
+      await ref
+          .read(notificationsListProvider.notifier)
+          .refreshInBackground();
+      return;
+    }
     ref.invalidate(notificationsListProvider);
   }
   ref.invalidate(myNotificationUnreadCountProvider);
@@ -313,6 +451,22 @@ Future<void> setNotificationReadFilter(
   NotificationReadFilter filter,
 ) async {
   ref.read(notificationReadFilterProvider.notifier).setFilter(filter);
+  if (ref.exists(notificationsListProvider)) {
+    ref.invalidate(notificationsListProvider);
+  }
+}
+
+Future<void> setNotificationCategoryFilter(
+  WidgetRef ref,
+  PaymentNotificationCategoryFilter filter,
+) async {
+  final previous = ref.read(notificationCategoryFilterProvider);
+  ref.read(notificationCategoryFilterProvider.notifier).setFilter(filter);
+  if (previous == filter) {
+    return;
+  }
+  // Category is now watched by the list provider — invalidate for a truthful
+  // server-side refetch of the selected family.
   if (ref.exists(notificationsListProvider)) {
     ref.invalidate(notificationsListProvider);
   }
@@ -343,6 +497,20 @@ Future<void> markAllNotificationsRead(WidgetRef ref) async {
 
   if (ref.exists(notificationsListProvider)) {
     ref.read(notificationsListProvider.notifier).markAllReadLocal();
+  }
+}
+
+/// Refresh related learner payment/reservation caches after opening a
+/// payment notification.
+void invalidateCachesAfterPaymentNotificationOpen(
+  WidgetRef ref, {
+  String? reservationId,
+}) {
+  refreshNotifications(ref);
+  invalidateLearnerReservationCaches(ref, reservationId: reservationId);
+  if (reservationId != null && reservationId.isNotEmpty) {
+    ref.invalidate(learnerCheckoutControllerProvider(reservationId));
+    ref.invalidate(learnerDeliveriesProvider);
   }
 }
 

@@ -167,7 +167,7 @@
     }
   },
   "notificationsTitle": "Notifications",
-  "notificationsSubtitle": "Reservation, delivery, project, and account updates.",
+  "notificationsSubtitle": "Payment, reservation, delivery, project, and account updates.",
   "notificationsLoading": "Loading notifications…",
   "notificationsLoadingSubtitle": "Fetching your latest updates.",
   "notificationsLoadError": "Could not load notifications.",
@@ -204,6 +204,186 @@
   "notificationChipMaterialRequest": "Material request",
   "notificationChipAccount": "Account",
   "notificationChipUpdate": "Update",
+  "notificationChipPayment": "Payment",
+  "notificationChipRefund": "Refund",
+  "notificationsFilterPayments": "Payments",
+  "notificationsFilterDelivery": "Delivery",
+  "notificationsFilterRefunds": "Refunds",
+  "notificationsUnreadCount": "{count, plural, =0{No unread} =1{1 unread} other{{count} unread}}",
+  "@notificationsUnreadCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationPaymentRequiredTitle": "Payment required",
+  "notificationPaymentRequiredBody": "Complete payment for {materialTitle} to continue.",
+  "@notificationPaymentRequiredBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRequiredBodyWithAmount": "Pay {amount} for {materialTitle} to continue.",
+  "@notificationPaymentRequiredBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentDeliveryFeeRequiredTitle": "Delivery fee required",
+  "notificationPaymentDeliveryFeeRequiredBody": "A delivery fee is required before delivery for {materialTitle} can proceed.",
+  "@notificationPaymentDeliveryFeeRequiredBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentDeliveryFeeRequiredBodyWithAmount": "Pay the delivery fee of {amount} before delivery for {materialTitle} can proceed.",
+  "@notificationPaymentDeliveryFeeRequiredBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentCompletedTitle": "Payment completed",
+  "notificationPaymentCompletedBody": "Payment for {materialTitle} was received.",
+  "@notificationPaymentCompletedBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentCompletedBodyWithAmount": "Payment of {amount} for {materialTitle} was received.",
+  "@notificationPaymentCompletedBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentCompletedMoreRequiredTitle": "Payment received — more still due",
+  "notificationPaymentCompletedMoreRequiredBody": "We received a payment for {materialTitle}, but more payment is still required before fulfillment can continue.",
+  "@notificationPaymentCompletedMoreRequiredBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentCompletedMoreRequiredBodyWithAmount": "We received {amount} for {materialTitle}, but more payment is still required before fulfillment can continue.",
+  "@notificationPaymentCompletedMoreRequiredBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentFulfillmentReadyTitle": "Ready for delivery",
+  "notificationPaymentFulfillmentReadyBody": "{materialTitle} is ready to move to fulfillment.",
+  "@notificationPaymentFulfillmentReadyBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentPickupReadyTitle": "Ready for pickup",
+  "notificationPaymentPickupReadyBody": "{materialTitle} is ready for pickup. Show your pickup code.",
+  "@notificationPaymentPickupReadyBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundRequestedTitle": "Refund processing",
+  "notificationPaymentRefundRequestedBody": "A refund for {materialTitle} is being processed.",
+  "@notificationPaymentRefundRequestedBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundRequestedBodyWithAmount": "A refund of {amount} for {materialTitle} is being processed.",
+  "@notificationPaymentRefundRequestedBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundedTitle": "Refunded",
+  "notificationPaymentRefundedBody": "Your refund for {materialTitle} is complete.",
+  "@notificationPaymentRefundedBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundedBodyWithAmount": "Your refund of {amount} for {materialTitle} is complete.",
+  "@notificationPaymentRefundedBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundedNewCycleTitle": "Refunded — new payment required",
+  "notificationPaymentRefundedNewCycleBody": "Your previous payment for {materialTitle} was refunded. A new payment is now required to continue.",
+  "@notificationPaymentRefundedNewCycleBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundedNewCycleBodyWithAmount": "Your previous payment of {amount} for {materialTitle} was refunded. A new payment is now required to continue.",
+  "@notificationPaymentRefundedNewCycleBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundFailedTitle": "Refund needs attention",
+  "notificationPaymentRefundFailedBody": "The refund for {materialTitle} could not be completed. Review reservation details.",
+  "@notificationPaymentRefundFailedBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentLateSuccessRefundTitle": "Late payment refunded",
+  "notificationPaymentLateSuccessRefundBody": "A late payment for {materialTitle} was automatically refunded.",
+  "@notificationPaymentLateSuccessRefundBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentNewCycleRequiredTitle": "New payment cycle required",
+  "notificationPaymentNewCycleRequiredBody": "A new payment cycle is required for {materialTitle}.",
+  "@notificationPaymentNewCycleRequiredBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentNewCycleRequiredBodyWithAmount": "Pay {amount} for the new cycle of {materialTitle}.",
+  "@notificationPaymentNewCycleRequiredBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentResolutionRequiredTitle": "Payment resolution required",
+  "notificationPaymentResolutionRequiredBody": "Your reservation for {materialTitle} needs payment resolution.",
+  "@notificationPaymentResolutionRequiredBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentShowPickupCode": "Show pickup code",
+  "notificationPaymentStatusUnpaid": "Not paid yet",
+  "notificationPaymentStatusPaid": "Paid",
+  "notificationPaymentStatusRefundProcessing": "Refund processing",
+  "notificationPaymentStatusRefunded": "Refunded",
+  "notificationPaymentStatusRefundFailed": "Refund failed",
+  "notificationPaymentStatusResolutionRequired": "Resolution required",
+  "notificationPaymentStatusLateRefund": "Late payment refunded",
+  "notificationPaymentStatusPickupReady": "Ready for pickup",
+  "notificationPaymentStatusFulfillmentReady": "Ready for fulfillment",
+  "notificationPaymentNextStepPay": "Continue to checkout to complete this payment.",
+  "notificationPaymentNextStepViewReservation": "Open reservation details to review payment history.",
+  "notificationPaymentNextStepPickup": "Open reservation details to show your pickup code.",
+  "notificationPaymentNextStepTrack": "Open reservation details to follow fulfillment.",
+  "notificationPaymentNextStepRefundProcessing": "Open reservation details to follow the refund.",
+  "notificationPaymentNextStepRefunded": "Open reservation details to review the refunded payment.",
+  "notificationPaymentNextStepResolution": "Open reservation details to resolve this payment issue.",
+  "notificationPaymentNextStepLateRefund": "Open reservation details to review the automatic refund.",
+  "notificationPaymentDetailSecondary": "Reservation details",
+  "notificationPaymentAmountLabel": "Amount",
   "notificationsBack": "Back",
   "refreshNotifications": "Refresh notifications",
   "viewJobs": "View jobs",

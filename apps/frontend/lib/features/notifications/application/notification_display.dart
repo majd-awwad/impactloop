@@ -1,6 +1,7 @@
 import '../data/models/app_notification.dart';
 import '../../supplier_portal/data/models/supplier_action_notification.dart';
 import '../../../l10n/app_localizations.dart';
+import 'payment_notification_presentation.dart';
 
 final RegExp _testTagPattern = RegExp(r'\[test[^\]]*\]', caseSensitive: false);
 
@@ -28,6 +29,8 @@ enum NotificationVisualCategory {
   reminder,
   deliveryUpdate,
   reservation,
+  payment,
+  refund,
   material,
   learning,
   materialRequest,
@@ -42,6 +45,17 @@ NotificationVisualCategory categoryForNotification(
   final entity = notification.relatedEntityType;
 
   switch (type) {
+    case 'PAYMENT_REQUIRED':
+    case 'PAYMENT_COMPLETED':
+    case 'PAYMENT_NEW_CYCLE_REQUIRED':
+    case 'PAYMENT_FULFILLMENT_READY':
+    case 'PAYMENT_RESOLUTION_REQUIRED':
+      return NotificationVisualCategory.payment;
+    case 'PAYMENT_REFUND_REQUESTED':
+    case 'PAYMENT_REFUNDED':
+    case 'PAYMENT_REFUND_FAILED':
+    case 'PAYMENT_LATE_SUCCESS_REFUND':
+      return NotificationVisualCategory.refund;
     case 'DRIVER_NEW_JOB':
       return NotificationVisualCategory.job;
     case 'DRIVER_PICKUP_TIME':
@@ -124,6 +138,8 @@ String notificationTypeChipLabel(
         l10n.notificationChipDelivery,
       NotificationVisualCategory.reservation =>
         l10n.notificationChipReservation,
+      NotificationVisualCategory.payment => l10n.notificationChipPayment,
+      NotificationVisualCategory.refund => l10n.notificationChipRefund,
       NotificationVisualCategory.material => l10n.notificationChipMaterial,
       NotificationVisualCategory.learning => l10n.notificationChipLearning,
       NotificationVisualCategory.materialRequest =>
@@ -141,6 +157,10 @@ String notificationTypeChipLabel(
       return 'Delivery update';
     case NotificationVisualCategory.reservation:
       return 'Reservation';
+    case NotificationVisualCategory.payment:
+      return 'Payment';
+    case NotificationVisualCategory.refund:
+      return 'Refund';
     case NotificationVisualCategory.material:
       return 'Material';
     case NotificationVisualCategory.learning:
@@ -167,6 +187,10 @@ String notificationActionLabel(
       ) ==
       null) {
     return l10n?.open ?? 'Open';
+  }
+
+  if (isPaymentNotification(notification) && l10n != null) {
+    return paymentNotificationActionLabel(notification, l10n);
   }
 
   switch (notification.notificationType) {
@@ -384,6 +408,10 @@ LocalizedNotificationCopy localizedNotificationCopy(
     materialTitle: materialTitle,
   );
 
+  if (isPaymentNotification(notification)) {
+    return localizedPaymentNotificationCopy(notification, l10n);
+  }
+
   return switch (notification.notificationType) {
     'RESERVATION_ACCEPTED' => (
       title: l10n.reservationAcceptedTitle,
@@ -542,6 +570,12 @@ String? notificationOpenRoute(
   required bool isSupplierMode,
   required bool isDriverMode,
 }) {
+  if (!isSupplierMode &&
+      !isDriverMode &&
+      isPaymentNotification(notification)) {
+    return paymentNotificationOpenRoute(notification);
+  }
+
   if (notification.relatedEntityType == 'RESERVATION' &&
       notification.relatedEntityId != null &&
       notification.relatedEntityId!.isNotEmpty) {

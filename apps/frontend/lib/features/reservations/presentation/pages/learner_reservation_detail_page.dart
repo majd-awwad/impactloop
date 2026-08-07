@@ -29,11 +29,13 @@ class LearnerReservationDetailPage extends ConsumerWidget {
     required this.reservationId,
     this.focusPayment = false,
     this.focusPaymentOrderId,
+    this.focusSection,
   });
 
   final String reservationId;
   final bool focusPayment;
   final String? focusPaymentOrderId;
+  final String? focusSection;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -41,6 +43,8 @@ class LearnerReservationDetailPage extends ConsumerWidget {
     final l10n = context.l10n;
     final isLearner =
         ref.watch(authControllerProvider).user?.hasRole('LEARNER') == true;
+    final normalizedFocus =
+        (focusSection ?? (focusPayment ? 'payment' : null))?.toLowerCase();
 
     return Scaffold(
       backgroundColor: palette.pageBackground,
@@ -72,7 +76,8 @@ class LearnerReservationDetailPage extends ConsumerWidget {
                     )
                   : _ReservationDetailContent(
                       reservationId: reservationId,
-                      focusPayment: focusPayment,
+                      focusSection: normalizedFocus,
+                      focusPayment: normalizedFocus == 'payment',
                       focusPaymentOrderId: focusPaymentOrderId,
                     ),
             ),
@@ -88,11 +93,13 @@ class _ReservationDetailContent extends ConsumerStatefulWidget {
     required this.reservationId,
     required this.focusPayment,
     required this.focusPaymentOrderId,
+    this.focusSection,
   });
 
   final String reservationId;
   final bool focusPayment;
   final String? focusPaymentOrderId;
+  final String? focusSection;
 
   @override
   ConsumerState<_ReservationDetailContent> createState() =>
@@ -286,6 +293,7 @@ class _ReservationDetailContentState
                           delivery: delivery,
                           highlightPayment: widget.focusPayment,
                           focusPaymentOrderId: orderId,
+                          focusSection: widget.focusSection,
                           onCheckoutOrder: _onCheckoutOrder,
                           pickupCodeSectionKey: _pickupCodeSectionKey,
                         );

@@ -96,6 +96,7 @@ export const listMyNotifications = async (
   const result = await notificationsRepository.findNotificationsForUser({
     userId,
     isRead: query.isRead,
+    category: query.category,
     page,
     limit,
   });

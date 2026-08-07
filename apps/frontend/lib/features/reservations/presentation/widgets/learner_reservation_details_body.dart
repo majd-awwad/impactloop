@@ -36,6 +36,7 @@ class LearnerReservationDetailsBody extends ConsumerStatefulWidget {
     required this.delivery,
     this.focusPaymentOrderId,
     this.highlightPayment = false,
+    this.focusSection,
     this.onCheckoutOrder,
     this.pickupCodeSectionKey,
   });
@@ -44,6 +45,7 @@ class LearnerReservationDetailsBody extends ConsumerStatefulWidget {
   final LearnerDelivery? delivery;
   final String? focusPaymentOrderId;
   final bool highlightPayment;
+  final String? focusSection;
   final ValueChanged<String>? onCheckoutOrder;
   final GlobalKey? pickupCodeSectionKey;
 
@@ -55,31 +57,50 @@ class LearnerReservationDetailsBody extends ConsumerStatefulWidget {
 class _LearnerReservationDetailsBodyState
     extends ConsumerState<LearnerReservationDetailsBody> {
   final _paymentSectionKey = GlobalKey();
-  bool _didScrollToPayment = false;
+  final _fulfillmentSectionKey = GlobalKey();
+  bool _didScrollToFocus = false;
 
   @override
   void initState() {
     super.initState();
-    _maybeScrollToPayment();
+    _maybeScrollToFocus();
   }
 
   @override
   void didUpdateWidget(covariant LearnerReservationDetailsBody oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.highlightPayment != widget.highlightPayment ||
-        oldWidget.focusPaymentOrderId != widget.focusPaymentOrderId) {
-      _didScrollToPayment = false;
-      _maybeScrollToPayment();
+        oldWidget.focusPaymentOrderId != widget.focusPaymentOrderId ||
+        oldWidget.focusSection != widget.focusSection) {
+      _didScrollToFocus = false;
+      _maybeScrollToFocus();
     }
   }
 
-  void _maybeScrollToPayment() {
-    if (_didScrollToPayment) return;
-    if (!widget.highlightPayment && widget.focusPaymentOrderId == null) return;
+  void _maybeScrollToFocus() {
+    if (_didScrollToFocus) return;
+    final focus = (widget.focusSection ??
+            (widget.highlightPayment || widget.focusPaymentOrderId != null
+                ? 'payment'
+                : null))
+        ?.toLowerCase();
+    if (focus == null || focus.isEmpty) return;
 
-    _didScrollToPayment = true;
+    _didScrollToFocus = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = _paymentSectionKey.currentContext;
+      BuildContext? ctx;
+      switch (focus) {
+        case 'pickup':
+          ctx = widget.pickupCodeSectionKey?.currentContext ??
+              _fulfillmentSectionKey.currentContext;
+        case 'fulfillment':
+          ctx = _fulfillmentSectionKey.currentContext ??
+              widget.pickupCodeSectionKey?.currentContext;
+        case 'payment':
+        case 'resolution':
+        default:
+          ctx = _paymentSectionKey.currentContext;
+      }
       if (ctx != null) {
         Scrollable.ensureVisible(
           ctx,
@@ -142,9 +163,12 @@ class _LearnerReservationDetailsBodyState
               ? () => widget.onCheckoutOrder!(checkoutOrderId)
               : null,
         );
-        final fulfillment = ReservationDetailFulfillmentCard(
-          reservation: reservation,
-          delivery: delivery,
+        final fulfillment = KeyedSubtree(
+          key: _fulfillmentSectionKey,
+          child: ReservationDetailFulfillmentCard(
+            reservation: reservation,
+            delivery: delivery,
+          ),
         );
         final timeline = ReservationDetailTimeline(
           reservation: reservation,

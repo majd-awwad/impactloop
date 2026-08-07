@@ -645,15 +645,15 @@ void main() {
 
       expect(find.text('Reservation accepted'), findsOneWidget);
 
-      await tester.tap(find.text('Unread'));
+      await tester.tap(find.byKey(const Key('notifications-read-filter-unread')));
       await tester.pumpAndSettle();
       expect(find.text('Reservation accepted'), findsOneWidget);
 
-      await tester.tap(find.text('Read'));
+      await tester.tap(find.byKey(const Key('notifications-read-filter-read')));
       await tester.pumpAndSettle();
       expect(find.text('Learning project approved'), findsOneWidget);
 
-      await tester.tap(find.text('All'));
+      await tester.tap(find.byKey(const Key('notifications-read-filter-all')));
       await tester.pumpAndSettle();
       expect(find.text('Reservation accepted'), findsOneWidget);
       expect(find.text('Learning project approved'), findsOneWidget);
@@ -940,6 +940,7 @@ class _FakeNotificationsApi extends NotificationsApi {
     int page = 1,
     int limit = 20,
     bool? isRead,
+    String? category,
   }) async {
     return const AppNotificationsPage(
       items: [],
@@ -1054,6 +1055,26 @@ class _DelayedNotificationsListNotifier extends _TestNotificationsListNotifier {
       await gate.future;
     }
     return super.build();
+  }
+
+  @override
+  Future<void> refreshInBackground() async {
+    final current = state.value;
+    if (current == null) {
+      return super.refreshInBackground();
+    }
+    state = AsyncData(current.copyWith(isBackgroundRefreshing: true));
+    if (shouldDelay()) {
+      await gate.future;
+    }
+    if (!ref.mounted) {
+      return;
+    }
+    final next = await super.build();
+    if (!ref.mounted) {
+      return;
+    }
+    state = AsyncData(next.copyWith(isBackgroundRefreshing: false));
   }
 }
 

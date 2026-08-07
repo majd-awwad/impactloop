@@ -31,13 +31,23 @@ String learnerReservationCheckoutRoute(String reservationId) =>
 String learnerPaymentCheckoutRoute(String orderId) =>
     '$learnerPaymentCheckoutRoutePrefix/$orderId';
 
+/// Builds a learner reservation detail route.
+///
+/// [focus] section anchors: `payment`, `fulfillment`, `pickup`, `resolution`.
+/// [focusPayment] remains supported for existing call sites.
 String learnerReservationDetailRoute(
   String reservationId, {
   bool focusPayment = false,
+  String? focus,
   String? checkoutableOrderId,
 }) {
   final q = <String, String>{};
-  if (focusPayment) q['focus'] = 'payment';
+  final normalizedFocus = (focus ?? (focusPayment ? 'payment' : null))
+      ?.trim()
+      .toLowerCase();
+  if (normalizedFocus != null && normalizedFocus.isNotEmpty) {
+    q['focus'] = normalizedFocus;
+  }
   if (checkoutableOrderId != null && checkoutableOrderId.isNotEmpty) {
     q['orderId'] = checkoutableOrderId;
   }

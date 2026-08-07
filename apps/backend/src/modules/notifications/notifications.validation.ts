@@ -9,6 +9,8 @@ export const listNotificationsQuerySchema = z.object({
     .transform((value) =>
       value === undefined ? undefined : value === 'true',
     ),
+  /** Learner inbox category filter — server-side type family. */
+  category: z.enum(['payments', 'delivery', 'refunds']).optional(),
 });
 
 export type ListNotificationsQuery = z.infer<typeof listNotificationsQuerySchema>;

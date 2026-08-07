@@ -749,7 +749,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Reservation, delivery, project, and account updates.'**
+  /// **'Payment, reservation, delivery, project, and account updates.'**
   String get notificationsSubtitle;
 
   /// No description provided for @notificationsLoading.
@@ -907,6 +907,390 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Update'**
   String get notificationChipUpdate;
+
+  /// No description provided for @notificationChipPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment'**
+  String get notificationChipPayment;
+
+  /// No description provided for @notificationChipRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund'**
+  String get notificationChipRefund;
+
+  /// No description provided for @notificationsFilterPayments.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments'**
+  String get notificationsFilterPayments;
+
+  /// No description provided for @notificationsFilterDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery'**
+  String get notificationsFilterDelivery;
+
+  /// No description provided for @notificationsFilterRefunds.
+  ///
+  /// In en, this message translates to:
+  /// **'Refunds'**
+  String get notificationsFilterRefunds;
+
+  /// No description provided for @notificationsUnreadCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No unread} =1{1 unread} other{{count} unread}}'**
+  String notificationsUnreadCount(int count);
+
+  /// No description provided for @notificationPaymentRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment required'**
+  String get notificationPaymentRequiredTitle;
+
+  /// No description provided for @notificationPaymentRequiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete payment for {materialTitle} to continue.'**
+  String notificationPaymentRequiredBody(String materialTitle);
+
+  /// No description provided for @notificationPaymentRequiredBodyWithAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay {amount} for {materialTitle} to continue.'**
+  String notificationPaymentRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  );
+
+  /// No description provided for @notificationPaymentDeliveryFeeRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery fee required'**
+  String get notificationPaymentDeliveryFeeRequiredTitle;
+
+  /// No description provided for @notificationPaymentDeliveryFeeRequiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A delivery fee is required before delivery for {materialTitle} can proceed.'**
+  String notificationPaymentDeliveryFeeRequiredBody(String materialTitle);
+
+  /// No description provided for @notificationPaymentDeliveryFeeRequiredBodyWithAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay the delivery fee of {amount} before delivery for {materialTitle} can proceed.'**
+  String notificationPaymentDeliveryFeeRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  );
+
+  /// No description provided for @notificationPaymentCompletedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment completed'**
+  String get notificationPaymentCompletedTitle;
+
+  /// No description provided for @notificationPaymentCompletedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment for {materialTitle} was received.'**
+  String notificationPaymentCompletedBody(String materialTitle);
+
+  /// No description provided for @notificationPaymentCompletedBodyWithAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment of {amount} for {materialTitle} was received.'**
+  String notificationPaymentCompletedBodyWithAmount(
+    String amount,
+    String materialTitle,
+  );
+
+  /// No description provided for @notificationPaymentCompletedMoreRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment received — more still due'**
+  String get notificationPaymentCompletedMoreRequiredTitle;
+
+  /// No description provided for @notificationPaymentCompletedMoreRequiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We received a payment for {materialTitle}, but more payment is still required before fulfillment can continue.'**
+  String notificationPaymentCompletedMoreRequiredBody(String materialTitle);
+
+  /// No description provided for @notificationPaymentCompletedMoreRequiredBodyWithAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'We received {amount} for {materialTitle}, but more payment is still required before fulfillment can continue.'**
+  String notificationPaymentCompletedMoreRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  );
+
+  /// No description provided for @notificationPaymentFulfillmentReadyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for delivery'**
+  String get notificationPaymentFulfillmentReadyTitle;
+
+  /// No description provided for @notificationPaymentFulfillmentReadyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{materialTitle} is ready to move to fulfillment.'**
+  String notificationPaymentFulfillmentReadyBody(String materialTitle);
+
+  /// No description provided for @notificationPaymentPickupReadyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for pickup'**
+  String get notificationPaymentPickupReadyTitle;
+
+  /// No description provided for @notificationPaymentPickupReadyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{materialTitle} is ready for pickup. Show your pickup code.'**
+  String notificationPaymentPickupReadyBody(String materialTitle);
+
+  /// No description provided for @notificationPaymentRefundRequestedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund processing'**
+  String get notificationPaymentRefundRequestedTitle;
+
+  /// No description provided for @notificationPaymentRefundRequestedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A refund for {materialTitle} is being processed.'**
+  String notificationPaymentRefundRequestedBody(String materialTitle);
+
+  /// No description provided for @notificationPaymentRefundRequestedBodyWithAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'A refund of {amount} for {materialTitle} is being processed.'**
+  String notificationPaymentRefundRequestedBodyWithAmount(
+    String amount,
+    String materialTitle,
+  );
+
+  /// No description provided for @notificationPaymentRefundedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Refunded'**
+  String get notificationPaymentRefundedTitle;
+
+  /// No description provided for @notificationPaymentRefundedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your refund for {materialTitle} is complete.'**
+  String notificationPaymentRefundedBody(String materialTitle);
+
+  /// No description provided for @notificationPaymentRefundedBodyWithAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Your refund of {amount} for {materialTitle} is complete.'**
+  String notificationPaymentRefundedBodyWithAmount(
+    String amount,
+    String materialTitle,
+  );
+
+  /// No description provided for @notificationPaymentRefundedNewCycleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Refunded — new payment required'**
+  String get notificationPaymentRefundedNewCycleTitle;
+
+  /// No description provided for @notificationPaymentRefundedNewCycleBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your previous payment for {materialTitle} was refunded. A new payment is now required to continue.'**
+  String notificationPaymentRefundedNewCycleBody(String materialTitle);
+
+  /// No description provided for @notificationPaymentRefundedNewCycleBodyWithAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Your previous payment of {amount} for {materialTitle} was refunded. A new payment is now required to continue.'**
+  String notificationPaymentRefundedNewCycleBodyWithAmount(
+    String amount,
+    String materialTitle,
+  );
+
+  /// No description provided for @notificationPaymentRefundFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund needs attention'**
+  String get notificationPaymentRefundFailedTitle;
+
+  /// No description provided for @notificationPaymentRefundFailedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The refund for {materialTitle} could not be completed. Review reservation details.'**
+  String notificationPaymentRefundFailedBody(String materialTitle);
+
+  /// No description provided for @notificationPaymentLateSuccessRefundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Late payment refunded'**
+  String get notificationPaymentLateSuccessRefundTitle;
+
+  /// No description provided for @notificationPaymentLateSuccessRefundBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A late payment for {materialTitle} was automatically refunded.'**
+  String notificationPaymentLateSuccessRefundBody(String materialTitle);
+
+  /// No description provided for @notificationPaymentNewCycleRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New payment cycle required'**
+  String get notificationPaymentNewCycleRequiredTitle;
+
+  /// No description provided for @notificationPaymentNewCycleRequiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A new payment cycle is required for {materialTitle}.'**
+  String notificationPaymentNewCycleRequiredBody(String materialTitle);
+
+  /// No description provided for @notificationPaymentNewCycleRequiredBodyWithAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay {amount} for the new cycle of {materialTitle}.'**
+  String notificationPaymentNewCycleRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  );
+
+  /// No description provided for @notificationPaymentResolutionRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment resolution required'**
+  String get notificationPaymentResolutionRequiredTitle;
+
+  /// No description provided for @notificationPaymentResolutionRequiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your reservation for {materialTitle} needs payment resolution.'**
+  String notificationPaymentResolutionRequiredBody(String materialTitle);
+
+  /// No description provided for @notificationPaymentShowPickupCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Show pickup code'**
+  String get notificationPaymentShowPickupCode;
+
+  /// No description provided for @notificationPaymentStatusUnpaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Not paid yet'**
+  String get notificationPaymentStatusUnpaid;
+
+  /// No description provided for @notificationPaymentStatusPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get notificationPaymentStatusPaid;
+
+  /// No description provided for @notificationPaymentStatusRefundProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund processing'**
+  String get notificationPaymentStatusRefundProcessing;
+
+  /// No description provided for @notificationPaymentStatusRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'Refunded'**
+  String get notificationPaymentStatusRefunded;
+
+  /// No description provided for @notificationPaymentStatusRefundFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund failed'**
+  String get notificationPaymentStatusRefundFailed;
+
+  /// No description provided for @notificationPaymentStatusResolutionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolution required'**
+  String get notificationPaymentStatusResolutionRequired;
+
+  /// No description provided for @notificationPaymentStatusLateRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Late payment refunded'**
+  String get notificationPaymentStatusLateRefund;
+
+  /// No description provided for @notificationPaymentStatusPickupReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for pickup'**
+  String get notificationPaymentStatusPickupReady;
+
+  /// No description provided for @notificationPaymentStatusFulfillmentReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for fulfillment'**
+  String get notificationPaymentStatusFulfillmentReady;
+
+  /// No description provided for @notificationPaymentNextStepPay.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue to checkout to complete this payment.'**
+  String get notificationPaymentNextStepPay;
+
+  /// No description provided for @notificationPaymentNextStepViewReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Open reservation details to review payment history.'**
+  String get notificationPaymentNextStepViewReservation;
+
+  /// No description provided for @notificationPaymentNextStepPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'Open reservation details to show your pickup code.'**
+  String get notificationPaymentNextStepPickup;
+
+  /// No description provided for @notificationPaymentNextStepTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Open reservation details to follow fulfillment.'**
+  String get notificationPaymentNextStepTrack;
+
+  /// No description provided for @notificationPaymentNextStepRefundProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Open reservation details to follow the refund.'**
+  String get notificationPaymentNextStepRefundProcessing;
+
+  /// No description provided for @notificationPaymentNextStepRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'Open reservation details to review the refunded payment.'**
+  String get notificationPaymentNextStepRefunded;
+
+  /// No description provided for @notificationPaymentNextStepResolution.
+  ///
+  /// In en, this message translates to:
+  /// **'Open reservation details to resolve this payment issue.'**
+  String get notificationPaymentNextStepResolution;
+
+  /// No description provided for @notificationPaymentNextStepLateRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Open reservation details to review the automatic refund.'**
+  String get notificationPaymentNextStepLateRefund;
+
+  /// No description provided for @notificationPaymentDetailSecondary.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation details'**
+  String get notificationPaymentDetailSecondary;
+
+  /// No description provided for @notificationPaymentAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get notificationPaymentAmountLabel;
 
   /// No description provided for @notificationsBack.
   ///
