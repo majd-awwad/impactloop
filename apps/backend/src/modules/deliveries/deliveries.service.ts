@@ -21,7 +21,7 @@ import {
   calculateDeliveryPricing,
   DELIVERY_PRICING_CURRENCY,
 } from '../delivery-pricing/delivery-pricing.service.js';
-import { normalizeCityName } from '../delivery-pricing/delivery-zone-cities.js';
+import { normalizeDropoffKey } from '../delivery-pricing/delivery-zone-cities.js';
 import { ensureDeliveryFeePaymentOrder } from '../payments/payments.ensure.js';
 import { isElectronicPaymentEnforced } from '../payments/payments.policy.js';
 import { evaluateDeliveryGroupPaymentReadiness } from '../payments/payments.readiness.js';
@@ -397,10 +397,13 @@ export type RequestDeliveryResult = ReturnType<typeof mapLearnerDelivery>;
  * Payment architecture:
  * - Creates/joins a DeliveryGroup and persists deliveryFee.
  * - Ensures one DELIVERY_FEE PaymentOrder when fee > 0 and enforcement is on.
- * - Creates WAITING_FOR_DRIVER Delivery only when fee is zero, already PAID,
- *   or electronic payment enforcement is disabled (legacy).
- * - Throws DELIVERY_FEE_REQUIRED (no Delivery, no driver notify) when fee is
- *   outstanding so the learner can checkout the fee order.
+ * - Creates WAITING_FOR_DRIVER Delivery only when the group is payment-ready
+ *   (fee + materials + confirmation) or electronic payment enforcement is
+ *   disabled (legacy).
+ * - Throws DELIVERY_FEE_REQUIRED (no Delivery, no driver notify) when a
+ *   payable fee/material order is outstanding so the learner can checkout.
+ * - Throws DELIVERY_PAYMENT_NOT_READY when the group is not dispatchable for
+ *   a non-checkout reason (e.g. awaiting confirmation).
  */
 export const requestDeliveryForReservation = async (
   learnerId: string,
@@ -437,6 +440,13 @@ export const requestDeliveryForReservation = async (
         paymentOrderId: string;
         amount: string;
         currency: string;
+      }
+    | {
+        outcome: 'GROUP_PAYMENT_NOT_READY';
+        deliveryGroupId: string;
+        overallStatus: string;
+        outstandingReservationIds: string[];
+        awaitingConfirmationReservationIds: string[];
       }
     | {
         outcome:
@@ -532,8 +542,8 @@ export const requestDeliveryForReservation = async (
       }
 
       const dropoffCity = resolvedDropoffLocation.city.trim();
-      const dropoffCityKey = normalizeCityName(dropoffCity);
       const dropoffArea = resolvedDropoffLocation.area?.trim() || null;
+      const dropoffKey = normalizeDropoffKey(dropoffCity, dropoffArea);
       const learnerNote = input.learnerNote?.trim() || null;
       const currency =
         reservation.pricingCurrency?.trim() || DELIVERY_PRICING_CURRENCY;
@@ -576,7 +586,7 @@ export const requestDeliveryForReservation = async (
         }
 
         // Prefer joining an open group for the same learner + supplier +
-        // dropoff city (normalized) so the shared fee is charged once.
+        // dropoff city+area (normalized) so the shared fee is charged once.
         const candidateGroups = await tx.deliveryGroup.findMany({
           where: {
             learnerId,
@@ -601,7 +611,9 @@ export const requestDeliveryForReservation = async (
           },
         });
         const compatibleGroup = candidateGroups.find(
-          (group) => normalizeCityName(group.dropoffCity) === dropoffCityKey,
+          (group) =>
+            normalizeDropoffKey(group.dropoffCity, group.dropoffArea) ===
+            dropoffKey,
         );
 
         const window = resolveDeliveryWindow(reservation);
@@ -697,14 +709,21 @@ export const requestDeliveryForReservation = async (
 
       const enforcement = isElectronicPaymentEnforced();
 
-      if (enforcement && isPositiveMoney(groupFeeAmount)) {
-        const ensured = await ensureDeliveryFeePaymentOrder(deliveryGroupId, tx);
-        if (ensured.outcome === 'NOT_FOUND') {
-          return { outcome: 'NOT_FOUND' as const };
-        }
+      if (enforcement) {
+        if (isPositiveMoney(groupFeeAmount)) {
+          const ensured = await ensureDeliveryFeePaymentOrder(
+            deliveryGroupId,
+            tx,
+          );
+          if (ensured.outcome === 'NOT_FOUND') {
+            return { outcome: 'NOT_FOUND' as const };
+          }
 
-        if (ensured.outcome === 'CREATED' || ensured.outcome === 'EXISTING') {
-          if (ensured.order.status !== 'PAID') {
+          if (
+            (ensured.outcome === 'CREATED' ||
+              ensured.outcome === 'EXISTING') &&
+            ensured.order.status !== 'PAID'
+          ) {
             return {
               outcome: 'PAYMENT_REQUIRED' as const,
               reservationId: reservation.id,
@@ -715,31 +734,77 @@ export const requestDeliveryForReservation = async (
             };
           }
         }
-      } else if (enforcement && freeDelivery) {
-        // Zero fee: no fee order; still require material paid via readiness.
+
+        // Fee is zero or already PAID — still require full group readiness
+        // (materials + confirmation) before opening WAITING_FOR_DRIVER.
         const readiness = await evaluateDeliveryGroupPaymentReadiness(
           deliveryGroupId,
           tx,
         );
         if (!readiness.overallReady) {
-          // Material unpaid — should be rare after pickup-ready flow.
-          const materialOrder = readiness.materials.find(
+          const ownMaterial = readiness.materials.find(
             (row) => row.reservationId === reservation.id,
           );
-          if (materialOrder && materialOrder.status !== 'PAID') {
+          const preferredPayable =
+            (ownMaterial &&
+            !ownMaterial.ready &&
+            ownMaterial.paymentOrderId
+              ? ownMaterial
+              : null) ??
+            (!readiness.fee.ready && readiness.fee.paymentOrderId
+              ? readiness.fee
+              : null) ??
+            readiness.materials.find(
+              (row) => !row.ready && row.paymentOrderId,
+            ) ??
+            null;
+
+          const paymentOrderId =
+            preferredPayable?.paymentOrderId ??
+            readiness.outstandingPaymentOrderIds[0] ??
+            null;
+
+          if (paymentOrderId) {
+            const matchedMaterial = readiness.materials.find(
+              (row) => row.paymentOrderId === paymentOrderId,
+            );
+            const amount =
+              matchedMaterial?.amount ??
+              (readiness.fee.paymentOrderId === paymentOrderId
+                ? readiness.fee.amount
+                : null) ??
+              preferredPayable?.amount ??
+              '0.00';
+            const orderCurrency =
+              matchedMaterial?.currency ??
+              (readiness.fee.paymentOrderId === paymentOrderId
+                ? readiness.fee.currency
+                : null) ??
+              preferredPayable?.currency ??
+              currency;
+
             return {
               outcome: 'PAYMENT_REQUIRED' as const,
               reservationId: reservation.id,
               deliveryGroupId,
-              paymentOrderId: materialOrder.paymentOrderId ?? '',
-              amount: materialOrder.amount ?? '0.00',
-              currency: materialOrder.currency ?? currency,
+              paymentOrderId,
+              amount,
+              currency: orderCurrency,
             };
           }
+
+          return {
+            outcome: 'GROUP_PAYMENT_NOT_READY' as const,
+            deliveryGroupId,
+            overallStatus: readiness.overallStatus,
+            outstandingReservationIds: readiness.outstandingReservationIds,
+            awaitingConfirmationReservationIds:
+              readiness.awaitingConfirmationReservationIds,
+          };
         }
       }
 
-      // Fee zero / paid / enforcement off → create operational Delivery.
+      // Group payment-ready / enforcement off → create operational Delivery.
       const created = await ensureDeliveryForAcceptedReservation(tx, {
         reservation: {
           id: fresh.id,
@@ -829,6 +894,19 @@ export const requestDeliveryForReservation = async (
         },
       );
     }
+    case 'GROUP_PAYMENT_NOT_READY':
+      throw new AppError(
+        'Delivery cannot start until all payment obligations for the group are satisfied.',
+        409,
+        'DELIVERY_PAYMENT_NOT_READY',
+        {
+          deliveryGroupId: result.deliveryGroupId,
+          overallStatus: result.overallStatus,
+          outstandingReservationIds: result.outstandingReservationIds,
+          awaitingConfirmationReservationIds:
+            result.awaitingConfirmationReservationIds,
+        },
+      );
     case 'NOT_FOUND':
       throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
     case 'INVALID_STATUS':
