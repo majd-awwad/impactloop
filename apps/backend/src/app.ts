@@ -69,6 +69,8 @@ export const createApp = (options: CreateAppOptions): Express => {
   const app = express();
   const isProduction = env.nodeEnv === 'production';
 
+  app.set('trust proxy', env.trustProxy);
+
   app.use(requestContextMiddleware);
   app.use(
     bindRecommendationEventOriginMiddleware(options.recommendationEventOrigin),
