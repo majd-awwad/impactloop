@@ -25,11 +25,11 @@ Conventions for response shape: [04-api-conventions.md](../04-api-conventions.md
 
 | Method | Path | Auth | Source file |
 |--------|------|------|-------------|
-| POST | `/api/auth/register` | Public | `auth/auth.routes.ts` |
-| POST | `/api/auth/login` | Public | `auth/auth.routes.ts` |
+| POST | `/api/auth/register` | Public (per-IP and per-email rate limits) | `auth/auth.routes.ts` |
+| POST | `/api/auth/login` | Public (per-IP and per-email rate limits) | `auth/auth.routes.ts` |
 | POST | `/api/auth/forgot-password` | Public | `auth/auth.routes.ts` |
 | POST | `/api/auth/reset-password` | Public | `auth/auth.routes.ts` |
-| POST | `/api/auth/refresh` | Public | `auth/auth.routes.ts` |
+| POST | `/api/auth/refresh` | Public (per-IP and per-token rate limits) | `auth/auth.routes.ts` |
 | POST | `/api/auth/logout` | Public | `auth/auth.routes.ts` |
 | GET | `/api/auth/me` | Bearer JWT | `auth/auth.routes.ts` |
 | PATCH | `/api/auth/change-password` | Bearer JWT | `auth/auth.routes.ts` |
@@ -46,6 +46,15 @@ Conventions for response shape: [04-api-conventions.md](../04-api-conventions.md
 `POST /api/auth/switch-role` body: `{ "activeRole": "LEARNER" | "SUPPLIER" }`. Backend enforces portal switch rules (organization suppliers cannot switch to learner unless they already have `LEARNER`; student/individual suppliers may be granted `LEARNER` on first switch). Response includes refreshed auth tokens and updated `user`.
 
 Validation schemas: `auth/auth.validation.ts`
+
+`POST /api/auth/register`
+- Public route with per-IP and per-email fixed-window rate limits.
+
+`POST /api/auth/login`
+- Public route with per-IP and per-email fixed-window rate limits.
+
+`POST /api/auth/refresh`
+- Public route with per-IP and per-hashed-refresh-token fixed-window rate limits.
 
 `POST /api/auth/forgot-password`
 - Public route with per-IP and per-email fixed-window rate limits.
