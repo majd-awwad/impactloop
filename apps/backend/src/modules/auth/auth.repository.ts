@@ -255,10 +255,48 @@ export const findActiveRefreshToken = async (
   });
 };
 
-export const markAuthTokenUsed = async (tokenId: string): Promise<void> => {
-  await prisma.authToken.update({
-    where: { id: tokenId },
-    data: { usedAt: new Date() },
+export const rotateRefreshToken = async (input: {
+  userId: string;
+  tokenHash: string;
+  successorTokenHash: string;
+  successorExpiresAt: Date;
+}): Promise<UserWithRolesAndProfiles | null> => {
+  return prisma.$transaction(async (tx) => {
+    const claim = await tx.authToken.updateMany({
+      where: {
+        userId: input.userId,
+        tokenHash: input.tokenHash,
+        tokenType: 'REFRESH_TOKEN',
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      data: { usedAt: new Date() },
+    });
+
+    if (claim.count !== 1) {
+      return null;
+    }
+
+    const user = await tx.user.findUnique({
+      where: { id: input.userId },
+      include: userWithRolesAndProfilesInclude,
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    await tx.authToken.create({
+      data: {
+        userId: input.userId,
+        tokenHash: input.successorTokenHash,
+        tokenType: 'REFRESH_TOKEN',
+        target: user.email,
+        expiresAt: input.successorExpiresAt,
+      },
+    });
+
+    return user;
   });
 };
 

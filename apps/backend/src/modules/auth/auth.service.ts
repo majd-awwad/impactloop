@@ -401,13 +401,36 @@ export const refreshAuthSession = async (
 
   assertAccountCanLogin(storedToken.user.accountStatus);
 
-  await authRepository.markAuthTokenUsed(storedToken.id);
+  const tokenId = generateOpaqueToken();
+  const newRefreshToken = signRefreshToken({
+    sub: storedToken.user.id,
+    jti: tokenId,
+  });
 
-  const session = await createAuthSession(storedToken.user);
+  const user = await authRepository.rotateRefreshToken({
+    userId: payload.sub,
+    tokenHash: hashToken(refreshToken),
+    successorTokenHash: hashToken(newRefreshToken),
+    successorExpiresAt: getRefreshTokenExpiry(),
+  });
+
+  if (!user) {
+    throw new AppError(
+      'Refresh token is invalid or revoked',
+      401,
+      'UNAUTHENTICATED',
+    );
+  }
+
+  const roles = user.roles.map((assignment) => assignment.role);
+  const accessToken = signAccessToken({
+    sub: user.id,
+    roles,
+  });
 
   return {
-    accessToken: session.accessToken,
-    refreshToken: session.refreshToken,
+    accessToken,
+    refreshToken: newRefreshToken,
   };
 };
 
