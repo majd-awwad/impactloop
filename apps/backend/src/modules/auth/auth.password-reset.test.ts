@@ -212,6 +212,49 @@ describe('password reset security', () => {
     );
   });
 
+  test('parallel reset with same token applies only one password change', async () => {
+    const provider = new RecordingAuthEmailProvider();
+    setAuthEmailProviderForTests(provider);
+    const user = await createLearnerUser();
+
+    await requestPasswordReset(user.email);
+    const resetToken = latestResetToken(provider);
+
+    const results = await Promise.allSettled([
+      resetPasswordWithToken(resetToken, 'NewPassword123!'),
+      resetPasswordWithToken(resetToken, 'DifferentPassword123!'),
+    ]);
+
+    const successes = results.filter((result) => result.status === 'fulfilled');
+    const failures = results.filter((result) => result.status === 'rejected');
+
+    assert.equal(successes.length, 1);
+    assert.equal(failures.length, 1);
+
+    const rejected = failures[0] as PromiseRejectedResult;
+    assert.ok(rejected.reason instanceof AppError);
+    assert.equal(rejected.reason.statusCode, 400);
+    assert.equal(rejected.reason.code, 'VALIDATION_ERROR');
+
+    const updatedUser = await prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: { passwordHash: true },
+    });
+
+    const matchesNew = await comparePassword(
+      'NewPassword123!',
+      updatedUser.passwordHash,
+    );
+    const matchesDifferent = await comparePassword(
+      'DifferentPassword123!',
+      updatedUser.passwordHash,
+    );
+    assert.equal(matchesNew || matchesDifferent, true);
+    assert.equal(matchesNew && matchesDifferent, false);
+
+    assert.equal(provider.passwordChangedEmails.length, 1);
+  });
+
   test('successful reset marks token used, updates password, revokes refresh tokens, and sends notification', async () => {
     const provider = new RecordingAuthEmailProvider();
     setAuthEmailProviderForTests(provider);

@@ -388,27 +388,41 @@ export const completePasswordReset = async (input: {
   tokenId: string;
   userId: string;
   passwordHash: string;
-}): Promise<void> => {
-  const usedAt = new Date();
+}): Promise<boolean> => {
+  return prisma.$transaction(async (tx) => {
+    const usedAt = new Date();
 
-  await prisma.$transaction([
-    prisma.authToken.update({
-      where: { id: input.tokenId },
+    const claim = await tx.authToken.updateMany({
+      where: {
+        id: input.tokenId,
+        userId: input.userId,
+        tokenType: 'PASSWORD_RESET',
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
       data: { usedAt },
-    }),
-    prisma.user.update({
+    });
+
+    if (claim.count !== 1) {
+      return false;
+    }
+
+    await tx.user.update({
       where: { id: input.userId },
       data: { passwordHash: input.passwordHash },
-    }),
-    prisma.authToken.updateMany({
+    });
+
+    await tx.authToken.updateMany({
       where: {
         userId: input.userId,
         tokenType: 'REFRESH_TOKEN',
         usedAt: null,
       },
       data: { usedAt },
-    }),
-  ]);
+    });
+
+    return true;
+  });
 };
 
 export const findUserPasswordHashById = async (

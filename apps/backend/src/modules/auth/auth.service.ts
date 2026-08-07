@@ -511,11 +511,19 @@ export const resetPasswordWithToken = async (
 
   const passwordHash = await hashPassword(newPassword);
 
-  await authRepository.completePasswordReset({
+  const completed = await authRepository.completePasswordReset({
     tokenId: storedToken.id,
     userId: storedToken.userId,
     passwordHash,
   });
+
+  if (!completed) {
+    throw new AppError(
+      'Invalid or expired reset token',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
 
   const emailResult = await getAuthEmailProvider().sendPasswordChangedEmail({
     recipientEmail: storedToken.user.email,
