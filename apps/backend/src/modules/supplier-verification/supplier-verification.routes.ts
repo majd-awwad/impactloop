@@ -6,6 +6,7 @@ import { validate } from '../../middlewares/validate.middleware.js';
 import { asyncHandler } from '../../utils/async-handler.js';
 
 import {
+  downloadSupplierVerificationDocumentHandler,
   getSupplierVerificationStatusHandler,
   resubmitSupplierVerificationHandler,
   submitSupplierVerificationHandler,
@@ -22,6 +23,13 @@ supplierVerificationRouter.get(
   authMiddleware,
   requireRoles('SUPPLIER'),
   asyncHandler(getSupplierVerificationStatusHandler),
+);
+
+supplierVerificationRouter.get(
+  '/document',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  asyncHandler(downloadSupplierVerificationDocumentHandler),
 );
 
 supplierVerificationRouter.post(

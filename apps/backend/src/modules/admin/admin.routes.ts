@@ -22,6 +22,7 @@ import {
 } from './admin-invitations.controller.js';
 import {
   approveAdminSupplierVerification,
+  downloadAdminSupplierVerificationDocument,
   getAdminSupplierVerification,
   listAdminSupplierVerifications,
   rejectAdminSupplierVerification,
@@ -256,6 +257,14 @@ adminRouter.get(
   requireRoles('ADMIN'),
   validate(supplierVerificationIdParamSchema, 'params'),
   asyncHandler(getAdminSupplierVerification),
+);
+
+adminRouter.get(
+  '/supplier-verifications/:id/document',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(supplierVerificationIdParamSchema, 'params'),
+  asyncHandler(downloadAdminSupplierVerificationDocument),
 );
 
 adminRouter.patch(

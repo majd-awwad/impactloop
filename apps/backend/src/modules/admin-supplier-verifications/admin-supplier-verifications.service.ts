@@ -4,6 +4,7 @@ import {
   ADMIN_ACTIVITY_ACTIONS,
   logAdminActivity,
 } from '../admin/admin-activity-log.js';
+import { resolveLocalSupplierVerificationDocument } from '../uploads/verification-uploads.storage.js';
 
 import * as repository from './admin-supplier-verifications.repository.js';
 import {
@@ -331,6 +332,18 @@ export const getSupplierVerificationForAdmin = async (
 ): Promise<SupplierVerificationDetailDto> => {
   const profile = await loadVerificationOrThrow(id);
   return mapDetail(profile);
+};
+
+export const getSupplierVerificationDocumentForAdmin = async (id: string) => {
+  const profile = await loadVerificationOrThrow(id);
+
+  return {
+    document: resolveLocalSupplierVerificationDocument(
+      profile.organizationProfile?.verificationDocumentUrl,
+    ),
+    downloadName:
+      profile.organizationProfile?.verificationDocumentName ?? null,
+  };
 };
 
 export const approveSupplierVerification = async (

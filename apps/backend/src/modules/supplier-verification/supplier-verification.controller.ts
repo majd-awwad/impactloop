@@ -1,8 +1,10 @@
 import type { Request, Response } from 'express';
 
 import { successResponse } from '../../utils/api-response.js';
+import { buildInlineContentDisposition } from '../uploads/verification-uploads.storage.js';
 
 import {
+  getSupplierVerificationDocumentForOwner,
   getSupplierVerificationStatus,
   resubmitSupplierVerification,
   submitSupplierVerification,
@@ -18,6 +20,22 @@ export const getSupplierVerificationStatusHandler = async (
 ): Promise<void> => {
   const status = await getSupplierVerificationStatus(req.auth!.sub);
   res.json(successResponse('Supplier verification status loaded', status));
+};
+
+export const downloadSupplierVerificationDocumentHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { document, downloadName } =
+    await getSupplierVerificationDocumentForOwner(req.auth!.sub);
+
+  res.setHeader('Content-Type', document.mimeType);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader(
+    'Content-Disposition',
+    buildInlineContentDisposition(downloadName?.trim() || document.filename),
+  );
+  res.sendFile(document.absolutePath);
 };
 
 export const submitSupplierVerificationHandler = async (

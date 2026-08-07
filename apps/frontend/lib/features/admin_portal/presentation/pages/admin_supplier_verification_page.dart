@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -5,7 +8,6 @@ import 'package:intl/intl.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_theme_colors.dart';
-import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_dialog_detail.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
@@ -13,6 +15,7 @@ import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/supplier_verification_status_presentation.dart';
 import '../../data/admin_supplier_verifications_api.dart';
+import '../../data/admin_verification_document_open.dart';
 import '../../data/models/admin_supplier_verifications_models.dart';
 import '../l10n/admin_l10n.dart';
 import '../theme/admin_decoration_set.dart';
@@ -1545,6 +1548,7 @@ class _VerificationDetailsDialogState
                             false) ...[
                           const SizedBox(height: AppSpacing.md),
                           _VerificationDocumentCard(
+                            verificationId: detail.supplierProfileId,
                             documentUrl: detail.verificationDocumentUrl!,
                             documentName: detail.verificationDocumentName,
                           ),
@@ -1926,45 +1930,45 @@ String _locationLabel(String? city, String? area, [String? addressLine]) {
   return parts.isEmpty ? '—' : parts.join(', ');
 }
 
-class _VerificationDocumentCard extends StatefulWidget {
+class _VerificationDocumentCard extends ConsumerStatefulWidget {
   const _VerificationDocumentCard({
+    required this.verificationId,
     required this.documentUrl,
     this.documentName,
   });
 
+  final String verificationId;
   final String documentUrl;
   final String? documentName;
 
   @override
-  State<_VerificationDocumentCard> createState() =>
+  ConsumerState<_VerificationDocumentCard> createState() =>
       _VerificationDocumentCardState();
 }
 
-class _VerificationDocumentCardState extends State<_VerificationDocumentCard> {
+class _VerificationDocumentCardState
+    extends ConsumerState<_VerificationDocumentCard> {
   bool _imagePreviewFailed = false;
+  bool _isOpening = false;
+  bool _isLoadingPreview = false;
+  Uint8List? _previewBytes;
+  String? _previewMimeType;
 
   bool get _isImage {
     final lower = widget.documentUrl.toLowerCase();
+    final name = (widget.documentName ?? '').toLowerCase();
     return lower.endsWith('.png') ||
         lower.endsWith('.jpg') ||
-        lower.endsWith('.jpeg');
+        lower.endsWith('.jpeg') ||
+        name.endsWith('.png') ||
+        name.endsWith('.jpg') ||
+        name.endsWith('.jpeg');
   }
 
-  bool get _isPdf => widget.documentUrl.toLowerCase().endsWith('.pdf');
-
-  String get _resolvedUrl => ApiConfig.resolveMediaUrl(widget.documentUrl);
-
-  bool get _canTryImagePreview {
-    if (!_isImage || _imagePreviewFailed) {
-      return false;
-    }
-
-    final uri = Uri.tryParse(_resolvedUrl);
-    if (uri == null || !uri.hasScheme || !uri.hasAuthority) {
-      return false;
-    }
-
-    return uri.path.contains('/uploads/supplier-verification/');
+  bool get _isPdf {
+    final lower = widget.documentUrl.toLowerCase();
+    final name = (widget.documentName ?? '').toLowerCase();
+    return lower.endsWith('.pdf') || name.endsWith('.pdf');
   }
 
   String get _displayName {
@@ -1994,13 +1998,97 @@ class _VerificationDocumentCardState extends State<_VerificationDocumentCard> {
     return Icons.insert_drive_file_outlined;
   }
 
-  void _openDocument() {
-    ApiConfig.openExternalDocument(widget.documentUrl);
+  @override
+  void initState() {
+    super.initState();
+    if (_isImage) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(_loadImagePreview());
+      });
+    }
+  }
+
+  Future<AdminVerificationDocumentBytes> _downloadDocument() {
+    return ref
+        .read(adminSupplierVerificationsApiProvider)
+        .downloadVerificationDocument(widget.verificationId);
+  }
+
+  Future<void> _loadImagePreview() async {
+    if (!_isImage || _imagePreviewFailed || _isLoadingPreview) {
+      return;
+    }
+
+    setState(() => _isLoadingPreview = true);
+
+    try {
+      final document = await _downloadDocument();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _previewBytes = Uint8List.fromList(document.bytes);
+        _previewMimeType = document.mimeType;
+        _isLoadingPreview = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _imagePreviewFailed = true;
+        _isLoadingPreview = false;
+      });
+    }
+  }
+
+  Future<void> _openDocument() async {
+    if (_isOpening) {
+      return;
+    }
+
+    setState(() => _isOpening = true);
+
+    try {
+      final document = _previewBytes != null
+          ? AdminVerificationDocumentBytes(
+              bytes: _previewBytes!,
+              mimeType: _previewMimeType ?? 'application/octet-stream',
+              filename: _displayName,
+            )
+          : await _downloadDocument();
+
+      if (!mounted) {
+        return;
+      }
+
+      openAdminVerificationDocumentBytes(
+        bytes: document.bytes,
+        mimeType: document.mimeType,
+        filename: document.filename,
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final message = error is ApiException
+          ? error.message
+          : 'Unable to open verification document.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isOpening = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final showImagePreview =
+        _isImage && !_imagePreviewFailed && _previewBytes != null;
 
     return _VerificationSectionCard(
       title: 'Verification document',
@@ -2008,11 +2096,11 @@ class _VerificationDocumentCardState extends State<_VerificationDocumentCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (_canTryImagePreview)
+          if (showImagePreview)
             ClipRRect(
               borderRadius: AppRadius.mdAll,
-              child: Image.network(
-                _resolvedUrl,
+              child: Image.memory(
+                _previewBytes!,
                 height: 140,
                 width: double.infinity,
                 fit: BoxFit.cover,
@@ -2027,6 +2115,21 @@ class _VerificationDocumentCardState extends State<_VerificationDocumentCard> {
                     label: _typeLabel,
                   );
                 },
+              ),
+            )
+          else if (_isImage && _isLoadingPreview)
+            Container(
+              height: 120,
+              width: double.infinity,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: colors.surfaceMuted,
+                borderRadius: AppRadius.mdAll,
+              ),
+              child: const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
             )
           else
@@ -2047,10 +2150,16 @@ class _VerificationDocumentCardState extends State<_VerificationDocumentCard> {
             runSpacing: AppSpacing.sm,
             children: [
               OutlinedButton.icon(
-                onPressed: _openDocument,
-                icon: Icon(
-                  _isPdf ? Icons.open_in_new : Icons.open_in_full_outlined,
-                ),
+                onPressed: _isOpening ? null : _openDocument,
+                icon: _isOpening
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        _isPdf ? Icons.open_in_new : Icons.open_in_full_outlined,
+                      ),
                 label: Text(_isPdf ? 'Open PDF' : 'Open full image'),
               ),
             ],

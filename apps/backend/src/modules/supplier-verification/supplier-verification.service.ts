@@ -6,6 +6,7 @@ import {
   normalizeSupplierVerificationStatus,
   requiresOrganizationVerification,
 } from '../supplier/supplier-verification.status.js';
+import { resolveLocalSupplierVerificationDocument } from '../uploads/verification-uploads.storage.js';
 
 import * as repository from './supplier-verification.repository.js';
 import type {
@@ -68,6 +69,30 @@ export const getSupplierVerificationStatus = async (userId: string) => {
   }
 
   return mapStatusDto(profile);
+};
+
+export const getSupplierVerificationDocumentForOwner = async (userId: string) => {
+  const profile = await repository.findSupplierVerificationContext(userId);
+
+  if (!profile) {
+    throw new AppError('Supplier profile not found', 404, 'NOT_FOUND');
+  }
+
+  if (!requiresOrganizationVerification(profile.supplierType)) {
+    throw new AppError(
+      'Verification documents are only available for organization suppliers.',
+      404,
+      'NOT_FOUND',
+    );
+  }
+
+  return {
+    document: resolveLocalSupplierVerificationDocument(
+      profile.organizationProfile?.verificationDocumentUrl,
+    ),
+    downloadName:
+      profile.organizationProfile?.verificationDocumentName ?? null,
+  };
 };
 
 export const submitSupplierVerification = async (

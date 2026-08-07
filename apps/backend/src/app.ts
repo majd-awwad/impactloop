@@ -50,7 +50,6 @@ import {
 } from './modules/uploads/profile-uploads.storage.js';
 import {
   ensureSupplierVerificationUploadsDir,
-  SUPPLIER_VERIFICATION_UPLOADS_DIR,
 } from './modules/uploads/verification-uploads.storage.js';
 import {
   ensureBuildCompletionUploadsDir,
@@ -104,10 +103,8 @@ export const createApp = (options: CreateAppOptions): Express => {
   );
   app.use('/uploads/materials', express.static(MATERIAL_UPLOADS_DIR));
   app.use('/uploads/profiles', express.static(PROFILE_UPLOADS_DIR));
-  app.use(
-    '/uploads/supplier-verification',
-    express.static(SUPPLIER_VERIFICATION_UPLOADS_DIR),
-  );
+  // Supplier verification documents are identity/business PII — never serve via
+  // anonymous express.static. Use authenticated owner/admin download endpoints.
   app.use('/uploads/build-completion', express.static(BUILD_COMPLETION_UPLOADS_DIR));
   // Raw body required for mock payment webhook HMAC verification.
   if (env.paymentMockRoutesEnabled) {

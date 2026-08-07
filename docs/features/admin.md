@@ -75,7 +75,7 @@ Mounted at `/api/admin` and guarded by `ADMIN`.
 |------|-----------|
 | Dashboard | `GET /dashboard` |
 | Invitations | `GET/POST /invitations`, `POST /invitations/:id/resend`, `PATCH /invitations/:id/revoke` |
-| Supplier verification | `GET /supplier-verifications`, `GET /supplier-verifications/:id`, `PATCH /supplier-verifications/:id/approve|reject|request-changes` |
+| Supplier verification | `GET /supplier-verifications`, `GET /supplier-verifications/:id`, `GET /supplier-verifications/:id/document`, `PATCH /supplier-verifications/:id/approve|reject|request-changes` |
 | Approvals | `GET /approvals/summary`, `GET /approvals/category-requests`, `PATCH /approvals/category-requests/:id/approve|reject`, `GET /approvals/price-requests`, `PATCH /approvals/price-requests/:id/approve|reject` |
 | Materials | `GET /materials/summary`, `GET /materials`, `GET /materials/:id`, `PATCH /materials/:id/hide|mark-unavailable|restore` |
 | Material reports | `GET /material-reports`, `GET /material-reports/:id`, `PATCH /material-reports/:id/resolve|reject|hide-material` |
