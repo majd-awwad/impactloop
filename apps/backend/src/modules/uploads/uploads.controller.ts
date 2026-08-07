@@ -22,7 +22,7 @@ export const uploadProfileImageHandler = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const image = mapUploadedProfileImage(req.file);
+  const image = await mapUploadedProfileImage(req.file, req.auth!.sub);
 
   res.status(201).json(successResponse('Profile image uploaded.', { image }));
 };
@@ -32,7 +32,7 @@ export const uploadSupplierVerificationDocumentHandler = async (
   res: Response,
 ): Promise<void> => {
   const file = req.file;
-  const document = mapUploadedVerificationDocument(file);
+  const document = await mapUploadedVerificationDocument(file, req.auth!.sub);
 
   res
     .status(201)

@@ -65,6 +65,7 @@ import {
   resolveSupplierContext,
 } from "./supplier-material-scope.js";
 import { assertSupplierCanPublishMaterials } from "../supplier-verification/supplier-verification.service.js";
+import { deleteReplacedProfileUpload } from "../uploads/local-upload-cleanup.js";
 import {
   computeAvailableQuantity,
   getHeldQuantitiesByMaterialIds,
@@ -1838,6 +1839,21 @@ export const updateSupplierProfileImages = async (
   }
 
   await supplierRepository.updateSupplierProfileImages(userId, input);
+
+  if (input.avatarImageUrl !== undefined) {
+    deleteReplacedProfileUpload(
+      existing.supplierProfile?.avatarImageUrl,
+      input.avatarImageUrl,
+    );
+  }
+
+  if (input.coverImageUrl !== undefined) {
+    deleteReplacedProfileUpload(
+      existing.supplierProfile?.coverImageUrl,
+      input.coverImageUrl,
+    );
+  }
+
   return getSupplierProfile(userId);
 };
 

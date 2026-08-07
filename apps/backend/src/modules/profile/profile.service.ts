@@ -2,6 +2,7 @@ import { AppError } from '../../utils/app-error.js';
 
 import { getAuthenticatedUser, type UserSummary } from '../auth/auth.service.js';
 import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
+import { deleteReplacedProfileUpload } from '../uploads/local-upload-cleanup.js';
 
 import * as profileRepository from './profile.repository.js';
 
@@ -59,6 +60,13 @@ export const updateProfileForUser = async (
     phone: nextPhone,
     clearPhoneVerifiedAt: phoneChanged,
   });
+
+  if (parsed.profileImageUrl !== undefined) {
+    deleteReplacedProfileUpload(
+      existing.profileImageUrl,
+      parsed.profileImageUrl,
+    );
+  }
 
   return getAuthenticatedUser(userId);
 };
