@@ -8,6 +8,7 @@ import {
   parseRecommendationScorerVersion,
   type RecommendationScorerVersion,
 } from './recommendation-scoring-version.js';
+import { resolveJwtSecretsConfig } from './jwt-secrets.env.js';
 import { resolvePaymentRuntimeConfig } from '../modules/payments/payments.env.js';
 
 const backendRoot = path.resolve(
@@ -600,6 +601,8 @@ export const resolveRecommendationMlRuntimeConfig = (
 
 const recommendationMlRuntime = resolveRecommendationMlRuntimeConfig(process.env);
 
+const jwtSecrets = resolveJwtSecretsConfig(process.env);
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   serviceName: process.env.SERVICE_NAME?.trim() || 'impactloop-api',
@@ -614,8 +617,8 @@ export const env = {
     .map((origin) => origin.trim())
     .filter(Boolean),
   databaseUrl: requireEnv('DATABASE_URL'),
-  jwtAccessSecret: requireEnv('JWT_ACCESS_SECRET', 'dev-access-secret-change-me'),
-  jwtRefreshSecret: requireEnv('JWT_REFRESH_SECRET', 'dev-refresh-secret-change-me'),
+  jwtAccessSecret: jwtSecrets.jwtAccessSecret,
+  jwtRefreshSecret: jwtSecrets.jwtRefreshSecret,
   jwtAccessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN ?? '15m',
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
   passwordResetExpiresIn: process.env.PASSWORD_RESET_EXPIRES_IN ?? '30m',
