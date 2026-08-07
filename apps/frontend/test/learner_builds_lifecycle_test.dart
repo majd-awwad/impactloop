@@ -356,7 +356,7 @@ void main() {
       adapter.options?.extra['skipAuthRefresh'],
       isTrue,
     );
-    expect(photo.imageUrl, '/uploads/build-completion/photo-1.jpg');
+    expect(photo.imageUrl, '/api/learner/builds/build-1/completion-story/photos/photo-1/content');
   });
 
   test('completion photo upload error avoids generic something went wrong', () {
@@ -415,7 +415,7 @@ class _CompletionPhotoUploadAdapter implements HttpClientAdapter {
     path = options.path;
     formData = options.data as FormData?;
     return ResponseBody.fromString(
-      '{"success":true,"data":{"photo":{"id":"photo-1","imageUrl":"/uploads/build-completion/photo-1.jpg","sortOrder":0}}}',
+      '{"success":true,"data":{"photo":{"id":"photo-1","imageUrl":"/api/learner/builds/build-1/completion-story/photos/photo-1/content","sortOrder":0}}}',
       200,
       headers: {
         Headers.contentTypeHeader: [Headers.jsonContentType],

@@ -15,6 +15,7 @@ import type { ListLearnerBuildsQuery } from './learner-builds.validation.js';
 import {
   addProjectBuildCompletionPhoto,
   deleteProjectBuildCompletionPhoto,
+  getProjectBuildCompletionPhotoForDownload,
   getProjectBuildCompletionStory,
   upsertProjectBuildCompletionStory,
 } from '../learning-projects/project-build-completion-story.js';
@@ -130,6 +131,28 @@ export const deleteCompletionPhotoHandler = async (req: Request, res: Response) 
   await deleteProjectBuildCompletionPhoto(buildId, req.auth!.sub, photoId);
 
   res.status(204).send();
+};
+
+export const downloadCompletionPhotoHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { buildId, photoId } = readValidatedParams<{
+    buildId: string;
+    photoId: string;
+  }>(req);
+
+  const { image, contentDisposition } =
+    await getProjectBuildCompletionPhotoForDownload(
+      buildId,
+      req.auth!.sub,
+      photoId,
+    );
+
+  res.setHeader('Content-Type', image.mimeType);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('Content-Disposition', contentDisposition);
+  res.sendFile(image.absolutePath);
 };
 
 export const getProjectBuildNotebookHandler = async (req: Request, res: Response) => {

@@ -7,9 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
-import '../../../../core/config/api_config.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/protected_media_image.dart';
 import '../../../learner_builds/application/learner_builds_providers.dart';
 import '../../../learner_builds/data/learner_builds_api.dart';
 import '../../../learner_builds/presentation/l10n/learner_builds_l10n.dart';
@@ -587,12 +587,12 @@ class _CompletionPhotoTile extends StatelessWidget {
       children: [
         ClipRRect(
           borderRadius: AppRadius.mdAll,
-          child: Image.network(
-            ApiConfig.resolveMediaUrl(photo.imageUrl),
+          child: ProtectedMediaImage(
+            url: photo.imageUrl,
             width: 96,
             height: 96,
             fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => const SizedBox(
+            errorBuilder: (_) => const SizedBox(
               width: 96,
               height: 96,
               child: ColoredBox(color: Colors.black12),

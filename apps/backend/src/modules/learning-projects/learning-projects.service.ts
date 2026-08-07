@@ -16,6 +16,7 @@ import {
 } from '../ai/ai.repository.js';
 
 import { deriveAuthoringDraftFields } from './learning-projects.authoring-draft-fields.js';
+import { buildCompletionPhotoContentPath } from './build-completion-uploads.storage.js';
 
 import * as learningProjectsRepository from './learning-projects.repository.js';
 import {
@@ -671,7 +672,7 @@ const mapProjectBuild = async (build: ProjectBuildRecord) => {
           updatedAt: build.completionStory.updatedAt.toISOString(),
           photos: build.completionStory.photos.map((photo) => ({
             id: photo.id,
-            imageUrl: photo.imageUrl,
+            imageUrl: buildCompletionPhotoContentPath(build.id, photo.id),
             caption: photo.caption,
             sortOrder: photo.sortOrder,
           })),

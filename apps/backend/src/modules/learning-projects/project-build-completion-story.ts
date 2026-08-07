@@ -3,25 +3,33 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 
+import { safeUnlink } from '../uploads/secure-upload.js';
+import { buildInlineContentDisposition } from '../uploads/verification-uploads.storage.js';
+
 import {
+  buildCompletionPhotoContentPath,
   isAllowedBuildCompletionImageMime,
   publicBuildCompletionImageUrl,
+  resolveLocalBuildCompletionImage,
 } from './build-completion-uploads.storage.js';
 
 export const COMPLETION_STORY_MAX_REFLECTION_LENGTH = 3000;
 export const COMPLETION_STORY_MAX_CAPTION_LENGTH = 120;
 export const COMPLETION_STORY_MAX_PHOTOS = 6;
 
-const mapCompletionPhoto = (photo: {
-  id: string;
-  imageUrl: string;
-  caption: string | null;
-  sortOrder: number;
-  createdAt: Date;
-  updatedAt: Date;
-}) => ({
+const mapCompletionPhoto = (
+  buildId: string,
+  photo: {
+    id: string;
+    imageUrl: string;
+    caption: string | null;
+    sortOrder: number;
+    createdAt: Date;
+    updatedAt: Date;
+  },
+) => ({
   id: photo.id,
-  imageUrl: photo.imageUrl,
+  imageUrl: buildCompletionPhotoContentPath(buildId, photo.id),
   caption: photo.caption,
   sortOrder: photo.sortOrder,
   createdAt: photo.createdAt.toISOString(),
@@ -29,6 +37,7 @@ const mapCompletionPhoto = (photo: {
 });
 
 export const mapCompletionStory = (
+  buildId: string,
   story: Prisma.ProjectBuildCompletionStoryGetPayload<{
     include: { photos: true };
   }> | null,
@@ -43,7 +52,7 @@ export const mapCompletionStory = (
     updatedAt: story.updatedAt.toISOString(),
     photos: story.photos
       .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map(mapCompletionPhoto),
+      .map((photo) => mapCompletionPhoto(buildId, photo)),
   };
 };
 
@@ -90,7 +99,7 @@ export const getProjectBuildCompletionStory = async (
     },
   });
 
-  return mapCompletionStory(story);
+  return mapCompletionStory(buildId, story);
 };
 
 export const upsertProjectBuildCompletionStory = async (
@@ -140,7 +149,41 @@ export const upsertProjectBuildCompletionStory = async (
     },
   });
 
-  return mapCompletionStory(story);
+  return mapCompletionStory(buildId, story);
+};
+
+export const getProjectBuildCompletionPhotoForDownload = async (
+  buildId: string,
+  learnerId: string,
+  photoId: string,
+) => {
+  const build = await prisma.projectBuild.findFirst({
+    where: { id: buildId, learnerId },
+    select: { id: true },
+  });
+
+  if (!build) {
+    throw new AppError('Project build not found.', 404, 'BUILD_NOT_FOUND');
+  }
+
+  const photo = await prisma.projectBuildCompletionPhoto.findFirst({
+    where: {
+      id: photoId,
+      story: { buildId },
+    },
+    select: { imageUrl: true },
+  });
+
+  if (!photo) {
+    throw new AppError('Completion photo not found.', 404, 'NOT_FOUND');
+  }
+
+  const image = resolveLocalBuildCompletionImage(photo.imageUrl);
+
+  return {
+    image,
+    contentDisposition: buildInlineContentDisposition(image.filename),
+  };
 };
 
 export const addProjectBuildCompletionPhoto = async (
@@ -201,7 +244,7 @@ export const addProjectBuildCompletionPhoto = async (
       data: { updatedAt: new Date() },
     });
 
-    return mapCompletionPhoto(photo);
+    return mapCompletionPhoto(buildId, photo);
   });
 };
 
@@ -221,15 +264,27 @@ export const deleteProjectBuildCompletionPhoto = async (
     throw new AppError('Completion photo not found.', 404, 'NOT_FOUND');
   }
 
-  const deleted = await prisma.projectBuildCompletionPhoto.deleteMany({
+  const photo = await prisma.projectBuildCompletionPhoto.findFirst({
     where: {
       id: photoId,
       storyId: story.id,
     },
+    select: { id: true, imageUrl: true },
   });
 
-  if (deleted.count === 0) {
+  if (!photo) {
     throw new AppError('Completion photo not found.', 404, 'NOT_FOUND');
+  }
+
+  await prisma.projectBuildCompletionPhoto.delete({
+    where: { id: photo.id },
+  });
+
+  try {
+    const resolved = resolveLocalBuildCompletionImage(photo.imageUrl);
+    await safeUnlink(resolved.absolutePath);
+  } catch {
+    // File may already be missing; DB row is removed.
   }
 
   const remaining = await prisma.projectBuildCompletionPhoto.findMany({
