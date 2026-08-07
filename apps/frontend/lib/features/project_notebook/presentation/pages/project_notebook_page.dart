@@ -22,9 +22,14 @@ const _kPageRailWidth = 250.0;
 const _kNotesMinHeight = 420.0;
 
 class ProjectNotebookPage extends ConsumerStatefulWidget {
-  const ProjectNotebookPage({super.key, required this.buildId});
+  const ProjectNotebookPage({
+    super.key,
+    required this.buildId,
+    this.initialPageId,
+  });
 
   final String buildId;
+  final String? initialPageId;
 
   @override
   ConsumerState<ProjectNotebookPage> createState() => _ProjectNotebookPageState();
@@ -41,6 +46,7 @@ class _ProjectNotebookPageState extends ConsumerState<ProjectNotebookPage> {
   double _selectedWidth = notebookStrokeWidths[1];
   _NotebookEditorMode _editorMode = _NotebookEditorMode.notes;
   bool _exportingPdf = false;
+  bool _appliedInitialPage = false;
 
   @override
   void dispose() {
@@ -201,6 +207,12 @@ class _ProjectNotebookPageState extends ConsumerState<ProjectNotebookPage> {
 
         final initialLoad =
             previous?.isInitialized != true && next.isInitialized;
+        if (initialLoad &&
+            !_appliedInitialPage &&
+            widget.initialPageId != null) {
+          _appliedInitialPage = true;
+          controller.selectPageIfExists(widget.initialPageId!);
+        }
         final pageChanged = previous?.selectedPageId != next.selectedPageId;
         if (initialLoad || pageChanged) {
           _syncControllersForPage(next.selectedPage!, force: true);

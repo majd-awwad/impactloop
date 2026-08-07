@@ -12,6 +12,7 @@ import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../learning_hub/domain/models/project_build.dart';
 import '../../../project_notebook/presentation/l10n/project_notebook_l10n.dart';
+import '../../../project_help_sessions/presentation/widgets/build_help_session_icon_button.dart';
 import '../../data/models/learner_build_models.dart';
 import '../l10n/learner_builds_l10n.dart';
 
@@ -171,6 +172,11 @@ class LearnerBuildListCard extends StatelessWidget {
                       learnerBuildNotebookRoute(item.id),
                     ),
                     icon: const Icon(Icons.menu_book_outlined),
+                  ),
+                  BuildHelpSessionIconButton(
+                    buildId: item.id,
+                    projectId: item.projectId,
+                    status: item.status,
                   ),
                   Icon(
                     Icons.chevron_right_rounded,

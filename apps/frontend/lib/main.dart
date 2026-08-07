@@ -10,10 +10,12 @@ import 'core/network/api_client.dart';
 import 'features/learning_hub/application/learning_hub_providers.dart';
 import 'features/learning_hub/data/api_learning_hub_repository.dart';
 import 'features/materials/data/material_listing_data_providers.dart';
+import 'features/project_help_sessions/application/project_help_session_timezone.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
+  ensureProjectHelpSessionTimezonesInitialized();
   // Ensure context.push updates the browser URL (e.g. /profile/account →
   // /notifications). go_router defaults to leaving the URL on the base route.
   GoRouter.optionURLReflectsImperativeAPIs = true;

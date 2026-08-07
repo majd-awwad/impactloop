@@ -472,6 +472,22 @@ enum ProjectBuildStatus {
   ARCHIVED
 }
 
+enum ProjectHelpSessionStatus {
+  PENDING
+  ALTERNATIVE_PROPOSED
+  ZOOM_PENDING
+  SCHEDULING_FAILED
+  SCHEDULED
+  DECLINED
+  CANCELLED
+  COMPLETED
+}
+
+enum ProjectHelpSessionTimeOptionType {
+  LEARNER_PROPOSED
+  AUTHOR_ALTERNATIVE
+}
+
 enum ProjectBuildItemStatus {
   MISSING
   ALREADY_OWNED
@@ -673,6 +689,12 @@ model User {
   learningQuestionFeedback               ProjectBuildLearningQuestionFeedback[] @relation("ProjectBuildLearningQuestionFeedbackLearner")
   paymentOrdersAsPayer                   PaymentOrder[]                         @relation("PaymentOrderPayer")
   paymentCheckoutSessionsAsPayer         PaymentCheckoutSession[]               @relation("PaymentCheckoutSessionPayer")
+  helpSessionOfferingsAuthored           ProjectHelpSessionOffering[]           @relation("ProjectHelpSessionOfferingAuthor")
+  helpSessionsAsLearner                  ProjectHelpSession[]                   @relation("ProjectHelpSessionLearner")
+  helpSessionsAsAuthor                   ProjectHelpSession[]                   @relation("ProjectHelpSessionAuthor")
+  helpSessionsCancelled                  ProjectHelpSession[]                   @relation("ProjectHelpSessionCancelledBy")
+  helpSessionTimeOptionsProposed         ProjectHelpSessionTimeOption[]         @relation("ProjectHelpSessionTimeOptionProposedBy")
+  helpSessionStatusHistoryActions        ProjectHelpSessionStatusHistory[]      @relation("ProjectHelpSessionStatusHistoryActor")
 
   @@index([suspendedById])
   @@index([reactivatedById])
@@ -985,6 +1007,8 @@ model LearningProject {
   comments                 Comment[]
   learnerMaterialRequests  LearnerMaterialRequest[]
   learningPacks            ProjectLearningPack[]
+  helpSessionOffering      ProjectHelpSessionOffering?
+  helpSessions             ProjectHelpSession[]
 
   @@index([categoryId])
   @@index([createdBy])
@@ -1074,6 +1098,7 @@ model ProjectStep {
   approvedByUser    User?                      @relation("ProjectStepApprovedBy", fields: [approvedBy], references: [id], onDelete: SetNull)
   buildProgress     ProjectBuildStepProgress[]
   learningQuestions ProjectLearningQuestion[]
+  helpSessions      ProjectHelpSession[]
 
   @@unique([projectId, stepNumber])
   @@index([projectId])
@@ -1309,6 +1334,7 @@ model ProjectBuild {
   completionSnapshot      ProjectBuildCompletionSnapshot?
   learningSession         ProjectBuildLearningSession?
   notebook                ProjectBuildNotebook?
+  helpSessions            ProjectHelpSession[]
 
   @@unique([projectId, learnerId, attemptNumber])
   @@index([learnerId])
@@ -1366,6 +1392,102 @@ model ProjectBuildNotebook {
   build     ProjectBuild @relation(fields: [buildId], references: [id], onDelete: Cascade)
 
   @@map("project_build_notebooks")
+}
+
+model ProjectHelpSessionOffering {
+  id             String   @id @default(cuid())
+  projectId      String   @unique @map("project_id")
+  authorId       String   @map("author_id")
+  isEnabled      Boolean  @default(false) @map("is_enabled")
+  allow15Minutes Boolean  @default(false) @map("allow_15_minutes")
+  allow30Minutes Boolean  @default(false) @map("allow_30_minutes")
+  weeklyLimit    Int      @default(3) @map("weekly_limit")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  project LearningProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author  User            @relation("ProjectHelpSessionOfferingAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([authorId])
+  @@map("project_help_session_offerings")
+}
+
+model ProjectHelpSession {
+  id                    String                   @id @default(cuid())
+  projectId             String                   @map("project_id")
+  buildId               String                   @map("build_id")
+  learnerId             String                   @map("learner_id")
+  authorId              String                   @map("author_id")
+  projectStepId         String?                  @map("project_step_id")
+  problemDescription    String                   @map("problem_description") @db.Text
+  durationMinutes       Int                      @map("duration_minutes")
+  learnerTimeZone       String                   @map("learner_time_zone")
+  status                ProjectHelpSessionStatus @default(PENDING)
+  activeKey             String?                  @unique @map("active_key")
+  selectedTimeOptionId  String?                  @unique @map("selected_time_option_id")
+  alternativeProposedAt DateTime?                @map("alternative_proposed_at")
+  confirmedAt           DateTime?                @map("confirmed_at")
+  zoomMeetingId         String?                  @unique @map("zoom_meeting_id")
+  zoomJoinUrl           String?                  @map("zoom_join_url")
+  zoomCreatedAt         DateTime?                @map("zoom_created_at")
+  zoomLastFailureCode   String?                  @map("zoom_last_failure_code")
+  zoomLastFailureAt     DateTime?                @map("zoom_last_failure_at")
+  declinedReason        String?                  @map("declined_reason")
+  declinedAt            DateTime?                @map("declined_at")
+  cancelledById         String?                  @map("cancelled_by_id")
+  cancellationReason    String?                  @map("cancellation_reason")
+  cancelledAt           DateTime?                @map("cancelled_at")
+  completedAt           DateTime?                @map("completed_at")
+  createdAt             DateTime                 @default(now()) @map("created_at")
+  updatedAt             DateTime                 @updatedAt @map("updated_at")
+
+  project            LearningProject                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  build              ProjectBuild                      @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  learner            User                              @relation("ProjectHelpSessionLearner", fields: [learnerId], references: [id], onDelete: Restrict)
+  author             User                              @relation("ProjectHelpSessionAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  projectStep        ProjectStep?                      @relation(fields: [projectStepId], references: [id], onDelete: SetNull)
+  cancelledBy        User?                             @relation("ProjectHelpSessionCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+  selectedTimeOption ProjectHelpSessionTimeOption?     @relation("ProjectHelpSessionSelectedTimeOption", fields: [selectedTimeOptionId], references: [id], onDelete: SetNull)
+  timeOptions        ProjectHelpSessionTimeOption[]    @relation("ProjectHelpSessionTimeOptions")
+  statusHistory      ProjectHelpSessionStatusHistory[]
+
+  @@index([learnerId, createdAt])
+  @@index([authorId, status, createdAt])
+  @@index([projectId])
+  @@index([buildId])
+  @@map("project_help_sessions")
+}
+
+model ProjectHelpSessionTimeOption {
+  id           String                           @id @default(cuid())
+  sessionId    String                           @map("session_id")
+  proposedById String                           @map("proposed_by_id")
+  startsAt     DateTime                         @map("starts_at")
+  proposalType ProjectHelpSessionTimeOptionType @default(LEARNER_PROPOSED) @map("proposal_type")
+  createdAt    DateTime                         @default(now()) @map("created_at")
+
+  session            ProjectHelpSession  @relation("ProjectHelpSessionTimeOptions", fields: [sessionId], references: [id], onDelete: Cascade)
+  proposedBy         User                @relation("ProjectHelpSessionTimeOptionProposedBy", fields: [proposedById], references: [id], onDelete: Restrict)
+  selectedForSession ProjectHelpSession? @relation("ProjectHelpSessionSelectedTimeOption")
+
+  @@index([sessionId, startsAt])
+  @@map("project_help_session_time_options")
+}
+
+model ProjectHelpSessionStatusHistory {
+  id         String                    @id @default(cuid())
+  sessionId  String                    @map("session_id")
+  fromStatus ProjectHelpSessionStatus? @map("from_status")
+  toStatus   ProjectHelpSessionStatus  @map("to_status")
+  actorId    String?                   @map("actor_id")
+  reason     String?
+  createdAt  DateTime                  @default(now()) @map("created_at")
+
+  session ProjectHelpSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  actor   User?              @relation("ProjectHelpSessionStatusHistoryActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId, createdAt])
+  @@map("project_help_session_status_history")
 }
 
 model ProjectLearningPack {

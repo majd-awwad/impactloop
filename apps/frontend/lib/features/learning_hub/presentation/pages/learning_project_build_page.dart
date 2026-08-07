@@ -35,6 +35,7 @@ import '../widgets/project_build_item_display.dart';
 import '../../../learner_builds/application/learner_builds_providers.dart';
 import '../../../learner_builds/presentation/l10n/learner_builds_l10n.dart';
 import '../../../project_notebook/presentation/l10n/project_notebook_l10n.dart';
+import '../../../project_help_sessions/presentation/widgets/build_help_session_section.dart';
 import '../widgets/project_build_material_linking.dart';
 import '../widgets/project_build_completion_story_section.dart';
 import '../../application/learning_session_providers.dart';
@@ -1504,6 +1505,11 @@ class _BuildContent extends StatelessWidget {
                   projectId: projectId,
                   buildRecord: buildRecord,
                 ),
+              ],
+              if (buildRecord.status == ProjectBuildStatus.inProgress ||
+                  buildRecord.status == ProjectBuildStatus.paused) ...[
+                const SizedBox(height: AppSpacing.lg),
+                BuildHelpSessionSection(buildRecord: buildRecord),
               ],
               const SizedBox(height: AppSpacing.lg),
               _MaterialsSection(

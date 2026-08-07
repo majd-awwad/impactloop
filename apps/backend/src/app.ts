@@ -28,6 +28,7 @@ import { learnerHomeRouter } from './modules/learner-home/learner-home.routes.js
 import { learnerMaterialRequestsRouter } from './modules/learner-material-requests/learner-material-requests.routes.js';
 import { learnerProfileSummaryRouter } from './modules/learner-profile-summary/learner-profile-summary.routes.js';
 import { learnerBuildsRouter } from './modules/learner-builds/learner-builds.routes.js';
+import { projectHelpSessionsRouter } from './modules/project-help-sessions/project-help-session-sessions.routes.js';
 import { aiRouter } from './modules/ai/ai.routes.js';
 import {
   bindRecommendationEventOriginMiddleware,
@@ -142,6 +143,7 @@ export const createApp = (options: CreateAppOptions): Express => {
   app.use('/api/learner', learnerHomeRouter);
   app.use('/api/learner', learnerProfileSummaryRouter);
   app.use('/api/learner', learnerBuildsRouter);
+  app.use('/api/project-help-sessions', projectHelpSessionsRouter);
   app.use('/api/ai/v1', aiRouter);
   app.use('/api/notifications', notificationsRouter);
   app.use('/api/suppliers', publicSuppliersRouter);

@@ -165,6 +165,18 @@ class ProjectNotebookController extends Notifier<ProjectNotebookState> {
     state = state.copyWith(selectedPageId: pageId);
   }
 
+  void selectPageIfExists(String pageId) {
+    final doc = state.document;
+    if (doc == null) {
+      return;
+    }
+    final exists = doc.pages.any((page) => page.id == pageId);
+    if (!exists) {
+      return;
+    }
+    selectPage(pageId);
+  }
+
   void updatePageTitle(String pageId, String title) {
     _pendingSaveErrorKind = NotebookSaveErrorKind.general;
     _mutatePage(pageId, (page) => page.copyWith(

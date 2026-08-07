@@ -30,6 +30,15 @@ void showInfoSnackBar(BuildContext context, String message) {
   );
 }
 
+void showSuccessSnackBar(BuildContext context, String message) {
+  _showFeedbackSnackBar(
+    context,
+    message: message,
+    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+    foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+  );
+}
+
 void _showFeedbackSnackBar(
   BuildContext context, {
   required String message,

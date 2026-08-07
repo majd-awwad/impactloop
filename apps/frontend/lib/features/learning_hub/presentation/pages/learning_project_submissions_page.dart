@@ -9,7 +9,6 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
-import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/utils/content_text_direction.dart';
 import '../../../../shared/widgets/app_dropdown_field.dart';
 import '../../../../shared/widgets/app_empty_state_card.dart';
@@ -31,6 +30,9 @@ import '../../../ai/application/ai_chat_controller.dart';
 import '../../../ai/domain/ai_models.dart';
 import '../../domain/models/learning_project_draft_component.dart';
 import '../../domain/models/learning_project_step_text.dart';
+import '../../../project_help_sessions/application/project_help_sessions_providers.dart';
+import '../../../project_help_sessions/presentation/l10n/project_help_sessions_l10n.dart';
+import '../../../project_help_sessions/presentation/widgets/submission_help_session_settings_entry.dart';
 import '../../domain/models/learning_project_submission.dart';
 import '../models/authoring_workspace_state.dart';
 import '../theme/learning_ui_palette.dart';
@@ -141,6 +143,11 @@ class _LearningProjectSubmissionsPageState
     final submissionsAsync = ref.watch(
       myLearningProjectSubmissionsProvider(_query),
     );
+    final showHelpRequestsEntry =
+        ref.watch(hasAuthoredProjectSubmissionsProvider).maybeWhen(
+              data: (value) => value,
+              orElse: () => false,
+            );
 
     return Scaffold(
       backgroundColor: palette.pageBackground,
@@ -165,6 +172,7 @@ class _LearningProjectSubmissionsPageState
                 data: (result) => _SubmissionsContent(
                   result: result,
                   selectedStatus: _status,
+                  showHelpRequestsEntry: showHelpRequestsEntry,
                   onStatusChanged: (status) {
                     setState(() {
                       _status = status;
@@ -186,12 +194,14 @@ class _SubmissionsContent extends StatelessWidget {
   const _SubmissionsContent({
     required this.result,
     required this.selectedStatus,
+    required this.showHelpRequestsEntry,
     required this.onStatusChanged,
     required this.onPageChanged,
   });
 
   final LearningProjectSubmissionsResult result;
   final LearningProjectSubmissionStatus? selectedStatus;
+  final bool showHelpRequestsEntry;
   final ValueChanged<LearningProjectSubmissionStatus?> onStatusChanged;
   final ValueChanged<int> onPageChanged;
 
@@ -245,6 +255,15 @@ class _SubmissionsContent extends StatelessWidget {
                     icon: const Icon(Icons.add_rounded),
                     label: const Text('Submit new project'),
                   ),
+                  if (showHelpRequestsEntry)
+                    OutlinedButton.icon(
+                      onPressed: () => context.push(creatorHelpSessionsRoute),
+                      icon: const Icon(Icons.support_agent_outlined),
+                      label: Text(
+                        ProjectHelpSessionsL10n.submissionsHelpRequestsAction
+                            .resolve(context),
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -604,6 +623,7 @@ class _SubmissionDetailContentState extends ConsumerState<_SubmissionDetailConte
                     ],
                     const SizedBox(height: AppSpacing.lg),
                     _SubmissionActions(submission: submission),
+                    SubmissionHelpSessionSettingsEntry(submission: submission),
                   ],
                 ),
               ),

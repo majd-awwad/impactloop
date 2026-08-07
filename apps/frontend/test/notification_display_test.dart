@@ -129,7 +129,7 @@ void main() {
         notificationTypeChipLabel(NotificationVisualCategory.general),
         'Update',
       );
-      expect(notificationActionLabel(notification), 'Open');
+      expect(notificationActionLabel(notification), '');
       expect(notificationHasNavigationTarget(notification), isFalse);
       expect(driverDeliveryNotificationRoute(notification), isNull);
     });
