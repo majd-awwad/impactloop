@@ -43,7 +43,10 @@ Terminal reservations and fulfilled requests do not block archival.
 
 - Reflection (max 3000 chars), caption (max 120), up to 6 photos (JPG/PNG/WebP).
 - Editable after completion; does not change build readiness or completion date.
-- Photos stored under `/uploads/build-completion/` (local dev).
+- Photos stored under `uploads/build-completion/` on disk (local dev) but are **private**:
+  only the owning learner can fetch them via authenticated
+  `GET /api/learner/builds/:buildId/completion-story/photos/:photoId/content`.
+  They are not served from `/uploads/build-completion/` (no public static route).
 
 ### Impact summary
 
@@ -93,6 +96,7 @@ Public portfolio sharing is **not** implemented.
 | POST | `/api/learner/builds/:buildId/archive` | Archive with blocker checks |
 | PATCH | `/api/learner/builds/:buildId/completion-story` | Update reflection/caption |
 | POST | `/api/learner/builds/:buildId/completion-story/photos` | Upload photo |
+| GET | `/api/learner/builds/:buildId/completion-story/photos/:photoId/content` | Download photo (owner only, auth required) |
 | DELETE | `/api/learner/builds/:buildId/completion-story/photos/:photoId` | Remove photo |
 
 ## Migration

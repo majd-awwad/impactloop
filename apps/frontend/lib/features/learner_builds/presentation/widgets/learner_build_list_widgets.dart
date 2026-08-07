@@ -6,7 +6,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
-import '../../../../core/config/api_config.dart';
+import '../../../../shared/widgets/protected_media_image.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../../shared/models/localized_text.dart';
@@ -427,10 +427,10 @@ class _BuildCoverImage extends StatelessWidget {
                   color: palette.textSecondary,
                 ),
               )
-            : Image.network(
-                ApiConfig.resolveMediaUrl(resolved),
+            : ProtectedMediaImage(
+                url: resolved,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => ColoredBox(
+                errorBuilder: (_) => ColoredBox(
                   color: palette.borderSubtle,
                   child: Icon(
                     Icons.handyman_outlined,

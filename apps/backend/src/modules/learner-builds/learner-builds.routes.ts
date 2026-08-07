@@ -10,6 +10,7 @@ import { buildCompletionPhotoUploadMiddleware } from './build-completion-uploads
 import {
   archiveLearnerBuildHandler,
   deleteCompletionPhotoHandler,
+  downloadCompletionPhotoHandler,
   getCompletionStoryHandler,
   getLearnerBuildHandler,
   getLearnerPortfolioHandler,
@@ -114,6 +115,15 @@ learnerBuildsRouter.post(
   buildCompletionPhotoUploadMiddleware,
   validate(completionPhotoCaptionSchema),
   asyncHandler(uploadCompletionPhotoHandler),
+);
+
+learnerBuildsRouter.get(
+  '/builds/:buildId/completion-story/photos/:photoId/content',
+  privateNoStoreMiddleware,
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learnerBuildPhotoIdParamSchema, 'params'),
+  asyncHandler(downloadCompletionPhotoHandler),
 );
 
 learnerBuildsRouter.delete(

@@ -1,6 +1,8 @@
 import type { ProjectBuildStatus } from '../../generated/prisma/client.js';
 
-import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
+import {
+  buildCompletionPhotoContentPath,
+} from '../learning-projects/build-completion-uploads.storage.js';
 import {
   archiveProjectBuild,
   findOwnedBuildById,
@@ -24,7 +26,10 @@ const mapListItemBase = (build: ListBuildRow) => {
     | Record<string, unknown>
     | undefined;
   const story = build.completionStory;
-  const previewPhoto = story?.photos[0]?.imageUrl ?? null;
+  const firstPhoto = story?.photos[0];
+  const previewPhoto = firstPhoto
+    ? buildCompletionPhotoContentPath(build.id, firstPhoto.id)
+    : null;
 
   return {
     id: build.id,

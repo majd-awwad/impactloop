@@ -438,7 +438,7 @@ export const listLearnerBuilds = async (input: {
             photos: {
               orderBy: { sortOrder: 'asc' },
               take: 1,
-              select: { imageUrl: true },
+              select: { id: true, imageUrl: true },
             },
           },
         },
