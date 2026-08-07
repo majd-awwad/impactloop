@@ -31,7 +31,9 @@ import {
 import * as supplierReservationsRepository from './supplier-reservations.repository.js';
 import {
   mapPreferredWindowsForResponse,
+  parsePreferredWindowsJson,
   resolvePreferredWindowByIndex,
+  computeEarliestDeliveryStart,
 } from './supplier-reservation-scheduling.js';
 import {
   assertValidPickupWindow,
@@ -69,6 +71,7 @@ import {
   notifyReservationAccepted,
   notifyReservationDeclined,
 } from '../notifications/reservation-notifications.js';
+import { notifyPaymentRequiredAfterAcceptance } from '../payments/payments.notifications.js';
 import { notifyNewJobForReservationWaitingDelivery } from '../notifications/driver-notification-events.service.js';
 import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 import { classifyAdminReportContract } from '../admin-no-show-reports/admin-no-show-reports.classifier.js';
@@ -525,8 +528,11 @@ export const mapSupplierReservation = (
       reservation.confirmedDeliveryWindowStart?.toISOString() ?? null,
     confirmedDeliveryWindowEnd:
       reservation.confirmedDeliveryWindowEnd?.toISOString() ?? null,
-    earliestDeliveryStart:
-      reservation.earliestDeliveryStart?.toISOString() ?? null,
+    earliestDeliveryStart: reservation.supplierPickupWindowStart
+      ? computeEarliestDeliveryStart(
+          reservation.supplierPickupWindowStart,
+        ).toISOString()
+      : (reservation.earliestDeliveryStart?.toISOString() ?? null),
     schedulingConflictReason: reservation.schedulingConflictReason,
     activeDelivery: latestDelivery
       ? {
@@ -606,7 +612,11 @@ export const mapSupplierReservation = (
       pendingReschedule,
       recoveryContext,
       schedulingConflictReason: reservation.schedulingConflictReason,
-      earliestDeliveryStart: reservation.earliestDeliveryStart?.toISOString() ?? null,
+      earliestDeliveryStart: reservation.supplierPickupWindowStart
+        ? computeEarliestDeliveryStart(
+            reservation.supplierPickupWindowStart,
+          ).toISOString()
+        : (reservation.earliestDeliveryStart?.toISOString() ?? null),
     },
     deliverySummary,
     incidentSummary,
@@ -980,6 +990,16 @@ export const acceptSupplierReservation = async (
       );
     }
 
+    const learnerDeliveryWindows = parsePreferredWindowsJson(
+      existing.learnerPreferredDeliveryWindows,
+    );
+    if (learnerDeliveryWindows.length === 0 && !proposedDeliveryWindow) {
+      throw new AppError(
+        'Learner left delivery timing flexible. Propose a delivery window when accepting.',
+        400,
+        'DELIVERY_WINDOW_REQUIRED',
+      );
+    }
   }
 
   const result = await supplierReservationsRepository.acceptSupplierReservation({
@@ -1006,6 +1026,7 @@ export const acceptSupplierReservation = async (
   }
 
   void notifyReservationAccepted(result.reservation.id);
+  await notifyPaymentRequiredAfterAcceptance(result.reservation.id);
   await notifyNewJobForReservationWaitingDelivery(result.reservation.id);
 
   return mapSupplierReservation(result.reservation);
@@ -1264,6 +1285,8 @@ export const acceptLearnerRescheduleProposal = async (
     );
   }
 
+  await notifyPaymentRequiredAfterAcceptance(result.reservation.id);
+
   return mapSupplierReservation(result.reservation);
 };
 
@@ -1480,6 +1503,7 @@ export const submitNoDriverPickupWindow = async (
   }
 
   await notifyNewJobForReservationWaitingDelivery(reservationId);
+  await notifyPaymentRequiredAfterAcceptance(reservationId);
 
   return mapSupplierReservation(result.reservation);
 };

@@ -119,7 +119,7 @@ async function createAwaitingDeliveryReservation(ctx: TestContext) {
   const material = await createMaterial(ctx, { deliveryAllowed: true });
   const supplierPickupStart = new Date(Date.now() + 24 * 3_600_000);
   const supplierPickupEnd = new Date(supplierPickupStart.getTime() + 2 * 3_600_000);
-  const earliestDelivery = new Date(supplierPickupEnd.getTime() + 60 * 60_000);
+  const earliestDelivery = new Date(supplierPickupStart.getTime() + 60 * 60_000);
   const learnerDeliveryStart = new Date(earliestDelivery.getTime() - 3 * 3_600_000);
   const learnerDeliveryEnd = new Date(earliestDelivery.getTime() - 30 * 60_000);
 

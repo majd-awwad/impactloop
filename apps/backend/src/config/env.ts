@@ -8,6 +8,7 @@ import {
   parseRecommendationScorerVersion,
   type RecommendationScorerVersion,
 } from './recommendation-scoring-version.js';
+import { resolvePaymentRuntimeConfig } from '../modules/payments/payments.env.js';
 
 const backendRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -714,6 +715,24 @@ export const env = {
   nominatimUserAgent:
     process.env.NOMINATIM_USER_AGENT?.trim() ||
     'ImpactLoop/1.0 (supplier profile reverse geocoding)',
+  ...(() => {
+    const payment = resolvePaymentRuntimeConfig(process.env);
+    if (payment.usedDevelopmentSecretFallback) {
+      console.warn(
+        '[payments] Using development-only mock payment secret fallback(s). Set distinct PAYMENT_MOCK_* secrets in .env for non-local work. Secret values are not logged.',
+      );
+    }
+    return {
+      paymentProvider: payment.paymentProvider,
+      paymentProviderMode: payment.paymentProviderMode,
+      paymentMockRoutesEnabled: payment.paymentMockRoutesEnabled,
+      paymentMockWebhookSecret: payment.paymentMockWebhookSecret,
+      paymentMockCheckoutTokenSecret: payment.paymentMockCheckoutTokenSecret,
+      paymentMockWebhookReplayWindowMs:
+        payment.paymentMockWebhookReplayWindowMs,
+      paymentMockCheckoutTtlMs: payment.paymentMockCheckoutTtlMs,
+    };
+  })(),
 };
 
 export const isAiProviderOperational = (): boolean => {

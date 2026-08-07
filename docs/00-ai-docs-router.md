@@ -114,6 +114,7 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 |------|-------------|-------------|------------------------|
 | Open questions (index) | [09-open-questions.md](09-open-questions.md) | — | Unresolved / **Needs verification** across features |
 | Reservations (learner) | [features/reservations.md](features/reservations.md) | [flows/learner-reservation-flow.md](flows/learner-reservation-flow.md) | Learner create/read + material detail status **Partial**; supplier workflow **Partial** |
+| Payments (Mock) | [features/payments.md](features/payments.md) | [flows/payment-flow.md](flows/payment-flow.md) | **Implemented** for local Mock + enforcement-ON (PAY-01…PAY-07); real PSP / Admin Payment Center not implemented |
 | Delivery | [features/delivery.md](features/delivery.md) | [flows/delivery-flow.md](flows/delivery-flow.md) | **Partial** — learner request/status/tracking summary/map marker UI and driver jobs/status/manual ping UI; realtime tracking stream not implemented |
 | AI material matching agent | [features/ai-agent.md](features/ai-agent.md) | [flows/ai-material-matching-flow.md](flows/ai-material-matching-flow.md) | **Not implemented** (distinct from price suggestion **Partial**) |
 | Admin portal | [features/admin.md](features/admin.md) | — | **Partial** — dashboard, invitations, supplier verification, approvals, materials moderation, and people management |

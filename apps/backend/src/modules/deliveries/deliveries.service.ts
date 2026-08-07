@@ -17,6 +17,16 @@ import {
 import { notifyNewDriverJob } from '../notifications/driver-notification-events.service.js';
 import { escalateStaleAssignedDriverPickupsByIds } from '../reservations/reservations.stale-assigned-driver-auto-escalation.repository.js';
 import { isAssignedDriverPickupOverdue } from '../reservations/reservation-assigned-driver-pickup-overdue.js';
+import {
+  calculateDeliveryPricing,
+  DELIVERY_PRICING_CURRENCY,
+} from '../delivery-pricing/delivery-pricing.service.js';
+import { normalizeDropoffKey } from '../delivery-pricing/delivery-zone-cities.js';
+import { ensureDeliveryFeePaymentOrder } from '../payments/payments.ensure.js';
+import { isElectronicPaymentEnforced } from '../payments/payments.policy.js';
+import { evaluateDeliveryGroupPaymentReadiness } from '../payments/payments.readiness.js';
+import { isPositiveMoney, toMoneyDecimal } from '../payments/payments.money.js';
+import { ensureDeliveryForAcceptedReservation } from '../delivery-groups/delivery-group-operations.service.js';
 export {
   DRIVER_IN_PROGRESS_ASSIGNED_STATUSES,
   MAX_ACTIVE_DRIVER_DELIVERIES,
@@ -340,11 +350,66 @@ export const mapLearnerDelivery = (
     : deriveHandoverCode('learner-delivery', delivery.id),
 });
 
+const buildDeliveryAddressText = (dropoff: {
+  country: string;
+  city: string;
+  area?: string | null;
+  addressLine?: string | null;
+}): string =>
+  [
+    dropoff.addressLine?.trim(),
+    dropoff.area?.trim(),
+    dropoff.city.trim(),
+    dropoff.country.trim(),
+  ]
+    .filter((part): part is string => Boolean(part && part.length > 0))
+    .join(', ');
+
+const resolveDeliveryWindow = (reservation: {
+  pickupWindowStart: Date | null;
+  pickupWindowEnd: Date | null;
+  confirmedDeliveryWindowStart: Date | null;
+  confirmedDeliveryWindowEnd: Date | null;
+}): { start: Date; end: Date } => {
+  if (
+    reservation.confirmedDeliveryWindowStart &&
+    reservation.confirmedDeliveryWindowEnd
+  ) {
+    return {
+      start: reservation.confirmedDeliveryWindowStart,
+      end: reservation.confirmedDeliveryWindowEnd,
+    };
+  }
+
+  const now = Date.now();
+  const earliest = reservation.pickupWindowEnd
+    ? Math.max(reservation.pickupWindowEnd.getTime(), now + 60 * 60 * 1000)
+    : now + 24 * 60 * 60 * 1000;
+  const start = new Date(earliest);
+  return { start, end: new Date(start.getTime() + 2 * 60 * 60 * 1000) };
+};
+
+export type RequestDeliveryResult = ReturnType<typeof mapLearnerDelivery>;
+
+/**
+ * Convert an accepted PICKUP reservation into delivery fulfillment.
+ *
+ * Payment architecture:
+ * - Creates/joins a DeliveryGroup and persists deliveryFee.
+ * - Ensures one DELIVERY_FEE PaymentOrder when fee > 0 and enforcement is on.
+ * - Creates WAITING_FOR_DRIVER Delivery only when the group is payment-ready
+ *   (fee + materials + confirmation) or electronic payment enforcement is
+ *   disabled (legacy).
+ * - Throws DELIVERY_FEE_REQUIRED (no Delivery, no driver notify) when a
+ *   payable fee/material order is outstanding so the learner can checkout.
+ * - Throws DELIVERY_PAYMENT_NOT_READY when the group is not dispatchable for
+ *   a non-checkout reason (e.g. awaiting confirmation).
+ */
 export const requestDeliveryForReservation = async (
   learnerId: string,
   reservationId: string,
   input: RequestDeliveryInput,
-) => {
+): Promise<RequestDeliveryResult> => {
   const resolvedDropoffLocation = input.savedDropoffAddressId
     ? await resolveSavedDropoffAddressForDelivery(
         learnerId,
@@ -352,15 +417,48 @@ export const requestDeliveryForReservation = async (
       )
     : input.dropoffLocation!;
 
-  let result: Awaited<ReturnType<typeof runSerializableTransaction<{
-    outcome:
-      | 'CREATED'
-      | 'NOT_FOUND'
-      | 'INVALID_STATUS'
-      | 'DELIVERY_NOT_ALLOWED'
-      | 'ACTIVE_DELIVERY_EXISTS';
-    deliveryId?: string;
-  }>>>;
+  const deliveryAddressText = buildDeliveryAddressText(resolvedDropoffLocation);
+  if (!deliveryAddressText.trim()) {
+    throw new AppError(
+      'A delivery drop-off address is required.',
+      400,
+      'VALIDATION_ERROR',
+      { field: 'dropoffLocation' },
+    );
+  }
+
+  type TxOutcome =
+    | {
+        outcome: 'CREATED';
+        deliveryId: string;
+        freeDelivery: boolean;
+      }
+    | {
+        outcome: 'PAYMENT_REQUIRED';
+        reservationId: string;
+        deliveryGroupId: string;
+        paymentOrderId: string;
+        amount: string;
+        currency: string;
+      }
+    | {
+        outcome: 'GROUP_PAYMENT_NOT_READY';
+        deliveryGroupId: string;
+        overallStatus: string;
+        outstandingReservationIds: string[];
+        awaitingConfirmationReservationIds: string[];
+      }
+    | {
+        outcome:
+          | 'NOT_FOUND'
+          | 'INVALID_STATUS'
+          | 'DELIVERY_NOT_ALLOWED'
+          | 'ACTIVE_DELIVERY_EXISTS'
+          | 'DELIVERY_PRICING_ERROR';
+        message?: string;
+      };
+
+  let result: TxOutcome;
 
   try {
     result = await runSerializableTransaction(async (tx) => {
@@ -374,6 +472,20 @@ export const requestDeliveryForReservation = async (
           status: true,
           fulfillmentMethod: true,
           materialId: true,
+          deliveryGroupId: true,
+          materialSubtotal: true,
+          deliveryFee: true,
+          totalAmount: true,
+          pricingCurrency: true,
+          deliveryAddressText: true,
+          dropoffCity: true,
+          dropoffArea: true,
+          deliveryNote: true,
+          pickupWindowStart: true,
+          pickupWindowEnd: true,
+          confirmedDeliveryWindowStart: true,
+          confirmedDeliveryWindowEnd: true,
+          requesterId: true,
         },
       });
 
@@ -385,15 +497,23 @@ export const requestDeliveryForReservation = async (
         return { outcome: 'INVALID_STATUS' as const };
       }
 
-      if (reservation.fulfillmentMethod === 'DELIVERY') {
-        return { outcome: 'INVALID_STATUS' as const };
-      }
-
       const material = await tx.material.findUnique({
         where: { id: reservation.materialId },
         select: {
           deliveryAllowed: true,
           locationId: true,
+          supplierProfileId: true,
+          location: {
+            select: {
+              country: true,
+              city: true,
+              area: true,
+              addressLine: true,
+              latitude: true,
+              longitude: true,
+              isApproximate: true,
+            },
+          },
         },
       });
 
@@ -401,26 +521,18 @@ export const requestDeliveryForReservation = async (
         return { outcome: 'DELIVERY_NOT_ALLOWED' as const };
       }
 
-      const materialLocation = await tx.location.findUnique({
-        where: { id: material.locationId },
-        select: {
-          country: true,
-          city: true,
-          area: true,
-          addressLine: true,
-          latitude: true,
-          longitude: true,
-          isApproximate: true,
-        },
-      });
-
-      if (!materialLocation) {
+      if (!material.location || !material.supplierProfileId) {
         return { outcome: 'NOT_FOUND' as const };
       }
 
       const activeDeliveryCount = await tx.delivery.count({
         where: {
-          reservationId: reservation.id,
+          OR: [
+            { reservationId: reservation.id },
+            ...(reservation.deliveryGroupId
+              ? [{ deliveryGroupId: reservation.deliveryGroupId }]
+              : []),
+          ],
           status: { in: [...ACTIVE_DELIVERY_STATUSES] },
         },
       });
@@ -429,60 +541,294 @@ export const requestDeliveryForReservation = async (
         return { outcome: 'ACTIVE_DELIVERY_EXISTS' as const };
       }
 
-      const pickupLocation = await tx.location.create({
-        data: {
-          country: materialLocation.country,
-          city: materialLocation.city,
-          area: materialLocation.area,
-          addressLine: materialLocation.addressLine,
-          latitude: materialLocation.latitude,
-          longitude: materialLocation.longitude,
-          visibility: 'PRIVATE',
-          isApproximate: materialLocation.isApproximate,
-          locationType: 'DELIVERY_PICKUP',
-        },
-      });
+      const dropoffCity = resolvedDropoffLocation.city.trim();
+      const dropoffArea = resolvedDropoffLocation.area?.trim() || null;
+      const dropoffKey = normalizeDropoffKey(dropoffCity, dropoffArea);
+      const learnerNote = input.learnerNote?.trim() || null;
+      const currency =
+        reservation.pricingCurrency?.trim() || DELIVERY_PRICING_CURRENCY;
 
-      const dropoffLocation = await tx.location.create({
-        data: {
-          country: resolvedDropoffLocation.country,
-          city: resolvedDropoffLocation.city,
-          area: resolvedDropoffLocation.area ?? null,
-          addressLine: resolvedDropoffLocation.addressLine ?? null,
-          latitude: resolvedDropoffLocation.latitude ?? null,
-          longitude: resolvedDropoffLocation.longitude ?? null,
-          visibility: 'PRIVATE',
-          isApproximate: resolvedDropoffLocation.isApproximate,
-          locationType: 'DELIVERY_DROPOFF',
-        },
-      });
+      let deliveryGroupId = reservation.deliveryGroupId;
+      let deliveryFeeDecimal = toMoneyDecimal(reservation.deliveryFee ?? 0);
+      let joinedExistingGroup = false;
 
-      const deliveryId = createDeliveryId();
-      const handoverCodes = await buildDeliveryHandoverCodeData(deliveryId);
+      // Already converted to DELIVERY with a group: reuse fee order; never
+      // create a second group/fee for retries.
+      if (
+        reservation.fulfillmentMethod === 'DELIVERY' &&
+        reservation.deliveryGroupId
+      ) {
+        deliveryGroupId = reservation.deliveryGroupId;
+        const group = await tx.deliveryGroup.findUnique({
+          where: { id: deliveryGroupId },
+          select: { deliveryFee: true, currency: true },
+        });
+        if (!group) {
+          return { outcome: 'NOT_FOUND' as const };
+        }
+        deliveryFeeDecimal = toMoneyDecimal(group.deliveryFee);
+        joinedExistingGroup = true;
+      } else if (reservation.fulfillmentMethod === 'DELIVERY') {
+        return { outcome: 'INVALID_STATUS' as const };
+      } else {
+        // PICKUP → DELIVERY conversion: price fee and create/join group.
+        const pricing = calculateDeliveryPricing({
+          supplierPickupCity: material.location.city,
+          dropoffCity,
+          dropoffArea,
+        });
 
-      const delivery = await tx.delivery.create({
-        data: {
-          id: deliveryId,
-          ...handoverCodes.data,
-          reservationId: reservation.id,
-          pickupLocationId: pickupLocation.id,
-          dropoffLocationId: dropoffLocation.id,
-          requestedByUserId: learnerId,
-          status: 'WAITING_FOR_DRIVER',
-          learnerNote: input.learnerNote?.trim() || null,
-          statusHistory: {
-            create: {
-              oldStatus: null,
-              newStatus: 'WAITING_FOR_DRIVER',
-              changedByUserId: learnerId,
-              note: 'Delivery requested by learner',
+        if (!pricing.ok) {
+          return {
+            outcome: 'DELIVERY_PRICING_ERROR' as const,
+            message: pricing.message,
+          };
+        }
+
+        // Prefer joining an open group for the same learner + supplier +
+        // dropoff city+area (normalized) so the shared fee is charged once.
+        const candidateGroups = await tx.deliveryGroup.findMany({
+          where: {
+            learnerId,
+            supplierProfileId: material.supplierProfileId,
+            status: 'OPEN',
+            assignedDriverProfileId: null,
+            delivery: null,
+            reservations: {
+              some: {
+                status: 'ACCEPTED',
+                fulfillmentMethod: 'DELIVERY',
+              },
             },
           },
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            deliveryFee: true,
+            currency: true,
+            dropoffCity: true,
+            dropoffArea: true,
+          },
+        });
+        const compatibleGroup = candidateGroups.find(
+          (group) =>
+            normalizeDropoffKey(group.dropoffCity, group.dropoffArea) ===
+            dropoffKey,
+        );
+
+        const window = resolveDeliveryWindow(reservation);
+
+        if (compatibleGroup) {
+          deliveryGroupId = compatibleGroup.id;
+          deliveryFeeDecimal = toMoneyDecimal(0);
+          joinedExistingGroup = true;
+
+          await tx.reservation.update({
+            where: { id: reservation.id },
+            data: {
+              fulfillmentMethod: 'DELIVERY',
+              deliveryGroupId: compatibleGroup.id,
+              deliveryAddressText,
+              dropoffCity,
+              dropoffArea,
+              deliveryNote: learnerNote,
+              deliveryFee: deliveryFeeDecimal,
+              totalAmount: toMoneyDecimal(reservation.materialSubtotal ?? 0).add(
+                deliveryFeeDecimal,
+              ),
+              pricingCurrency: compatibleGroup.currency || currency,
+              confirmedDeliveryWindowStart: window.start,
+              confirmedDeliveryWindowEnd: window.end,
+            },
+          });
+        } else {
+          deliveryFeeDecimal = toMoneyDecimal(pricing.deliveryFee);
+          const createdGroup = await tx.deliveryGroup.create({
+            data: {
+              learnerId,
+              supplierProfileId: material.supplierProfileId,
+              dropoffCity,
+              dropoffArea,
+              deliveryAddressText,
+              deliveryFee: deliveryFeeDecimal,
+              currency,
+              deliveryZone: pricing.zone,
+              status: 'OPEN',
+              windowStart: window.start,
+              windowEnd: window.end,
+            },
+          });
+          deliveryGroupId = createdGroup.id;
+
+          await tx.reservation.update({
+            where: { id: reservation.id },
+            data: {
+              fulfillmentMethod: 'DELIVERY',
+              deliveryGroupId: createdGroup.id,
+              deliveryAddressText,
+              dropoffCity,
+              dropoffArea,
+              deliveryNote: learnerNote,
+              deliveryFee: deliveryFeeDecimal,
+              totalAmount: toMoneyDecimal(reservation.materialSubtotal ?? 0).add(
+                deliveryFeeDecimal,
+              ),
+              pricingCurrency: currency,
+              deliveryZone: pricing.zone,
+              confirmedDeliveryWindowStart: window.start,
+              confirmedDeliveryWindowEnd: window.end,
+            },
+          });
+        }
+      }
+
+      if (!deliveryGroupId) {
+        return { outcome: 'NOT_FOUND' as const };
+      }
+
+      // Refresh reservation fields after conversion for delivery ensure.
+      const fresh = await tx.reservation.findUniqueOrThrow({
+        where: { id: reservation.id },
+        select: {
+          id: true,
+          requesterId: true,
+          deliveryGroupId: true,
+          deliveryAddressText: true,
+          dropoffCity: true,
+          dropoffArea: true,
+          deliveryNote: true,
         },
-        select: { id: true },
       });
 
-      return { outcome: 'CREATED' as const, deliveryId: delivery.id };
+      const groupFee = await tx.deliveryGroup.findUniqueOrThrow({
+        where: { id: deliveryGroupId },
+        select: { deliveryFee: true, currency: true },
+      });
+      const groupFeeAmount = toMoneyDecimal(groupFee.deliveryFee);
+      const freeDelivery = !isPositiveMoney(groupFeeAmount);
+
+      const enforcement = isElectronicPaymentEnforced();
+
+      if (enforcement) {
+        if (isPositiveMoney(groupFeeAmount)) {
+          const ensured = await ensureDeliveryFeePaymentOrder(
+            deliveryGroupId,
+            tx,
+          );
+          if (ensured.outcome === 'NOT_FOUND') {
+            return { outcome: 'NOT_FOUND' as const };
+          }
+
+          if (
+            (ensured.outcome === 'CREATED' ||
+              ensured.outcome === 'EXISTING') &&
+            ensured.order.status !== 'PAID'
+          ) {
+            return {
+              outcome: 'PAYMENT_REQUIRED' as const,
+              reservationId: reservation.id,
+              deliveryGroupId,
+              paymentOrderId: ensured.order.id,
+              amount: ensured.order.amount,
+              currency: ensured.order.currency,
+            };
+          }
+        }
+
+        // Fee is zero or already PAID — still require full group readiness
+        // (materials + confirmation) before opening WAITING_FOR_DRIVER.
+        const readiness = await evaluateDeliveryGroupPaymentReadiness(
+          deliveryGroupId,
+          tx,
+        );
+        if (!readiness.overallReady) {
+          const ownMaterial = readiness.materials.find(
+            (row) => row.reservationId === reservation.id,
+          );
+          const preferredPayable =
+            (ownMaterial &&
+            !ownMaterial.ready &&
+            ownMaterial.paymentOrderId
+              ? ownMaterial
+              : null) ??
+            (!readiness.fee.ready && readiness.fee.paymentOrderId
+              ? readiness.fee
+              : null) ??
+            readiness.materials.find(
+              (row) => !row.ready && row.paymentOrderId,
+            ) ??
+            null;
+
+          const paymentOrderId =
+            preferredPayable?.paymentOrderId ??
+            readiness.outstandingPaymentOrderIds[0] ??
+            null;
+
+          if (paymentOrderId) {
+            const matchedMaterial = readiness.materials.find(
+              (row) => row.paymentOrderId === paymentOrderId,
+            );
+            const amount =
+              matchedMaterial?.amount ??
+              (readiness.fee.paymentOrderId === paymentOrderId
+                ? readiness.fee.amount
+                : null) ??
+              preferredPayable?.amount ??
+              '0.00';
+            const orderCurrency =
+              matchedMaterial?.currency ??
+              (readiness.fee.paymentOrderId === paymentOrderId
+                ? readiness.fee.currency
+                : null) ??
+              preferredPayable?.currency ??
+              currency;
+
+            return {
+              outcome: 'PAYMENT_REQUIRED' as const,
+              reservationId: reservation.id,
+              deliveryGroupId,
+              paymentOrderId,
+              amount,
+              currency: orderCurrency,
+            };
+          }
+
+          return {
+            outcome: 'GROUP_PAYMENT_NOT_READY' as const,
+            deliveryGroupId,
+            overallStatus: readiness.overallStatus,
+            outstandingReservationIds: readiness.outstandingReservationIds,
+            awaitingConfirmationReservationIds:
+              readiness.awaitingConfirmationReservationIds,
+          };
+        }
+      }
+
+      // Group payment-ready / enforcement off → create operational Delivery.
+      const created = await ensureDeliveryForAcceptedReservation(tx, {
+        reservation: {
+          id: fresh.id,
+          requesterId: fresh.requesterId,
+          deliveryGroupId: fresh.deliveryGroupId,
+          deliveryAddressText: fresh.deliveryAddressText,
+          dropoffCity: fresh.dropoffCity,
+          dropoffArea: fresh.dropoffArea,
+          deliveryNote: fresh.deliveryNote ?? learnerNote,
+          material: {
+            location: material.location,
+          },
+        },
+        changedByUserId: learnerId,
+        statusHistoryNote: joinedExistingGroup
+          ? 'Delivery opened after learner joined an existing delivery group'
+          : 'Delivery requested by learner after pickup reservation',
+      });
+
+      return {
+        outcome: 'CREATED' as const,
+        deliveryId: created.id,
+        freeDelivery,
+      };
     });
   } catch (error) {
     if (isPrismaCode(error, 'P2002')) {
@@ -502,22 +848,65 @@ export const requestDeliveryForReservation = async (
         await maybeSaveDropoffAddressAfterDeliveryRequest(learnerId, {
           label: input.saveDropoffAddressLabel.trim(),
           location: {
-            country: input.dropoffLocation.country,
-            city: input.dropoffLocation.city,
-            area: input.dropoffLocation.area ?? null,
-            addressLine: input.dropoffLocation.addressLine ?? null,
-            latitude: input.dropoffLocation.latitude ?? null,
-            longitude: input.dropoffLocation.longitude ?? null,
-            isApproximate: input.dropoffLocation.isApproximate,
+            country: resolvedDropoffLocation.country,
+            city: resolvedDropoffLocation.city,
+            area: resolvedDropoffLocation.area ?? null,
+            addressLine: resolvedDropoffLocation.addressLine ?? null,
+            latitude: resolvedDropoffLocation.latitude ?? null,
+            longitude: resolvedDropoffLocation.longitude ?? null,
+            isApproximate: resolvedDropoffLocation.isApproximate,
           },
         });
       }
 
-      const delivery = await loadDeliveryRecord(result.deliveryId!);
+      const delivery = await loadDeliveryRecord(result.deliveryId);
       await notifyNewDriverJob(delivery.id);
 
       return mapLearnerDelivery(delivery);
     }
+    case 'PAYMENT_REQUIRED': {
+      if (input.dropoffLocation && input.saveDropoffAddressLabel?.trim()) {
+        await maybeSaveDropoffAddressAfterDeliveryRequest(learnerId, {
+          label: input.saveDropoffAddressLabel.trim(),
+          location: {
+            country: resolvedDropoffLocation.country,
+            city: resolvedDropoffLocation.city,
+            area: resolvedDropoffLocation.area ?? null,
+            addressLine: resolvedDropoffLocation.addressLine ?? null,
+            latitude: resolvedDropoffLocation.latitude ?? null,
+            longitude: resolvedDropoffLocation.longitude ?? null,
+            isApproximate: resolvedDropoffLocation.isApproximate,
+          },
+        });
+      }
+
+      throw new AppError(
+        'Delivery fee payment is required before fulfillment can start.',
+        409,
+        'DELIVERY_FEE_REQUIRED',
+        {
+          reservationId: result.reservationId,
+          deliveryGroupId: result.deliveryGroupId,
+          paymentOrderId: result.paymentOrderId,
+          amount: result.amount,
+          currency: result.currency,
+          freeDelivery: false,
+        },
+      );
+    }
+    case 'GROUP_PAYMENT_NOT_READY':
+      throw new AppError(
+        'Delivery cannot start until all payment obligations for the group are satisfied.',
+        409,
+        'DELIVERY_PAYMENT_NOT_READY',
+        {
+          deliveryGroupId: result.deliveryGroupId,
+          overallStatus: result.overallStatus,
+          outstandingReservationIds: result.outstandingReservationIds,
+          awaitingConfirmationReservationIds:
+            result.awaitingConfirmationReservationIds,
+        },
+      );
     case 'NOT_FOUND':
       throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
     case 'INVALID_STATUS':
@@ -537,6 +926,12 @@ export const requestDeliveryForReservation = async (
         'This reservation already has an active delivery.',
         409,
         'CONFLICT',
+      );
+    case 'DELIVERY_PRICING_ERROR':
+      throw new AppError(
+        result.message ?? 'Delivery fee could not be calculated for this location.',
+        400,
+        'DELIVERY_PRICING_ERROR',
       );
     default:
       throw new AppError('Unable to request delivery.', 500, 'INTERNAL_ERROR');

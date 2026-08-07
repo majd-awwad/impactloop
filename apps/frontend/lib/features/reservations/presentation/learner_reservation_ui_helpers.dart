@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/format/localized_formatters.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/l10n/driver_quantity_labels.dart';
 import '../../../shared/l10n/learner_ui_labels.dart';
 import '../../../shared/widgets/app_status_badge.dart';
 import '../../../shared/widgets/incident_report_status_presentation.dart';
@@ -62,6 +63,14 @@ bool learnerReservationNeedsAction(LearnerReservation reservation) {
 
   if (reservation.isReadOnlyFinalState) {
     return false;
+  }
+
+  final summary = reservation.paymentSummary;
+  if (summary != null &&
+      summary.enforcementEnabled &&
+      !summary.isPaymentsDisabled &&
+      (summary.isPaymentActionRequired || summary.canStartCheckout)) {
+    return true;
   }
 
   return reservation.isAccepted &&
@@ -493,9 +502,10 @@ String formatFulfillmentMethodLabel(
   LearnerReservation reservation, {
   AppLocalizations? l10n,
 }) {
-  return reservation.isDeliveryFulfillment
-      ? l10n?.delivery ?? 'Delivery'
-      : l10n?.pickup ?? 'Pickup';
+  if (reservation.isDeliveryFulfillment) {
+    return l10n?.fulfillmentDelivery ?? l10n?.delivery ?? 'Delivery';
+  }
+  return l10n?.fulfillmentPickup ?? l10n?.pickup ?? 'Pickup';
 }
 
 String? formatPreferredWindowsSummary(
@@ -739,6 +749,10 @@ String? reservationStatusMessage(
   }
 
   if (reservation.isAwaitingConfirmation) {
+    if (reservation.isDeliveryFulfillment &&
+        reservation.learnerPreferredDeliveryWindows.isEmpty) {
+      return l10n.reservationFlexibleScheduleReady;
+    }
     return l10n.reservationScheduleNeedsConfirmation;
   }
 
@@ -792,12 +806,34 @@ String? reservationStatusMessage(
   return null;
 }
 
-String formatRequestedQuantity(LearnerReservation reservation) {
+String formatRequestedQuantity(
+  LearnerReservation reservation, {
+  AppLocalizations? l10n,
+}) {
+  if (l10n != null) {
+    return driverQuantityLabel(
+      l10n,
+      reservation.quantityRequested,
+      reservation.material.unit,
+    );
+  }
   final quantity = reservation.quantityRequested;
   final formatted = quantity == quantity.roundToDouble()
       ? quantity.toStringAsFixed(0)
       : quantity.toString();
   return '$formatted ${reservation.material.unit}';
+}
+
+/// Quantity + unit label without supplier name, suitable for the list card.
+String formatQuantityLabel(
+  LearnerReservation reservation, {
+  required AppLocalizations l10n,
+}) {
+  return driverQuantityLabel(
+    l10n,
+    reservation.quantityRequested,
+    reservation.material.unit,
+  );
 }
 
 String formatSupplierQuantityLine(
@@ -806,7 +842,7 @@ String formatSupplierQuantityLine(
 }) {
   return l10n.supplierQuantityLine(
     reservation.supplier.displayName,
-    formatRequestedQuantity(reservation),
+    formatRequestedQuantity(reservation, l10n: l10n),
   );
 }
 

@@ -6,6 +6,7 @@ import {
   type TimeWindow,
 } from '../delivery-pricing/delivery-window-overlap.js';
 import { normalizeDropoffKey } from '../delivery-pricing/delivery-zone-cities.js';
+import { isElectronicPaymentEnforced } from '../payments/payments.policy.js';
 
 const TERMINAL_RESERVATION_STATUSES = [
   'REJECTED',
@@ -49,10 +50,28 @@ const parsePreferredWindows = (
     end: new Date(window.end),
   }));
 
-const groupHasBlockingDelivery = async (
+/**
+ * When electronic payments are enforced, any existing Delivery means
+ * fulfillment has begun — unpaid joiners must not attach.
+ * When disabled, preserve legacy: only advanced driver statuses block joins
+ * (WAITING_FOR_DRIVER still allows combine).
+ */
+const groupBlocksNewJoin = async (
   tx: Prisma.TransactionClient,
   groupId: string,
 ): Promise<boolean> => {
+  if (isElectronicPaymentEnforced()) {
+    const count = await tx.delivery.count({
+      where: {
+        OR: [
+          { deliveryGroupId: groupId },
+          { reservation: { deliveryGroupId: groupId } },
+        ],
+      },
+    });
+    return count > 0;
+  }
+
   const count = await tx.delivery.count({
     where: {
       reservation: {
@@ -118,10 +137,10 @@ export const findCompatibleDeliveryGroupCandidate = async (input: {
     }
 
     if (input.tx) {
-      if (await groupHasBlockingDelivery(input.tx, group.id)) {
+      if (await groupBlocksNewJoin(input.tx, group.id)) {
         continue;
       }
-    } else if (await groupHasBlockingDelivery(client, group.id)) {
+    } else if (await groupBlocksNewJoin(client, group.id)) {
       continue;
     }
 
@@ -186,7 +205,7 @@ export const validateDeliveryGroupForCombine = async (
     return { ok: false, code: 'GROUP_NOT_AVAILABLE' };
   }
 
-  if (await groupHasBlockingDelivery(tx, group.id)) {
+  if (await groupBlocksNewJoin(tx, group.id)) {
     return { ok: false, code: 'GROUP_NOT_AVAILABLE' };
   }
 

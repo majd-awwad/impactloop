@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../application/learner_reservation_provider.dart';
 import '../../application/my_reservations_provider.dart';
 import '../../data/models/reservation_message.dart';
 import '../../data/reservations_repository.dart';
@@ -18,11 +20,13 @@ class LearnerReservationMessagesPanel extends ConsumerStatefulWidget {
     required this.reservationId,
     required this.canSendMessage,
     required this.currentUserId,
+    this.constrainWidth = false,
   });
 
   final String reservationId;
   final bool canSendMessage;
   final String currentUserId;
+  final bool constrainWidth;
 
   @override
   ConsumerState<LearnerReservationMessagesPanel> createState() =>
@@ -68,7 +72,7 @@ class _LearnerReservationMessagesPanelState
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Could not load follow-up messages.';
+        _error = context.l10n.followUpMessagesLoadError;
       });
     }
   }
@@ -90,6 +94,7 @@ class _LearnerReservationMessagesPanelState
         _controller.clear();
       });
       ref.invalidate(myReservationsProvider);
+      ref.invalidate(learnerReservationProvider(widget.reservationId));
     } catch (error) {
       if (!mounted) return;
       showErrorSnackBar(context, error);
@@ -104,12 +109,13 @@ class _LearnerReservationMessagesPanelState
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final colors = AppThemeColors.of(context);
+    final l10n = context.l10n;
 
-    return Column(
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Follow-up messages',
+          l10n.followUpMessagesTitle,
           style: AppTextStyles.label(
             context,
           ).copyWith(color: palette.textSecondary, fontWeight: FontWeight.w700),
@@ -136,7 +142,7 @@ class _LearnerReservationMessagesPanelState
           )
         else if (_messages.isEmpty)
           Text(
-            'No follow-up messages yet.',
+            l10n.noFollowUpMessagesYet,
             style: AppTextStyles.body(
               context,
             ).copyWith(color: palette.textMuted),
@@ -182,7 +188,7 @@ class _LearnerReservationMessagesPanelState
             maxLines: 3,
             maxLength: 1000,
             decoration: InputDecoration(
-              hintText: 'Send a short follow-up to the supplier…',
+              hintText: l10n.writeShortFollowUpMessage,
               border: OutlineInputBorder(borderRadius: AppRadius.mdAll),
             ),
           ),
@@ -200,11 +206,23 @@ class _LearnerReservationMessagesPanelState
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Send message'),
+                  : Text(l10n.sendFollowUpMessage),
             ),
           ),
         ],
       ],
+    );
+
+    if (!widget.constrainWidth) {
+      return content;
+    }
+
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: content,
+      ),
     );
   }
 }

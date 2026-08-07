@@ -455,7 +455,7 @@ describe('supplier accept fulfillment', () => {
     const material = await createMaterial(ctx, { deliveryAllowed: true });
     const supplierPickupStart = new Date(Date.now() + 24 * 3_600_000);
     const supplierPickupEnd = new Date(supplierPickupStart.getTime() + 2 * 3_600_000);
-    const earliestDelivery = new Date(supplierPickupEnd.getTime() + 60 * 60_000);
+    const earliestDelivery = new Date(supplierPickupStart.getTime() + 60 * 60_000);
     const learnerDeliveryStart = new Date(earliestDelivery.getTime() - 30 * 60_000);
     const learnerDeliveryEnd = new Date(earliestDelivery.getTime() + 3 * 3_600_000);
 
@@ -494,7 +494,7 @@ describe('supplier accept fulfillment', () => {
     const material = await createMaterial(ctx, { deliveryAllowed: true });
     const supplierPickupStart = new Date(Date.now() + 24 * 3_600_000);
     const supplierPickupEnd = new Date(supplierPickupStart.getTime() + 2 * 3_600_000);
-    const earliestDelivery = new Date(supplierPickupEnd.getTime() + 60 * 60_000);
+    const earliestDelivery = new Date(supplierPickupStart.getTime() + 60 * 60_000);
     const learnerDeliveryStart = new Date(earliestDelivery.getTime() - 60 * 60_000);
     const learnerDeliveryEnd = new Date(earliestDelivery.getTime() + 3 * 3_600_000);
 
@@ -525,7 +525,7 @@ describe('supplier accept fulfillment', () => {
     const material = await createMaterial(ctx, { deliveryAllowed: true });
     const supplierPickupStart = new Date(Date.now() + 24 * 3_600_000);
     const supplierPickupEnd = new Date(supplierPickupStart.getTime() + 2 * 3_600_000);
-    const earliestDelivery = new Date(supplierPickupEnd.getTime() + 60 * 60_000);
+    const earliestDelivery = new Date(supplierPickupStart.getTime() + 60 * 60_000);
     const learnerDeliveryStart = new Date(earliestDelivery.getTime() - 3 * 3_600_000);
     const learnerDeliveryEnd = new Date(earliestDelivery.getTime() - 30 * 60_000);
 
@@ -555,6 +555,66 @@ describe('supplier accept fulfillment', () => {
       where: { reservationId: reservation.id },
     });
     assert.equal(deliveryCount, 0);
+  });
+
+  test('flexible DELIVERY (no preferred windows) + feasible proposal -> ACCEPTED', async () => {
+    const material = await createMaterial(ctx, { deliveryAllowed: true });
+    const supplierPickupStart = new Date(Date.now() + 24 * 3_600_000);
+    const supplierPickupEnd = new Date(supplierPickupStart.getTime() + 2 * 3_600_000);
+    const earliestDelivery = new Date(supplierPickupStart.getTime() + 60 * 60_000);
+    const proposedStart = new Date(earliestDelivery.getTime() + 30 * 60_000);
+    const proposedEnd = new Date(proposedStart.getTime() + 2 * 3_600_000);
+
+    const reservation = await createReservation(
+      ctx.learnerId,
+      deliveryReservationPayload(material.id, {
+        learnerPreferredDeliveryWindows: [],
+      }),
+    );
+    ctx.createdReservationIds.push(reservation.id);
+
+    const accepted = await acceptSupplierReservation(ctx.supplierId, reservation.id, {
+      pickupWindowStart: supplierPickupStart.toISOString(),
+      pickupWindowEnd: supplierPickupEnd.toISOString(),
+      proposedDeliveryWindowStart: proposedStart.toISOString(),
+      proposedDeliveryWindowEnd: proposedEnd.toISOString(),
+    });
+
+    assert.equal(accepted.status, 'ACCEPTED');
+    assert.equal(accepted.confirmedDeliveryWindowStart, proposedStart.toISOString());
+    assert.equal(accepted.confirmedDeliveryWindowEnd, proposedEnd.toISOString());
+    assert.equal(
+      await prisma.delivery.count({ where: { reservationId: reservation.id } }),
+      1,
+    );
+  });
+
+  test('flexible DELIVERY requires proposed delivery window', async () => {
+    const material = await createMaterial(ctx, { deliveryAllowed: true });
+    const supplierPickupStart = new Date(Date.now() + 24 * 3_600_000);
+    const supplierPickupEnd = new Date(supplierPickupStart.getTime() + 2 * 3_600_000);
+
+    const reservation = await createReservation(
+      ctx.learnerId,
+      deliveryReservationPayload(material.id, {
+        learnerPreferredDeliveryWindows: [],
+      }),
+    );
+    ctx.createdReservationIds.push(reservation.id);
+
+    await assert.rejects(
+      () =>
+        acceptSupplierReservation(ctx.supplierId, reservation.id, {
+          pickupWindowStart: supplierPickupStart.toISOString(),
+          pickupWindowEnd: supplierPickupEnd.toISOString(),
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        assert.equal(error.code, 'DELIVERY_WINDOW_REQUIRED');
+        return true;
+      },
+    );
   });
 
   test('supplier reject still releases hold', async () => {

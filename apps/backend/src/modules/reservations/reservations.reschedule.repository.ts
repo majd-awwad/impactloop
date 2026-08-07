@@ -1,12 +1,17 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 import {
   assertRescheduleAllowedOutsideHandover,
   clearPendingRescheduleFields,
 } from './reservation-reschedule.js';
 import { recomputeAndUpdateMaterialStatus } from './reservations.quantity.js';
 import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
+import {
+  flushPostCommitPaymentRefunds,
+  handleReservationPaymentLifecycleTransition,
+} from '../payments/payments.lifecycle.js';
 
 const learnerRescheduleExistingSelect = {
   id: true,
@@ -109,7 +114,7 @@ export const cancelLearnerRescheduleRequest = async (input: {
   requesterId: string;
   reservationId: string;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const result = await runSerializableTransaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
       where: {
         id: input.reservationId,
@@ -151,6 +156,26 @@ export const cancelLearnerRescheduleRequest = async (input: {
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
     await applyBuildReservationSyncInTransaction(tx, existing.id);
 
-    return { conflict: false as const };
+    const payment = await handleReservationPaymentLifecycleTransition(tx, {
+      reservationId: existing.id,
+      newStatus: 'CANCELLED',
+      actorUserId: input.requesterId,
+      reason: 'Learner cancelled after reschedule request',
+    });
+
+    return {
+      conflict: false as const,
+      postCommitRefunds: payment.postCommitRefunds,
+      postCommitResolution: payment.postCommitResolution ?? null,
+    };
   });
+
+  if (result && result.conflict === false) {
+    await flushPostCommitPaymentRefunds(
+      result.postCommitRefunds,
+      result.postCommitResolution,
+    );
+  }
+
+  return result;
 };

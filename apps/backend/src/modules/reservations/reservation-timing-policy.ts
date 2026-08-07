@@ -1,3 +1,4 @@
+/** Minutes after supplier pickup window *start* before learner delivery may begin. */
 export const DELIVERY_BUFFER_MINUTES = 60;
 
 export const MIN_PICKUP_LEAD_TIME_MINUTES = 30;

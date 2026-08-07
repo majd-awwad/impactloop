@@ -17,7 +17,13 @@ import {
   ensureSelfPickupCodeStored,
   verifyHandoverCode,
 } from '../../utils/handover-codes.js';
-import { ensureDeliveryForAcceptedReservation } from '../delivery-groups/delivery-group-operations.service.js';
+import { afterFinalAcceptanceInTransaction } from '../payments/payments.acceptance.js';
+import {
+  flushPostCommitPaymentRefunds,
+  handleReservationPaymentLifecycleTransition,
+  type PostCommitRefundTask,
+} from '../payments/payments.lifecycle.js';
+import { assertPickupPaymentSatisfiedOrThrow } from '../payments/payments.readiness.js';
 import {
   computeEarliestDeliveryStart,
   findFeasibleDeliveryWindow,
@@ -505,7 +511,7 @@ const acceptPickupReservation = async (
   );
 
   if (!learnerWindows.length) {
-    return tx.reservation.update({
+    const updated = await tx.reservation.update({
       where: { id: input.reservationId },
       data: {
         status: 'ACCEPTED',
@@ -520,6 +526,10 @@ const acceptPickupReservation = async (
       },
       select: reservationMutationSelect,
     });
+    await afterFinalAcceptanceInTransaction(tx, {
+      reservationId: updated.id,
+    });
+    return updated;
   }
 
   if (input.selectedPreferredWindowIndex != null) {
@@ -532,7 +542,7 @@ const acceptPickupReservation = async (
       throw new Error('Selected preferred pickup window is invalid.');
     }
 
-    return tx.reservation.update({
+    const updated = await tx.reservation.update({
       where: { id: input.reservationId },
       data: {
         status: 'ACCEPTED',
@@ -547,10 +557,14 @@ const acceptPickupReservation = async (
       },
       select: reservationMutationSelect,
     });
+    await afterFinalAcceptanceInTransaction(tx, {
+      reservationId: updated.id,
+    });
+    return updated;
   }
 
   if (windowMatchesLearnerPreference(input.proposedWindow, learnerWindows)) {
-    return tx.reservation.update({
+    const updated = await tx.reservation.update({
       where: { id: input.reservationId },
       data: {
         status: 'ACCEPTED',
@@ -565,6 +579,10 @@ const acceptPickupReservation = async (
       },
       select: reservationMutationSelect,
     });
+    await afterFinalAcceptanceInTransaction(tx, {
+      reservationId: updated.id,
+    });
+    return updated;
   }
 
   return tx.reservation.update({
@@ -631,10 +649,13 @@ const acceptDeliveryWithConfirmedWindow = async (
     select: reservationMutationSelect,
   });
 
-  await ensureDeliveryForAcceptedReservation(tx, {
-    reservation: input.reservation,
-    changedByUserId: input.ownerId,
-    statusHistoryNote: 'Delivery created when supplier accepted reservation',
+  await afterFinalAcceptanceInTransaction(tx, {
+    reservationId: updated.id,
+    ensureDelivery: {
+      reservation: input.reservation,
+      changedByUserId: input.ownerId,
+      statusHistoryNote: 'Delivery created when supplier accepted reservation',
+    },
   });
 
   return updated;
@@ -675,7 +696,7 @@ const acceptDeliveryReservation = async (
     input.learnerPreferredDeliveryWindows,
   );
   const earliestDeliveryStart = computeEarliestDeliveryStart(
-    input.supplierPickupWindow.end,
+    input.supplierPickupWindow.start,
   );
 
   if (input.proposedDeliveryWindow) {
@@ -684,7 +705,9 @@ const acceptDeliveryReservation = async (
       learnerWindows,
     );
 
-    if (!isLearnerPreference) {
+    // Learner listed preferences and supplier proposed a different window → confirm.
+    // Empty preferences mean the learner is flexible: auto-accept if feasible.
+    if (!isLearnerPreference && learnerWindows.length > 0) {
       return tx.reservation.update({
         where: { id: input.reservation.id },
         data: {
@@ -703,7 +726,7 @@ const acceptDeliveryReservation = async (
     }
 
     const feasible = findFeasibleDeliveryWindow(
-      input.supplierPickupWindow.end,
+      input.supplierPickupWindow.start,
       [input.proposedDeliveryWindow],
     );
 
@@ -725,10 +748,32 @@ const acceptDeliveryReservation = async (
         supplierPickupWindowStart: input.supplierPickupWindow.start,
         supplierPickupWindowEnd: input.supplierPickupWindow.end,
         earliestDeliveryStart,
+        confirmedDeliveryWindowStart: input.proposedDeliveryWindow.start,
+        confirmedDeliveryWindowEnd: input.proposedDeliveryWindow.end,
+        schedulingConflictReason:
+          learnerWindows.length === 0
+            ? 'Proposed delivery window is not feasible after supplier pickup and delivery buffer.'
+            : 'Selected learner delivery window is not feasible after supplier pickup and delivery buffer.',
+        supplierNote: input.supplierNote,
+        acceptedAt: new Date(),
+      },
+      select: reservationMutationSelect,
+    });
+  }
+
+  // Flexible learner with no delivery proposal: do not invent a fake conflict.
+  // Service layer should require a proposed delivery window when prefs are empty.
+  if (learnerWindows.length === 0) {
+    return tx.reservation.update({
+      where: { id: input.reservation.id },
+      data: {
+        status: 'AWAITING_LEARNER_CONFIRMATION',
+        supplierPickupWindowStart: input.supplierPickupWindow.start,
+        supplierPickupWindowEnd: input.supplierPickupWindow.end,
+        earliestDeliveryStart,
         confirmedDeliveryWindowStart: null,
         confirmedDeliveryWindowEnd: null,
-        schedulingConflictReason:
-          'Selected learner delivery window is not feasible after supplier pickup and delivery buffer.',
+        schedulingConflictReason: null,
         supplierNote: input.supplierNote,
         acceptedAt: new Date(),
       },
@@ -752,7 +797,7 @@ const acceptDeliveryReservation = async (
   }
 
   const feasible = findFeasibleDeliveryWindow(
-    input.supplierPickupWindow.end,
+    input.supplierPickupWindow.start,
     windowsToEvaluate,
   );
 
@@ -930,7 +975,19 @@ export const declineSupplierReservation = async (input: {
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
     await applyBuildReservationSyncInTransaction(tx, updated.id);
 
-    return { conflict: false as const, reservationId: updated.id };
+    const payment = await handleReservationPaymentLifecycleTransition(tx, {
+      reservationId: updated.id,
+      newStatus: 'REJECTED',
+      actorUserId: input.ownerId,
+      reason: reason ?? 'Rejected by supplier',
+    });
+
+    return {
+      conflict: false as const,
+      reservationId: updated.id,
+      postCommitRefunds: payment.postCommitRefunds,
+      postCommitResolution: payment.postCommitResolution ?? null,
+    };
   });
 
   if (!outcome) {
@@ -939,6 +996,15 @@ export const declineSupplierReservation = async (input: {
 
   if (outcome.conflict) {
     return outcome;
+  }
+
+  if ('postCommitRefunds' in outcome && outcome.postCommitRefunds) {
+    await flushPostCommitPaymentRefunds(
+      outcome.postCommitRefunds,
+      'postCommitResolution' in outcome
+        ? outcome.postCommitResolution
+        : null,
+    );
   }
 
   const reservation = await loadSupplierReservationRecord(outcome.reservationId);
@@ -977,6 +1043,8 @@ export const completeSupplierReservation = async (input: {
     if (existing.fulfillmentMethod !== 'PICKUP') {
       return { conflict: true as const, reservation: existing };
     }
+
+    await assertPickupPaymentSatisfiedOrThrow(existing.id, tx);
 
     await ensureSelfPickupCodeStored(tx, existing.id);
 
@@ -1214,6 +1282,10 @@ export const acceptLearnerRescheduleProposal = async (input: {
       select: reservationMutationSelect,
     });
 
+    await afterFinalAcceptanceInTransaction(tx, {
+      reservationId: updated.id,
+    });
+
     await tx.reservationStatusHistory.create({
       data: {
         reservationId: updated.id,
@@ -1298,7 +1370,19 @@ export const cancelSupplierAcceptedReservation = async (input: {
       await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
       await applyBuildReservationSyncInTransaction(tx, updated.id);
 
-      return { conflict: false as const, reservationId: updated.id };
+      const payment = await handleReservationPaymentLifecycleTransition(tx, {
+        reservationId: updated.id,
+        newStatus: 'CANCELLED',
+        actorUserId: input.ownerId,
+        reason,
+      });
+
+      return {
+        conflict: false as const,
+        reservationId: updated.id,
+        postCommitRefunds: payment.postCommitRefunds,
+        postCommitResolution: payment.postCommitResolution ?? null,
+      };
     }
 
     if (
@@ -1346,7 +1430,19 @@ export const cancelSupplierAcceptedReservation = async (input: {
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
     await applyBuildReservationSyncInTransaction(tx, updated.id);
 
-    return { conflict: false as const, reservationId: updated.id };
+    const payment = await handleReservationPaymentLifecycleTransition(tx, {
+      reservationId: updated.id,
+      newStatus: 'CANCELLED',
+      actorUserId: input.ownerId,
+      reason,
+    });
+
+    return {
+      conflict: false as const,
+      reservationId: updated.id,
+      postCommitRefunds: payment.postCommitRefunds,
+      postCommitResolution: payment.postCommitResolution ?? null,
+    };
   });
 
   if (!outcome) {
@@ -1359,6 +1455,15 @@ export const cancelSupplierAcceptedReservation = async (input: {
     ('deliveryBlocked' in outcome && outcome.deliveryBlocked)
   ) {
     return outcome;
+  }
+
+  if ('postCommitRefunds' in outcome && outcome.postCommitRefunds) {
+    await flushPostCommitPaymentRefunds(
+      outcome.postCommitRefunds,
+      'postCommitResolution' in outcome
+        ? outcome.postCommitResolution
+        : null,
+    );
   }
 
   const reservation = await loadSupplierReservationRecord(outcome.reservationId);

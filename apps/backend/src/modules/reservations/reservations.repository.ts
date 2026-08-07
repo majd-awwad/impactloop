@@ -21,6 +21,11 @@ import {
   validateBuildItemForReservationLink,
 } from '../learning-projects/learning-projects.build-reservation-linking.js';
 import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
+import {
+  flushPostCommitPaymentRefunds,
+  handleReservationPaymentLifecycleTransition,
+  type PostCommitRefundTask,
+} from '../payments/payments.lifecycle.js';
 
 const reservationInclude = {
   material: {
@@ -79,6 +84,14 @@ const learnerReservationListScalarSelect = {
   supplierNote: true,
   rejectionReason: true,
   selfPickupCodeHash: true,
+  // Pricing / group fields required for batched list paymentSummary.
+  materialSubtotal: true,
+  deliveryFee: true,
+  unitPriceAtReservation: true,
+  totalAmount: true,
+  pricingCurrency: true,
+  deliveryZone: true,
+  deliveryGroupId: true,
 } satisfies Prisma.ReservationSelect;
 
 const learnerReservationListSelect = {
@@ -360,12 +373,13 @@ export const createLearnerReservation = async (input: {
       },
     );
 
-    const expiredMissedPickupReservationIds =
+    const missedPickupExpiry =
       await expireStaleMissedPickupsForMaterialIdsInTransaction(
         tx,
         [material.id],
         input.requesterId,
       );
+    const expiredMissedPickupReservationIds = missedPickupExpiry.expiredIds;
 
     const availabilityChanged =
       expiredPendingReservationIds.length > 0 ||
@@ -373,6 +387,8 @@ export const createLearnerReservation = async (input: {
     const withAvailabilityChange = <T extends object>(result: T) => ({
       ...result,
       availabilityChanged,
+      postCommitRefunds: missedPickupExpiry.postCommitRefunds,
+      postCommitResolutions: missedPickupExpiry.postCommitResolutions,
     });
 
     const openLearnerReservationCount = await tx.reservation.count({
@@ -568,6 +584,23 @@ export const createLearnerReservation = async (input: {
     });
   });
 
+  if (
+    'postCommitRefunds' in result &&
+    Array.isArray(result.postCommitRefunds)
+  ) {
+    const resolutions =
+      'postCommitResolutions' in result &&
+      Array.isArray(result.postCommitResolutions)
+        ? (result.postCommitResolutions as import('../payments/payments.lifecycle.js').PostCommitResolutionTask[])
+        : 'postCommitResolution' in result
+          ? (result.postCommitResolution as
+              | import('../payments/payments.lifecycle.js').PostCommitResolutionTask
+              | null
+              | undefined)
+          : null;
+    await flushPostCommitPaymentRefunds(result.postCommitRefunds, resolutions);
+  }
+
   if (result.outcome !== 'CREATED') {
     return result;
   }
@@ -637,12 +670,29 @@ export const cancelLearnerReservation = async (input: {
 
     await applyBuildReservationSyncInTransaction(tx, existing.id);
 
-    return { outcome: 'CANCELLED' as const, reservationId: existing.id };
+    const payment = await handleReservationPaymentLifecycleTransition(tx, {
+      reservationId: existing.id,
+      newStatus: 'CANCELLED',
+      actorUserId: input.requesterId,
+      reason: 'Cancelled by learner',
+    });
+
+    return {
+      outcome: 'CANCELLED' as const,
+      reservationId: existing.id,
+      postCommitRefunds: payment.postCommitRefunds,
+      postCommitResolution: payment.postCommitResolution ?? null,
+    };
   });
 
   if (result.outcome !== 'CANCELLED') {
     return result;
   }
+
+  await flushPostCommitPaymentRefunds(
+    result.postCommitRefunds,
+    result.postCommitResolution,
+  );
 
   const reservation = await loadLearnerCancelledReservationRecord(
     result.reservationId,

@@ -1,6 +1,7 @@
 import '../../../../core/config/api_config.dart';
 
 import 'reservation_message.dart';
+import 'reservation_payment_summary.dart';
 import 'reservation_preferred_window.dart';
 
 class LearnerReservationPickupLocation {
@@ -200,6 +201,7 @@ class LearnerReservation {
     this.groupItemCount,
     this.groupDeliveryFee,
     this.groupTotal,
+    this.paymentSummary,
   });
 
   final String id;
@@ -256,6 +258,7 @@ class LearnerReservation {
   final int? groupItemCount;
   final double? groupDeliveryFee;
   final double? groupTotal;
+  final ReservationPaymentSummary? paymentSummary;
 
   factory LearnerReservation.fromJson(Map<String, dynamic> json) {
     final materialJson = json['material'];
@@ -368,6 +371,15 @@ class LearnerReservation {
       groupItemCount: (json['groupItemCount'] as num?)?.toInt(),
       groupDeliveryFee: (json['groupDeliveryFee'] as num?)?.toDouble(),
       groupTotal: (json['groupTotal'] as num?)?.toDouble(),
+      paymentSummary: () {
+        final summary = json['paymentSummary'];
+        if (summary is Map) {
+          return ReservationPaymentSummary.fromJson(
+            Map<String, dynamic>.from(summary),
+          );
+        }
+        return null;
+      }(),
     );
   }
 

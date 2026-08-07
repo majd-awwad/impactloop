@@ -2,9 +2,11 @@
 
 Documents the implemented MVP learner reservation request path.
 
-**Out of scope for Flutter (still):** background GPS streaming, WebSockets/realtime tracking, public tracking links, supplier live tracking, scheduled background expiry cron, reservation-related reviews, delivery cancellation/retry, and payment.
+**Out of scope for Flutter (still):** background GPS streaming, WebSockets/realtime tracking, public tracking links, supplier live tracking, scheduled background expiry cron, reservation-related reviews, delivery cancellation/retry, and real PSP checkout.
 
-**Implemented since earlier doc drafts:** learner cancel (`PENDING` / awaiting confirmation), partial-quantity holds, handover codes, reschedule/report/messages, delivery request + delivery detail tracking summary.
+**Payments:** local Mock + enforcement-ON payment for material and delivery fees is **implemented** — see [payment-flow.md](payment-flow.md) and [payments.md](../features/payments.md).
+
+**Implemented since earlier doc drafts:** learner cancel (`PENDING` / awaiting confirmation), partial-quantity holds, handover codes, reschedule/report/messages, delivery request + delivery detail tracking summary, reservation-scoped Mock checkout.
 
 ## Trigger
 

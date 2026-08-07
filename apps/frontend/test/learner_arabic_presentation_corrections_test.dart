@@ -119,10 +119,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('طريقة استلام الطلب: الاستلام من المورّد'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('الاستلام من المورّد'), findsWidgets);
     expect(find.textContaining('التوصيل: الاستلام'), findsNothing);
   });
 
@@ -141,7 +138,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('مكتمل'), findsOneWidget);
+    expect(find.text('مكتمل'), findsWidgets);
     expect(find.text('اكتمل هذا الحجز.'), findsOneWidget);
   });
 

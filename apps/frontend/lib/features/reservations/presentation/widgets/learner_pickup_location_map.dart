@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../data/models/learner_reservation.dart';
 
@@ -13,14 +14,19 @@ class LearnerPickupLocationMap extends StatelessWidget {
     super.key,
     required this.location,
     this.compact = false,
+    this.height,
   });
 
   final LearnerReservationPickupLocation location;
   final bool compact;
 
+  /// Optional fixed height. When null, uses compact/desktop defaults.
+  final double? height;
+
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final l10n = context.l10n;
     final latitude = location.latitude;
     final longitude = location.longitude;
 
@@ -29,18 +35,19 @@ class LearnerPickupLocationMap extends StatelessWidget {
     }
 
     final point = LatLng(latitude, longitude);
-    final mapHeight = compact
-        ? 180.0
-        : (MediaQuery.sizeOf(context).width >= 700 ? 240.0 : 200.0);
+    final mapHeight = height ??
+        (compact
+            ? 180.0
+            : (MediaQuery.sizeOf(context).width >= 700 ? 240.0 : 200.0));
 
     return Semantics(
-      label: 'Pickup location map',
+      label: l10n.reservationLocationLabel,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (location.isApproximate) ...[
             Text(
-              'Map shows an approximate pickup area.',
+              l10n.mapApproximateNote,
               style: AppTextStyles.label(
                 context,
               ).copyWith(color: palette.textMuted),

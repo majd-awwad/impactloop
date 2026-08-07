@@ -311,6 +311,7 @@ class _FakeNotificationsApi extends NotificationsApi {
     int page = 1,
     int limit = 20,
     bool? isRead,
+    String? category,
   }) async {
     return const AppNotificationsPage(
       items: [],

@@ -5,12 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../core/format/localized_formatters.dart';
 
-import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../auth/application/auth_route_helpers.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/learner_deliveries_provider.dart';
@@ -152,6 +152,17 @@ class _Header extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          TextButton.icon(
+            onPressed: () => _goBackFromDelivery(context, delivery),
+            style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
+            icon: const Icon(Icons.arrow_back_rounded, size: 18),
+            label: Text(
+              delivery.reservationId.trim().isNotEmpty
+                  ? context.l10n.viewReservation
+                  : context.l10n.backToReservations,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             context.l10n.deliveryStatusTitle,
             style: AppTextStyles.display(
@@ -267,15 +278,24 @@ class _DeliverySummaryPanel extends StatelessWidget {
             ),
           const SizedBox(height: AppSpacing.md),
           TextButton.icon(
-            onPressed: () => context.popOrGo('/learner/reservations'),
+            onPressed: () => context.go(learnerReservationsRoute),
             style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
-            icon: const Icon(Icons.assignment_turned_in_outlined),
+            icon: const Icon(Icons.arrow_back_rounded, size: 18),
             label: Text(context.l10n.backToReservations),
           ),
         ],
       ),
     );
   }
+}
+
+void _goBackFromDelivery(BuildContext context, LearnerDelivery delivery) {
+  final reservationId = delivery.reservationId.trim();
+  if (reservationId.isNotEmpty) {
+    context.go(learnerReservationDetailRoute(reservationId));
+    return;
+  }
+  context.go(learnerReservationsRoute);
 }
 
 class _TrackingStatusCard extends StatelessWidget {

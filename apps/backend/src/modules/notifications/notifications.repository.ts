@@ -108,6 +108,7 @@ export const createNotificationIfMissing = async (
 export const findNotificationsForUser = async (input: {
   userId: string;
   isRead?: boolean;
+  category?: 'payments' | 'delivery' | 'refunds';
   page: number;
   limit: number;
 }) => {
@@ -116,9 +117,44 @@ export const findNotificationsForUser = async (input: {
     ? Math.min(50, Math.max(1, Math.floor(input.limit)))
     : 20;
 
+  const categoryWhere: Prisma.NotificationWhereInput | undefined =
+    input.category === 'payments'
+      ? {
+          notificationType: {
+            in: [
+              'PAYMENT_REQUIRED',
+              'PAYMENT_COMPLETED',
+              'PAYMENT_NEW_CYCLE_REQUIRED',
+              'PAYMENT_RESOLUTION_REQUIRED',
+            ],
+          },
+        }
+      : input.category === 'refunds'
+        ? {
+            notificationType: {
+              in: [
+                'PAYMENT_REFUND_REQUESTED',
+                'PAYMENT_REFUNDED',
+                'PAYMENT_REFUND_FAILED',
+                'PAYMENT_LATE_SUCCESS_REFUND',
+              ],
+            },
+          }
+        : input.category === 'delivery'
+          ? {
+              OR: [
+                { notificationType: 'PAYMENT_FULFILLMENT_READY' },
+                { relatedEntityType: 'DELIVERY' },
+                { notificationType: { startsWith: 'DRIVER_' } },
+                { notificationType: { contains: 'DELIVERY' } },
+              ],
+            }
+          : undefined;
+
   const where: Prisma.NotificationWhereInput = {
     ...visibleNotificationWhere(input.userId),
     ...(input.isRead === undefined ? {} : { isRead: input.isRead }),
+    ...(categoryWhere ?? {}),
   };
 
   const [items, total, unreadCount] = await Promise.all([

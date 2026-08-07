@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,18 +9,24 @@ import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/format/localized_formatters.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../auth/application/auth_route_helpers.dart';
 import '../../../auth/data/models/user.dart';
 import '../../application/notification_display.dart';
 import '../../application/notifications_provider.dart';
+import '../../application/payment_notification_presentation.dart';
 import '../../data/models/app_notification.dart';
 import '../notification_visual_presentation.dart';
 import '../notification_visuals.dart';
+import '../widgets/payment_notification_detail_sheet.dart';
+
+const _notificationsPollInterval = Duration(seconds: 30);
 
 class UserNotificationsPage extends ConsumerWidget {
   const UserNotificationsPage({super.key, this.embeddedInShell = false});
@@ -95,6 +103,24 @@ class _NotificationsBody extends ConsumerStatefulWidget {
 
 class _NotificationsBodyState extends ConsumerState<_NotificationsBody> {
   bool _refreshInFlight = false;
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _pollTimer = Timer.periodic(_notificationsPollInterval, (_) {
+      if (!mounted || _refreshInFlight) {
+        return;
+      }
+      unawaited(refreshNotifications(ref));
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
 
   Future<void> _handleRefresh() async {
     if (_refreshInFlight) {
@@ -121,6 +147,7 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody> {
     final l10n = context.l10n;
     final listAsync = ref.watch(notificationsListProvider);
     final selectedFilter = ref.watch(notificationReadFilterProvider);
+    final categoryFilter = ref.watch(notificationCategoryFilterProvider);
     final viewportWidth = MediaQuery.sizeOf(context).width;
     final isCompactMobile = viewportWidth < 820;
     final showPageBack = !widget.embeddedInShell && viewportWidth < 900;
@@ -156,6 +183,7 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody> {
                         icon: const Icon(Icons.arrow_back_rounded, size: 18),
                         label: Text(l10n.notificationsBack),
                         style: TextButton.styleFrom(
+                          minimumSize: const Size(44, 44),
                           padding: const EdgeInsetsDirectional.symmetric(
                             horizontal: AppSpacing.sm,
                           ),
@@ -167,12 +195,22 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody> {
                   ],
                   _NotificationsHeaderCard(
                     listAsync: listAsync,
-                    isRefreshing: _refreshInFlight || listAsync.isLoading,
+                    isRefreshing: _refreshInFlight ||
+                        listAsync.maybeWhen(
+                          data: (state) => state.isBackgroundRefreshing,
+                          orElse: () => listAsync.isLoading,
+                        ),
                     onMarkAllRead: () => markAllNotificationsRead(ref),
                     onRefresh: _handleRefresh,
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  _NotificationFilterBar(
+                  _NotificationCategoryFilterBar(
+                    selected: categoryFilter,
+                    onSelected: (filter) =>
+                        setNotificationCategoryFilter(ref, filter),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _NotificationReadFilterBar(
                     selected: selectedFilter,
                     onSelected: (filter) =>
                         setNotificationReadFilter(ref, filter),
@@ -186,6 +224,7 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody> {
         Expanded(
           child: listAsync.when(
             skipLoadingOnReload: true,
+            skipLoadingOnRefresh: true,
             loading: () => Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(
@@ -195,11 +234,7 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody> {
                   padding: const EdgeInsetsDirectional.symmetric(
                     horizontal: AppSpacing.md,
                   ),
-                  child: _NotificationsStateCard(
-                    icon: Icons.hourglass_top_outlined,
-                    title: l10n.notificationsLoading,
-                    subtitle: l10n.notificationsLoadingSubtitle,
-                  ),
+                  child: _NotificationsSkeletonList(bottomPadding: bottomPadding),
                 ),
               ),
             ),
@@ -215,10 +250,8 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody> {
                       padding: const EdgeInsetsDirectional.symmetric(
                         horizontal: AppSpacing.md,
                       ),
-                      child: _NotificationsStateCard(
-                        icon: Icons.hourglass_top_outlined,
-                        title: l10n.notificationsLoading,
-                        subtitle: l10n.notificationsLoadingSubtitle,
+                      child: _NotificationsSkeletonList(
+                        bottomPadding: bottomPadding,
                       ),
                     ),
                   ),
@@ -248,7 +281,8 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody> {
               );
             },
             data: (state) {
-              if (state.items.isEmpty) {
+              final visible = state.visibleItems;
+              if (visible.isEmpty) {
                 final empty = _emptyCopyForFilter(selectedFilter, l10n);
                 return Center(
                   child: ConstrainedBox(
@@ -276,6 +310,7 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody> {
                   ),
                   child: _NotificationsListView(
                     state: state,
+                    visibleItems: visible,
                     bottomPadding: bottomPadding,
                     isSupplierMode:
                         widget.user?.isSupplierMode == true &&
@@ -335,17 +370,62 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody> {
     }
 
     final currentUser = ref.read(authControllerProvider).user;
+    final isSupplierMode =
+        currentUser?.isSupplierMode == true &&
+        currentUser?.hasRole('SUPPLIER') == true;
+    final isDriverMode =
+        currentUser?.isDriverMode == true &&
+        currentUser?.hasRole('DRIVER') == true;
+
     final route = notificationOpenRoute(
       notification,
-      isSupplierMode:
-          currentUser?.isSupplierMode == true &&
-          currentUser?.hasRole('SUPPLIER') == true,
-      isDriverMode:
-          currentUser?.isDriverMode == true &&
-          currentUser?.hasRole('DRIVER') == true,
+      isSupplierMode: isSupplierMode,
+      isDriverMode: isDriverMode,
     );
 
     if (route == null) {
+      return;
+    }
+
+    final isPayment =
+        !isSupplierMode && !isDriverMode && isPaymentNotification(notification);
+
+    if (isPayment) {
+      final reservationId = paymentNotificationReservationId(notification);
+      invalidateCachesAfterPaymentNotificationOpen(
+        ref,
+        reservationId: reservationId,
+      );
+
+      final secondaryRoute = reservationId == null
+          ? null
+          : learnerReservationDetailRoute(reservationId, focus: 'payment');
+
+      await showPaymentNotificationDetailSheet(
+        context: context,
+        notification: notification,
+        onPrimaryAction: () {
+          if (!context.mounted) {
+            return;
+          }
+          if (_isDriverDeliveryRoute(route)) {
+            context.go(route);
+            return;
+          }
+          context.push(route);
+        },
+        onSecondaryAction:
+            secondaryRoute != null &&
+                secondaryRoute != route &&
+                paymentNotificationShouldOpenCheckout(notification)
+            ? () {
+                if (!context.mounted) {
+                  return;
+                }
+                context.push(secondaryRoute);
+              }
+            : null,
+      );
       return;
     }
 
@@ -365,6 +445,7 @@ bool _isDriverDeliveryRoute(String route) {
 class _NotificationsListView extends StatelessWidget {
   const _NotificationsListView({
     required this.state,
+    required this.visibleItems,
     required this.bottomPadding,
     required this.isSupplierMode,
     required this.isDriverMode,
@@ -373,6 +454,7 @@ class _NotificationsListView extends StatelessWidget {
   });
 
   final NotificationsListState state;
+  final List<AppNotification> visibleItems;
   final double bottomPadding;
   final bool isSupplierMode;
   final bool isDriverMode;
@@ -392,24 +474,24 @@ class _NotificationsListView extends StatelessWidget {
         AppSpacing.md,
         bottomPadding,
       ),
-      itemCount: state.items.length + footerCount,
+      itemCount: visibleItems.length + footerCount,
       separatorBuilder: (context, index) {
-        if (index >= state.items.length - 1) {
+        if (index >= visibleItems.length - 1) {
           return const SizedBox.shrink();
         }
         return const SizedBox(height: AppSpacing.sm);
       },
       itemBuilder: (context, index) {
-        if (index < state.items.length) {
+        if (index < visibleItems.length) {
           return _NotificationTile(
-            notification: state.items[index],
+            notification: visibleItems[index],
             isSupplierMode: isSupplierMode,
             isDriverMode: isDriverMode,
-            onOpen: () => onOpen(state.items[index]),
+            onOpen: () => onOpen(visibleItems[index]),
           );
         }
 
-        var footerIndex = index - state.items.length;
+        var footerIndex = index - visibleItems.length;
 
         if (state.hasMore) {
           if (footerIndex == 0) {
@@ -448,7 +530,7 @@ class _NotificationsListView extends StatelessWidget {
             AppSpacing.sm,
           ),
           child: Text(
-            l10n.notificationCount(state.items.length, state.total),
+            l10n.notificationCount(visibleItems.length, state.total),
             textAlign: TextAlign.center,
             style: AppTextStyles.label(
               context,
@@ -460,8 +542,72 @@ class _NotificationsListView extends StatelessWidget {
   }
 }
 
-class _NotificationFilterBar extends StatelessWidget {
-  const _NotificationFilterBar({
+class _NotificationCategoryFilterBar extends StatelessWidget {
+  const _NotificationCategoryFilterBar({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final PaymentNotificationCategoryFilter selected;
+  final ValueChanged<PaymentNotificationCategoryFilter> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final palette = MaterialsUiPalette.of(context);
+
+    Widget chip(PaymentNotificationCategoryFilter value, String label) {
+      final isSelected = selected == value;
+      return FilterChip(
+        key: Key('notifications-category-${value.name}'),
+        selected: isSelected,
+        showCheckmark: false,
+        label: Text(label),
+        onSelected: (_) => onSelected(value),
+        selectedColor: palette.mint.withValues(alpha: 0.18),
+        side: BorderSide(
+          color: isSelected ? palette.mint : palette.borderSubtle,
+        ),
+        labelStyle: AppTextStyles.label(context).copyWith(
+          color: isSelected ? palette.textPrimary : palette.textSecondary,
+          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+        ),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        materialTapTargetSize: MaterialTapTargetSize.padded,
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          chip(PaymentNotificationCategoryFilter.all, l10n.filterAll),
+          const SizedBox(width: AppSpacing.sm),
+          chip(
+            PaymentNotificationCategoryFilter.payments,
+            l10n.notificationsFilterPayments,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          chip(
+            PaymentNotificationCategoryFilter.delivery,
+            l10n.notificationsFilterDelivery,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          chip(
+            PaymentNotificationCategoryFilter.refunds,
+            l10n.notificationsFilterRefunds,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NotificationReadFilterBar extends StatelessWidget {
+  const _NotificationReadFilterBar({
     required this.selected,
     required this.onSelected,
   });
@@ -473,18 +619,28 @@ class _NotificationFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return SegmentedButton<NotificationReadFilter>(
+      key: const Key('notifications-read-filter-bar'),
       segments: [
         ButtonSegment(
           value: NotificationReadFilter.all,
-          label: Text(l10n.filterAll),
+          label: Text(
+            l10n.filterAll,
+            key: const Key('notifications-read-filter-all'),
+          ),
         ),
         ButtonSegment(
           value: NotificationReadFilter.unread,
-          label: Text(l10n.filterUnread),
+          label: Text(
+            l10n.filterUnread,
+            key: const Key('notifications-read-filter-unread'),
+          ),
         ),
         ButtonSegment(
           value: NotificationReadFilter.read,
-          label: Text(l10n.filterRead),
+          label: Text(
+            l10n.filterRead,
+            key: const Key('notifications-read-filter-read'),
+          ),
         ),
       ],
       selected: {selected},
@@ -543,6 +699,13 @@ class _NotificationsHeaderCard extends StatelessWidget {
                   context,
                 ).copyWith(color: palette.textSecondary),
               ),
+              if (unreadCount > 0) ...[
+                const SizedBox(height: AppSpacing.sm),
+                AppStatusBadge(
+                  label: l10n.notificationsUnreadCount(unreadCount),
+                  tone: AppStatusTone.info,
+                ),
+              ],
             ],
           );
 
@@ -691,6 +854,37 @@ class _NotificationsStateCard extends StatelessWidget {
   }
 }
 
+class _NotificationsSkeletonList extends StatelessWidget {
+  const _NotificationsSkeletonList({required this.bottomPadding});
+
+  final double bottomPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    return ListView.separated(
+      padding: EdgeInsetsDirectional.fromSTEB(
+        0,
+        0,
+        0,
+        bottomPadding,
+      ),
+      itemCount: 4,
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+      itemBuilder: (context, index) {
+        return Container(
+          height: 96,
+          decoration: BoxDecoration(
+            color: palette.panelSurface,
+            borderRadius: AppRadius.mdAll,
+            border: Border.all(color: palette.borderSubtle),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _NotificationTile extends StatelessWidget {
   const _NotificationTile({
     required this.notification,
@@ -707,7 +901,10 @@ class _NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final themeColors = AppThemeColors.of(context);
     final l10n = context.l10n;
+    final isPayment =
+        !isSupplierMode && !isDriverMode && isPaymentNotification(notification);
     final category = categoryForNotification(notification);
     final chipLabel = notificationTypeChipLabel(category, l10n: l10n);
     final actionLabel = notificationActionLabel(
@@ -722,18 +919,29 @@ class _NotificationTile extends StatelessWidget {
       isSupplierMode: isSupplierMode,
       isDriverMode: isDriverMode,
     );
-    final tone = notificationVisualTone(category);
-    final accent = AppStatusStyle.of(context, tone).foreground;
+    final tone = toneForNotification(notification);
+    final accent = isPayment
+        ? paymentNotificationAccent(notification)
+        : AppStatusStyle.of(context, tone).foreground;
     final isCompact = MediaQuery.sizeOf(context).width < 600;
     final relativeTime = LocalizedFormatters(
       l10n,
     ).relativeTime(notification.createdAt);
+    final amount = isPayment
+        ? formatPaymentNotificationAmount(notification, l10n)
+        : null;
+    final reservationLabel = isPayment
+        ? paymentNotificationReservationLabel(notification)
+        : '';
+    final materialTitle = isPayment
+        ? paymentNotificationMaterialTitle(notification)
+        : null;
 
     final typeIcon = ExcludeSemantics(
       child: Container(
         key: Key('notification-type-icon-${notification.id}'),
-        width: isCompact ? 36 : 40,
-        height: isCompact ? 36 : 40,
+        width: isCompact ? 40 : 44,
+        height: isCompact ? 40 : 44,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: accent.withValues(alpha: 0.12),
@@ -742,7 +950,7 @@ class _NotificationTile extends StatelessWidget {
         ),
         child: Icon(
           iconForNotification(notification),
-          size: isCompact ? 18 : 20,
+          size: isCompact ? 20 : 22,
           color: accent,
         ),
       ),
@@ -751,10 +959,10 @@ class _NotificationTile extends StatelessWidget {
     final unreadDot = !notification.isRead
         ? Container(
             key: Key('notification-unread-dot-${notification.id}'),
-            width: 8,
-            height: 8,
+            width: 10,
+            height: 10,
             decoration: BoxDecoration(
-              color: palette.mint,
+              color: themeColors.info,
               shape: BoxShape.circle,
             ),
           )
@@ -765,7 +973,7 @@ class _NotificationTile extends StatelessWidget {
       style: AppTextStyles.body(context).copyWith(
         color: palette.textPrimary,
         fontSize: isCompact ? 15 : 16,
-        fontWeight: notification.isRead ? FontWeight.w600 : FontWeight.w700,
+        fontWeight: notification.isRead ? FontWeight.w600 : FontWeight.w800,
         height: 1.3,
       ),
     );
@@ -788,101 +996,152 @@ class _NotificationTile extends StatelessWidget {
         ? Text(
             actionLabel,
             style: AppTextStyles.label(context).copyWith(
-              color: palette.mint,
-              fontWeight: FontWeight.w600,
+              color: isPayment ? accent : palette.mint,
+              fontWeight: FontWeight.w700,
               fontSize: 12,
             ),
           )
         : null;
 
+    final metaRow = Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.xs,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (reservationLabel.isNotEmpty)
+          Text(
+            reservationLabel,
+            style: AppTextStyles.label(context).copyWith(
+              color: palette.textMuted,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        if (amount != null)
+          Text(
+            amount,
+            key: Key('notification-amount-${notification.id}'),
+            style: AppTextStyles.label(context).copyWith(
+              color: palette.textPrimary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        if (materialTitle != null)
+          Text(
+            materialTitle,
+            style: AppTextStyles.label(context).copyWith(
+              color: palette.textSecondary,
+            ),
+          ),
+      ],
+    );
+
     return Material(
-      color: notification.isRead ? palette.panelSurface : palette.inputSurface,
+      color: notification.isRead
+          ? palette.panelSurface
+          : Color.alphaBlend(
+              themeColors.info.withValues(alpha: 0.08),
+              palette.cardSurface,
+            ),
       borderRadius: AppRadius.mdAll,
       child: InkWell(
         onTap: onOpen,
         borderRadius: AppRadius.mdAll,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: AppRadius.mdAll,
-            border: Border.all(
-              color: notification.isRead
-                  ? palette.borderSubtle
-                  : palette.borderStrong,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 72),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: AppRadius.mdAll,
+              border: Border.all(
+                color: notification.isRead
+                    ? palette.borderSubtle
+                    : themeColors.info.withValues(alpha: 0.45),
+              ),
             ),
-          ),
-          padding: EdgeInsetsDirectional.all(
-            isCompact ? AppSpacing.sm + 2 : AppSpacing.md,
-          ),
-          child: isCompact
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        if (unreadDot != null) ...[
-                          unreadDot,
-                          const SizedBox(width: AppSpacing.xs),
-                        ],
-                        Flexible(
-                          child: AppStatusBadge(label: chipLabel, tone: tone),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        timestamp,
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        typeIcon,
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(child: title),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    body,
-                    if (action != null) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      action,
-                    ],
-                  ],
-                )
-              : Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    typeIcon,
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
+            padding: EdgeInsetsDirectional.all(
+              isCompact ? AppSpacing.sm + 2 : AppSpacing.md,
+            ),
+            child: isCompact
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
                         children: [
-                          Wrap(
-                            spacing: AppSpacing.xs,
-                            runSpacing: AppSpacing.xs,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              AppStatusBadge(label: chipLabel, tone: tone),
-                              ?unreadDot,
-                            ],
+                          if (unreadDot != null) ...[
+                            unreadDot,
+                            const SizedBox(width: AppSpacing.xs),
+                          ],
+                          Flexible(
+                            child: AppStatusBadge(
+                              label: chipLabel,
+                              tone: tone,
+                            ),
                           ),
-                          const SizedBox(height: AppSpacing.xs),
-                          title,
-                          const SizedBox(height: AppSpacing.xs),
-                          body,
-                          const SizedBox(height: AppSpacing.sm),
-                          Wrap(
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.xs,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [timestamp, ?action],
-                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          timestamp,
                         ],
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          typeIcon,
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(child: title),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      body,
+                      if (isPayment) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        metaRow,
+                      ],
+                      if (action != null) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        action,
+                      ],
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      typeIcon,
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Wrap(
+                              spacing: AppSpacing.xs,
+                              runSpacing: AppSpacing.xs,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                AppStatusBadge(label: chipLabel, tone: tone),
+                                ?unreadDot,
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            title,
+                            const SizedBox(height: AppSpacing.xs),
+                            body,
+                            if (isPayment) ...[
+                              const SizedBox(height: AppSpacing.sm),
+                              metaRow,
+                            ],
+                            const SizedBox(height: AppSpacing.sm),
+                            Wrap(
+                              spacing: AppSpacing.sm,
+                              runSpacing: AppSpacing.xs,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [timestamp, ?action],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );

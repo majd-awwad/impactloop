@@ -379,4 +379,94 @@ describe('notifications module', () => {
 
     assert.equal(capped.pagination.limit, 50);
   });
+
+  test('listMyNotifications category filter is server-side truthful', async () => {
+    await resetNotifications();
+    const payment = await createNotification({
+      userId: ctx.learnerId,
+      notificationType: 'PAYMENT_REQUIRED',
+      title: 'Payment required',
+      body: 'Pay now',
+      relatedEntityType: 'RESERVATION',
+      relatedEntityId: 'res-pay',
+      eventKey: `test:payment-required:${ctx.learnerId}`,
+    });
+    const refund = await createNotification({
+      userId: ctx.learnerId,
+      notificationType: 'PAYMENT_REFUNDED',
+      title: 'Refunded',
+      body: 'Refund done',
+      relatedEntityType: 'RESERVATION',
+      relatedEntityId: 'res-refund',
+      eventKey: `test:payment-refunded:${ctx.learnerId}`,
+    });
+    const fulfillment = await createNotification({
+      userId: ctx.learnerId,
+      notificationType: 'PAYMENT_FULFILLMENT_READY',
+      title: 'Ready',
+      body: 'Pickup ready',
+      relatedEntityType: 'RESERVATION',
+      relatedEntityId: 'res-fulfill',
+      eventKey: `test:payment-fulfill:${ctx.learnerId}`,
+    });
+    const other = await createNotification({
+      userId: ctx.learnerId,
+      notificationType: 'RESERVATION_ACCEPTED',
+      title: 'Accepted',
+      body: 'Accepted body',
+      relatedEntityType: 'RESERVATION',
+      relatedEntityId: 'res-other',
+      eventKey: `test:reservation-accepted:${ctx.learnerId}`,
+    });
+    ctx.createdNotificationIds.push(
+      payment.id,
+      refund.id,
+      fulfillment.id,
+      other.id,
+    );
+
+    const payments = await listMyNotifications(ctx.learnerId, {
+      page: 1,
+      limit: 50,
+      isRead: undefined,
+      category: 'payments',
+    });
+    assert.ok(payments.items.some((item) => item.id === payment.id));
+    assert.equal(
+      payments.items.some((item) => item.id === refund.id),
+      false,
+    );
+    assert.equal(
+      payments.items.some((item) => item.id === fulfillment.id),
+      false,
+    );
+    assert.equal(
+      payments.items.some((item) => item.id === other.id),
+      false,
+    );
+
+    const refunds = await listMyNotifications(ctx.learnerId, {
+      page: 1,
+      limit: 50,
+      isRead: undefined,
+      category: 'refunds',
+    });
+    assert.ok(refunds.items.some((item) => item.id === refund.id));
+    assert.equal(
+      refunds.items.some((item) => item.id === payment.id),
+      false,
+    );
+
+    const delivery = await listMyNotifications(ctx.learnerId, {
+      page: 1,
+      limit: 50,
+      isRead: undefined,
+      category: 'delivery',
+    });
+    assert.ok(delivery.items.some((item) => item.id === fulfillment.id));
+    assert.equal(
+      delivery.items.some((item) => item.id === payment.id),
+      false,
+    );
+  });
 });

@@ -987,7 +987,7 @@ describe('material request fulfillment build synchronization', () => {
     const supplierPickupEnd = new Date(
       supplierPickupStart.getTime() + 2 * 3_600_000,
     );
-    const earliestDelivery = new Date(supplierPickupEnd.getTime() + 60 * 60_000);
+    const earliestDelivery = new Date(supplierPickupStart.getTime() + 60 * 60_000);
     const learnerDeliveryStart = new Date(
       earliestDelivery.getTime() - 30 * 60_000,
     );

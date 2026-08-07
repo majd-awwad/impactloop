@@ -158,7 +158,7 @@ describe('reservation delivery batch lookups', () => {
       deliveriesByReservationId: new Map([['missed-3', [{ status: 'WAITING_FOR_DRIVER' }]]]),
     });
 
-    const expiredIds = await expireStaleMissedPickupsInTransaction(
+    const expired = await expireStaleMissedPickupsInTransaction(
       tx,
       reservations,
       'learner-1',
@@ -167,6 +167,6 @@ describe('reservation delivery batch lookups', () => {
 
     assert.equal(metrics.findManyCalls, 1);
     assert.equal(metrics.countCalls, 0);
-    assert.equal(expiredIds.length, 0);
+    assert.equal(expired.expiredIds.length, 0);
   });
 });

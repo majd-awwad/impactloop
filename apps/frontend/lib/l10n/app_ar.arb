@@ -75,7 +75,7 @@
   "pickupMissed": "فات موعد الاستلام",
   "filterAll": "الكل",
   "filterActive": "نشط",
-  "filterNeedsAction": "يتطلب إجراءً",
+  "filterNeedsAction": "يتطلب إجراء",
   "filterPending": "قيد الانتظار",
   "filterAccepted": "مقبول",
   "filterCompleted": "مكتمل",
@@ -166,7 +166,7 @@
     }
   },
   "notificationsTitle": "الإشعارات",
-  "notificationsSubtitle": "تحديثات الحجوزات والتوصيل والمشاريع والحساب.",
+  "notificationsSubtitle": "تحديثات الدفع والحجوزات والتوصيل والمشاريع والحساب.",
   "notificationsLoading": "جارٍ تحميل الإشعارات…",
   "notificationsLoadingSubtitle": "جارٍ جلب أحدث التحديثات.",
   "notificationsLoadError": "تعذّر تحميل الإشعارات.",
@@ -203,6 +203,186 @@
   "notificationChipMaterialRequest": "طلب مادة",
   "notificationChipAccount": "الحساب",
   "notificationChipUpdate": "تحديث",
+  "notificationChipPayment": "دفع",
+  "notificationChipRefund": "استرداد",
+  "notificationsFilterPayments": "المدفوعات",
+  "notificationsFilterDelivery": "التوصيل",
+  "notificationsFilterRefunds": "الاستردادات",
+  "notificationsUnreadCount": "{count, plural, =0{لا يوجد غير مقروء} =1{إشعار واحد غير مقروء} other{{count} غير مقروءة}}",
+  "@notificationsUnreadCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationPaymentRequiredTitle": "الدفع مطلوب",
+  "notificationPaymentRequiredBody": "أكمل الدفع مقابل {materialTitle} للمتابعة.",
+  "@notificationPaymentRequiredBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRequiredBodyWithAmount": "ادفع {amount} مقابل {materialTitle} للمتابعة.",
+  "@notificationPaymentRequiredBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentDeliveryFeeRequiredTitle": "رسوم التوصيل مطلوبة",
+  "notificationPaymentDeliveryFeeRequiredBody": "مطلوب دفع رسوم التوصيل قبل متابعة توصيل {materialTitle}.",
+  "@notificationPaymentDeliveryFeeRequiredBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentDeliveryFeeRequiredBodyWithAmount": "ادفع رسوم التوصيل بقيمة {amount} قبل متابعة توصيل {materialTitle}.",
+  "@notificationPaymentDeliveryFeeRequiredBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentCompletedTitle": "اكتمل الدفع",
+  "notificationPaymentCompletedBody": "تم استلام الدفع مقابل {materialTitle}.",
+  "@notificationPaymentCompletedBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentCompletedBodyWithAmount": "تم استلام دفع بقيمة {amount} مقابل {materialTitle}.",
+  "@notificationPaymentCompletedBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentCompletedMoreRequiredTitle": "تم استلام دفعة — ما زال هناك مبلغ مستحق",
+  "notificationPaymentCompletedMoreRequiredBody": "تم استلام دفعة مقابل {materialTitle}، لكن ما زال هناك دفع مطلوب قبل متابعة التنفيذ.",
+  "@notificationPaymentCompletedMoreRequiredBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentCompletedMoreRequiredBodyWithAmount": "تم استلام {amount} مقابل {materialTitle}، لكن ما زال هناك دفع مطلوب قبل متابعة التنفيذ.",
+  "@notificationPaymentCompletedMoreRequiredBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentFulfillmentReadyTitle": "جاهز للتوصيل",
+  "notificationPaymentFulfillmentReadyBody": "{materialTitle} جاهزة للانتقال إلى التنفيذ.",
+  "@notificationPaymentFulfillmentReadyBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentPickupReadyTitle": "جاهز للاستلام",
+  "notificationPaymentPickupReadyBody": "{materialTitle} جاهزة للاستلام. اعرض رمز الاستلام.",
+  "@notificationPaymentPickupReadyBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundRequestedTitle": "جاري معالجة الاسترداد",
+  "notificationPaymentRefundRequestedBody": "يتم معالجة استرداد لـ {materialTitle}.",
+  "@notificationPaymentRefundRequestedBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundRequestedBodyWithAmount": "يتم معالجة استرداد بقيمة {amount} لـ {materialTitle}.",
+  "@notificationPaymentRefundRequestedBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundedTitle": "تم الاسترداد",
+  "notificationPaymentRefundedBody": "اكتمل استردادك مقابل {materialTitle}.",
+  "@notificationPaymentRefundedBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundedBodyWithAmount": "اكتمل استردادك بقيمة {amount} مقابل {materialTitle}.",
+  "@notificationPaymentRefundedBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundedNewCycleTitle": "تم الاسترداد — مطلوب دفع جديد",
+  "notificationPaymentRefundedNewCycleBody": "تم استرداد دفعتك السابقة مقابل {materialTitle}. مطلوب الآن دفع جديد للمتابعة.",
+  "@notificationPaymentRefundedNewCycleBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundedNewCycleBodyWithAmount": "تم استرداد دفعتك السابقة بقيمة {amount} مقابل {materialTitle}. مطلوب الآن دفع جديد للمتابعة.",
+  "@notificationPaymentRefundedNewCycleBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentRefundFailedTitle": "الاسترداد يحتاج متابعة",
+  "notificationPaymentRefundFailedBody": "تعذّر إكمال الاسترداد مقابل {materialTitle}. راجع تفاصيل الحجز.",
+  "@notificationPaymentRefundFailedBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentLateSuccessRefundTitle": "استرداد دفعة متأخرة",
+  "notificationPaymentLateSuccessRefundBody": "تم استرداد دفعة متأخرة تلقائيًا مقابل {materialTitle}.",
+  "@notificationPaymentLateSuccessRefundBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentNewCycleRequiredTitle": "دورة دفع جديدة مطلوبة",
+  "notificationPaymentNewCycleRequiredBody": "مطلوب دورة دفع جديدة مقابل {materialTitle}.",
+  "@notificationPaymentNewCycleRequiredBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentNewCycleRequiredBodyWithAmount": "ادفع {amount} للدورة الجديدة من {materialTitle}.",
+  "@notificationPaymentNewCycleRequiredBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentResolutionRequiredTitle": "مطلوب حل لمشكلة الدفع",
+  "notificationPaymentResolutionRequiredBody": "حجزك لـ {materialTitle} يحتاج إلى حل لمشكلة الدفع.",
+  "@notificationPaymentResolutionRequiredBody": {
+    "placeholders": {
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentShowPickupCode": "عرض رمز الاستلام",
+  "notificationPaymentStatusUnpaid": "لم يُدفع بعد",
+  "notificationPaymentStatusPaid": "مدفوع",
+  "notificationPaymentStatusRefundProcessing": "جاري معالجة الاسترداد",
+  "notificationPaymentStatusRefunded": "تم الاسترداد",
+  "notificationPaymentStatusRefundFailed": "فشل الاسترداد",
+  "notificationPaymentStatusResolutionRequired": "مطلوب حل",
+  "notificationPaymentStatusLateRefund": "تم استرداد دفعة متأخرة",
+  "notificationPaymentStatusPickupReady": "جاهز للاستلام",
+  "notificationPaymentStatusFulfillmentReady": "جاهز للتنفيذ",
+  "notificationPaymentNextStepPay": "تابع إلى الدفع لإكمال هذه العملية.",
+  "notificationPaymentNextStepViewReservation": "افتح تفاصيل الحجز لمراجعة سجل الدفع.",
+  "notificationPaymentNextStepPickup": "افتح تفاصيل الحجز لعرض رمز الاستلام.",
+  "notificationPaymentNextStepTrack": "افتح تفاصيل الحجز لمتابعة التنفيذ.",
+  "notificationPaymentNextStepRefundProcessing": "افتح تفاصيل الحجز لمتابعة الاسترداد.",
+  "notificationPaymentNextStepRefunded": "افتح تفاصيل الحجز لمراجعة الدفعة المستردة.",
+  "notificationPaymentNextStepResolution": "افتح تفاصيل الحجز لحل مشكلة الدفع.",
+  "notificationPaymentNextStepLateRefund": "افتح تفاصيل الحجز لمراجعة الاسترداد التلقائي.",
+  "notificationPaymentDetailSecondary": "تفاصيل الحجز",
+  "notificationPaymentAmountLabel": "المبلغ",
   "notificationsBack": "رجوع",
   "refreshNotifications": "تحديث الإشعارات",
   "viewJobs": "عرض المهام",
@@ -515,7 +695,7 @@
   "learnerAccountRequired": "يلزم حساب متعلّم",
   "learnerAccountRequiredReservations": "استخدم حساب متعلّم لعرض حجوزات المواد.",
   "myReservations": "حجوزاتي",
-  "reservationsSubtitle": "تابع الطلبات ومواعيد الاستلام وتحديثات التوصيل.",
+  "reservationsSubtitle": "تابع جميع حجوزاتك وطلبات الاستلام والتوصيل والدفع من هنا.",
   "loadingReservations": "جارٍ تحميل الحجوزات",
   "loadingReservationsSubtitle": "جارٍ التحقق من أحدث نشاط للحجوزات.",
   "reservationsLoadError": "تعذّر تحميل الحجوزات",
@@ -526,6 +706,265 @@
   "noMatchingReservationsSubtitle": "جرّب مرشحًا آخر أو تصفّح المواد لبدء طلب جديد.",
   "deliveryUpdatesUnavailable": "تحديثات التوصيل غير متاحة مؤقتًا.",
   "tryAgainAction": "حاول مرة أخرى",
+  "reservationsSummaryActive": "نشطة",
+  "reservationsSummaryActionRequired": "يتطلب إجراء",
+  "reservationsSummaryPaymentsRequired": "مدفوعات مطلوبة",
+  "reservationsSummaryDeliveries": "توصيل جاهز",
+  "reservationsSummaryTotal": "إجمالي الحجوزات",
+  "reservationsSummaryLoadedHint": "الأعداد تعكس الحجوزات المحمّلة حالياً.",
+  "reservationsTimezoneNote": "جميع التواريخ والأوقات حسب المنطقة الزمنية الخاصة بك.",
+  "reservationsFilter": "تصفية",
+  "viewAllReservations": "عرض كل الحجوزات",
+  "reservationMoneyAmountDue": "المبلغ المطلوب",
+  "reservationMoneyRemaining": "المتبقي",
+  "reservationMoneyPaidInFull": "تم الدفع بالكامل",
+  "reservationMoneyOrdersRemaining": "{count, plural, zero{لا دفعات متبقية} one{دفعة واحدة متبقية} two{دفعتان متبقيتان} few{{count} دفعات متبقية} many{{count} دفعة متبقية} other{{count} دفعة متبقية}}",
+  "@reservationMoneyOrdersRemaining": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "reservationMoneyMaterialPaidDeliveryDue": "تم دفع دفعة المادة. رسوم التوصيل ما زالت مطلوبة.",
+  "reservationMoneyDeliveryPaidMaterialDue": "تم تسديد رسوم التوصيل. دفعة المادة ما زالت مطلوبة.",
+  "reservationMoneyBothOutstanding": "تُدفع المادة ورسوم التوصيل معًا في دفعة واحدة.",
+  "reservationNextStepPayTitle": "أكمل الدفع لتأكيد الحجز",
+  "reservationNextStepPaySupporting": "سيظهر رمز الاستلام بعد الدفع وبدء نافذة الاستلام.",
+  "reservationNextStepPaySupportingDelivery": "يبدأ التوصيل فقط بعد إكمال الدفع المطلوب.",
+  "reservationNextStepPartialTitle": "أكمل الدفع المتبقي",
+  "reservationNextStepPartialSupporting": "تم استلام دفعة، وما زالت رسوم التوصيل مطلوبة.",
+  "paymentStatusNotRequired": "الدفع غير مطلوب",
+  "reservationNextStepPayToConfirm": "ادفع لتأكيد الحجز وإظهار رمز الاستلام.",
+  "reservationNextStepPayToConfirmDelivery": "ادفع لتأكيد الحجز ومتابعة التوصيل.",
+  "materialDetailViewReservation": "عرض الحجز",
+  "materialDetailViewPickupDetails": "عرض تفاصيل الاستلام",
+  "materialDetailViewDeliveryDetails": "عرض تفاصيل التوصيل",
+  "materialDetailRequestDeliveryInReservations": "اطلب التوصيل من حجوزاتي",
+  "materialDetailViewDeliveryStatus": "عرض حالة التوصيل",
+  "materialDetailViewReservationRequest": "عرض طلب الحجز",
+  "materialDetailViewReservationHistory": "عرض سجل الحجز",
+  "materialDetailViewReservationStatus": "عرض حالة الحجز",
+  "materialDetailAcceptedPickupReady": "تم قبول الحجز. تفاصيل الاستلام جاهزة.",
+  "materialDetailAcceptedDeliveryReady": "تم قبول الحجز. افتح تفاصيل الحجز لحالة التوصيل والدفع.",
+  "materialDetailAcceptedRequestDelivery": "تم قبول الحجز. التوصيل الداخلي متاح من حجوزاتي.",
+  "materialDetailPreviousDeliveryRequestAgain": "حالة التوصيل السابقة: {status}. اطلب التوصيل من حجوزاتي.",
+  "@materialDetailPreviousDeliveryRequestAgain": {
+    "placeholders": {
+      "status": { "type": "String" }
+    }
+  },
+  "materialDetailDeliveryStatusLine": "حالة التوصيل: {status}.",
+  "@materialDetailDeliveryStatusLine": {
+    "placeholders": {
+      "status": { "type": "String" }
+    }
+  },
+  "materialDetailPaymentRequired": "ما زال الدفع مطلوبًا. افتح الحجز لمتابعة الدفع.",
+  "materialDetailReservationPending": "تم إرسال طلب الحجز. بانتظار رد المورد.",
+  "notificationPaymentOpenCheckout": "فتح الدفع",
+  "notificationPaymentStatusCheckPayment": "تحقق من حالة الدفع الحالية",
+  "reservationMoneyAmountWithCurrency": "{amount} ₪",
+  "@reservationMoneyAmountWithCurrency": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "reservationDetailsTitle": "تفاصيل الحجز",
+  "reservationSummaryTitle": "ملخص الحجز",
+  "reservationReference": "المرجع",
+  "reservationStatusLabel": "الحالة",
+  "reservationLocationLabel": "الموقع",
+  "importantNotes": "ملاحظات مهمة",
+  "pickupCodeTitle": "رمز الاستلام",
+  "pickupCodeLockedPayment": "أكمل الدفع لفتح رمز الاستلام.",
+  "pickupCodeWaitingWindow": "سيظهر رمز الاستلام عند بدء نافذة الاستلام.",
+  "pickupCodeAvailableLabel": "اعرض هذا الرمز للمورّد عند الاستلام.",
+  "pickupCodeSafetyNote": "لا تشارك هذا الرمز قبل وصولك إلى موقع الاستلام.",
+  "pickupCodeClosed": "رمز الاستلام لم يعد متاحًا لهذا الحجز.",
+  "pickupCodeProcessing": "سيصبح رمز الاستلام متاحًا بعد تأكيد الدفع.",
+  "pickupCodeUnderReview": "رمز الاستلام موقوف مؤقتًا أثناء مراجعة الحالة.",
+  "pickupCodeRefundProcessing": "رمز الاستلام غير متاح أثناء معالجة الاسترداد.",
+  "pickupCodeRefunded": "تم استرداد هذا الحجز. لا يلزم رمز استلام.",
+  "pickupCodeNotApplicable": "رمز الاستلام لا ينطبق على هذا الحجز.",
+  "pickupWindowNotStarted": "لم تبدأ بعد",
+  "pickupWindowActiveNow": "متاحة الآن",
+  "pickupWindowEnded": "انتهت",
+  "openInMaps": "فتح في الخرائط",
+  "mapApproximateNote": "تُظهر الخريطة منطقة استلام تقريبية.",
+  "followUpMessagesTitle": "رسائل المتابعة",
+  "noFollowUpMessagesYet": "لا توجد رسائل متابعة بعد.",
+  "writeShortFollowUpMessage": "أرسل رسالة متابعة قصيرة للمورّد…",
+  "sendFollowUpMessage": "إرسال الرسالة",
+  "followUpMessagesLoadError": "تعذّر تحميل رسائل المتابعة.",
+  "showFullHistory": "عرض السجل الكامل",
+  "showLessHistory": "عرض أقل",
+  "paymentHistoryTitle": "سجل الدفع",
+  "currentPaymentCycle": "دورة الدفع الحالية",
+  "previousPaymentCycleCancelled": "تم إلغاء دورة الدفع السابقة.",
+  "previousPaymentCycleRefunded": "تم استرداد دورة الدفع السابقة.",
+  "reservationDetailNotesPickupTitle": "ملاحظات الاستلام",
+  "reservationDetailNotesPickupSafety": "أحضر هوية سارية وصل ضمن نافذة الاستلام المؤكدة.",
+  "reservationDetailNotesPickupContact": "تواصل مع المورّد عبر رسائل المتابعة إذا تأخرت.",
+  "reservationDetailTimelineCreated": "تم إنشاء الحجز",
+  "reservationDetailTimelinePending": "بانتظار رد المورّد",
+  "reservationDetailTimelineAwaitingConfirmation": "يتطلب تأكيدك",
+  "reservationDetailTimelinePaymentRequired": "دفع مطلوب",
+  "reservationDetailTimelinePaymentCompleted": "تم الدفع",
+  "reservationDetailTimelineReadyPickup": "جاهز للاستلام",
+  "reservationDetailTimelineReadyDelivery": "جاهز للتوصيل",
+  "reservationDetailTimelineCompleted": "اكتمل الحجز",
+  "reservationDetailTimelineCancelled": "تم إلغاء الحجز",
+  "reservationDetailTimelineRefunded": "تم استرداد الدفع",
+  "reservationDetailTimelineUnderReview": "قيد مراجعة الإدارة",
+  "reservationDetailPaymentTitle": "الدفع",
+  "reservationDetailPaymentRequiredTitle": "الدفع المطلوب",
+  "reservationDetailMaterialAmount": "مبلغ المادة",
+  "reservationDetailDeliveryFeeAmount": "رسوم التوصيل",
+  "reservationDetailPickupFeeAmount": "رسوم الاستلام",
+  "reservationDetailRemainingAmount": "المتبقي",
+  "reservationDetailTotalRequired": "المبلغ المطلوب",
+  "contactSupplier": "تواصل مع المورد",
+  "viewSupplierProfile": "عرض ملف المورد",
+  "reservationDetailFulfillmentTitle": "التنفيذ",
+  "reservationDetailQuickActionsTitle": "إجراءات سريعة",
+  "reservationDetailOverdueBanner": "فات موعد الاستلام. تواصل مع المورّد أو انتظر المتابعة.",
+  "allReservations": "جميع الحجوزات",
+  "loadingReservation": "جارٍ تحميل الحجز",
+  "loadingReservationSubtitle": "جارٍ التحقق من أحدث حالة للحجز.",
+  "reservationLoadError": "تعذّر تحميل الحجز",
+  "checkoutComingSoon": "صفحة الدفع ستتوفر قريبًا. طلب الدفع جاهز.",
+  "checkoutPageTitle": "إتمام الدفع",
+  "checkoutPageSubtitle": "أنت على وشك تأكيد هذا الحجز بدفع المبلغ المطلوب بشكل آمن.",
+  "checkoutBreadcrumbHome": "الرئيسية",
+  "checkoutBreadcrumbReservations": "حجوزاتي",
+  "checkoutBreadcrumbDetails": "تفاصيل الحجز",
+  "checkoutBreadcrumbCheckout": "الدفع",
+  "checkoutStepSummary": "ملخص الدفع",
+  "checkoutStepMethod": "طريقة الدفع",
+  "checkoutStepConfirm": "تأكيد الطلب",
+  "checkoutStepResult": "النتيجة",
+  "checkoutReservationInfo": "معلومات الحجز",
+  "checkoutOrderIdLabel": "الحجز",
+  "checkoutReservationDateLabel": "التاريخ",
+  "checkoutReservationStatusLabel": "الحالة",
+  "checkoutPickupWindowLabel": "نافذة الاستلام",
+  "checkoutViewReservationDetails": "عرض تفاصيل الحجز",
+  "checkoutQuantityLabel": "{count} وحدة",
+  "@checkoutQuantityLabel": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "checkoutFulfillmentPickup": "استلام من المورّد",
+  "checkoutFulfillmentDelivery": "توصيل",
+  "checkoutVerifiedSupplier": "مورّد موثّق",
+  "checkoutAmountSummaryTitle": "ملخص المبلغ",
+  "checkoutItemPrice": "سعر المادة",
+  "checkoutDeliveryFees": "رسوم التوصيل",
+  "checkoutTotalRequired": "الإجمالي المطلوب",
+  "checkoutPreviouslyPaid": "المدفوع سابقًا",
+  "checkoutRemainingAmount": "المبلغ المتبقي",
+  "checkoutChooseWhatToPay": "اختر ما تريد دفعه",
+  "checkoutCombinedPaymentTitle": "يشمل الدفع",
+  "checkoutCombinedPaymentHint": "تُحصَّل المبالغ المتبقية للمادة والتوصيل معًا في جلسة دفع واحدة.",
+  "checkoutPurposeMaterialTitle": "سعر المادة",
+  "checkoutPurposeMaterialHint": "يدفع المبلغ المتبقي للمادة لهذا الحجز.",
+  "checkoutPurposeDeliveryTitle": "رسوم التوصيل",
+  "checkoutPurposeDeliveryHint": "يدفع رسوم التوصيل المتبقية لهذا الحجز.",
+  "checkoutOtherOrderHint": "أي مبالغ متبقية لهذا الحجز مشمولة في جلسة الدفع هذه.",
+  "checkoutPaymentIncludesTitle": "يشمل الدفع",
+  "checkoutIncludesConfirmReservation": "تأكيد الحجز",
+  "checkoutIncludesPickupCode": "إظهار رمز الاستلام عند الجاهزية",
+  "checkoutIncludesDeliveryDispatch": "تمكين إرسال التوصيل عند الجاهزية",
+  "checkoutSecurePaymentTitle": "دفع آمن",
+  "checkoutSecurePaymentBody": "جلسة الدفع مشفّرة. لا يخزّن ImpactLoop بيانات البطاقات — يتم الدفع عبر مزوّد الدفع التجريبي الآمن في هذه البيئة.",
+  "checkoutContinueToPayment": "متابعة إلى الدفع",
+  "checkoutReviewOrder": "مراجعة الطلب",
+  "checkoutConfirmPayment": "تأكيد الدفع",
+  "checkoutMockProviderTitle": "مزوّد الدفع التجريبي",
+  "checkoutMockProviderBody": "تستخدم هذه البيئة مزوّد ImpactLoop التجريبي الآمن. إتمام الدفع يحدّث حالة الدفع الموثّقة في الخادم — الضغط على زر وحده لا يعني النجاح.",
+  "checkoutMockPaySecurely": "إتمام الدفع التجريبي",
+  "checkoutMockSimulateDecline": "محاكاة الرفض",
+  "checkoutMockCancelAttempt": "إلغاء هذه المحاولة",
+  "checkoutReviewTitle": "مراجعة الطلب",
+  "checkoutReviewMethodLabel": "طريقة الدفع",
+  "checkoutReviewMethodValue": "مزوّد ImpactLoop التجريبي",
+  "checkoutReviewAmountLabel": "المبلغ المطلوب",
+  "checkoutProcessingTitle": "جارٍ معالجة الدفع…",
+  "checkoutProcessingBody": "يرجى عدم إغلاق هذه الصفحة. قد يستغرق الأمر بضع ثوانٍ أثناء التحقق من الدفع مع المزوّد.",
+  "checkoutSuccessTitle": "تم الدفع بنجاح!",
+  "checkoutSuccessBody": "تم تأكيد دفع الحجز. ارجع إلى تفاصيل الحجز للخطوة التالية.",
+  "checkoutSuccessTransactionLabel": "جلسة الدفع",
+  "checkoutBackToReservation": "العودة إلى تفاصيل الحجز",
+  "checkoutViewAllReservations": "عرض جميع حجوزاتي",
+  "checkoutFailureTitle": "فشل الدفع",
+  "checkoutFailureBody": "تعذّر إتمام الدفع. يمكنك إعادة المحاولة بأمان دون إنشاء إرسال مكرر.",
+  "checkoutRetry": "إعادة المحاولة",
+  "checkoutChangeMethod": "العودة إلى طريقة الدفع",
+  "checkoutCancelledTitle": "تم إلغاء الدفع",
+  "checkoutCancelledBody": "تم إلغاء محاولة الدفع هذه. يمكنك بدء دفع آمن جديد عندما تكون جاهزًا.",
+  "checkoutExpiredTitle": "انتهت صلاحية الدفع",
+  "checkoutExpiredBody": "انتهت صلاحية محاولة الدفع قبل الإتمام. ابدأ دفعًا جديدًا للمتابعة.",
+  "checkoutAlreadyPaidTitle": "مدفوع مسبقًا",
+  "checkoutAlreadyPaidBody": "دفع هذا الحجز مسدّد بالفعل. لا يلزم دفع إضافي.",
+  "checkoutRefundPendingTitle": "استرداد قيد المعالجة",
+  "checkoutRefundPendingBody": "يوجد استرداد قيد المعالجة لدفع هذا الحجز. الدفع غير متاح.",
+  "checkoutPartiallyRefundedTitle": "استرداد جزئي",
+  "checkoutPartiallyRefundedBody": "يوجد استرداد قيد المعالجة أو مكتمل جزئيًا لهذا الحجز. الدفع غير متاح حتى تتضح حالة الدفع.",
+  "checkoutRefundedTitle": "تم الاسترداد",
+  "checkoutRefundedBody": "تم استرداد دفع هذا الحجز. قد يلزم بدء دورة دفع جديدة من تفاصيل الحجز.",
+  "checkoutOrderCancelledTitle": "تم إلغاء طلب الدفع",
+  "checkoutOrderCancelledBody": "تم إلغاء دفع هذا الحجز ولا يمكن إتمام الدفع.",
+  "checkoutInvariantBlockedTitle": "الدفع يحتاج مراجعة",
+  "checkoutInvariantBlockedBody": "الدفع محظور حتى تتم مراجعة حالة دفع هذا الحجز. ارجع إلى تفاصيل الحجز أو تواصل مع الدعم.",
+  "checkoutLoadErrorTitle": "تعذّر تحميل صفحة الدفع",
+  "checkoutLoadErrorBody": "تعذّر تحميل دفع هذا الحجز. تحقق من الاتصال وحاول مرة أخرى.",
+  "checkoutMissingTitle": "الدفع غير متاح",
+  "checkoutMissingBody": "لم يتم العثور على دفع هذا الحجز أو ليس لديك صلاحية الوصول إليه.",
+  "checkoutRetryLoad": "حاول مرة أخرى",
+  "checkoutSubmittingGuard": "الدفع قيد التنفيذ بالفعل. يرجى الانتظار.",
+  "checkoutableOrderReadyHint": "يوجد دفع جاهز لهذا الحجز.",
+  "paymentStatusRequired": "دفع مطلوب",
+  "paymentStatusPartial": "دفعة جزئية",
+  "paymentStatusProcessing": "قيد المعالجة",
+  "paymentStatusPaid": "مدفوع",
+  "paymentStatusRefundPending": "استرداد قيد المعالجة",
+  "paymentStatusRefunded": "تم الاسترداد",
+  "paymentStatusNeedsReview": "يتطلب مراجعة",
+  "paymentSummaryUnavailable": "حالة الدفع غير متاحة",
+  "paymentSummaryUnavailableHint": "تفاصيل الحجز ما زالت متاحة. اسحب للتحديث أو حاول مرة أخرى.",
+  "reservationListStatusWaiting": "قيد الانتظار",
+  "reservationListStatusNeedsAction": "يتطلب إجراء",
+  "reservationListStatusAccepted": "مقبول",
+  "reservationListStatusCompleted": "مكتمل",
+  "reservationListStatusClosed": "مغلق",
+  "reservationListStatusNeedsReview": "يتطلب مراجعة",
+  "reservationNextStepDeliveryFeeRemaining": "تم استلام دفعة، وما زالت رسوم التوصيل مطلوبة.",
+  "reservationNextStepWaitingSupplier": "بانتظار موافقة المورد.",
+  "reservationNextStepConfirmProposal": "راجع اقتراح المورد وأكّده.",
+  "reservationNextStepPickupCodeWindow": "تم الدفع، وسيصبح رمز الاستلام متاحًا داخل نافذة الاستلام.",
+  "reservationNextStepPickupCodeReady": "رمز الاستلام جاهز في صفحة تفاصيل الحجز.",
+  "reservationNextStepFindingDriver": "جاري البحث عن سائق.",
+  "reservationNextStepTrackDelivery": "التوصيل قيد التنفيذ. تتبّعه للاطلاع على التحديثات.",
+  "reservationNextStepRefundProcessing": "تتم معالجة إعادة المبلغ.",
+  "reservationNextStepRefunded": "تم استرداد هذا الدفع.",
+  "reservationNextStepUnderReview": "الحالة قيد المراجعة، ولا يلزم إجراء منك الآن.",
+  "reservationNextStepPaymentProcessing": "جارٍ معالجة الدفع.",
+  "reservationNextStepPaymentUnavailable": "حالة الدفع غير متاحة مؤقتًا. افتح التفاصيل أو حدّث الصفحة.",
+  "reservationNextStepReadyPickup": "تم قبول الحجز. افتح التفاصيل لمعلومات الاستلام.",
+  "reservationNextStepAcceptedDelivery": "تم قبول الحجز. سيتابع التوصيل عند الجاهزية.",
+  "reservationNextStepDelivered": "تم تسليم المواد بنجاح.",
+  "reservationNextStepCompletedPickup": "تم إكمال الاستلام بنجاح.",
+  "reservationNextStepClosed": "هذا الحجز مغلق.",
+  "reservationNextStepViewDetails": "افتح التفاصيل لعرض الحالة الكاملة.",
+  "payNow": "ادفع الآن",
+  "completePayment": "أكمل الدفع",
+  "viewPickupCode": "عرض رمز الاستلام",
+  "reservationDateLabel": "تاريخ الحجز",
+  "supplierLabel": "المورد",
+  "quantityLabelShort": "الكمية",
+  "fulfillmentPickup": "استلام",
+  "fulfillmentDelivery": "توصيل",
+  "skeletonLoadingReservations": "جارٍ تحميل حجوزاتك",
   "fulfillmentMethod": "طريقة استلام الطلب",
   "supplierIssueReportedAdmin": "تم إبلاغ الإدارة بمشكلة المورّد.",
   "noDriverReportedAdmin": "تم إبلاغ الإدارة بعدم توفر سائق.",
@@ -606,6 +1045,8 @@
   "deliveryWindowSubmitted": "تم إرسال موعد التوصيل.",
   "cancelReservation": "إلغاء الحجز",
   "acceptProposedTime": "قبول الموعد المقترح",
+  "confirmFlexibleDeliveryWindow": "تأكيد موعد التوصيل",
+  "flexibleDeliveryNeedsWindowHint": "تركت توقيت التوصيل مفتوحًا. أكّد اقتراح المورّد أو اختر أي نافذة توصيل بعد أقرب وقت أدناه.",
   "newDeliveryWindow": "موعد توصيل جديد",
   "submitNewDeliveryWindow": "إرسال موعد التوصيل الجديد",
   "pickupIncompleteAdminReview": "لم يكتمل الاستلام قبل نهاية موعد المورّد. قد تراجع الإدارة الحالة إذا لم يبلّغ أحد عن المشكلة.",
@@ -620,6 +1061,7 @@
   },
   "reservationWaitingSupplierMessage": "بانتظار رد المورّد.",
   "reservationScheduleNeedsConfirmation": "اقترح المورّد موعدًا يحتاج إلى تأكيدك.",
+  "reservationFlexibleScheduleReady": "حدّد المورّد موعدًا. أكّد نافذة التوصيل للمتابعة.",
   "reservationRescheduleWaitingSupplier": "طلبت موعد استلام جديدًا. بانتظار رد المورّد.",
   "reservationReportedAwaitingAdmin": "تم الإبلاغ عن هذا الحجز وهو بانتظار مراجعة الإدارة.",
   "reservationReportVerifiedMessage": "تحققت الإدارة من صحة بلاغك.",
@@ -843,6 +1285,9 @@
     }
   },
   "deliveryRequested": "تم طلب التوصيل.",
+  "deliveryRequestedFree": "تم طلب التوصيل. التوصيل مجاني لهذا الطلب.",
+  "deliveryFeePaymentRequired": "تم إعداد التوصيل. ادفع رسوم التوصيل لبدء التنفيذ.",
+  "freeDeliveryLabel": "توصيل مجاني",
   "deliveryRequestFailed": "تعذّر طلب التوصيل. حاول مرة أخرى.",
   "savedAddressesLoadFailed": "تعذّر تحميل العناوين المحفوظة.",
   "noSavedAddresses": "لا توجد عناوين محفوظة بعد. أدخل عنوانًا أدناه.",
@@ -1790,6 +2235,7 @@
   "supplierDeliveryNote": "ملاحظة التوصيل",
   "supplierSelectedLearnerDeliveryWindowWillBe": "سيتم استخدام نافذة التوصيل المفضلة للمتعلم عندما تكون ممكنة.",
   "supplierProposeCustomDeliveryWindow": "اقتراح نافذة توصيل مخصصة",
+  "supplierFlexibleLearnerNeedsDeliveryProposal": "ترك المتعلّم توقيت التوصيل مفتوحًا. اقترح نافذة توصيل للقبول — ستُعتمد تلقائيًا إذا كانت مناسبة بعد الاستلام.",
   "supplierProposedLearnerDeliveryWindow": "نافذة التوصيل المقترحة للمتعلم",
   "supplierChooseTheProposedDeliveryDateAnd": "اختر تاريخ ووقت التوصيل المقترح.",
   "supplierProposedPickupTimeWaitingForLearner": "وقت الاستلام المقترح — في انتظار تأكيد المتعلم",
