@@ -51,6 +51,42 @@ const normalizeBodyToken = (value: unknown): string =>
     ? hashToken(value.trim())
     : 'missing';
 
+const registerIpPolicy: RateLimitPolicy = {
+  name: 'register-ip',
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+};
+
+const registerEmailPolicy: RateLimitPolicy = {
+  name: 'register-email',
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+};
+
+const loginIpPolicy: RateLimitPolicy = {
+  name: 'login-ip',
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+};
+
+const loginEmailPolicy: RateLimitPolicy = {
+  name: 'login-email',
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+};
+
+const refreshIpPolicy: RateLimitPolicy = {
+  name: 'refresh-ip',
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+};
+
+const refreshTokenPolicy: RateLimitPolicy = {
+  name: 'refresh-token',
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+};
+
 const forgotPasswordIpPolicy: RateLimitPolicy = {
   name: 'forgot-password-ip',
   windowMs: 15 * 60 * 1000,
@@ -75,6 +111,36 @@ const resetPasswordTokenPolicy: RateLimitPolicy = {
   max: 5,
 };
 
+const registerIpRateLimit = createRateLimitMiddleware({
+  policy: registerIpPolicy,
+  keyGenerator: getRequestIp,
+});
+
+const registerEmailRateLimit = createRateLimitMiddleware({
+  policy: registerEmailPolicy,
+  keyGenerator: (req) => normalizeBodyEmail(req.body?.email),
+});
+
+const loginIpRateLimit = createRateLimitMiddleware({
+  policy: loginIpPolicy,
+  keyGenerator: getRequestIp,
+});
+
+const loginEmailRateLimit = createRateLimitMiddleware({
+  policy: loginEmailPolicy,
+  keyGenerator: (req) => normalizeBodyEmail(req.body?.email),
+});
+
+const refreshIpRateLimit = createRateLimitMiddleware({
+  policy: refreshIpPolicy,
+  keyGenerator: getRequestIp,
+});
+
+const refreshTokenRateLimit = createRateLimitMiddleware({
+  policy: refreshTokenPolicy,
+  keyGenerator: (req) => normalizeBodyToken(req.body?.refreshToken),
+});
+
 const forgotPasswordIpRateLimit = createRateLimitMiddleware({
   policy: forgotPasswordIpPolicy,
   keyGenerator: getRequestIp,
@@ -97,11 +163,19 @@ const resetPasswordTokenRateLimit = createRateLimitMiddleware({
 
 authRouter.post(
   '/register',
+  registerIpRateLimit,
   validate(registerSchema),
+  registerEmailRateLimit,
   asyncHandler(register),
 );
 
-authRouter.post('/login', validate(loginSchema), asyncHandler(login));
+authRouter.post(
+  '/login',
+  loginIpRateLimit,
+  validate(loginSchema),
+  loginEmailRateLimit,
+  asyncHandler(login),
+);
 
 authRouter.post(
   '/forgot-password',
@@ -121,7 +195,9 @@ authRouter.post(
 
 authRouter.post(
   '/refresh',
+  refreshIpRateLimit,
   validate(refreshTokenSchema),
+  refreshTokenRateLimit,
   asyncHandler(refresh),
 );
 
