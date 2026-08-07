@@ -432,6 +432,35 @@ const parseBoolean = (value: string | undefined, fallback = false): boolean => {
   return normalized === '1' || normalized === 'true' || normalized === 'yes';
 };
 
+export type TrustProxySetting = boolean | number | string;
+
+export const parseTrustProxy = (
+  value: string | undefined,
+): TrustProxySetting => {
+  if (value === undefined || value.trim() === '') {
+    return false;
+  }
+
+  const trimmed = value.trim();
+  const lower = trimmed.toLowerCase();
+
+  if (lower === 'false' || lower === '0') {
+    return false;
+  }
+
+  // Prefer a single trusted hop over blanket proxy trust.
+  if (lower === 'true') {
+    return 1;
+  }
+
+  const asNumber = Number(trimmed);
+  if (Number.isInteger(asNumber) && asNumber > 0) {
+    return asNumber;
+  }
+
+  return trimmed;
+};
+
 const LOG_LEVELS = new Set(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']);
 
 const parseLogLevel = (value: string | undefined, nodeEnv: string): string => {
@@ -616,6 +645,12 @@ export const env = {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean),
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
+  rateLimitMaxEntries: parsePositiveInt(process.env.RATE_LIMIT_MAX_ENTRIES, 10_000),
+  rateLimitSweepIntervalMs: parsePositiveInt(
+    process.env.RATE_LIMIT_SWEEP_INTERVAL_MS,
+    60_000,
+  ),
   databaseUrl: requireEnv('DATABASE_URL'),
   jwtAccessSecret: jwtSecrets.jwtAccessSecret,
   jwtRefreshSecret: jwtSecrets.jwtRefreshSecret,
