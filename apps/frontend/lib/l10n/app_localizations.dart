@@ -2156,6 +2156,12 @@ abstract class AppLocalizations {
   /// **'The pickup code appears after payment and once the pickup window starts.'**
   String get reservationNextStepPaySupporting;
 
+  /// No description provided for @reservationNextStepPaySupportingDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery starts only after the required payment is complete.'**
+  String get reservationNextStepPaySupportingDelivery;
+
   /// No description provided for @reservationNextStepPartialTitle.
   ///
   /// In en, this message translates to:
@@ -2167,6 +2173,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A payment was received; the delivery fee is still required.'**
   String get reservationNextStepPartialSupporting;
+
+  /// No description provided for @paymentStatusNotRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment not required'**
+  String get paymentStatusNotRequired;
+
+  /// No description provided for @reservationNextStepPayToConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay to confirm the reservation and reveal the pickup code.'**
+  String get reservationNextStepPayToConfirm;
+
+  /// No description provided for @reservationNextStepPayToConfirmDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay to confirm the reservation and continue to delivery.'**
+  String get reservationNextStepPayToConfirmDelivery;
+
+  /// No description provided for @materialDetailViewReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'View reservation'**
+  String get materialDetailViewReservation;
+
+  /// No description provided for @materialDetailViewPickupDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View pickup details'**
+  String get materialDetailViewPickupDetails;
+
+  /// No description provided for @materialDetailViewDeliveryDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View delivery details'**
+  String get materialDetailViewDeliveryDetails;
+
+  /// No description provided for @materialDetailRequestDeliveryInReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Request delivery in My Reservations'**
+  String get materialDetailRequestDeliveryInReservations;
+
+  /// No description provided for @materialDetailViewDeliveryStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'View delivery status'**
+  String get materialDetailViewDeliveryStatus;
+
+  /// No description provided for @materialDetailViewReservationRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'View reservation request'**
+  String get materialDetailViewReservationRequest;
+
+  /// No description provided for @materialDetailViewReservationHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'View reservation history'**
+  String get materialDetailViewReservationHistory;
+
+  /// No description provided for @materialDetailViewReservationStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'View reservation status'**
+  String get materialDetailViewReservationStatus;
+
+  /// No description provided for @materialDetailAcceptedPickupReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation accepted. Pickup details are ready.'**
+  String get materialDetailAcceptedPickupReady;
+
+  /// No description provided for @materialDetailAcceptedDeliveryReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation accepted. Open reservation details for delivery and payment status.'**
+  String get materialDetailAcceptedDeliveryReady;
+
+  /// No description provided for @materialDetailAcceptedRequestDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation accepted. Internal delivery is available from My Reservations.'**
+  String get materialDetailAcceptedRequestDelivery;
+
+  /// No description provided for @materialDetailPreviousDeliveryRequestAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous delivery status: {status}. Request delivery from My Reservations.'**
+  String materialDetailPreviousDeliveryRequestAgain(String status);
+
+  /// No description provided for @materialDetailDeliveryStatusLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery status: {status}.'**
+  String materialDetailDeliveryStatusLine(String status);
+
+  /// No description provided for @materialDetailPaymentRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment is still required. Open the reservation to continue checkout.'**
+  String get materialDetailPaymentRequired;
+
+  /// No description provided for @materialDetailReservationPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation request sent. Waiting for supplier response.'**
+  String get materialDetailReservationPending;
+
+  /// No description provided for @notificationPaymentOpenCheckout.
+  ///
+  /// In en, this message translates to:
+  /// **'Open checkout'**
+  String get notificationPaymentOpenCheckout;
+
+  /// No description provided for @notificationPaymentStatusCheckPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Check current payment status'**
+  String get notificationPaymentStatusCheckPayment;
 
   /// No description provided for @reservationMoneyAmountWithCurrency.
   ///
@@ -3163,12 +3289,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Needs review'**
   String get reservationListStatusNeedsReview;
-
-  /// No description provided for @reservationNextStepPayToConfirm.
-  ///
-  /// In en, this message translates to:
-  /// **'Pay to confirm the reservation and reveal the pickup code.'**
-  String get reservationNextStepPayToConfirm;
 
   /// No description provided for @reservationNextStepDeliveryFeeRemaining.
   ///

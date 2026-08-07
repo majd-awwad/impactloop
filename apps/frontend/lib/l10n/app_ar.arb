@@ -729,8 +729,39 @@
   "reservationMoneyBothOutstanding": "تُدفع المادة ورسوم التوصيل معًا في دفعة واحدة.",
   "reservationNextStepPayTitle": "أكمل الدفع لتأكيد الحجز",
   "reservationNextStepPaySupporting": "سيظهر رمز الاستلام بعد الدفع وبدء نافذة الاستلام.",
+  "reservationNextStepPaySupportingDelivery": "يبدأ التوصيل فقط بعد إكمال الدفع المطلوب.",
   "reservationNextStepPartialTitle": "أكمل الدفع المتبقي",
   "reservationNextStepPartialSupporting": "تم استلام دفعة، وما زالت رسوم التوصيل مطلوبة.",
+  "paymentStatusNotRequired": "الدفع غير مطلوب",
+  "reservationNextStepPayToConfirm": "ادفع لتأكيد الحجز وإظهار رمز الاستلام.",
+  "reservationNextStepPayToConfirmDelivery": "ادفع لتأكيد الحجز ومتابعة التوصيل.",
+  "materialDetailViewReservation": "عرض الحجز",
+  "materialDetailViewPickupDetails": "عرض تفاصيل الاستلام",
+  "materialDetailViewDeliveryDetails": "عرض تفاصيل التوصيل",
+  "materialDetailRequestDeliveryInReservations": "اطلب التوصيل من حجوزاتي",
+  "materialDetailViewDeliveryStatus": "عرض حالة التوصيل",
+  "materialDetailViewReservationRequest": "عرض طلب الحجز",
+  "materialDetailViewReservationHistory": "عرض سجل الحجز",
+  "materialDetailViewReservationStatus": "عرض حالة الحجز",
+  "materialDetailAcceptedPickupReady": "تم قبول الحجز. تفاصيل الاستلام جاهزة.",
+  "materialDetailAcceptedDeliveryReady": "تم قبول الحجز. افتح تفاصيل الحجز لحالة التوصيل والدفع.",
+  "materialDetailAcceptedRequestDelivery": "تم قبول الحجز. التوصيل الداخلي متاح من حجوزاتي.",
+  "materialDetailPreviousDeliveryRequestAgain": "حالة التوصيل السابقة: {status}. اطلب التوصيل من حجوزاتي.",
+  "@materialDetailPreviousDeliveryRequestAgain": {
+    "placeholders": {
+      "status": { "type": "String" }
+    }
+  },
+  "materialDetailDeliveryStatusLine": "حالة التوصيل: {status}.",
+  "@materialDetailDeliveryStatusLine": {
+    "placeholders": {
+      "status": { "type": "String" }
+    }
+  },
+  "materialDetailPaymentRequired": "ما زال الدفع مطلوبًا. افتح الحجز لمتابعة الدفع.",
+  "materialDetailReservationPending": "تم إرسال طلب الحجز. بانتظار رد المورد.",
+  "notificationPaymentOpenCheckout": "فتح الدفع",
+  "notificationPaymentStatusCheckPayment": "تحقق من حالة الدفع الحالية",
   "reservationMoneyAmountWithCurrency": "{amount} ₪",
   "@reservationMoneyAmountWithCurrency": {
     "placeholders": {
@@ -907,7 +938,6 @@
   "reservationListStatusCompleted": "مكتمل",
   "reservationListStatusClosed": "مغلق",
   "reservationListStatusNeedsReview": "يتطلب مراجعة",
-  "reservationNextStepPayToConfirm": "ادفع لتأكيد الحجز وإظهار رمز الاستلام.",
   "reservationNextStepDeliveryFeeRemaining": "تم استلام دفعة، وما زالت رسوم التوصيل مطلوبة.",
   "reservationNextStepWaitingSupplier": "بانتظار موافقة المورد.",
   "reservationNextStepConfirmProposal": "راجع اقتراح المورد وأكّده.",

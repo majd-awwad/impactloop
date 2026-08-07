@@ -1266,11 +1266,88 @@ class AppLocalizationsAr extends AppLocalizations {
       'سيظهر رمز الاستلام بعد الدفع وبدء نافذة الاستلام.';
 
   @override
+  String get reservationNextStepPaySupportingDelivery =>
+      'يبدأ التوصيل فقط بعد إكمال الدفع المطلوب.';
+
+  @override
   String get reservationNextStepPartialTitle => 'أكمل الدفع المتبقي';
 
   @override
   String get reservationNextStepPartialSupporting =>
       'تم استلام دفعة، وما زالت رسوم التوصيل مطلوبة.';
+
+  @override
+  String get paymentStatusNotRequired => 'الدفع غير مطلوب';
+
+  @override
+  String get reservationNextStepPayToConfirm =>
+      'ادفع لتأكيد الحجز وإظهار رمز الاستلام.';
+
+  @override
+  String get reservationNextStepPayToConfirmDelivery =>
+      'ادفع لتأكيد الحجز ومتابعة التوصيل.';
+
+  @override
+  String get materialDetailViewReservation => 'عرض الحجز';
+
+  @override
+  String get materialDetailViewPickupDetails => 'عرض تفاصيل الاستلام';
+
+  @override
+  String get materialDetailViewDeliveryDetails => 'عرض تفاصيل التوصيل';
+
+  @override
+  String get materialDetailRequestDeliveryInReservations =>
+      'اطلب التوصيل من حجوزاتي';
+
+  @override
+  String get materialDetailViewDeliveryStatus => 'عرض حالة التوصيل';
+
+  @override
+  String get materialDetailViewReservationRequest => 'عرض طلب الحجز';
+
+  @override
+  String get materialDetailViewReservationHistory => 'عرض سجل الحجز';
+
+  @override
+  String get materialDetailViewReservationStatus => 'عرض حالة الحجز';
+
+  @override
+  String get materialDetailAcceptedPickupReady =>
+      'تم قبول الحجز. تفاصيل الاستلام جاهزة.';
+
+  @override
+  String get materialDetailAcceptedDeliveryReady =>
+      'تم قبول الحجز. افتح تفاصيل الحجز لحالة التوصيل والدفع.';
+
+  @override
+  String get materialDetailAcceptedRequestDelivery =>
+      'تم قبول الحجز. التوصيل الداخلي متاح من حجوزاتي.';
+
+  @override
+  String materialDetailPreviousDeliveryRequestAgain(String status) {
+    return 'حالة التوصيل السابقة: $status. اطلب التوصيل من حجوزاتي.';
+  }
+
+  @override
+  String materialDetailDeliveryStatusLine(String status) {
+    return 'حالة التوصيل: $status.';
+  }
+
+  @override
+  String get materialDetailPaymentRequired =>
+      'ما زال الدفع مطلوبًا. افتح الحجز لمتابعة الدفع.';
+
+  @override
+  String get materialDetailReservationPending =>
+      'تم إرسال طلب الحجز. بانتظار رد المورد.';
+
+  @override
+  String get notificationPaymentOpenCheckout => 'فتح الدفع';
+
+  @override
+  String get notificationPaymentStatusCheckPayment =>
+      'تحقق من حالة الدفع الحالية';
 
   @override
   String reservationMoneyAmountWithCurrency(String amount) {
@@ -1804,10 +1881,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get reservationListStatusNeedsReview => 'يتطلب مراجعة';
-
-  @override
-  String get reservationNextStepPayToConfirm =>
-      'ادفع لتأكيد الحجز وإظهار رمز الاستلام.';
 
   @override
   String get reservationNextStepDeliveryFeeRemaining =>

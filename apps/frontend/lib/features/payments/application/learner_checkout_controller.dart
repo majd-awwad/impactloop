@@ -777,12 +777,10 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
         return;
       }
 
-      // Never claim success until backend session status is SUCCEEDED.
-      // Never auto-chain sibling order checkouts from Flutter.
-      if (session?.isSucceeded == true ||
-          (session == null && order?.isPaid == true)) {
-        _invalidateReservationCaches();
-      }
+      // Always refresh reservation-facing caches after a provider act so list,
+      // details, and notifications do not keep a contradictory Pay CTA after
+      // decline/cancel/success. Never auto-chain sibling order checkouts.
+      _invalidateReservationCaches();
 
       state = state.copyWith(submitting: false);
       _applyReservationTruth(
@@ -790,11 +788,6 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
         session: state.session,
         preserveMethodStep: false,
       );
-
-      if (state.phase == CheckoutPhase.succeeded ||
-          state.phase == CheckoutPhase.alreadyPaid) {
-        _invalidateReservationCaches();
-      }
     } on ApiException catch (error) {
       state = state.copyWith(
         submitting: false,

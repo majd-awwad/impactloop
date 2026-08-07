@@ -178,11 +178,15 @@ bool paymentNotificationHasPayableObligation(AppNotification notification) {
 }
 
 /// True when the learner should continue into reservation-scoped checkout.
+///
+/// For PAYMENT_REQUIRED, always prefer reservation-scoped checkout so stale
+/// notification metadata cannot force a contradictory details-only path.
+/// Checkout / requirement APIs remain the server truth for already-paid cases.
 bool paymentNotificationShouldOpenCheckout(AppNotification notification) {
   final kind = paymentNotificationKind(notification);
   switch (kind) {
     case PaymentNotificationKind.required:
-      return paymentNotificationHasPayableObligation(notification);
+      return true;
     case PaymentNotificationKind.newCycleRequired:
       return true;
     case PaymentNotificationKind.completed:
@@ -449,13 +453,20 @@ String paymentNotificationActionLabel(
   AppNotification notification,
   AppLocalizations l10n,
 ) {
+  final kind = paymentNotificationKind(notification);
+  // Soft CTA: do not hard-claim "Pay now" from frozen notification metadata.
+  if (kind == PaymentNotificationKind.required) {
+    return l10n.notificationPaymentOpenCheckout;
+  }
   if (paymentNotificationShouldOpenCheckout(notification)) {
-    return l10n.payNow;
+    return kind == PaymentNotificationKind.newCycleRequired
+        ? l10n.payNow
+        : l10n.notificationPaymentOpenCheckout;
   }
 
-  final kind = paymentNotificationKind(notification);
   switch (kind) {
     case PaymentNotificationKind.required:
+      return l10n.notificationPaymentOpenCheckout;
     case PaymentNotificationKind.newCycleRequired:
       return l10n.payNow;
     case PaymentNotificationKind.completed:
@@ -480,13 +491,17 @@ String paymentNotificationNextStepCopy(
   AppNotification notification,
   AppLocalizations l10n,
 ) {
+  final kind = paymentNotificationKind(notification);
+  if (kind == PaymentNotificationKind.required) {
+    return l10n.notificationPaymentStatusCheckPayment;
+  }
   if (paymentNotificationShouldOpenCheckout(notification)) {
     return l10n.notificationPaymentNextStepPay;
   }
 
-  final kind = paymentNotificationKind(notification);
   return switch (kind) {
-    PaymentNotificationKind.required ||
+    PaymentNotificationKind.required =>
+      l10n.notificationPaymentStatusCheckPayment,
     PaymentNotificationKind.newCycleRequired =>
       l10n.notificationPaymentNextStepPay,
     PaymentNotificationKind.completed =>
@@ -514,7 +529,8 @@ String? paymentNotificationStatusCaption(
 ) {
   final kind = paymentNotificationKind(notification);
   return switch (kind) {
-    PaymentNotificationKind.required ||
+    PaymentNotificationKind.required =>
+      l10n.notificationPaymentStatusCheckPayment,
     PaymentNotificationKind.newCycleRequired =>
       l10n.notificationPaymentStatusUnpaid,
     PaymentNotificationKind.completed => l10n.notificationPaymentStatusPaid,

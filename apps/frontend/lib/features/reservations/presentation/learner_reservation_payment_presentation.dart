@@ -103,6 +103,7 @@ String? paymentStatusLabel(
     case 'BLOCKED':
       return l10n.paymentStatusNeedsReview;
     case 'NOT_REQUIRED':
+      return l10n.paymentStatusNotRequired;
     case 'AWAITING_ACCEPTANCE':
     case 'AWAITING_GROUP_CONFIRMATION':
     case 'PAYMENT_DISABLED':
@@ -176,7 +177,9 @@ String reservationNextStepMessage(
           : l10n.reservationNextStepPayToConfirm;
     }
     if (summary.hasMaterialPaymentOutstanding) {
-      return l10n.reservationNextStepPayToConfirm;
+      return reservation.isDeliveryFulfillment
+          ? l10n.reservationNextStepPayToConfirmDelivery
+          : l10n.reservationNextStepPayToConfirm;
     }
     if (summary.hasDeliveryFeeOutstanding) {
       return l10n.reservationNextStepDeliveryFeeRemaining;
@@ -514,7 +517,9 @@ String? reservationNextStepSupporting(
     if (summary.isPartialPayment) {
       return l10n.reservationNextStepPartialSupporting;
     }
-    return l10n.reservationNextStepPaySupporting;
+    return reservation.isDeliveryFulfillment
+        ? l10n.reservationNextStepPaySupportingDelivery
+        : l10n.reservationNextStepPaySupporting;
   }
 
   return null;

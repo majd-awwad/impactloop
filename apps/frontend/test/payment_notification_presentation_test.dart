@@ -142,22 +142,24 @@ void main() {
       );
     });
 
-    test('stale non-checkoutable payment required falls back to details', () {
+    test('stale payment-required metadata still opens reservation checkout', () {
+      // Frozen metadata may say PAID while the notification type is still
+      // PAYMENT_REQUIRED — never trust that over reservation-scoped checkout.
       final notification = _paymentNotification(
         type: 'PAYMENT_REQUIRED',
         paymentStatus: 'PAID',
       );
       expect(
         paymentNotificationOpenRoute(notification),
-        learnerReservationDetailRoute(
-          'res-1024',
-          focus: 'payment',
-          checkoutableOrderId: 'ord-1',
-        ),
+        learnerReservationCheckoutRoute('res-1024'),
       );
       expect(
-        paymentNotificationOpenRoute(notification),
-        isNot(contains('/learner/checkout/')),
+        paymentNotificationActionLabel(notification, en),
+        en.notificationPaymentOpenCheckout,
+      );
+      expect(
+        paymentNotificationStatusCaption(notification, en),
+        en.notificationPaymentStatusCheckPayment,
       );
     });
 
@@ -359,7 +361,10 @@ void main() {
         en.notificationPaymentCompletedMoreRequiredTitle,
       );
       expect(paymentNotificationOpenRoute(more), contains('/checkout/reservation/'));
-      expect(paymentNotificationActionLabel(more, en), en.payNow);
+      expect(
+        paymentNotificationActionLabel(more, en),
+        en.notificationPaymentOpenCheckout,
+      );
 
       final cycle = _paymentNotification(
         type: 'PAYMENT_REFUNDED',

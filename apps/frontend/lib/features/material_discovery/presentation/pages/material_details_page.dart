@@ -2038,12 +2038,17 @@ class _LearnerReservationStateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final palette = MaterialsUiPalette.of(context);
-    final detail = _reservationDetailText(reservation);
+    final detail = _reservationDetailText(reservation, l10n: l10n);
     final activeDelivery =
         delivery != null && _isActiveDelivery(delivery!.status)
         ? delivery
         : null;
+    final summary = reservation.paymentSummary;
+    final paymentRequired = summary != null &&
+        !summary.isPaymentsDisabled &&
+        summary.isPaymentActionRequired;
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
@@ -2075,7 +2080,9 @@ class _LearnerReservationStateCard extends StatelessWidget {
               reservation: reservation,
               delivery: delivery,
               deliveryAvailable: deliveryAvailable,
+              paymentRequired: paymentRequired,
               fallback: detail,
+              l10n: l10n,
             ),
             style: AppTextStyles.body(
               context,
@@ -2088,7 +2095,15 @@ class _LearnerReservationStateCard extends StatelessWidget {
                   context.push('/learner/deliveries/${activeDelivery.id}'),
               style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
               icon: const Icon(Icons.local_shipping_outlined),
-              label: const Text('View delivery status'),
+              label: Text(l10n.materialDetailViewDeliveryStatus),
+            )
+          else if (paymentRequired)
+            TextButton.icon(
+              onPressed: () =>
+                  context.push('/learner/reservations/${reservation.id}'),
+              style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
+              icon: const Icon(Icons.account_balance_wallet_outlined),
+              label: Text(l10n.materialDetailViewReservation),
             )
           else
             TextButton.icon(
@@ -2097,9 +2112,11 @@ class _LearnerReservationStateCard extends StatelessWidget {
               style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
               icon: const Icon(Icons.assignment_turned_in_outlined),
               label: Text(
-                reservation.isAccepted && deliveryAvailable
-                    ? 'Request delivery in My Reservations'
-                    : _reservationActionLabel(reservation.status),
+                _reservationActionLabel(
+                  reservation,
+                  deliveryAvailable: deliveryAvailable,
+                  l10n: l10n,
+                ),
               ),
             ),
         ],
@@ -2112,18 +2129,35 @@ String _materialDetailReservationText({
   required LearnerReservation reservation,
   required LearnerReservationActiveDelivery? delivery,
   required bool deliveryAvailable,
+  required bool paymentRequired,
   required String fallback,
+  required AppLocalizations l10n,
 }) {
-  if (delivery != null && _isActiveDelivery(delivery.status)) {
-    return 'Delivery status: ${deliveryStatusLabel(delivery.status)}.';
+  if (paymentRequired) {
+    return l10n.materialDetailPaymentRequired;
   }
 
-  if (reservation.isAccepted && deliveryAvailable) {
-    if (delivery != null) {
-      return 'Previous delivery status: ${deliveryStatusLabel(delivery.status)}. Request delivery from My Reservations.';
+  if (delivery != null && _isActiveDelivery(delivery.status)) {
+    return l10n.materialDetailDeliveryStatusLine(
+      deliveryStatusLabel(delivery.status, l10n: l10n),
+    );
+  }
+
+  if (reservation.isAccepted) {
+    if (reservation.isDeliveryFulfillment) {
+      return l10n.materialDetailAcceptedDeliveryReady;
     }
 
-    return 'Reservation accepted. Internal delivery is available from My Reservations.';
+    if (reservation.canLearnerRequestDelivery && deliveryAvailable) {
+      if (delivery != null) {
+        return l10n.materialDetailPreviousDeliveryRequestAgain(
+          deliveryStatusLabel(delivery.status, l10n: l10n),
+        );
+      }
+      return l10n.materialDetailAcceptedRequestDelivery;
+    }
+
+    return fallback;
   }
 
   return fallback;
@@ -2138,35 +2172,55 @@ bool _isActiveDelivery(String status) => !const {
   'LEARNER_NO_SHOW',
 }.contains(status);
 
-String _reservationActionLabel(String status) {
-  switch (status) {
+String _reservationActionLabel(
+  LearnerReservation reservation, {
+  required bool deliveryAvailable,
+  required AppLocalizations l10n,
+}) {
+  if (reservation.isAccepted) {
+    if (reservation.isDeliveryFulfillment) {
+      return l10n.materialDetailViewDeliveryDetails;
+    }
+    if (reservation.canLearnerRequestDelivery && deliveryAvailable) {
+      return l10n.materialDetailRequestDeliveryInReservations;
+    }
+    return l10n.materialDetailViewPickupDetails;
+  }
+
+  switch (reservation.status) {
     case 'PENDING':
-      return 'View reservation request';
-    case 'ACCEPTED':
-      return 'View pickup details';
+      return l10n.materialDetailViewReservationRequest;
     case 'REJECTED':
     case 'COMPLETED':
-      return 'View reservation history';
+      return l10n.materialDetailViewReservationHistory;
     default:
-      return 'View reservation status';
+      return l10n.materialDetailViewReservationStatus;
   }
 }
 
 String _reservationStatusLabel(String status) => reservationStatusLabel(status);
 
-String _reservationDetailText(LearnerReservation reservation) {
+String _reservationDetailText(
+  LearnerReservation reservation, {
+  required AppLocalizations l10n,
+}) {
   if (reservation.isPending) {
-    return 'Reservation request sent. Waiting for supplier response.';
+    return l10n.materialDetailReservationPending;
   }
 
   if (reservation.isAccepted) {
     final pickup = _pickupWindowText(reservation);
     final note = reservation.supplierNote?.trim();
+    if (reservation.isDeliveryFulfillment) {
+      return note != null && note.isNotEmpty
+          ? note
+          : l10n.materialDetailAcceptedDeliveryReady;
+    }
     if (pickup != null && note != null && note.isNotEmpty) {
       return '$pickup $note';
     }
 
-    return pickup ?? 'Reservation accepted. Pickup details are ready.';
+    return pickup ?? l10n.materialDetailAcceptedPickupReady;
   }
 
   if (reservation.isRejected) {

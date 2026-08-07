@@ -276,7 +276,9 @@ class ReservationDetailPaymentCard extends StatelessWidget {
                 const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Text(
-                    l10n.reservationNextStepPaySupporting,
+                    reservation.isDeliveryFulfillment
+                        ? l10n.reservationNextStepPaySupportingDelivery
+                        : l10n.reservationNextStepPaySupporting,
                     style: AppTextStyles.label(context).copyWith(
                       color: palette.textMuted,
                       fontSize: 12,

@@ -730,8 +730,39 @@
   "reservationMoneyBothOutstanding": "Material and delivery are paid together in one checkout.",
   "reservationNextStepPayTitle": "Complete payment to confirm the reservation",
   "reservationNextStepPaySupporting": "The pickup code appears after payment and once the pickup window starts.",
+  "reservationNextStepPaySupportingDelivery": "Delivery starts only after the required payment is complete.",
   "reservationNextStepPartialTitle": "Complete the remaining payment",
   "reservationNextStepPartialSupporting": "A payment was received; the delivery fee is still required.",
+  "paymentStatusNotRequired": "Payment not required",
+  "reservationNextStepPayToConfirm": "Pay to confirm the reservation and reveal the pickup code.",
+  "reservationNextStepPayToConfirmDelivery": "Pay to confirm the reservation and continue to delivery.",
+  "materialDetailViewReservation": "View reservation",
+  "materialDetailViewPickupDetails": "View pickup details",
+  "materialDetailViewDeliveryDetails": "View delivery details",
+  "materialDetailRequestDeliveryInReservations": "Request delivery in My Reservations",
+  "materialDetailViewDeliveryStatus": "View delivery status",
+  "materialDetailViewReservationRequest": "View reservation request",
+  "materialDetailViewReservationHistory": "View reservation history",
+  "materialDetailViewReservationStatus": "View reservation status",
+  "materialDetailAcceptedPickupReady": "Reservation accepted. Pickup details are ready.",
+  "materialDetailAcceptedDeliveryReady": "Reservation accepted. Open reservation details for delivery and payment status.",
+  "materialDetailAcceptedRequestDelivery": "Reservation accepted. Internal delivery is available from My Reservations.",
+  "materialDetailPreviousDeliveryRequestAgain": "Previous delivery status: {status}. Request delivery from My Reservations.",
+  "@materialDetailPreviousDeliveryRequestAgain": {
+    "placeholders": {
+      "status": { "type": "String" }
+    }
+  },
+  "materialDetailDeliveryStatusLine": "Delivery status: {status}.",
+  "@materialDetailDeliveryStatusLine": {
+    "placeholders": {
+      "status": { "type": "String" }
+    }
+  },
+  "materialDetailPaymentRequired": "Payment is still required. Open the reservation to continue checkout.",
+  "materialDetailReservationPending": "Reservation request sent. Waiting for supplier response.",
+  "notificationPaymentOpenCheckout": "Open checkout",
+  "notificationPaymentStatusCheckPayment": "Check current payment status",
   "reservationMoneyAmountWithCurrency": "{amount} ₪",
   "@reservationMoneyAmountWithCurrency": {
     "placeholders": {
@@ -908,7 +939,6 @@
   "reservationListStatusCompleted": "Completed",
   "reservationListStatusClosed": "Closed",
   "reservationListStatusNeedsReview": "Needs review",
-  "reservationNextStepPayToConfirm": "Pay to confirm the reservation and reveal the pickup code.",
   "reservationNextStepDeliveryFeeRemaining": "A payment was received, and the delivery fee is still required.",
   "reservationNextStepWaitingSupplier": "Waiting for supplier approval.",
   "reservationNextStepConfirmProposal": "Review and confirm the supplier proposal.",

@@ -1278,12 +1278,89 @@ class AppLocalizationsEn extends AppLocalizations {
       'The pickup code appears after payment and once the pickup window starts.';
 
   @override
+  String get reservationNextStepPaySupportingDelivery =>
+      'Delivery starts only after the required payment is complete.';
+
+  @override
   String get reservationNextStepPartialTitle =>
       'Complete the remaining payment';
 
   @override
   String get reservationNextStepPartialSupporting =>
       'A payment was received; the delivery fee is still required.';
+
+  @override
+  String get paymentStatusNotRequired => 'Payment not required';
+
+  @override
+  String get reservationNextStepPayToConfirm =>
+      'Pay to confirm the reservation and reveal the pickup code.';
+
+  @override
+  String get reservationNextStepPayToConfirmDelivery =>
+      'Pay to confirm the reservation and continue to delivery.';
+
+  @override
+  String get materialDetailViewReservation => 'View reservation';
+
+  @override
+  String get materialDetailViewPickupDetails => 'View pickup details';
+
+  @override
+  String get materialDetailViewDeliveryDetails => 'View delivery details';
+
+  @override
+  String get materialDetailRequestDeliveryInReservations =>
+      'Request delivery in My Reservations';
+
+  @override
+  String get materialDetailViewDeliveryStatus => 'View delivery status';
+
+  @override
+  String get materialDetailViewReservationRequest => 'View reservation request';
+
+  @override
+  String get materialDetailViewReservationHistory => 'View reservation history';
+
+  @override
+  String get materialDetailViewReservationStatus => 'View reservation status';
+
+  @override
+  String get materialDetailAcceptedPickupReady =>
+      'Reservation accepted. Pickup details are ready.';
+
+  @override
+  String get materialDetailAcceptedDeliveryReady =>
+      'Reservation accepted. Open reservation details for delivery and payment status.';
+
+  @override
+  String get materialDetailAcceptedRequestDelivery =>
+      'Reservation accepted. Internal delivery is available from My Reservations.';
+
+  @override
+  String materialDetailPreviousDeliveryRequestAgain(String status) {
+    return 'Previous delivery status: $status. Request delivery from My Reservations.';
+  }
+
+  @override
+  String materialDetailDeliveryStatusLine(String status) {
+    return 'Delivery status: $status.';
+  }
+
+  @override
+  String get materialDetailPaymentRequired =>
+      'Payment is still required. Open the reservation to continue checkout.';
+
+  @override
+  String get materialDetailReservationPending =>
+      'Reservation request sent. Waiting for supplier response.';
+
+  @override
+  String get notificationPaymentOpenCheckout => 'Open checkout';
+
+  @override
+  String get notificationPaymentStatusCheckPayment =>
+      'Check current payment status';
 
   @override
   String reservationMoneyAmountWithCurrency(String amount) {
@@ -1831,10 +1908,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reservationListStatusNeedsReview => 'Needs review';
-
-  @override
-  String get reservationNextStepPayToConfirm =>
-      'Pay to confirm the reservation and reveal the pickup code.';
 
   @override
   String get reservationNextStepDeliveryFeeRemaining =>

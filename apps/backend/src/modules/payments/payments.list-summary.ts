@@ -281,8 +281,12 @@ export const resolvePaymentSummariesByReservations = async (
       (primaryPayerByGroup.get(reservation.deliveryGroupId) === reservation.id ||
         !primaryPayerByGroup.has(reservation.deliveryGroupId));
 
+    // When a fee PaymentOrder exists, every included reservation may open the
+    // same reservation-scoped checkout — surface the authoritative fee amount
+    // so Pay CTAs are never amount-less. Only invent a pre-order fee snapshot
+    // for the primary payer (avoids double-counting phantom fees on joiners).
     const feeAmount =
-      feeOutstanding && feeOrder && isFeePrimary
+      feeOutstanding && feeOrder
         ? moneyDecimalToString(feeOrder.amount as never)
         : feeOutstanding && !feeOrder && isFeePrimary
           ? moneyDecimalToString(toMoneyDecimal(reservation.deliveryFee as never))

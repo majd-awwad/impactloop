@@ -154,9 +154,11 @@ describe('PAY-05A list paymentSummary batch DTO', () => {
     const feeAmounts = members
       .map((m) => m.paymentSummary?.outstandingAmount)
       .filter((amount) => amount != null);
-    // Only the primary payer (positive deliveryFee) includes fee amount.
-    assert.equal(feeAmounts.length, 1);
-    assert.equal(feeAmounts[0], '12.00');
+    // Fee PaymentOrder exists once; every included reservation may open the
+    // same reservation-scoped checkout, so each surfaces the fee amount.
+    // Accounting still charges the fee exactly once (single PaymentOrder).
+    assert.equal(feeAmounts.length, 2);
+    assert.ok(feeAmounts.every((amount) => amount === '12.00'));
 
     for (const member of members) {
       assert.equal(member.paymentSummary?.hasDeliveryFeeOutstanding, true);
