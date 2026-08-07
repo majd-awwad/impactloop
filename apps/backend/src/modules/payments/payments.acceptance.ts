@@ -94,10 +94,26 @@ export const ensureDeliveryGroupAttachedForAcceptedReservation = async (
     !reservation.deliveryZone ||
     !windowStart ||
     !windowEnd ||
-    !reservation.deliveryAddressText?.trim()
+    !reservation.deliveryAddressText?.trim() ||
+    !reservation.pricingCurrency?.trim()
   ) {
-    // Incomplete recovery / mid-transition rows stay ungrouped until fields exist.
-    return null;
+    throw new AppError(
+      'Accepted delivery with a positive fee is missing required DeliveryGroup fields.',
+      409,
+      'PAYMENT_SOURCE_INVARIANT_VIOLATION',
+      {
+        reservationId,
+        reason: 'MISSING_DELIVERY_GROUP_FIELDS',
+        missing: {
+          supplierProfileId: !supplierProfileId,
+          dropoffCity: !dropoffCity,
+          deliveryZone: !reservation.deliveryZone,
+          confirmedDeliveryWindow: !windowStart || !windowEnd,
+          deliveryAddressText: !reservation.deliveryAddressText?.trim(),
+          pricingCurrency: !reservation.pricingCurrency?.trim(),
+        },
+      },
+    );
   }
 
   const group = await tx.deliveryGroup.create({

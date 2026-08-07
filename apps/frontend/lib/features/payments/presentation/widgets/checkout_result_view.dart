@@ -6,13 +6,14 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../application/learner_checkout_controller.dart';
-import '../../data/models/payment_order.dart';
 
 class CheckoutResultView extends StatelessWidget {
   const CheckoutResultView({
     super.key,
     required this.phase,
-    required this.order,
+    this.reservationId,
+    this.sessionId,
+    this.failureMessage,
     this.onBackToReservation,
     this.onViewReservations,
     this.onRetry,
@@ -21,7 +22,9 @@ class CheckoutResultView extends StatelessWidget {
   });
 
   final CheckoutPhase phase;
-  final PaymentOrder? order;
+  final String? reservationId;
+  final String? sessionId;
+  final String? failureMessage;
   final VoidCallback? onBackToReservation;
   final VoidCallback? onViewReservations;
   final VoidCallback? onRetry;
@@ -32,10 +35,11 @@ class CheckoutResultView extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = AppThemeColors.of(context);
+    final referenceId = sessionId ?? reservationId;
 
     return switch (phase) {
       CheckoutPhase.processing => _ProcessingBody(l10n: l10n, colors: colors),
-      CheckoutPhase.success || CheckoutPhase.alreadyPaid => _ResultBody(
+      CheckoutPhase.succeeded || CheckoutPhase.alreadyPaid => _ResultBody(
           icon: Icons.check_rounded,
           iconColor: colors.success,
           iconBg: colors.successSoft,
@@ -45,19 +49,18 @@ class CheckoutResultView extends StatelessWidget {
           body: phase == CheckoutPhase.alreadyPaid
               ? l10n.checkoutAlreadyPaidBody
               : l10n.checkoutSuccessBody,
-          orderId: order?.id,
+          referenceId: referenceId,
           primaryLabel: l10n.checkoutBackToReservation,
           onPrimary: onBackToReservation,
           secondaryLabel: l10n.checkoutViewAllReservations,
           onSecondary: onViewReservations,
         ),
-      CheckoutPhase.failure => _ResultBody(
+      CheckoutPhase.declined => _ResultBody(
           icon: Icons.close_rounded,
           iconColor: colors.danger,
           iconBg: colors.dangerSoft,
           title: l10n.checkoutFailureTitle,
-          body: order?.latestTerminalAttempt?.failureMessage ??
-              l10n.checkoutFailureBody,
+          body: failureMessage ?? l10n.checkoutFailureBody,
           primaryLabel: l10n.checkoutRetry,
           onPrimary: onRetry,
           secondaryLabel: l10n.checkoutChangeMethod,
@@ -82,13 +85,13 @@ class CheckoutResultView extends StatelessWidget {
           primaryLabel: l10n.checkoutRetry,
           onPrimary: onRetry,
         ),
-      CheckoutPhase.refundPending => _ResultBody(
+      CheckoutPhase.partiallyRefunded => _ResultBody(
           icon: Icons.hourglass_top_rounded,
           iconColor: colors.warningText,
           iconBg: colors.warningSoft,
-          title: l10n.checkoutRefundPendingTitle,
-          body: l10n.checkoutRefundPendingBody,
-          orderId: order?.id,
+          title: l10n.checkoutPartiallyRefundedTitle,
+          body: l10n.checkoutPartiallyRefundedBody,
+          referenceId: referenceId,
           primaryLabel: l10n.checkoutBackToReservation,
           onPrimary: onBackToReservation,
           secondaryLabel: l10n.checkoutViewAllReservations,
@@ -100,7 +103,7 @@ class CheckoutResultView extends StatelessWidget {
           iconBg: colors.surfaceMuted,
           title: l10n.checkoutRefundedTitle,
           body: l10n.checkoutRefundedBody,
-          orderId: order?.id,
+          referenceId: referenceId,
           primaryLabel: l10n.checkoutBackToReservation,
           onPrimary: onBackToReservation,
         ),
@@ -110,9 +113,22 @@ class CheckoutResultView extends StatelessWidget {
           iconBg: colors.dangerSoft,
           title: l10n.checkoutOrderCancelledTitle,
           body: l10n.checkoutOrderCancelledBody,
-          orderId: order?.id,
+          referenceId: referenceId,
           primaryLabel: l10n.checkoutBackToReservation,
           onPrimary: onBackToReservation,
+        ),
+      CheckoutPhase.invariantBlocked => _ResultBody(
+          icon: Icons.report_gmailerrorred_outlined,
+          iconColor: colors.danger,
+          iconBg: colors.dangerSoft,
+          title: l10n.checkoutInvariantBlockedTitle,
+          body: l10n.checkoutInvariantBlockedBody,
+          referenceId: referenceId,
+          primaryLabel: l10n.checkoutBackToReservation,
+          onPrimary: onBackToReservation,
+          secondaryLabel: l10n.checkoutViewAllReservations,
+          onSecondary: onViewReservations,
+          secondaryOutlined: true,
         ),
       CheckoutPhase.missing => _ResultBody(
           icon: Icons.search_off_rounded,
@@ -193,7 +209,7 @@ class _ResultBody extends StatelessWidget {
     required this.iconBg,
     required this.title,
     required this.body,
-    this.orderId,
+    this.referenceId,
     this.primaryLabel,
     this.onPrimary,
     this.secondaryLabel,
@@ -206,7 +222,7 @@ class _ResultBody extends StatelessWidget {
   final Color iconBg;
   final String title;
   final String body;
-  final String? orderId;
+  final String? referenceId;
   final String? primaryLabel;
   final VoidCallback? onPrimary;
   final String? secondaryLabel;
@@ -247,10 +263,10 @@ class _ResultBody extends StatelessWidget {
                 height: 1.45,
               ),
             ),
-            if (orderId != null && orderId!.isNotEmpty) ...[
+            if (referenceId != null && referenceId!.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
               Text(
-                '${l10n.checkoutSuccessTransactionLabel}: $orderId',
+                '${l10n.checkoutSuccessTransactionLabel}: $referenceId',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.label(context).copyWith(
                   color: colors.textMuted,

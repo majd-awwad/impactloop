@@ -1266,7 +1266,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get checkoutReservationInfo => 'Reservation information';
 
   @override
-  String get checkoutOrderIdLabel => 'Order ID';
+  String get checkoutOrderIdLabel => 'Reservation';
 
   @override
   String get checkoutReservationDateLabel => 'Date';
@@ -1320,25 +1320,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get checkoutCombinedPaymentHint =>
-      'Material and delivery fees are charged together in this checkout.';
+      'Outstanding material and delivery amounts are collected together in one checkout session.';
 
   @override
   String get checkoutPurposeMaterialTitle => 'Material subtotal';
 
   @override
   String get checkoutPurposeMaterialHint =>
-      'Confirms the reservation. Delivery fees (if any) are paid separately.';
+      'Pays the outstanding material amount for this reservation.';
 
   @override
   String get checkoutPurposeDeliveryTitle => 'Delivery fee';
 
   @override
   String get checkoutPurposeDeliveryHint =>
-      'Pays the delivery fee for this reservation group.';
+      'Pays the remaining delivery fee for this reservation.';
 
   @override
   String get checkoutOtherOrderHint =>
-      'Another payment is also outstanding. You can pay it after this one.';
+      'Any remaining amounts for this reservation are included in this checkout session.';
 
   @override
   String get checkoutPaymentIncludesTitle => 'Payment includes';
@@ -1413,7 +1413,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Reservation payment is confirmed. Return to reservation details for the next step.';
 
   @override
-  String get checkoutSuccessTransactionLabel => 'Payment order';
+  String get checkoutSuccessTransactionLabel => 'Checkout session';
 
   @override
   String get checkoutBackToReservation => 'Back to reservation details';
@@ -1453,42 +1453,56 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get checkoutAlreadyPaidBody =>
-      'This payment order is already settled. No further payment is required.';
+      'This reservation payment is already settled. No further payment is required.';
 
   @override
   String get checkoutRefundPendingTitle => 'Refund pending';
 
   @override
   String get checkoutRefundPendingBody =>
-      'A refund is in progress for this payment order. Checkout is not available.';
+      'A refund is in progress for this reservation payment. Checkout is not available.';
+
+  @override
+  String get checkoutPartiallyRefundedTitle => 'Partial refund';
+
+  @override
+  String get checkoutPartiallyRefundedBody =>
+      'A refund is in progress or partially completed for this reservation. Checkout is not available until payment state is clear.';
 
   @override
   String get checkoutRefundedTitle => 'Refunded';
 
   @override
   String get checkoutRefundedBody =>
-      'This payment order was refunded. A new payment cycle may be required from reservation details.';
+      'This reservation payment was refunded. A new payment cycle may be required from reservation details.';
 
   @override
   String get checkoutOrderCancelledTitle => 'Payment cancelled';
 
   @override
   String get checkoutOrderCancelledBody =>
-      'This payment order was cancelled and cannot be checked out.';
+      'This reservation payment was cancelled and cannot be checked out.';
+
+  @override
+  String get checkoutInvariantBlockedTitle => 'Payment needs review';
+
+  @override
+  String get checkoutInvariantBlockedBody =>
+      'Checkout is blocked until this reservation’s payment state is reviewed. Return to reservation details or contact support.';
 
   @override
   String get checkoutLoadErrorTitle => 'Could not load checkout';
 
   @override
   String get checkoutLoadErrorBody =>
-      'We could not load this payment order. Check your connection and try again.';
+      'We could not load this reservation checkout. Check your connection and try again.';
 
   @override
-  String get checkoutMissingTitle => 'Payment order unavailable';
+  String get checkoutMissingTitle => 'Checkout unavailable';
 
   @override
   String get checkoutMissingBody =>
-      'This payment order was not found or you do not have access to it.';
+      'This reservation checkout was not found or you do not have access to it.';
 
   @override
   String get checkoutRetryLoad => 'Try again';
@@ -1499,7 +1513,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get checkoutableOrderReadyHint =>
-      'A checkoutable payment order is ready for this reservation.';
+      'A checkoutable payment is ready for this reservation.';
 
   @override
   String get paymentStatusRequired => 'Payment required';

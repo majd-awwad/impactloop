@@ -24,3 +24,11 @@ export const mockCheckoutActSchema = z.object({
 });
 
 export type MockCheckoutActInput = z.infer<typeof mockCheckoutActSchema>;
+
+export const reservationCheckoutCancelSchema = z.object({
+  attemptId: z.string().min(1),
+});
+
+export type ReservationCheckoutCancelInput = z.infer<
+  typeof reservationCheckoutCancelSchema
+>;

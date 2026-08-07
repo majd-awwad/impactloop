@@ -7,21 +7,21 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../application/learner_checkout_controller.dart';
-import '../../data/models/payment_order.dart';
+import '../../data/models/reservation_checkout_session.dart';
 import 'checkout_amount_summary.dart';
 import 'checkout_reservation_summary_card.dart';
 
 class CheckoutMockProviderPanel extends StatelessWidget {
   const CheckoutMockProviderPanel({
     super.key,
-    required this.order,
+    required this.amount,
     required this.state,
     required this.onReview,
     required this.onSimulateDecline,
     required this.onCancelAttempt,
   });
 
-  final PaymentOrder order;
+  final String amount;
   final LearnerCheckoutState state;
   final VoidCallback onReview;
   final VoidCallback onSimulateDecline;
@@ -72,7 +72,7 @@ class CheckoutMockProviderPanel extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        checkoutMoney(l10n, order.amount),
+                        checkoutMoney(l10n, amount),
                         style: AppTextStyles.label(context).copyWith(
                           color: colors.textSecondary,
                         ),
@@ -123,27 +123,30 @@ class CheckoutMockProviderPanel extends StatelessWidget {
 class CheckoutReviewSheet extends StatelessWidget {
   const CheckoutReviewSheet({
     super.key,
-    required this.order,
+    required this.amount,
     required this.submitting,
     required this.onConfirm,
     required this.onClose,
+    this.session,
   });
 
-  final PaymentOrder order;
+  final String amount;
   final bool submitting;
   final VoidCallback onConfirm;
   final VoidCallback onClose;
+  final ReservationCheckoutSession? session;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = AppThemeColors.of(context);
+    final items = session?.items ?? const <ReservationCheckoutSessionItem>[];
 
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.lg,
-          AppSpacing.md,
+          AppSpacing.sm,
           AppSpacing.lg,
           AppSpacing.lg,
         ),
@@ -151,30 +154,75 @@ class CheckoutReviewSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: colors.borderSubtle,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
             Row(
               children: [
                 Expanded(
                   child: Text(
                     l10n.checkoutReviewTitle,
-                    style: AppTextStyles.title(context),
+                    style: AppTextStyles.title(context).copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 IconButton(
                   onPressed: submitting ? null : onClose,
+                  visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.close_rounded),
                 ),
               ],
             ),
             const SizedBox(height: AppSpacing.md),
-            _ReviewRow(
-              label: l10n.checkoutReviewMethodLabel,
-              value: l10n.checkoutReviewMethodValue,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            _ReviewRow(
-              label: l10n.checkoutReviewAmountLabel,
-              value: checkoutMoney(l10n, order.amount),
-              emphasize: true,
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: colors.surfaceMuted,
+                borderRadius: AppRadius.mdAll,
+                border: Border.all(color: colors.borderSubtle),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _ReviewDetail(
+                    label: l10n.checkoutReviewMethodLabel,
+                    value: l10n.checkoutReviewMethodValue,
+                  ),
+                  if (items.isNotEmpty) ...[
+                    Padding(
+                      padding:
+                          const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                      child: Divider(height: 1, color: colors.borderSubtle),
+                    ),
+                    for (var i = 0; i < items.length; i++) ...[
+                      if (i > 0) const SizedBox(height: AppSpacing.sm),
+                      _ReviewLineItem(item: items[i]),
+                    ],
+                  ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                    child: Divider(height: 1, color: colors.borderSubtle),
+                  ),
+                  _ReviewDetail(
+                    key: const Key('checkout_review_total'),
+                    label: l10n.checkoutReviewAmountLabel,
+                    value: checkoutMoney(
+                      l10n,
+                      session?.totalAmount ?? amount,
+                    ),
+                    emphasize: true,
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: AppSpacing.lg),
             FilledButton.icon(
@@ -204,8 +252,64 @@ class CheckoutReviewSheet extends StatelessWidget {
   }
 }
 
-class _ReviewRow extends StatelessWidget {
-  const _ReviewRow({
+class _ReviewLineItem extends StatelessWidget {
+  const _ReviewLineItem({required this.item});
+
+  final ReservationCheckoutSessionItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = AppThemeColors.of(context);
+    final title = (item.materialTitle != null && item.materialTitle!.isNotEmpty)
+        ? item.materialTitle!
+        : item.purpose;
+    final reservationRef = item.reservationId;
+    final subtitle = reservationRef == null || reservationRef.isEmpty
+        ? item.purpose
+        : '${item.purpose} · ${reservationRef.length > 8 ? reservationRef.substring(0, 8) : reservationRef}';
+
+    return KeyedSubtree(
+      key: Key('checkout_review_line_${item.paymentOrderId}'),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.subtitle(context).copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: AppTextStyles.label(context).copyWith(
+                    color: colors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            checkoutMoney(l10n, item.amount),
+            style: AppTextStyles.subtitle(context).copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReviewDetail extends StatelessWidget {
+  const _ReviewDetail({
+    super.key,
     required this.label,
     required this.value,
     this.emphasize = false,
@@ -218,22 +322,26 @@ class _ReviewRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Text(
-            label,
-            style: AppTextStyles.label(context).copyWith(
-              color: colors.textSecondary,
-            ),
+        Text(
+          label,
+          style: AppTextStyles.label(context).copyWith(
+            color: colors.textSecondary,
+            fontSize: 12,
           ),
         ),
+        const SizedBox(height: 4),
         Text(
           value,
           style: (emphasize
-                  ? AppTextStyles.subtitle(context)
-                  : AppTextStyles.label(context))
-              .copyWith(fontWeight: FontWeight.w700),
+                  ? AppTextStyles.title(context)
+                  : AppTextStyles.subtitle(context))
+              .copyWith(
+            fontWeight: FontWeight.w700,
+            color: emphasize ? colors.primary : colors.textPrimary,
+          ),
         ),
       ],
     );

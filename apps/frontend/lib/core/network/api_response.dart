@@ -109,6 +109,45 @@ Future<T> unwrapApiResponse<T>(
   }
 }
 
+/// Like [unwrapApiResponse] but allows `data: null` success payloads.
+Future<T?> unwrapNullableApiResponse<T>(
+  Future<Response<Map<String, dynamic>>> request,
+  T Function(Map<String, dynamic> json) parseData,
+) async {
+  try {
+    final response = await request;
+    final body = response.data;
+
+    if (body == null) {
+      throw const ApiException(message: 'Empty response from server');
+    }
+
+    if (body['success'] != true) {
+      final errorBody = _apiErrorBody(body);
+
+      throw ApiException(
+        message: body['message'] as String? ?? 'Request failed',
+        code: errorBody?['code'] as String?,
+        statusCode: response.statusCode,
+        details: errorBody?['details'] is Map
+            ? Map<String, dynamic>.from(errorBody!['details'] as Map)
+            : null,
+        requestId: errorBody?['requestId'] as String?,
+      );
+    }
+
+    final rawData = body['data'];
+    if (rawData == null) return null;
+    if (rawData is! Map) {
+      throw const ApiException(message: 'Unexpected response data format');
+    }
+
+    return parseData(Map<String, dynamic>.from(rawData));
+  } on DioException catch (error) {
+    throw mapDioException(error);
+  }
+}
+
 Future<void> unwrapApiVoidResponse(
   Future<Response<Map<String, dynamic>>> request,
 ) async {

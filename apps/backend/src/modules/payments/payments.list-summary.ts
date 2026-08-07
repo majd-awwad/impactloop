@@ -1,7 +1,6 @@
 import { prisma } from '../../database/prisma.js';
 import { isWithinAllowedHandoverRange } from '../../utils/handover-timing.js';
 
-import { ensurePaymentObligationsForAcceptedReservation } from './payments.acceptance.js';
 import { isPayablePaymentOrderStatus } from './payments.constants.js';
 import { moneyDecimalToString, toMoneyDecimal } from './payments.money.js';
 import { classifyReservationPaymentLifecycle } from './payments.lifecycle.policy.js';
@@ -165,41 +164,8 @@ export const resolvePaymentSummariesByReservations = async (
     return result;
   }
 
-  // Repair accepted DELIVERY rows that have a priced fee but never got a group
-  // (flexible booking path). This creates the missing DELIVERY_FEE order.
-  const ungroupedDeliveryIds = reservations
-    .filter(
-      (reservation) =>
-        reservation.status === 'ACCEPTED' &&
-        reservation.fulfillmentMethod === 'DELIVERY' &&
-        reservation.deliveryGroupId == null &&
-        isPositiveAmount(reservation.deliveryFee),
-    )
-    .map((reservation) => reservation.id);
-
-  if (ungroupedDeliveryIds.length > 0) {
-    for (const reservationId of ungroupedDeliveryIds) {
-      await prisma.$transaction(
-        (tx) => ensurePaymentObligationsForAcceptedReservation(tx, reservationId),
-        { timeout: 15_000 },
-      );
-    }
-
-    const repaired = await prisma.reservation.findMany({
-      where: { id: { in: ungroupedDeliveryIds } },
-      select: { id: true, deliveryGroupId: true },
-    });
-    const repairedGroupById = new Map(
-      repaired.map((row) => [row.id, row.deliveryGroupId] as const),
-    );
-    for (const reservation of reservations) {
-      const repairedGroupId = repairedGroupById.get(reservation.id);
-      if (repairedGroupId) {
-        reservation.deliveryGroupId = repairedGroupId;
-      }
-    }
-  }
-
+  // PAY-05D: reads must not mutate. Report invariant without creating groups/orders.
+  // Historical malformed rows are healed via reconcile CLI / command paths only.
   const reservationIds = reservations.map((r) => r.id);
   const groupIds = [
     ...new Set(
@@ -377,7 +343,15 @@ export const resolvePaymentSummariesByReservations = async (
     const lifecycle = classifyReservationPaymentLifecycle(reservation.status);
     let overallStatus: string;
 
-    if (lifecycle === 'PRE_FULFILLMENT_TERMINAL') {
+    const missingGroupInvariant =
+      accepted &&
+      reservation.fulfillmentMethod === 'DELIVERY' &&
+      reservation.deliveryGroupId == null &&
+      isPositiveAmount(reservation.deliveryFee);
+
+    if (missingGroupInvariant) {
+      overallStatus = 'INVARIANT_VIOLATION';
+    } else if (lifecycle === 'PRE_FULFILLMENT_TERMINAL') {
       overallStatus =
         materialOrder?.status === 'REFUNDED'
           ? 'REFUNDED'

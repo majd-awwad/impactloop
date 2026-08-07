@@ -50,6 +50,12 @@ export class MockPaymentProvider implements PaymentProvider {
     supportedModes: ['LOCAL', 'SANDBOX'],
   };
 
+  /** providerRef → charged minor + refunded minor (allocated/partial refunds). */
+  private readonly chargeLedger = new Map<
+    string,
+    { chargedMinor: number; refundedMinor: number; currency: string }
+  >();
+
   constructor(mode: 'LOCAL' | 'SANDBOX') {
     assertMockSecretsConfigured();
     this.mode = mode;
@@ -59,6 +65,15 @@ export class MockPaymentProvider implements PaymentProvider {
     input: ProviderCheckoutRequest,
   ): Promise<ProviderCheckoutResult> {
     const providerRef = `mock_pay_${input.attemptId}`;
+    const existing = this.chargeLedger.get(providerRef);
+    // Idempotent re-create for the same attempt (claim recovery).
+    if (!existing) {
+      this.chargeLedger.set(providerRef, {
+        chargedMinor: input.amountMinor,
+        refundedMinor: 0,
+        currency: input.currency.toUpperCase(),
+      });
+    }
     const expiresAt = new Date(Date.now() + env.paymentMockCheckoutTtlMs);
     const token = signMockCheckoutToken({
       attemptId: input.attemptId,
@@ -251,6 +266,28 @@ export class MockPaymentProvider implements PaymentProvider {
   async requestRefund(
     input: ProviderRefundRequest,
   ): Promise<ProviderRefundResult> {
+    const ledger = this.chargeLedger.get(input.providerRef);
+    if (ledger) {
+      if (input.currency.toUpperCase() !== ledger.currency) {
+        return {
+          providerRefundRef: `mock_rfnd_${input.paymentOrderId}`,
+          status: 'FAILED',
+          failureCode: 'CURRENCY_MISMATCH',
+          failureMessage: 'Refund currency does not match charge currency.',
+        };
+      }
+      if (ledger.refundedMinor + input.amountMinor > ledger.chargedMinor) {
+        return {
+          providerRefundRef: `mock_rfnd_${input.paymentOrderId}`,
+          status: 'FAILED',
+          failureCode: 'REFUND_EXCEEDS_CHARGE',
+          failureMessage:
+            'Allocated refund would exceed the successful provider charge.',
+        };
+      }
+      ledger.refundedMinor += input.amountMinor;
+    }
+
     return {
       providerRefundRef: `mock_rfnd_${input.paymentOrderId}`,
       status: 'PENDING',

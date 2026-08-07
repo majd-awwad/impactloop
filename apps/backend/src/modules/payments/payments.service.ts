@@ -740,20 +740,36 @@ export const actOnMockCheckout = async (input: {
 
   const attempt = await prisma.paymentAttempt.findUnique({
     where: { id: input.attemptId },
-    include: { paymentOrder: true },
+    include: {
+      paymentOrder: true,
+      checkoutSession: true,
+    },
   });
 
   if (!attempt) {
     throw new AppError('Payment attempt not found.', 404, 'NOT_FOUND');
   }
 
+  const payerUserId =
+    attempt.paymentOrder?.payerUserId ??
+    attempt.checkoutSession?.payerUserId ??
+    null;
+
+  if (!payerUserId) {
+    throw new AppError(
+      'Payment attempt is missing payer ownership.',
+      500,
+      'INTERNAL_ERROR',
+    );
+  }
+
   const tokenAuth = verifyMockCheckoutToken(input.mockToken, attempt.id);
-  const isPayer = input.actorUserId === attempt.paymentOrder.payerUserId;
+  const isPayer = input.actorUserId === payerUserId;
   if (!isPayer && !tokenAuth.ok) {
     throw new AppError('Not authorized for mock checkout action.', 403, 'FORBIDDEN');
   }
 
-  if (tokenAuth.ok && tokenAuth.payerUserId !== attempt.paymentOrder.payerUserId) {
+  if (tokenAuth.ok && tokenAuth.payerUserId !== payerUserId) {
     throw new AppError('Not authorized for mock checkout action.', 403, 'FORBIDDEN');
   }
 
@@ -798,8 +814,23 @@ export const actOnMockCheckout = async (input: {
 
   await afterVerifiedPaymentEventProcessed(result);
 
+  if (attempt.checkoutSessionId) {
+    const { getCheckoutSessionForActor } = await import(
+      './payments.checkout-session.js'
+    );
+    const session = await getCheckoutSessionForActor(attempt.checkoutSessionId, {
+      userId: payerUserId,
+      roles: ['LEARNER'],
+    });
+    return {
+      processing: result,
+      checkoutSession: session,
+      order: null,
+    };
+  }
+
   const order = await prisma.paymentOrder.findUniqueOrThrow({
-    where: { id: attempt.paymentOrderId },
+    where: { id: attempt.paymentOrderId! },
     include: orderDetailInclude,
   });
 
@@ -944,6 +975,84 @@ export const requestFullRefundForPaidOrder = async (input: {
 }) => {
   const provider = getPaymentProvider();
 
+  const resolveSucceededAttemptForOrder = async (
+    tx: Prisma.TransactionClient,
+    orderId: string,
+  ) => {
+    const direct = await tx.paymentAttempt.findFirst({
+      where: {
+        paymentOrderId: orderId,
+        status: 'SUCCEEDED',
+      },
+      orderBy: { succeededAt: 'desc' },
+    });
+    if (direct?.providerRef) {
+      return {
+        attempt: direct,
+        amountMinor: moneyDecimalToMinorUnits(
+          (
+            await tx.paymentOrder.findUniqueOrThrow({ where: { id: orderId } })
+          ).amount,
+        ),
+      };
+    }
+
+    const item = await tx.paymentCheckoutSessionItem.findFirst({
+      where: {
+        paymentOrderId: orderId,
+        status: { in: ['SETTLED', 'REFUNDED'] },
+        checkoutSession: { status: 'SUCCEEDED' },
+      },
+      include: {
+        checkoutSession: {
+          include: {
+            attempts: {
+              where: { status: 'SUCCEEDED' },
+              orderBy: { succeededAt: 'desc' },
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const sessionAttempt = item?.checkoutSession.attempts[0];
+    if (!sessionAttempt?.providerRef || !item) {
+      return null;
+    }
+
+    const remaining = item.amountMinor - item.refundedAmountMinor;
+    if (remaining <= 0) {
+      throw new AppError(
+        'Checkout allocation for this payment order is already fully refunded.',
+        409,
+        'REFUND_ALREADY_EXISTS',
+      );
+    }
+
+    // Cumulative session refunds must not exceed the successful charge.
+    const sessionItems = await tx.paymentCheckoutSessionItem.findMany({
+      where: { checkoutSessionId: item.checkoutSessionId },
+    });
+    const alreadyRefunded = sessionItems.reduce(
+      (sum, row) => sum + row.refundedAmountMinor,
+      0,
+    );
+    if (alreadyRefunded + remaining > item.checkoutSession.totalAmountMinor) {
+      throw new AppError(
+        'Refund would exceed the successful checkout session charge.',
+        409,
+        'REFUND_EXCEEDS_SESSION_CHARGE',
+      );
+    }
+
+    return {
+      attempt: sessionAttempt,
+      amountMinor: item.amountMinor,
+    };
+  };
+
   const prepared = await runSerializableTransaction(async (tx) => {
     const order = await tx.paymentOrder.findUnique({
       where: { id: input.orderId },
@@ -984,28 +1093,30 @@ export const requestFullRefundForPaidOrder = async (input: {
       };
     }
 
+    const resolved = await resolveSucceededAttemptForOrder(tx, order.id);
+    if (!resolved?.attempt.providerRef) {
+      throw new AppError(
+        'Paid order is missing a succeeded payment attempt.',
+        500,
+        'INTERNAL_ERROR',
+      );
+    }
+
+    const allocationMinor = resolved.amountMinor;
+
     // REQUESTED under REFUND_PENDING means prior provider call never completed — retry.
     if (
       order.status === 'REFUND_PENDING' &&
       order.refund &&
       order.refund.status === 'REQUESTED'
     ) {
-      const succeededAttempt = order.attempts[0];
-      if (!succeededAttempt?.providerRef) {
-        throw new AppError(
-          'Paid order is missing a succeeded payment attempt.',
-          500,
-          'INTERNAL_ERROR',
-        );
-      }
-
       return {
         kind: 'CREATED' as const,
         orderId: order.id,
         refundId: order.refund.id,
-        attemptId: succeededAttempt.id,
-        providerRef: succeededAttempt.providerRef,
-        amountMinor: succeededAttempt.amountMinor,
+        attemptId: resolved.attempt.id,
+        providerRef: resolved.attempt.providerRef,
+        amountMinor: allocationMinor,
         currency: order.currency,
         reason: order.refund.reason ?? undefined,
       };
@@ -1017,15 +1128,6 @@ export const requestFullRefundForPaidOrder = async (input: {
         409,
         'PAYMENT_NOT_REFUNDABLE',
         { status: order.status },
-      );
-    }
-
-    const succeededAttempt = order.attempts[0];
-    if (!succeededAttempt?.providerRef) {
-      throw new AppError(
-        'Paid order is missing a succeeded payment attempt.',
-        500,
-        'INTERNAL_ERROR',
       );
     }
 
@@ -1060,9 +1162,9 @@ export const requestFullRefundForPaidOrder = async (input: {
         kind: 'CREATED' as const,
         orderId: order.id,
         refundId: retryRefund.id,
-        attemptId: succeededAttempt.id,
-        providerRef: succeededAttempt.providerRef,
-        amountMinor: succeededAttempt.amountMinor,
+        attemptId: resolved.attempt.id,
+        providerRef: resolved.attempt.providerRef,
+        amountMinor: allocationMinor,
         currency: order.currency,
         reason: retryRefund.reason ?? undefined,
       };
@@ -1071,7 +1173,7 @@ export const requestFullRefundForPaidOrder = async (input: {
     const refund = await tx.paymentRefund.create({
       data: {
         paymentOrderId: order.id,
-        paymentAttemptId: succeededAttempt.id,
+        paymentAttemptId: resolved.attempt.id,
         status: 'REQUESTED',
         amount: order.amount,
         currency: order.currency,
@@ -1088,9 +1190,9 @@ export const requestFullRefundForPaidOrder = async (input: {
       kind: 'CREATED' as const,
       orderId: order.id,
       refundId: refund.id,
-      attemptId: succeededAttempt.id,
-      providerRef: succeededAttempt.providerRef,
-      amountMinor: succeededAttempt.amountMinor,
+      attemptId: resolved.attempt.id,
+      providerRef: resolved.attempt.providerRef,
+      amountMinor: allocationMinor,
       currency: order.currency,
       reason: refund.reason ?? undefined,
     };
@@ -1168,6 +1270,71 @@ export const requestFullRefundForPaidOrder = async (input: {
   });
 };
 
+/**
+ * PAY-05D-R2: refund a session allocation that duplicated an already-PAID order
+ * without flipping the order out of PAID (legacy/other charge remains authoritative).
+ */
+export const refundDuplicateSessionAllocationsKeepingOrdersPaid = async (input: {
+  checkoutSessionId: string;
+  paymentOrderIds: string[];
+}): Promise<void> => {
+  const provider = getPaymentProvider();
+  const session = await prisma.paymentCheckoutSession.findUnique({
+    where: { id: input.checkoutSessionId },
+    include: {
+      items: true,
+      attempts: {
+        where: { status: 'SUCCEEDED' },
+        orderBy: { succeededAt: 'desc' },
+        take: 1,
+      },
+    },
+  });
+
+  const attempt = session?.attempts[0];
+  if (!session || !attempt?.providerRef) {
+    return;
+  }
+
+  for (const orderId of input.paymentOrderIds) {
+    const item = session.items.find((row) => row.paymentOrderId === orderId);
+    if (!item) continue;
+    const remaining = item.amountMinor - item.refundedAmountMinor;
+    if (remaining <= 0) continue;
+
+    const refundResult = await provider.requestRefund({
+      paymentOrderId: orderId,
+      paymentAttemptId: attempt.id,
+      providerRef: attempt.providerRef,
+      amountMinor: remaining,
+      currency: item.currency,
+      reason: 'DUPLICATE_ALLOCATION_AFTER_OTHER_CHARGE',
+    });
+
+    if (refundResult.status === 'FAILED') {
+      continue;
+    }
+
+    // Provider accepted — mark allocation refunded; order stays PAID.
+    await prisma.paymentCheckoutSessionItem.update({
+      where: { id: item.id },
+      data: {
+        refundedAmountMinor: item.amountMinor,
+        status: 'REFUNDED',
+      },
+    });
+
+    const order = await prisma.paymentOrder.findUnique({
+      where: { id: orderId },
+      select: { status: true },
+    });
+    if (order?.status === 'PAID') {
+      // Keep PAID — no PaymentRefund row / no status flip.
+      continue;
+    }
+  }
+};
+
 /** Test/helper: complete mock refund asynchronously through event processor. */
 export const completeMockRefundViaEvent = async (input: {
   orderId: string;
@@ -1188,14 +1355,41 @@ export const completeMockRefundViaEvent = async (input: {
     },
   });
 
-  if (!order?.refund || !order.attempts[0]?.providerRef) {
+  if (!order?.refund) {
+    throw new AppError('Refundable paid order not found.', 404, 'NOT_FOUND');
+  }
+
+  let succeededAttempt = order.attempts[0] ?? null;
+  if (!succeededAttempt?.providerRef) {
+    const item = await prisma.paymentCheckoutSessionItem.findFirst({
+      where: {
+        paymentOrderId: order.id,
+        status: { in: ['SETTLED', 'REFUNDED'] },
+      },
+      include: {
+        checkoutSession: {
+          include: {
+            attempts: {
+              where: { status: 'SUCCEEDED' },
+              orderBy: { succeededAt: 'desc' },
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    succeededAttempt = item?.checkoutSession.attempts[0] ?? null;
+  }
+
+  if (!succeededAttempt?.providerRef) {
     throw new AppError('Refundable paid order not found.', 404, 'NOT_FOUND');
   }
 
   const built = provider.buildRefundEvent({
     outcome: input.outcome,
-    attemptId: order.attempts[0].id,
-    providerRef: order.attempts[0].providerRef,
+    attemptId: succeededAttempt.id,
+    providerRef: succeededAttempt.providerRef,
     providerRefundRef:
       order.refund.providerRefundRef ?? `mock_rfnd_${order.id}`,
     amountMinor: moneyDecimalToMinorUnits(order.amount),

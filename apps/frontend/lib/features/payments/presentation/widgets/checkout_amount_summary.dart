@@ -7,6 +7,7 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../reservations/data/models/learner_reservation.dart';
 import '../../data/models/payment_order.dart';
+import '../../data/models/reservation_checkout_session.dart';
 import '../../data/models/reservation_payment_requirement.dart';
 import 'checkout_reservation_summary_card.dart';
 
@@ -20,10 +21,17 @@ String? _asMoneyString(double? value) {
 }
 
 String? checkoutCombinedRemainingAmount({
-  required PaymentOrder order,
+  PaymentOrder? order,
   LearnerReservation? reservation,
   ReservationPaymentRequirement? requirement,
+  ReservationCheckoutSession? session,
 }) {
+  // Prefer authoritative CheckoutSession total (multi-reservation safe).
+  final sessionTotal = session?.totalAmount;
+  if (sessionTotal != null && sessionTotal.trim().isNotEmpty) {
+    return sessionTotal.trim();
+  }
+
   final fromSummary = reservation?.paymentSummary?.outstandingAmount;
   if (fromSummary != null && fromSummary.trim().isNotEmpty) {
     return fromSummary.trim();
@@ -42,28 +50,32 @@ String? checkoutCombinedRemainingAmount({
       const <String>[];
 
   if (unpaid.isEmpty) {
-    return order.amount;
+    return order?.amount;
   }
   if (unpaid.length == 1) {
     return unpaid.first;
   }
 
-  try {
-    final total = unpaid.fold<double>(
-      0,
-      (sum, amount) => sum + double.parse(amount),
-    );
-    return total.toStringAsFixed(2);
-  } catch (_) {
-    return unpaid.join(' + ');
-  }
+  // No Dart double money math — show discrete obligations until a session exists.
+  return unpaid.join(' + ');
 }
 
+/// True when this reservation checkout settles more than one outstanding order.
 bool checkoutHasCombinedSiblingOrders({
-  required PaymentOrder order,
+  PaymentOrder? order,
   ReservationPaymentRequirement? requirement,
 }) {
   if (requirement == null) return false;
+  final unpaid = requirement.orders
+      .where(
+        (row) =>
+            row.isCurrent &&
+            (row.status == 'REQUIRES_PAYMENT' ||
+                row.status == 'CHECKOUT_PENDING'),
+      )
+      .length;
+  if (unpaid >= 2) return true;
+  if (order == null) return unpaid >= 1 && requirement.orders.length > 1;
   return requirement.orders.any(
     (row) =>
         row.id != order.id &&
@@ -75,14 +87,16 @@ bool checkoutHasCombinedSiblingOrders({
 class CheckoutAmountSummaryCard extends StatelessWidget {
   const CheckoutAmountSummaryCard({
     super.key,
-    required this.order,
+    this.order,
     this.reservation,
     this.requirement,
+    this.session,
   });
 
-  final PaymentOrder order;
+  final PaymentOrder? order;
   final LearnerReservation? reservation;
   final ReservationPaymentRequirement? requirement;
+  final ReservationCheckoutSession? session;
 
   @override
   Widget build(BuildContext context) {
@@ -91,11 +105,13 @@ class CheckoutAmountSummaryCard extends StatelessWidget {
 
     final materialAmount = requirement?.material.amount ??
         _asMoneyString(reservation?.materialSubtotal) ??
-        (order.isMaterial ? order.amount : null);
+        (order?.isMaterial == true ? order?.amount : null);
     final deliveryAmount = requirement?.deliveryFee?.amount ??
         _asMoneyString(reservation?.deliveryFee);
     final materialPaid = requirement?.material.isPaid == true;
     final deliveryPaid = requirement?.deliveryFee?.isPaid == true;
+    final deliveryOutstanding = requirement?.deliveryFee?.isOutstanding == true;
+    final onlyFeeRemaining = materialPaid && deliveryOutstanding;
 
     final previouslyPaidParts = <String>[];
     if (materialPaid && requirement?.material.amount != null) {
@@ -104,8 +120,6 @@ class CheckoutAmountSummaryCard extends StatelessWidget {
     if (deliveryPaid && requirement?.deliveryFee?.amount != null) {
       previouslyPaidParts.add(requirement!.deliveryFee!.amount!);
     }
-    // Display previously paid as server strings when available; otherwise 0.00
-    // for this single-order checkout context.
     final previouslyPaidDisplay = previouslyPaidParts.isEmpty
         ? '0.00'
         : previouslyPaidParts.length == 1
@@ -116,7 +130,13 @@ class CheckoutAmountSummaryCard extends StatelessWidget {
       order: order,
       reservation: reservation,
       requirement: requirement,
-    )!;
+      session: session,
+    ) ??
+        '0.00';
+
+    final totalRequired = _asMoneyString(reservation?.totalAmount) ??
+        session?.totalAmount ??
+        remainingAmount;
 
     return CheckoutSurfaceCard(
       title: l10n.checkoutAmountSummaryTitle,
@@ -126,7 +146,10 @@ class CheckoutAmountSummaryCard extends StatelessWidget {
           if (materialAmount != null)
             _AmountRow(
               label: l10n.checkoutItemPrice,
-              value: checkoutMoney(l10n, materialAmount),
+              value: onlyFeeRemaining || materialPaid
+                  ? l10n.paymentStatusPaid
+                  : checkoutMoney(l10n, materialAmount),
+              valueMuted: materialPaid,
             ),
           if (deliveryAmount != null &&
               deliveryAmount != '0' &&
@@ -134,18 +157,16 @@ class CheckoutAmountSummaryCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             _AmountRow(
               label: l10n.checkoutDeliveryFees,
-              value: checkoutMoney(l10n, deliveryAmount),
+              value: deliveryPaid
+                  ? l10n.paymentStatusPaid
+                  : checkoutMoney(l10n, deliveryAmount),
+              valueMuted: deliveryPaid,
             ),
           ],
           const SizedBox(height: AppSpacing.sm),
           _AmountRow(
             label: l10n.checkoutTotalRequired,
-            value: checkoutMoney(
-              l10n,
-              _asMoneyString(reservation?.totalAmount) ??
-                  requirement?.material.amount ??
-                  order.amount,
-            ),
+            value: checkoutMoney(l10n, totalRequired),
             emphasized: true,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -192,12 +213,14 @@ class CheckoutAmountSummaryCard extends StatelessWidget {
 class CheckoutPurposeCard extends StatelessWidget {
   const CheckoutPurposeCard({
     super.key,
-    required this.order,
+    this.order,
     this.requirement,
+    this.session,
   });
 
-  final PaymentOrder order;
+  final PaymentOrder? order;
   final ReservationPaymentRequirement? requirement;
+  final ReservationCheckoutSession? session;
 
   @override
   Widget build(BuildContext context) {
@@ -207,29 +230,39 @@ class CheckoutPurposeCard extends StatelessWidget {
       order: order,
       requirement: requirement,
     );
+    final materialPaid = requirement?.material.isPaid == true;
+    final onlyFee = materialPaid &&
+        requirement?.deliveryFee?.isOutstanding == true;
+
+    final title = onlyFee
+        ? l10n.checkoutPurposeDeliveryTitle
+        : (combined
+            ? l10n.checkoutCombinedPaymentTitle
+            : (order?.isDeliveryFee == true
+                ? l10n.checkoutPurposeDeliveryTitle
+                : l10n.checkoutPurposeMaterialTitle));
+    final hint = onlyFee
+        ? l10n.checkoutPurposeDeliveryHint
+        : (combined
+            ? l10n.checkoutCombinedPaymentHint
+            : (order?.isDeliveryFee == true
+                ? l10n.checkoutPurposeDeliveryHint
+                : l10n.checkoutPurposeMaterialHint));
 
     return CheckoutSurfaceCard(
-      title: combined
-          ? l10n.checkoutCombinedPaymentTitle
-          : (order.isDeliveryFee
-              ? l10n.checkoutPurposeDeliveryTitle
-              : l10n.checkoutPurposeMaterialTitle),
+      title: title,
       titleIcon: Icons.payments_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            combined
-                ? l10n.checkoutCombinedPaymentHint
-                : (order.isDeliveryFee
-                    ? l10n.checkoutPurposeDeliveryHint
-                    : l10n.checkoutPurposeMaterialHint),
+            hint,
             style: AppTextStyles.label(context).copyWith(
               color: colors.textSecondary,
               height: 1.35,
             ),
           ),
-          if (combined) ...[
+          if (combined || session != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
               checkoutMoney(
@@ -237,8 +270,10 @@ class CheckoutPurposeCard extends StatelessWidget {
                 checkoutCombinedRemainingAmount(
                       order: order,
                       requirement: requirement,
+                      session: session,
                     ) ??
-                    order.amount,
+                    order?.amount ??
+                    '0.00',
               ),
               style: AppTextStyles.subtitle(context).copyWith(
                 color: colors.primary,
@@ -255,12 +290,12 @@ class CheckoutPurposeCard extends StatelessWidget {
 class CheckoutIncludesSection extends StatelessWidget {
   const CheckoutIncludesSection({
     super.key,
-    required this.order,
+    this.order,
     this.reservation,
     this.requirement,
   });
 
-  final PaymentOrder order;
+  final PaymentOrder? order;
   final LearnerReservation? reservation;
   final ReservationPaymentRequirement? requirement;
 
@@ -268,17 +303,28 @@ class CheckoutIncludesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = AppThemeColors.of(context);
-    final isPickup = (reservation?.fulfillmentMethod ?? 'PICKUP') == 'PICKUP';
+    final fulfillment = requirement?.fulfillmentMethod ??
+        reservation?.fulfillmentMethod ??
+        'PICKUP';
+    final isPickup = fulfillment == 'PICKUP';
+    final isDelivery = fulfillment == 'DELIVERY';
     final combined = checkoutHasCombinedSiblingOrders(
       order: order,
       requirement: requirement,
     );
+    final materialPaid = requirement?.material.isPaid == true;
+    final includesMaterial =
+        !materialPaid || order?.isMaterial == true || combined;
+    // Never show pickup-code messaging for DELIVERY fulfillment.
+    final showPickupCode =
+        isPickup && !isDelivery && (includesMaterial || combined);
 
     final items = <String>[
       l10n.checkoutIncludesConfirmReservation,
-      if ((order.isMaterial || combined) && isPickup)
-        l10n.checkoutIncludesPickupCode,
-      if (!isPickup || order.isDeliveryFee || combined)
+      if (showPickupCode) l10n.checkoutIncludesPickupCode,
+      if (isDelivery ||
+          order?.isDeliveryFee == true ||
+          requirement?.deliveryFee?.required == true)
         l10n.checkoutIncludesDeliveryDispatch,
     ];
 
@@ -369,11 +415,13 @@ class _AmountRow extends StatelessWidget {
     required this.label,
     required this.value,
     this.emphasized = false,
+    this.valueMuted = false,
   });
 
   final String label;
   final String value;
   final bool emphasized;
+  final bool valueMuted;
 
   @override
   Widget build(BuildContext context) {
@@ -394,7 +442,10 @@ class _AmountRow extends StatelessWidget {
           style: (emphasized
                   ? AppTextStyles.subtitle(context)
                   : AppTextStyles.label(context))
-              .copyWith(fontWeight: FontWeight.w700),
+              .copyWith(
+            fontWeight: FontWeight.w700,
+            color: valueMuted ? colors.success : null,
+          ),
         ),
       ],
     );

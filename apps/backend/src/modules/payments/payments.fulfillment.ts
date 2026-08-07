@@ -441,29 +441,87 @@ const createOrReopenDeliveryIfReady = async (
 export const afterVerifiedPaymentEventProcessed = async (input: {
   processingStatus: string;
   paymentOrderId?: string;
+  paymentOrderIds?: string[];
+  checkoutSessionId?: string;
+  paymentAttemptId?: string | null;
   postCommitAutoRefund?: boolean;
+  postCommitAutoRefundOrderIds?: string[];
+  postCommitDuplicateAllocationOrderIds?: string[];
   reason?: string;
 }): Promise<void> => {
   if (
     (input.processingStatus !== 'PROCESSED' &&
       input.processingStatus !== 'IGNORED_DUPLICATE') ||
-    !input.paymentOrderId ||
     !isElectronicPaymentEnforced()
   ) {
     return;
   }
 
+  const orderIds = [
+    ...new Set(
+      [
+        ...(input.paymentOrderIds ?? []),
+        ...(input.paymentOrderId ? [input.paymentOrderId] : []),
+      ].filter(Boolean),
+    ),
+  ];
+
+  if (orderIds.length === 0) {
+    return;
+  }
+
+  // Process primary order for refund / cycle paths; then settle fulfillment once.
+  const primaryId = orderIds[0]!;
+
+  const duplicateIds = [
+    ...new Set(input.postCommitDuplicateAllocationOrderIds ?? []),
+  ];
+
+  if (duplicateIds.length > 0 && input.checkoutSessionId) {
+    const { refundDuplicateSessionAllocationsKeepingOrdersPaid } = await import(
+      './payments.service.js'
+    );
+    await refundDuplicateSessionAllocationsKeepingOrdersPaid({
+      checkoutSessionId: input.checkoutSessionId,
+      paymentOrderIds: duplicateIds,
+    });
+  }
+
   if (input.postCommitAutoRefund) {
-    await notifyLatePaymentAutoRefund(input.paymentOrderId);
-    await flushPostCommitPaymentRefunds([
-      {
-        orderId: input.paymentOrderId,
-        reason:
-          input.reason ??
-          LIFECYCLE_REFUND_REASONS.LATE_SUCCESS_AFTER_SOURCE_TERMINAL,
-        actorUserId: 'payment-lifecycle',
-      },
-    ]);
+    const refundIds = [
+      ...new Set(
+        [
+          ...(input.postCommitAutoRefundOrderIds ?? []),
+          ...(input.paymentOrderId ? [input.paymentOrderId] : []),
+        ]
+          .filter(Boolean)
+          .filter((id) => !duplicateIds.includes(id)),
+      ),
+    ];
+    for (const orderId of refundIds) {
+      await notifyLatePaymentAutoRefund(orderId);
+    }
+    if (refundIds.length > 0) {
+      await flushPostCommitPaymentRefunds(
+        refundIds.map((orderId) => ({
+          orderId,
+          reason:
+            input.reason ??
+            LIFECYCLE_REFUND_REASONS.LATE_SUCCESS_AFTER_SOURCE_TERMINAL,
+          actorUserId: 'payment-lifecycle',
+        })),
+      );
+    }
+    // Mixed late-success may also keep valid PAID allocations — reevaluate after refunds.
+    for (const orderId of orderIds) {
+      const order = await prisma.paymentOrder.findUnique({
+        where: { id: orderId },
+        select: { status: true },
+      });
+      if (order?.status === 'PAID') {
+        await reevaluateFulfillmentAfterPaymentOrderPaid(orderId);
+      }
+    }
     return;
   }
 
@@ -472,7 +530,7 @@ export const afterVerifiedPaymentEventProcessed = async (input: {
     input.reason === 'LATE_SUCCESS_AFTER_FULFILLED_NO_REFUND'
   ) {
     const order = await prisma.paymentOrder.findUnique({
-      where: { id: input.paymentOrderId },
+      where: { id: primaryId },
       select: { reservationId: true, deliveryGroupId: true, purpose: true },
     });
     let reservationId = order?.reservationId ?? null;
@@ -487,101 +545,114 @@ export const afterVerifiedPaymentEventProcessed = async (input: {
     if (reservationId) {
       await notifyPaymentResolutionRequired({
         reservationId,
-        paymentOrderId: input.paymentOrderId,
-        episodeKey: input.paymentOrderId,
+        paymentOrderId: primaryId,
+        episodeKey: primaryId,
       });
     }
     return;
   }
 
-  const order = await prisma.paymentOrder.findUnique({
-    where: { id: input.paymentOrderId },
-    select: {
-      id: true,
-      status: true,
-      purpose: true,
-      cycleNumber: true,
-      reservationId: true,
-      deliveryGroupId: true,
-    },
-  });
+  const evaluatedGroups = new Set<string>();
+  const evaluatedReservations = new Set<string>();
 
-  if (!order) {
-    return;
-  }
-
-  if (order.status === 'REFUNDED') {
-    const cycle = await ensureNextPaymentCycleAfterVerifiedRefund(order.id);
-    const newCycleCreated = cycle.outcome === 'CREATED';
-    await notifyRefundCompleted({
-      paymentOrderId: order.id,
-      newCycleCreated,
-      newCycleNumber: cycle.cycleNumber,
+  for (const orderId of orderIds) {
+    const order = await prisma.paymentOrder.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true,
+        status: true,
+        purpose: true,
+        cycleNumber: true,
+        reservationId: true,
+        deliveryGroupId: true,
+      },
     });
-    return;
-  }
 
-  if (order.status !== 'PAID') {
-    return;
-  }
+    if (!order) continue;
 
-  const existingRefund = await prisma.paymentRefund.findUnique({
-    where: { paymentOrderId: order.id },
-    select: { id: true, status: true },
-  });
-  if (existingRefund?.status === 'FAILED') {
-    await notifyRefundFailed({
-      paymentOrderId: order.id,
-      refundId: existingRefund.id,
+    if (order.status === 'REFUNDED') {
+      const cycle = await ensureNextPaymentCycleAfterVerifiedRefund(order.id);
+      const newCycleCreated = cycle.outcome === 'CREATED';
+      await notifyRefundCompleted({
+        paymentOrderId: order.id,
+        newCycleCreated,
+        newCycleNumber: cycle.cycleNumber,
+      });
+      continue;
+    }
+
+    if (order.status !== 'PAID') {
+      continue;
+    }
+
+    const existingRefund = await prisma.paymentRefund.findUnique({
+      where: { paymentOrderId: order.id },
+      select: { id: true, status: true },
     });
-    return;
-  }
-  if (
-    existingRefund?.status === 'PENDING' ||
-    existingRefund?.status === 'REQUESTED'
-  ) {
-    return;
-  }
-
-  await notifyPaymentCompleted(order.id);
-
-  const fulfillment = await reevaluateFulfillmentAfterPaymentOrderPaid(
-    order.id,
-  );
-
-  if (
-    order.purpose === 'MATERIAL_SUBTOTAL' &&
-    order.reservationId &&
-    fulfillment.evaluated
-  ) {
-    const reservation = await prisma.reservation.findUnique({
-      where: { id: order.reservationId },
-      select: { fulfillmentMethod: true, status: true },
-    });
+    if (existingRefund?.status === 'FAILED') {
+      await notifyRefundFailed({
+        paymentOrderId: order.id,
+        refundId: existingRefund.id,
+      });
+      continue;
+    }
     if (
-      reservation?.fulfillmentMethod === 'PICKUP' &&
-      reservation.status === 'ACCEPTED'
+      existingRefund?.status === 'PENDING' ||
+      existingRefund?.status === 'REQUESTED'
     ) {
-      const pickup = await evaluatePickupPaymentReadiness(order.reservationId);
-      if (pickup.ready) {
-        await notifyFulfillmentUnlockedPickup({
-          reservationId: order.reservationId,
+      continue;
+    }
+
+    await notifyPaymentCompleted(order.id);
+
+    const groupKey =
+      order.deliveryGroupId ??
+      (order.reservationId ? `res:${order.reservationId}` : order.id);
+    if (evaluatedGroups.has(groupKey)) {
+      continue;
+    }
+    evaluatedGroups.add(groupKey);
+
+    const fulfillment = await reevaluateFulfillmentAfterPaymentOrderPaid(
+      order.id,
+    );
+
+    if (
+      fulfillment.reservationId &&
+      !evaluatedReservations.has(fulfillment.reservationId)
+    ) {
+      evaluatedReservations.add(fulfillment.reservationId);
+      if (
+        (fulfillment.deliveryCreated ||
+          fulfillment.deliveryReopened ||
+          fulfillment.deliveryAlreadyDispatchable) &&
+        fulfillment.deliveryGroupId
+      ) {
+        await notifyFulfillmentUnlockedDelivery({
+          deliveryGroupId: fulfillment.deliveryGroupId,
           paymentOrderId: order.id,
-          cycleNumber: order.cycleNumber,
         });
+      } else if (fulfillment.reservationId) {
+        const reservation = await prisma.reservation.findUnique({
+          where: { id: fulfillment.reservationId },
+          select: { fulfillmentMethod: true, status: true },
+        });
+        if (
+          reservation?.fulfillmentMethod === 'PICKUP' &&
+          reservation.status === 'ACCEPTED'
+        ) {
+          const pickupReady = await evaluatePickupPaymentReadiness(
+            fulfillment.reservationId,
+          );
+          if (pickupReady.ready) {
+            await notifyFulfillmentUnlockedPickup({
+              reservationId: fulfillment.reservationId,
+              paymentOrderId: order.id,
+              cycleNumber: order.cycleNumber,
+            });
+          }
+        }
       }
     }
-  }
-
-  if (
-    (fulfillment.deliveryCreated ||
-      fulfillment.deliveryReopened ||
-      fulfillment.deliveryAlreadyDispatchable) &&
-    fulfillment.deliveryGroupId
-  ) {
-    await notifyFulfillmentUnlockedDelivery({
-      deliveryGroupId: fulfillment.deliveryGroupId,
-      paymentOrderId: order.id,
-    });
   }
 };

@@ -17,9 +17,9 @@ import '../widgets/checkout_stepper.dart';
 import '../widgets/checkout_sticky_action_bar.dart';
 
 class LearnerCheckoutPage extends ConsumerStatefulWidget {
-  const LearnerCheckoutPage({super.key, required this.orderId});
+  const LearnerCheckoutPage({super.key, required this.reservationId});
 
-  final String orderId;
+  final String reservationId;
 
   @override
   ConsumerState<LearnerCheckoutPage> createState() =>
@@ -44,22 +44,26 @@ class _LearnerCheckoutPageState extends ConsumerState<LearnerCheckoutPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref
-          .read(learnerCheckoutControllerProvider(widget.orderId).notifier)
+          .read(
+            learnerCheckoutControllerProvider(widget.reservationId).notifier,
+          )
           .reconcile(soft: true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(learnerCheckoutControllerProvider(widget.orderId));
-    final controller =
-        ref.read(learnerCheckoutControllerProvider(widget.orderId).notifier);
+    final state =
+        ref.watch(learnerCheckoutControllerProvider(widget.reservationId));
+    final controller = ref.read(
+      learnerCheckoutControllerProvider(widget.reservationId).notifier,
+    );
     final l10n = context.l10n;
     final colors = AppThemeColors.of(context);
     final width = MediaQuery.sizeOf(context).width;
     final isMobile = width < 900;
     final showSticky = isMobile &&
-        (state.phase == CheckoutPhase.summary ||
+        (state.phase == CheckoutPhase.ready ||
             state.phase == CheckoutPhase.method);
     final stickyPad =
         showSticky ? checkoutStickyContentPadding(context) : AppSpacing.lg;
@@ -109,7 +113,7 @@ class _LearnerCheckoutPageState extends ConsumerState<LearnerCheckoutPage>
               },
             ),
           ),
-          if (state.reviewOpen && state.order != null)
+          if (state.reviewOpen)
             Positioned.fill(
               child: GestureDetector(
                 onTap: state.submitting ? null : controller.closeReview,
@@ -118,19 +122,33 @@ class _LearnerCheckoutPageState extends ConsumerState<LearnerCheckoutPage>
                 ),
               ),
             ),
-          if (state.reviewOpen && state.order != null)
+          if (state.reviewOpen)
             Align(
               alignment: Alignment.bottomCenter,
-              child: Material(
-                color: colors.surface,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 0 : AppSpacing.lg,
+                  vertical: isMobile ? 0 : AppSpacing.md,
                 ),
-                child: CheckoutReviewSheet(
-                  order: state.order!,
-                  submitting: state.submitting,
-                  onConfirm: controller.confirmMockPayment,
-                  onClose: controller.closeReview,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: Material(
+                    elevation: 12,
+                    shadowColor: colors.overlay.withValues(alpha: 0.28),
+                    color: colors.surface,
+                    borderRadius: BorderRadius.vertical(
+                      top: const Radius.circular(16),
+                      bottom: Radius.circular(isMobile ? 0 : 16),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: CheckoutReviewSheet(
+                      amount: state.displayPayAmount,
+                      session: state.session,
+                      submitting: state.submitting,
+                      onConfirm: controller.confirmMockPayment,
+                      onClose: controller.closeReview,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -178,14 +196,15 @@ class _LearnerCheckoutPageState extends ConsumerState<LearnerCheckoutPage>
     if (state.phase == CheckoutPhase.error ||
         state.phase == CheckoutPhase.missing ||
         state.phase == CheckoutPhase.processing ||
-        state.phase == CheckoutPhase.success ||
+        state.phase == CheckoutPhase.succeeded ||
         state.phase == CheckoutPhase.alreadyPaid ||
-        state.phase == CheckoutPhase.failure ||
+        state.phase == CheckoutPhase.declined ||
         state.phase == CheckoutPhase.cancelled ||
         state.phase == CheckoutPhase.expired ||
-        state.phase == CheckoutPhase.refundPending ||
+        state.phase == CheckoutPhase.partiallyRefunded ||
         state.phase == CheckoutPhase.refunded ||
-        state.phase == CheckoutPhase.orderCancelled) {
+        state.phase == CheckoutPhase.orderCancelled ||
+        state.phase == CheckoutPhase.invariantBlocked) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -193,7 +212,10 @@ class _LearnerCheckoutPageState extends ConsumerState<LearnerCheckoutPage>
           const SizedBox(height: AppSpacing.xl),
           CheckoutResultView(
             phase: state.phase,
-            order: state.order,
+            reservationId: state.reservationId,
+            sessionId: state.session?.checkoutSessionId,
+            failureMessage: state.errorMessage ??
+                state.order?.latestTerminalAttempt?.failureMessage,
             onBackToReservation: () => _goToReservation(context, state),
             onViewReservations: () => context.go(learnerReservationsRoute),
             onRetry: controller.retryFromFailure,
@@ -207,11 +229,11 @@ class _LearnerCheckoutPageState extends ConsumerState<LearnerCheckoutPage>
       );
     }
 
-    final order = state.order;
-    if (order == null) {
+    final reservation = state.reservation;
+    if (reservation == null && state.requirement == null) {
       return CheckoutResultView(
         phase: CheckoutPhase.missing,
-        order: null,
+        reservationId: state.reservationId,
         onViewReservations: () => context.go(learnerReservationsRoute),
       );
     }
@@ -267,7 +289,7 @@ class _LearnerCheckoutPageState extends ConsumerState<LearnerCheckoutPage>
             onViewDetails: () => _goToReservation(context, state),
           ),
         if (!isMobile &&
-            (state.phase == CheckoutPhase.summary ||
+            (state.phase == CheckoutPhase.ready ||
                 state.phase == CheckoutPhase.method)) ...[
           const SizedBox(height: AppSpacing.xl),
           Align(
@@ -329,9 +351,8 @@ class _LearnerCheckoutPageState extends ConsumerState<LearnerCheckoutPage>
   }
 
   void _goToReservation(BuildContext context, LearnerCheckoutState state) {
-    final reservationId =
-        state.order?.reservationId ?? state.reservation?.id;
-    if (reservationId != null && reservationId.isNotEmpty) {
+    final reservationId = state.reservationId;
+    if (reservationId.isNotEmpty) {
       context.go(learnerReservationDetailRoute(reservationId));
       return;
     }
@@ -348,8 +369,7 @@ class _Breadcrumbs extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = AppThemeColors.of(context);
-    final reservationId =
-        state.order?.reservationId ?? state.reservation?.id;
+    final reservationId = state.reservationId;
 
     Widget crumb(String label, {VoidCallback? onTap}) {
       final text = Text(
@@ -372,7 +392,7 @@ class _Breadcrumbs extends StatelessWidget {
           l10n.checkoutBreadcrumbReservations,
           onTap: () => context.go(learnerReservationsRoute),
         ),
-        if (reservationId != null) ...[
+        if (reservationId.isNotEmpty) ...[
           Text('  ›  ', style: TextStyle(color: colors.textMuted)),
           crumb(
             l10n.checkoutBreadcrumbDetails,
@@ -400,15 +420,15 @@ class _DesktopCheckoutColumns extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final order = state.order!;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           flex: 3,
           child: CheckoutReservationSummaryCard(
-            order: order,
             reservation: state.reservation,
+            order: state.order,
+            reservationId: state.reservationId,
             onViewDetails: onViewDetails,
           ),
         ),
@@ -417,16 +437,17 @@ class _DesktopCheckoutColumns extends StatelessWidget {
           flex: 4,
           child: Column(
             children: [
-              if (state.phase == CheckoutPhase.summary) ...[
+              if (state.phase == CheckoutPhase.ready) ...[
                 CheckoutPurposeCard(
-                  order: order,
+                  order: state.order,
                   requirement: state.requirement,
+                  session: state.session,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 const CheckoutSecureFooter(),
               ] else ...[
                 CheckoutMockProviderPanel(
-                  order: order,
+                  amount: state.displayPayAmount,
                   state: state,
                   onReview: controller.openReview,
                   onSimulateDecline: controller.simulateDecline,
@@ -442,13 +463,14 @@ class _DesktopCheckoutColumns extends StatelessWidget {
           child: Column(
             children: [
               CheckoutAmountSummaryCard(
-                order: order,
+                order: state.order,
                 reservation: state.reservation,
                 requirement: state.requirement,
+                session: state.session,
               ),
               const SizedBox(height: AppSpacing.md),
               CheckoutIncludesSection(
-                order: order,
+                order: state.order,
                 reservation: state.reservation,
                 requirement: state.requirement,
               ),
@@ -473,29 +495,31 @@ class _MobileCheckoutColumns extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final order = state.order!;
     return Column(
       children: [
         CheckoutReservationSummaryCard(
-          order: order,
           reservation: state.reservation,
+          order: state.order,
+          reservationId: state.reservationId,
           onViewDetails: onViewDetails,
         ),
         const SizedBox(height: AppSpacing.md),
         CheckoutAmountSummaryCard(
-          order: order,
+          order: state.order,
           reservation: state.reservation,
           requirement: state.requirement,
+          session: state.session,
         ),
         const SizedBox(height: AppSpacing.md),
-        if (state.phase == CheckoutPhase.summary) ...[
+        if (state.phase == CheckoutPhase.ready) ...[
           CheckoutPurposeCard(
-            order: order,
+            order: state.order,
             requirement: state.requirement,
+            session: state.session,
           ),
           const SizedBox(height: AppSpacing.md),
           CheckoutIncludesSection(
-            order: order,
+            order: state.order,
             reservation: state.reservation,
             requirement: state.requirement,
           ),
@@ -503,7 +527,7 @@ class _MobileCheckoutColumns extends StatelessWidget {
           const CheckoutSecureFooter(),
         ] else ...[
           CheckoutMockProviderPanel(
-            order: order,
+            amount: state.displayPayAmount,
             state: state,
             onReview: controller.openReview,
             onSimulateDecline: controller.simulateDecline,

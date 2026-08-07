@@ -136,7 +136,7 @@ class _ReservationDetailContentState
 
   void _onCheckoutOrder(String orderId) {
     setState(() => _checkoutableOrderId = orderId);
-    context.push(learnerPaymentCheckoutRoute(orderId));
+    context.push(learnerReservationCheckoutRoute(widget.reservationId));
   }
 
   void _scrollToPickupCode() {

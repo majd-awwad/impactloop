@@ -11,10 +11,19 @@ import {
   handleMockWebhook,
   startPaymentCheckout,
 } from './payments.service.js';
+import {
+  assertReservationPaymentAccess,
+  cancelReservationCheckoutSession,
+  getCheckoutSessionForActor,
+  getRelevantCheckoutSessionForReservation,
+  reconcileExpiredCheckoutSessions,
+  startReservationCheckout,
+} from './payments.checkout-session.js';
 import { getReservationPaymentRequirement } from './payments.requirement.js';
 import type {
   MockCheckoutActInput,
   PaymentCancelAttemptInput,
+  ReservationCheckoutCancelInput,
 } from './payments.validation.js';
 
 const actorFromRequest = (req: Request) => {
@@ -80,6 +89,101 @@ export const startPaymentCheckoutHandler = async (
   });
 
   res.status(200).json(successResponse('Checkout attempt ready.', result));
+};
+
+export const startReservationCheckoutHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  const actor = actorFromRequest(req);
+  const idempotencyKey = validateIdempotencyKey(req.get('Idempotency-Key'));
+
+  const result = await startReservationCheckout({
+    reservationId: pathParam(req.params.reservationId, 'reservationId'),
+    payerUserId: actor.userId,
+    idempotencyKey,
+  });
+
+  res
+    .status(200)
+    .json(successResponse('Reservation checkout session ready.', result));
+};
+
+export const getCheckoutSessionHandler = async (req: Request, res: Response) => {
+  const actor = actorFromRequest(req);
+  const session = await getCheckoutSessionForActor(
+    pathParam(req.params.id, 'id'),
+    actor,
+  );
+  res
+    .status(200)
+    .json(successResponse('Checkout session retrieved.', session));
+};
+
+export const getReservationCheckoutSessionHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  const actor = actorFromRequest(req);
+  const session = await getRelevantCheckoutSessionForReservation(
+    pathParam(req.params.reservationId, 'reservationId'),
+    actor,
+  );
+  res.status(200).json(
+    successResponse(
+      session
+        ? 'Reservation checkout session retrieved.'
+        : 'No relevant checkout session.',
+      session,
+    ),
+  );
+};
+
+export const reconcileExpiredCheckoutSessionsHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  const actor = actorFromRequest(req);
+  const reservationId =
+    typeof req.query.reservationId === 'string'
+      ? req.query.reservationId
+      : undefined;
+
+  // Learners may only reconcile their own reservation scope.
+  if (reservationId) {
+    await assertReservationPaymentAccess(reservationId, actor);
+  } else if (!actor.roles.includes('ADMIN')) {
+    throw new AppError(
+      'reservationId is required for non-admin reconcile.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  const result = await reconcileExpiredCheckoutSessions({
+    reservationId,
+  });
+  res
+    .status(200)
+    .json(successResponse('Expired checkout sessions reconciled.', result));
+};
+
+export const cancelReservationCheckoutHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  const actor = actorFromRequest(req);
+  const body = req.body as ReservationCheckoutCancelInput;
+
+  const result = await cancelReservationCheckoutSession({
+    checkoutSessionId: pathParam(req.params.id, 'id'),
+    attemptId: body.attemptId,
+    payerUserId: actor.userId,
+  });
+
+  res
+    .status(200)
+    .json(successResponse('Checkout session attempt cancelled.', result));
 };
 
 export const cancelPaymentAttemptHandler = async (

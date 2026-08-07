@@ -2243,7 +2243,7 @@ abstract class AppLocalizations {
   /// No description provided for @checkoutOrderIdLabel.
   ///
   /// In en, this message translates to:
-  /// **'Order ID'**
+  /// **'Reservation'**
   String get checkoutOrderIdLabel;
 
   /// No description provided for @checkoutReservationDateLabel.
@@ -2345,7 +2345,7 @@ abstract class AppLocalizations {
   /// No description provided for @checkoutCombinedPaymentHint.
   ///
   /// In en, this message translates to:
-  /// **'Material and delivery fees are charged together in this checkout.'**
+  /// **'Outstanding material and delivery amounts are collected together in one checkout session.'**
   String get checkoutCombinedPaymentHint;
 
   /// No description provided for @checkoutPurposeMaterialTitle.
@@ -2357,7 +2357,7 @@ abstract class AppLocalizations {
   /// No description provided for @checkoutPurposeMaterialHint.
   ///
   /// In en, this message translates to:
-  /// **'Confirms the reservation. Delivery fees (if any) are paid separately.'**
+  /// **'Pays the outstanding material amount for this reservation.'**
   String get checkoutPurposeMaterialHint;
 
   /// No description provided for @checkoutPurposeDeliveryTitle.
@@ -2369,13 +2369,13 @@ abstract class AppLocalizations {
   /// No description provided for @checkoutPurposeDeliveryHint.
   ///
   /// In en, this message translates to:
-  /// **'Pays the delivery fee for this reservation group.'**
+  /// **'Pays the remaining delivery fee for this reservation.'**
   String get checkoutPurposeDeliveryHint;
 
   /// No description provided for @checkoutOtherOrderHint.
   ///
   /// In en, this message translates to:
-  /// **'Another payment is also outstanding. You can pay it after this one.'**
+  /// **'Any remaining amounts for this reservation are included in this checkout session.'**
   String get checkoutOtherOrderHint;
 
   /// No description provided for @checkoutPaymentIncludesTitle.
@@ -2513,7 +2513,7 @@ abstract class AppLocalizations {
   /// No description provided for @checkoutSuccessTransactionLabel.
   ///
   /// In en, this message translates to:
-  /// **'Payment order'**
+  /// **'Checkout session'**
   String get checkoutSuccessTransactionLabel;
 
   /// No description provided for @checkoutBackToReservation.
@@ -2585,7 +2585,7 @@ abstract class AppLocalizations {
   /// No description provided for @checkoutAlreadyPaidBody.
   ///
   /// In en, this message translates to:
-  /// **'This payment order is already settled. No further payment is required.'**
+  /// **'This reservation payment is already settled. No further payment is required.'**
   String get checkoutAlreadyPaidBody;
 
   /// No description provided for @checkoutRefundPendingTitle.
@@ -2597,8 +2597,20 @@ abstract class AppLocalizations {
   /// No description provided for @checkoutRefundPendingBody.
   ///
   /// In en, this message translates to:
-  /// **'A refund is in progress for this payment order. Checkout is not available.'**
+  /// **'A refund is in progress for this reservation payment. Checkout is not available.'**
   String get checkoutRefundPendingBody;
+
+  /// No description provided for @checkoutPartiallyRefundedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial refund'**
+  String get checkoutPartiallyRefundedTitle;
+
+  /// No description provided for @checkoutPartiallyRefundedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A refund is in progress or partially completed for this reservation. Checkout is not available until payment state is clear.'**
+  String get checkoutPartiallyRefundedBody;
 
   /// No description provided for @checkoutRefundedTitle.
   ///
@@ -2609,7 +2621,7 @@ abstract class AppLocalizations {
   /// No description provided for @checkoutRefundedBody.
   ///
   /// In en, this message translates to:
-  /// **'This payment order was refunded. A new payment cycle may be required from reservation details.'**
+  /// **'This reservation payment was refunded. A new payment cycle may be required from reservation details.'**
   String get checkoutRefundedBody;
 
   /// No description provided for @checkoutOrderCancelledTitle.
@@ -2621,8 +2633,20 @@ abstract class AppLocalizations {
   /// No description provided for @checkoutOrderCancelledBody.
   ///
   /// In en, this message translates to:
-  /// **'This payment order was cancelled and cannot be checked out.'**
+  /// **'This reservation payment was cancelled and cannot be checked out.'**
   String get checkoutOrderCancelledBody;
+
+  /// No description provided for @checkoutInvariantBlockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment needs review'**
+  String get checkoutInvariantBlockedTitle;
+
+  /// No description provided for @checkoutInvariantBlockedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Checkout is blocked until this reservation’s payment state is reviewed. Return to reservation details or contact support.'**
+  String get checkoutInvariantBlockedBody;
 
   /// No description provided for @checkoutLoadErrorTitle.
   ///
@@ -2633,19 +2657,19 @@ abstract class AppLocalizations {
   /// No description provided for @checkoutLoadErrorBody.
   ///
   /// In en, this message translates to:
-  /// **'We could not load this payment order. Check your connection and try again.'**
+  /// **'We could not load this reservation checkout. Check your connection and try again.'**
   String get checkoutLoadErrorBody;
 
   /// No description provided for @checkoutMissingTitle.
   ///
   /// In en, this message translates to:
-  /// **'Payment order unavailable'**
+  /// **'Checkout unavailable'**
   String get checkoutMissingTitle;
 
   /// No description provided for @checkoutMissingBody.
   ///
   /// In en, this message translates to:
-  /// **'This payment order was not found or you do not have access to it.'**
+  /// **'This reservation checkout was not found or you do not have access to it.'**
   String get checkoutMissingBody;
 
   /// No description provided for @checkoutRetryLoad.
@@ -2663,7 +2687,7 @@ abstract class AppLocalizations {
   /// No description provided for @checkoutableOrderReadyHint.
   ///
   /// In en, this message translates to:
-  /// **'A checkoutable payment order is ready for this reservation.'**
+  /// **'A checkoutable payment is ready for this reservation.'**
   String get checkoutableOrderReadyHint;
 
   /// No description provided for @paymentStatusRequired.

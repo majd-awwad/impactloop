@@ -3,7 +3,7 @@ import { prisma } from '../../database/prisma.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
 import { PROVIDER_EVENT_TYPES } from './payments.constants.js';
-import { moneyDecimalToMinorUnits, moneyEquals } from './payments.money.js';
+import { moneyDecimalToMinorUnits } from './payments.money.js';
 import type { NormalizedProviderEvent } from './providers/payment-provider.js';
 import {
   evaluateMaterialLateSuccessAction,
@@ -12,6 +12,7 @@ import {
   prepareLateSuccessAutoRefundInTransaction,
 } from './payments.lifecycle.js';
 import { LIFECYCLE_REFUND_REASONS } from './payments.lifecycle.policy.js';
+import { processSessionOwnedPaymentEvent } from './payments.session-settlement.js';
 
 const isUniqueConstraintError = (error: unknown): boolean =>
   typeof error === 'object' &&
@@ -158,10 +159,20 @@ export type ProcessProviderEventResult = {
     | 'REJECTED'
     | 'RECEIVED';
   paymentOrderId?: string;
+  /** All orders settled by a session-owned attempt (PAY-05D). */
+  paymentOrderIds?: string[];
+  checkoutSessionId?: string;
   paymentAttemptId?: string | null;
   reason?: string;
   /** When set, post-commit hook must start refund orchestration (not fulfillment). */
   postCommitAutoRefund?: boolean;
+  /** Allocation-aware late-success refunds for one or more session items. */
+  postCommitAutoRefundOrderIds?: string[];
+  /**
+   * Orders already PAID by another charge — refund the session allocation only
+   * and keep the order PAID (PAY-05D-R2 double-charge defense).
+   */
+  postCommitDuplicateAllocationOrderIds?: string[];
 };
 
 const markRejected = async (
@@ -272,6 +283,11 @@ export const processVerifiedProviderEvent = async (
       where: { id: externalAttemptId },
       include: {
         paymentOrder: true,
+        checkoutSession: {
+          include: {
+            items: { include: { paymentOrder: true } },
+          },
+        },
       },
     });
 
@@ -285,7 +301,76 @@ export const processVerifiedProviderEvent = async (
       data: { paymentAttemptId: attempt.id },
     });
 
-    const order = attempt.paymentOrder;
+    // PAY-05D: session-owned attempts settle all included orders atomically.
+    if (attempt.checkoutSessionId) {
+      const isRefundEvent =
+        event.eventType === PROVIDER_EVENT_TYPES.REFUND_PENDING ||
+        event.eventType === PROVIDER_EVENT_TYPES.REFUND_SUCCEEDED ||
+        event.eventType === PROVIDER_EVENT_TYPES.REFUND_FAILED;
+
+      if (!isRefundEvent) {
+        const sessionResult = await processSessionOwnedPaymentEvent({
+          tx,
+          event,
+          eventRowId: eventRow.id,
+          attempt: {
+            id: attempt.id,
+            status: attempt.status,
+            provider: attempt.provider,
+            providerRef: attempt.providerRef,
+            amountMinor: attempt.amountMinor,
+            currency: attempt.currency,
+            checkoutSessionId: attempt.checkoutSessionId,
+            succeededAt: attempt.succeededAt,
+          },
+          markProcessed,
+          markRejected,
+        });
+        if (sessionResult) {
+          return sessionResult;
+        }
+      }
+    }
+
+    // Resolve order: legacy order-owned attempt, or refund target for session attempt.
+    let order = attempt.paymentOrder;
+    if (!order) {
+      const refundRows = await tx.paymentRefund.findMany({
+        where: { paymentAttemptId: attempt.id },
+        include: { paymentOrder: true },
+        orderBy: { requestedAt: 'desc' },
+      });
+      const providerRefundRef =
+        typeof event.payload.providerRefundRef === 'string'
+          ? event.payload.providerRefundRef
+          : null;
+      const byRef = providerRefundRef
+        ? refundRows.find((row) => row.providerRefundRef === providerRefundRef)
+        : null;
+      const byAmount =
+        event.amountMinor != null
+          ? refundRows.find(
+              (row) =>
+                moneyDecimalToMinorUnits(row.amount) === event.amountMinor,
+            )
+          : null;
+      order =
+        byRef?.paymentOrder ??
+        byAmount?.paymentOrder ??
+        refundRows[0]?.paymentOrder ??
+        null;
+    }
+
+    if (!order) {
+      await markRejected(tx, eventRow.id, 'ORDER_NOT_FOUND_FOR_ATTEMPT');
+      return {
+        processingStatus: 'REJECTED',
+        reason: 'ORDER_NOT_FOUND_FOR_ATTEMPT',
+        paymentAttemptId: attempt.id,
+        checkoutSessionId: attempt.checkoutSessionId ?? undefined,
+      };
+    }
+
     const orderAmountMinor = moneyDecimalToMinorUnits(order.amount);
     const now = new Date();
 
@@ -300,6 +385,17 @@ export const processVerifiedProviderEvent = async (
     }
 
     if (event.eventType === PROVIDER_EVENT_TYPES.PAYMENT_SUCCEEDED) {
+      // Session-owned attempts never reach this branch for payment events.
+      if (attempt.checkoutSessionId) {
+        await markRejected(tx, eventRow.id, 'SESSION_PAYMENT_PATH_REQUIRED');
+        return {
+          processingStatus: 'REJECTED',
+          reason: 'SESSION_PAYMENT_PATH_REQUIRED',
+          paymentAttemptId: attempt.id,
+          checkoutSessionId: attempt.checkoutSessionId,
+        };
+      }
+
       const missing = requirePaymentSuccessFields(event);
       if (missing) {
         await markRejected(tx, eventRow.id, missing);
@@ -487,6 +583,16 @@ export const processVerifiedProviderEvent = async (
       event.eventType === PROVIDER_EVENT_TYPES.PAYMENT_CANCELLED ||
       event.eventType === PROVIDER_EVENT_TYPES.PAYMENT_EXPIRED
     ) {
+      if (attempt.checkoutSessionId) {
+        await markRejected(tx, eventRow.id, 'SESSION_PAYMENT_PATH_REQUIRED');
+        return {
+          processingStatus: 'REJECTED',
+          reason: 'SESSION_PAYMENT_PATH_REQUIRED',
+          paymentAttemptId: attempt.id,
+          checkoutSessionId: attempt.checkoutSessionId,
+        };
+      }
+
       const missing = requireDeclineIdentity(event);
       if (missing) {
         await markRejected(tx, eventRow.id, missing);
@@ -564,6 +670,16 @@ export const processVerifiedProviderEvent = async (
     }
 
     if (event.eventType === PROVIDER_EVENT_TYPES.PAYMENT_PENDING) {
+      if (attempt.checkoutSessionId) {
+        await markRejected(tx, eventRow.id, 'SESSION_PAYMENT_PATH_REQUIRED');
+        return {
+          processingStatus: 'REJECTED',
+          reason: 'SESSION_PAYMENT_PATH_REQUIRED',
+          paymentAttemptId: attempt.id,
+          checkoutSessionId: attempt.checkoutSessionId,
+        };
+      }
+
       if (attempt.status === 'SUCCEEDED') {
         await markProcessed(tx, eventRow.id, 'LATE_PENDING_SUCCEEDED_ATTEMPT');
         return {
@@ -608,6 +724,7 @@ export const processVerifiedProviderEvent = async (
       event.eventType === PROVIDER_EVENT_TYPES.REFUND_SUCCEEDED ||
       event.eventType === PROVIDER_EVENT_TYPES.REFUND_FAILED
     ) {
+      // Prefer refund tied to this order; for session attempts, match by order.
       const refund = await tx.paymentRefund.findUnique({
         where: { paymentOrderId: order.id },
       });
@@ -664,7 +781,11 @@ export const processVerifiedProviderEvent = async (
           };
         }
 
-        if (event.amountMinor !== attempt.amountMinor) {
+        const refundAmountMinor = moneyDecimalToMinorUnits(refund.amount);
+
+        // Allocation-aware: refund amount must match the obligation, not the
+        // combined session charge when the attempt is session-owned.
+        if (event.amountMinor !== refundAmountMinor) {
           await markRejected(tx, eventRow.id, 'AMOUNT_MISMATCH');
           return {
             processingStatus: 'REJECTED',
@@ -684,17 +805,17 @@ export const processVerifiedProviderEvent = async (
           };
         }
 
-        if (!moneyEquals(refund.amount, order.amount)) {
-          await markRejected(tx, eventRow.id, 'REFUND_AMOUNT_MISMATCH');
+        if (!attempt.checkoutSessionId && event.amountMinor !== attempt.amountMinor) {
+          await markRejected(tx, eventRow.id, 'ATTEMPT_AMOUNT_MISMATCH');
           return {
             processingStatus: 'REJECTED',
-            reason: 'REFUND_AMOUNT_MISMATCH',
+            reason: 'ATTEMPT_AMOUNT_MISMATCH',
             paymentOrderId: order.id,
             paymentAttemptId: attempt.id,
           };
         }
 
-        if (event.currency!.toUpperCase() !== attempt.currency.toUpperCase()) {
+        if (event.currency!.toUpperCase() !== order.currency.toUpperCase()) {
           await markRejected(tx, eventRow.id, 'CURRENCY_MISMATCH');
           return {
             processingStatus: 'REJECTED',
@@ -704,41 +825,35 @@ export const processVerifiedProviderEvent = async (
           };
         }
 
-        if (event.currency!.toUpperCase() !== order.currency.toUpperCase()) {
-          await markRejected(tx, eventRow.id, 'ORDER_CURRENCY_MISMATCH');
-          return {
-            processingStatus: 'REJECTED',
-            reason: 'ORDER_CURRENCY_MISMATCH',
-            paymentOrderId: order.id,
-            paymentAttemptId: attempt.id,
-          };
-        }
-
-        if (
-          attempt.providerRef != null &&
-          event.providerRef !== attempt.providerRef
-        ) {
-          await markRejected(tx, eventRow.id, 'PROVIDER_REF_MISMATCH');
-          return {
-            processingStatus: 'REJECTED',
-            reason: 'PROVIDER_REF_MISMATCH',
-            paymentOrderId: order.id,
-            paymentAttemptId: attempt.id,
-          };
-        }
-
-        const providerRefundRef = event.payload.providerRefundRef as string;
-        if (
-          refund.providerRefundRef != null &&
-          refund.providerRefundRef !== providerRefundRef
-        ) {
-          await markRejected(tx, eventRow.id, 'PROVIDER_REFUND_REF_MISMATCH');
-          return {
-            processingStatus: 'REJECTED',
-            reason: 'PROVIDER_REFUND_REF_MISMATCH',
-            paymentOrderId: order.id,
-            paymentAttemptId: attempt.id,
-          };
+        // Track allocation on session item when present.
+        if (attempt.checkoutSessionId) {
+          const item = await tx.paymentCheckoutSessionItem.findFirst({
+            where: {
+              checkoutSessionId: attempt.checkoutSessionId,
+              paymentOrderId: order.id,
+            },
+          });
+          if (item) {
+            const nextRefunded = item.refundedAmountMinor + refundAmountMinor;
+            if (nextRefunded > item.amountMinor) {
+              await markRejected(tx, eventRow.id, 'REFUND_EXCEEDS_ALLOCATION');
+              return {
+                processingStatus: 'REJECTED',
+                reason: 'REFUND_EXCEEDS_ALLOCATION',
+                paymentOrderId: order.id,
+                paymentAttemptId: attempt.id,
+                checkoutSessionId: attempt.checkoutSessionId,
+              };
+            }
+            await tx.paymentCheckoutSessionItem.update({
+              where: { id: item.id },
+              data: {
+                refundedAmountMinor: nextRefunded,
+                status:
+                  nextRefunded >= item.amountMinor ? 'REFUNDED' : item.status,
+              },
+            });
+          }
         }
 
         await tx.paymentRefund.update({
@@ -746,11 +861,15 @@ export const processVerifiedProviderEvent = async (
           data: {
             status: 'SUCCEEDED',
             succeededAt: now,
+            providerRefundRef:
+              typeof event.payload.providerRefundRef === 'string'
+                ? event.payload.providerRefundRef
+                : refund.providerRefundRef,
             failureCode: null,
             failureMessage: null,
-            providerRefundRef,
           },
         });
+
         await tx.paymentOrder.update({
           where: { id: order.id },
           data: {
@@ -759,6 +878,7 @@ export const processVerifiedProviderEvent = async (
           },
         });
       } else {
+        // REFUND_FAILED
         await tx.paymentRefund.update({
           where: { id: refund.id },
           data: {
@@ -786,13 +906,14 @@ export const processVerifiedProviderEvent = async (
         processingStatus: 'PROCESSED',
         paymentOrderId: order.id,
         paymentAttemptId: attempt.id,
+        checkoutSessionId: attempt.checkoutSessionId ?? undefined,
       };
     }
 
-    await markRejected(tx, eventRow.id, 'UNKNOWN_EVENT_TYPE');
+    await markRejected(tx, eventRow.id, 'UNSUPPORTED_EVENT_TYPE');
     return {
       processingStatus: 'REJECTED',
-      reason: 'UNKNOWN_EVENT_TYPE',
+      reason: 'UNSUPPORTED_EVENT_TYPE',
       paymentOrderId: order.id,
       paymentAttemptId: attempt.id,
     };
@@ -814,20 +935,54 @@ export const processVerifiedProviderEvent = async (
         select: {
           paymentAttemptId: true,
           paymentAttempt: {
-            select: { paymentOrderId: true },
+            select: {
+              paymentOrderId: true,
+              checkoutSessionId: true,
+              checkoutSession: {
+                select: {
+                  items: {
+                    select: { paymentOrderId: true },
+                    take: 1,
+                    orderBy: { createdAt: 'asc' },
+                  },
+                },
+              },
+            },
           },
         },
       });
 
       let paymentOrderId =
         existingEvent?.paymentAttempt?.paymentOrderId ?? undefined;
+      if (
+        !paymentOrderId &&
+        existingEvent?.paymentAttempt?.checkoutSession?.items[0]
+      ) {
+        paymentOrderId =
+          existingEvent.paymentAttempt.checkoutSession.items[0].paymentOrderId;
+      }
 
       if (!paymentOrderId && event.paymentAttemptId) {
         const attempt = await prisma.paymentAttempt.findUnique({
           where: { id: event.paymentAttemptId },
-          select: { paymentOrderId: true },
+          select: {
+            paymentOrderId: true,
+            checkoutSessionId: true,
+            checkoutSession: {
+              select: {
+                items: {
+                  select: { paymentOrderId: true },
+                  take: 1,
+                  orderBy: { createdAt: 'asc' },
+                },
+              },
+            },
+          },
         });
-        paymentOrderId = attempt?.paymentOrderId ?? undefined;
+        paymentOrderId =
+          attempt?.paymentOrderId ??
+          attempt?.checkoutSession?.items[0]?.paymentOrderId ??
+          undefined;
       }
 
       return {
@@ -835,6 +990,8 @@ export const processVerifiedProviderEvent = async (
         paymentOrderId,
         paymentAttemptId:
           existingEvent?.paymentAttemptId ?? event.paymentAttemptId ?? null,
+        checkoutSessionId:
+          existingEvent?.paymentAttempt?.checkoutSessionId ?? undefined,
         reason: 'DUPLICATE_PROVIDER_EVENT',
       };
     }

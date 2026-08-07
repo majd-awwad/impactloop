@@ -60,11 +60,94 @@ export type DeliveryGroupPaymentLifecycleResult = {
 
 const SYSTEM_ACTOR = 'payment-lifecycle';
 
+/**
+ * Cancel active CheckoutSessions that include the given PaymentOrder.
+ * Session-owned attempts use paymentOrderId=null, so order-scoped attempt
+ * cancellation alone cannot clear them.
+ */
+export const cancelActiveCheckoutSessionsForPaymentOrder = async (
+  tx: Prisma.TransactionClient,
+  input: { paymentOrderId: string; reason: string },
+): Promise<void> => {
+  const pendingItems = await tx.paymentCheckoutSessionItem.findMany({
+    where: {
+      paymentOrderId: input.paymentOrderId,
+      status: 'PENDING',
+      checkoutSession: {
+        status: { in: ['CREATED', 'CHECKOUT_PENDING'] },
+      },
+    },
+    select: { checkoutSessionId: true },
+  });
+
+  const sessionIds = [...new Set(pendingItems.map((row) => row.checkoutSessionId))];
+  for (const sessionId of sessionIds) {
+    const session = await tx.paymentCheckoutSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        items: { include: { paymentOrder: true } },
+        attempts: {
+          where: { status: { in: ['CREATED', 'PENDING'] } },
+        },
+      },
+    });
+    if (!session) continue;
+    if (
+      session.status !== 'CREATED' &&
+      session.status !== 'CHECKOUT_PENDING'
+    ) {
+      continue;
+    }
+
+    for (const attempt of session.attempts) {
+      await tx.paymentAttempt.update({
+        where: { id: attempt.id },
+        data: {
+          status: 'CANCELLED',
+          failureCode: 'SOURCE_LIFECYCLE_CANCELLED',
+          failureMessage: input.reason.slice(0, 500),
+        },
+      });
+    }
+
+    await tx.paymentCheckoutSession.update({
+      where: { id: session.id },
+      data: { status: 'CANCELLED' },
+    });
+
+    for (const item of session.items) {
+      if (item.status === 'PENDING') {
+        await tx.paymentCheckoutSessionItem.update({
+          where: { id: item.id },
+          data: { status: 'CANCELLED' },
+        });
+      }
+
+      // Reopen sibling unpaid orders that are not the lifecycle target and
+      // are not already terminal.
+      if (
+        item.paymentOrderId !== input.paymentOrderId &&
+        item.paymentOrder.status === 'CHECKOUT_PENDING'
+      ) {
+        await tx.paymentOrder.update({
+          where: { id: item.paymentOrderId },
+          data: { status: 'REQUIRES_PAYMENT' },
+        });
+      }
+    }
+  }
+};
+
 const cancelActiveAttempts = async (
   tx: Prisma.TransactionClient,
   paymentOrderId: string,
   reason: string,
 ) => {
+  await cancelActiveCheckoutSessionsForPaymentOrder(tx, {
+    paymentOrderId,
+    reason,
+  });
+
   await tx.paymentAttempt.updateMany({
     where: {
       paymentOrderId,

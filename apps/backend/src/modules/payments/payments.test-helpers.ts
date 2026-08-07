@@ -25,6 +25,60 @@ export const createPayTestIds = (): PayTestIds => ({
 });
 
 export async function cleanupPayTest(ids: PayTestIds) {
+  if (ids.orders.length || ids.reservations.length || ids.groups.length) {
+    const sessionWhere = {
+      OR: [
+        ...(ids.reservations.length
+          ? [{ reservationId: { in: ids.reservations } }]
+          : []),
+        ...(ids.groups.length
+          ? [{ deliveryGroupId: { in: ids.groups } }]
+          : []),
+        ...(ids.orders.length
+          ? [{ items: { some: { paymentOrderId: { in: ids.orders } } } }]
+          : []),
+      ],
+    };
+
+    if (sessionWhere.OR.length > 0) {
+      const sessions = await prisma.paymentCheckoutSession.findMany({
+        where: sessionWhere,
+        select: { id: true },
+      });
+      const sessionIds = sessions.map((row) => row.id);
+      if (sessionIds.length) {
+        await prisma.paymentProviderEvent.deleteMany({
+          where: {
+            paymentAttempt: { checkoutSessionId: { in: sessionIds } },
+          },
+        });
+        await prisma.paymentRefund.deleteMany({
+          where: {
+            paymentAttempt: { checkoutSessionId: { in: sessionIds } },
+          },
+        });
+        await prisma.paymentAttempt.deleteMany({
+          where: { checkoutSessionId: { in: sessionIds } },
+        });
+        await prisma.paymentCheckoutSessionItem.deleteMany({
+          where: { checkoutSessionId: { in: sessionIds } },
+        });
+        await prisma.paymentCheckoutSession.deleteMany({
+          where: { id: { in: sessionIds } },
+        });
+      }
+    }
+
+    await prisma.idempotencyRecord.deleteMany({
+      where: {
+        userId: { in: ids.users },
+        scope: {
+          in: ['PAYMENT_CHECKOUT', 'PAYMENT_RESERVATION_CHECKOUT'],
+        },
+      },
+    });
+  }
+
   if (ids.orders.length) {
     await prisma.paymentProviderEvent.deleteMany({
       where: { paymentAttempt: { paymentOrderId: { in: ids.orders } } },
@@ -34,12 +88,6 @@ export async function cleanupPayTest(ids: PayTestIds) {
     });
     await prisma.paymentAttempt.deleteMany({
       where: { paymentOrderId: { in: ids.orders } },
-    });
-    await prisma.idempotencyRecord.deleteMany({
-      where: {
-        userId: { in: ids.users },
-        scope: 'PAYMENT_CHECKOUT',
-      },
     });
     await prisma.paymentOrder.deleteMany({
       where: { id: { in: ids.orders } },
@@ -188,6 +236,16 @@ export async function createPayReservationFixture(
     supplierId: string;
     materialSubtotal: number;
     pricingCurrency?: string;
+    fulfillmentMethod?: 'PICKUP' | 'DELIVERY';
+    deliveryFee?: number;
+    deliveryGroupId?: string;
+    deliveryAddressText?: string;
+    dropoffCity?: string;
+    deliveryZone?: 'SAME_CITY' | 'WEST_BANK' | 'JERUSALEM' | 'INSIDE_48' | 'UNKNOWN';
+    confirmedDeliveryWindowStart?: Date;
+    confirmedDeliveryWindowEnd?: Date;
+    pickupWindowStart?: Date;
+    pickupWindowEnd?: Date;
   },
 ) {
   const category = await prisma.category.create({
@@ -239,22 +297,54 @@ export async function createPayReservationFixture(
   });
   ids.materials.push(material.id);
 
+  const method = input.fulfillmentMethod ?? 'PICKUP';
+  const deliveryFee = input.deliveryFee ?? 0;
+  const windowStart =
+    input.confirmedDeliveryWindowStart ??
+    (method === 'DELIVERY' ? new Date(Date.now() + 24 * 3_600_000) : undefined);
+  const windowEnd =
+    input.confirmedDeliveryWindowEnd ??
+    (windowStart
+      ? new Date(windowStart.getTime() + 2 * 3_600_000)
+      : undefined);
+
+  const pickupStart =
+    input.pickupWindowStart ??
+    (method === 'PICKUP' ? new Date(Date.now() - 30 * 60_000) : undefined);
+  const pickupEnd =
+    input.pickupWindowEnd ??
+    (pickupStart
+      ? new Date(pickupStart.getTime() + 4 * 3_600_000)
+      : undefined);
+
   const reservation = await prisma.reservation.create({
     data: {
       materialId: material.id,
       requesterId: input.learnerId,
       ownerId: input.supplierId,
       quantityRequested: new Prisma.Decimal(1),
-      fulfillmentMethod: 'PICKUP',
+      fulfillmentMethod: method,
       status: 'ACCEPTED',
       materialSubtotal: new Prisma.Decimal(input.materialSubtotal),
-      deliveryFee: new Prisma.Decimal(0),
-      totalAmount: new Prisma.Decimal(input.materialSubtotal),
+      deliveryFee: new Prisma.Decimal(deliveryFee),
+      totalAmount: new Prisma.Decimal(input.materialSubtotal + deliveryFee),
       pricingCurrency: input.pricingCurrency ?? 'NIS',
       unitPriceAtReservation: new Prisma.Decimal(input.materialSubtotal),
       acceptedAt: new Date(),
+      deliveryGroupId: input.deliveryGroupId,
+      deliveryAddressText:
+        input.deliveryAddressText ??
+        (method === 'DELIVERY' ? 'Test street 1' : undefined),
+      dropoffCity:
+        input.dropoffCity ?? (method === 'DELIVERY' ? 'Ramallah' : undefined),
+      deliveryZone:
+        input.deliveryZone ?? (method === 'DELIVERY' ? 'SAME_CITY' : undefined),
+      confirmedDeliveryWindowStart: windowStart,
+      confirmedDeliveryWindowEnd: windowEnd,
+      pickupWindowStart: pickupStart,
+      pickupWindowEnd: pickupEnd,
     },
-    select: { id: true },
+    select: { id: true, deliveryGroupId: true },
   });
   ids.reservations.push(reservation.id);
   return reservation;

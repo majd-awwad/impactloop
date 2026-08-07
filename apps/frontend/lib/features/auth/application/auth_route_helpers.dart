@@ -23,6 +23,11 @@ const learnerProfileEditRoute = '/profile/learner/edit';
 const learnerReservationsRoute = '/learner/reservations';
 const learnerPaymentCheckoutRoutePrefix = '/learner/checkout';
 
+/// Primary PAY-05D entry: reservation-scoped checkout.
+String learnerReservationCheckoutRoute(String reservationId) =>
+    '$learnerPaymentCheckoutRoutePrefix/reservation/$reservationId';
+
+/// Legacy order-scoped path — prefer [learnerReservationCheckoutRoute].
 String learnerPaymentCheckoutRoute(String orderId) =>
     '$learnerPaymentCheckoutRoutePrefix/$orderId';
 

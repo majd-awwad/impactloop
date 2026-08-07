@@ -227,15 +227,10 @@ class _RequestDeliveryDialogState
       ref.invalidate(learnerDeliveriesProvider);
 
       if (error.code == 'DELIVERY_FEE_REQUIRED') {
-        final paymentOrderId = error.details?['paymentOrderId']?.toString();
         showInfoSnackBar(context, context.l10n.deliveryFeePaymentRequired);
         final router = GoRouter.of(context);
         widget.onSubmitted();
-        if (paymentOrderId != null && paymentOrderId.isNotEmpty) {
-          router.push(learnerPaymentCheckoutRoute(paymentOrderId));
-        } else {
-          router.push(learnerReservationDetailRoute(widget.reservation.id));
-        }
+        router.push(learnerReservationCheckoutRoute(widget.reservation.id));
         return;
       }
 

@@ -3,9 +3,13 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/api_exception.dart';
+import '../../deliveries/application/learner_deliveries_provider.dart';
+import '../../reservations/application/learner_reservation_provider.dart';
+import '../../reservations/application/my_reservations_provider.dart';
 import '../../reservations/data/models/learner_reservation.dart';
 import '../../reservations/data/reservations_repository.dart';
 import '../data/models/payment_order.dart';
+import '../data/models/reservation_checkout_session.dart';
 import '../data/models/reservation_payment_requirement.dart';
 import '../data/payments_api.dart';
 import '../data/payments_repository.dart';
@@ -18,28 +22,29 @@ enum CheckoutStep {
   result,
 }
 
-/// UI phase driven exclusively from backend PaymentOrder / attempt truth.
+/// UI phase driven from reservation requirement + checkout session truth.
 enum CheckoutPhase {
   loading,
-  summary,
+  ready,
   method,
   confirming,
   processing,
-  success,
-  failure,
+  succeeded,
+  declined,
   cancelled,
   expired,
   alreadyPaid,
-  refundPending,
+  partiallyRefunded,
   refunded,
   orderCancelled,
+  invariantBlocked,
   error,
   missing,
 }
 
 class LearnerCheckoutState {
   const LearnerCheckoutState({
-    required this.orderId,
+    required this.reservationId,
     this.phase = CheckoutPhase.loading,
     this.step = CheckoutStep.summary,
     this.order,
@@ -54,13 +59,13 @@ class LearnerCheckoutState {
     this.reviewOpen = false,
   });
 
-  final String orderId;
+  final String reservationId;
   final CheckoutPhase phase;
   final CheckoutStep step;
   final PaymentOrder? order;
   final LearnerReservation? reservation;
   final ReservationPaymentRequirement? requirement;
-  final PaymentCheckoutSession? session;
+  final ReservationCheckoutSession? session;
   final String? errorMessage;
   final String? errorCode;
   final int? errorStatusCode;
@@ -70,24 +75,60 @@ class LearnerCheckoutState {
 
   bool get canSubmit =>
       !submitting &&
-      (phase == CheckoutPhase.summary ||
+      (phase == CheckoutPhase.ready ||
           phase == CheckoutPhase.method ||
-          phase == CheckoutPhase.failure ||
+          phase == CheckoutPhase.declined ||
           phase == CheckoutPhase.cancelled ||
           phase == CheckoutPhase.expired);
 
   bool get isTerminalResult =>
-      phase == CheckoutPhase.success ||
+      phase == CheckoutPhase.succeeded ||
       phase == CheckoutPhase.alreadyPaid ||
-      phase == CheckoutPhase.refundPending ||
+      phase == CheckoutPhase.partiallyRefunded ||
       phase == CheckoutPhase.refunded ||
-      phase == CheckoutPhase.orderCancelled;
+      phase == CheckoutPhase.orderCancelled ||
+      phase == CheckoutPhase.invariantBlocked;
 
   bool get blocksDuplicateSubmission =>
       submitting || phase == CheckoutPhase.processing;
 
-  String? get activeAttemptId =>
-      session?.attemptId ?? order?.activeAttempt?.id;
+  String? get activeAttemptId => session?.attemptId ?? order?.activeAttempt?.id;
+
+  String? get activeSessionId => session?.checkoutSessionId;
+
+  /// Amount shown on review / mock panels — session total when available.
+  /// Never sums money with Dart [double].
+  String get displayPayAmount {
+    final sessionAmount = session?.totalAmount;
+    if (sessionAmount != null && sessionAmount.isNotEmpty) {
+      return sessionAmount;
+    }
+    final outstanding = requirement?.orders
+        .where(
+          (row) =>
+              row.isCurrent &&
+              (row.status == 'REQUIRES_PAYMENT' ||
+                  row.status == 'CHECKOUT_PENDING'),
+        )
+        .map((row) => row.amount)
+        .where((amount) => amount.trim().isNotEmpty)
+        .toList(growable: false);
+    if (outstanding != null && outstanding.isNotEmpty) {
+      if (outstanding.length == 1) return outstanding.first;
+      // Without a session, avoid inventing a combined total client-side.
+      return outstanding.join(' + ');
+    }
+    return order?.amount ?? '0.00';
+  }
+
+  bool get canStartCheckout {
+    final req = requirement;
+    if (req == null) return false;
+    if (req.overallStatus == 'INVARIANT_VIOLATION') return false;
+    if (req.material.canStartCheckout) return true;
+    if (req.deliveryFee?.canStartCheckout == true) return true;
+    return req.orders.any((row) => row.isCurrent && row.canStartCheckout);
+  }
 
   LearnerCheckoutState copyWith({
     CheckoutPhase? phase,
@@ -95,7 +136,7 @@ class LearnerCheckoutState {
     PaymentOrder? order,
     LearnerReservation? reservation,
     ReservationPaymentRequirement? requirement,
-    PaymentCheckoutSession? session,
+    ReservationCheckoutSession? session,
     String? errorMessage,
     String? errorCode,
     int? errorStatusCode,
@@ -104,12 +145,13 @@ class LearnerCheckoutState {
     bool? reviewOpen,
     bool clearError = false,
     bool clearSession = false,
+    bool clearOrder = false,
   }) {
     return LearnerCheckoutState(
-      orderId: orderId,
+      reservationId: reservationId,
       phase: phase ?? this.phase,
       step: step ?? this.step,
-      order: order ?? this.order,
+      order: clearOrder ? null : (order ?? this.order),
       reservation: reservation ?? this.reservation,
       requirement: requirement ?? this.requirement,
       session: clearSession ? null : (session ?? this.session),
@@ -130,9 +172,9 @@ final learnerCheckoutControllerProvider = NotifierProvider.autoDispose
 );
 
 class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
-  LearnerCheckoutController(this.orderId);
+  LearnerCheckoutController(this.reservationId);
 
-  final String orderId;
+  final String reservationId;
 
   Timer? _pollTimer;
 
@@ -144,12 +186,18 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
   LearnerCheckoutState build() {
     ref.onDispose(_disposeResources);
     Future.microtask(load);
-    return LearnerCheckoutState(orderId: orderId);
+    return LearnerCheckoutState(reservationId: reservationId);
   }
 
   void _disposeResources() {
     _pollTimer?.cancel();
     _pollTimer = null;
+  }
+
+  void _invalidateReservationCaches() {
+    ref.invalidate(myReservationsProvider);
+    ref.invalidate(learnerDeliveriesProvider);
+    ref.invalidate(learnerReservationProvider(reservationId));
   }
 
   Future<void> load() async {
@@ -159,32 +207,48 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
     );
 
     try {
-      final order = await _payments.fetchPaymentOrder(state.orderId);
-      LearnerReservation? reservation;
-      ReservationPaymentRequirement? requirement;
+      // Authoritative TTL expiry before resume (not a list/detail GET write).
+      try {
+        await _payments.reconcileExpiredCheckoutSessions(
+          reservationId: reservationId,
+        );
+      } catch (_) {
+        // Resume still proceeds; reconcile is best-effort on load.
+      }
 
-      final reservationId = order.reservationId;
-      if (reservationId != null && reservationId.isNotEmpty) {
+      final results = await Future.wait<Object?>([
+        _reservations.fetchReservation(reservationId),
+        _payments.fetchReservationPaymentRequirement(reservationId),
+        _payments.fetchReservationCheckoutSession(reservationId),
+      ]);
+
+      final reservation = results[0] as LearnerReservation;
+      final requirement = results[1] as ReservationPaymentRequirement;
+      final session = results[2] as ReservationCheckoutSession?;
+
+      PaymentOrder? order;
+      final orderId = _primaryOrderId(requirement);
+      if (orderId != null) {
         try {
-          reservation = await _reservations.fetchReservation(reservationId);
+          order = await _payments.fetchPaymentOrder(orderId);
         } catch (_) {
-          reservation = null;
-        }
-        try {
-          requirement = await _payments
-              .fetchReservationPaymentRequirement(reservationId);
-        } catch (_) {
-          requirement = null;
+          order = null;
         }
       }
 
       state = state.copyWith(
-        order: order,
         reservation: reservation,
         requirement: requirement,
+        order: order,
+        session: session,
+        clearSession: session == null,
         clearError: true,
       );
-      _applyOrderTruth(order, preserveMethodStep: false);
+      _applyReservationTruth(
+        requirement: requirement,
+        session: session,
+        preserveMethodStep: false,
+      );
     } on ApiException catch (error) {
       _applyLoadError(error);
     } catch (error) {
@@ -201,37 +265,84 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
     if (state.submitting && soft) return;
 
     try {
-      final order = await _payments.fetchPaymentOrder(state.orderId);
       ReservationPaymentRequirement? requirement = state.requirement;
-      final reservationId = order.reservationId;
-      if (reservationId != null && reservationId.isNotEmpty) {
-        try {
-          requirement = await _payments
-              .fetchReservationPaymentRequirement(reservationId);
-        } catch (_) {}
+      try {
+        requirement =
+            await _payments.fetchReservationPaymentRequirement(reservationId);
+      } catch (_) {
+        if (!soft) rethrow;
       }
 
       LearnerReservation? reservation = state.reservation;
-      if (reservationId != null &&
-          reservationId.isNotEmpty &&
-          reservation == null) {
+      if (reservation == null) {
         try {
           reservation = await _reservations.fetchReservation(reservationId);
         } catch (_) {}
       }
 
+      try {
+        await _payments.reconcileExpiredCheckoutSessions(
+          reservationId: reservationId,
+        );
+      } catch (_) {}
+
+      ReservationCheckoutSession? session = state.session;
+      try {
+        session = await _payments.fetchReservationCheckoutSession(reservationId);
+      } catch (_) {
+        if (!soft) {
+          final sessionId = session?.checkoutSessionId;
+          if (sessionId != null && sessionId.isNotEmpty) {
+            try {
+              session = await _payments.fetchCheckoutSession(sessionId);
+            } catch (_) {}
+          }
+        }
+      }
+
+      PaymentOrder? order = state.order;
+      if (!soft) {
+        final orderId = _primaryOrderId(requirement) ?? order?.id;
+        if (orderId != null && orderId.isNotEmpty) {
+          try {
+            order = await _payments.fetchPaymentOrder(orderId);
+          } catch (_) {}
+        }
+      }
+
       state = state.copyWith(
-        order: order,
         reservation: reservation,
         requirement: requirement,
+        session: session,
+        clearSession: session == null,
+        order: order,
         clearError: true,
       );
-      _applyOrderTruth(order, preserveMethodStep: soft);
+      _applyReservationTruth(
+        requirement: requirement ?? state.requirement,
+        session: session,
+        preserveMethodStep: soft,
+      );
     } on ApiException catch (error) {
       if (!soft) {
         _applyLoadError(error);
       }
     }
+  }
+
+  String? _primaryOrderId(ReservationPaymentRequirement? requirement) {
+    if (requirement == null) return null;
+    if (requirement.outstandingPaymentOrderIds.isNotEmpty) {
+      return requirement.outstandingPaymentOrderIds.first;
+    }
+    final materialId = requirement.material.paymentOrderId;
+    if (materialId != null && materialId.isNotEmpty) return materialId;
+    final feeId = requirement.deliveryFee?.paymentOrderId;
+    if (feeId != null && feeId.isNotEmpty) return feeId;
+    for (final row in requirement.orders) {
+      if (row.isCurrent) return row.id;
+    }
+    return null;
   }
 
   void _applyLoadError(ApiException error) {
@@ -246,7 +357,9 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
       step: CheckoutStep.summary,
       errorMessage: unauthorized
           ? error.message
-          : (error.message.isEmpty ? 'Could not load payment order' : error.message),
+          : (error.message.isEmpty
+              ? 'Could not load reservation checkout'
+              : error.message),
       errorCode: error.code,
       errorStatusCode: error.statusCode,
       submitting: false,
@@ -254,11 +367,25 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
     _stopPolling();
   }
 
-  void _applyOrderTruth(PaymentOrder order, {required bool preserveMethodStep}) {
-    if (order.isPaid) {
+  void _applyReservationTruth({
+    required ReservationPaymentRequirement? requirement,
+    required ReservationCheckoutSession? session,
+    required bool preserveMethodStep,
+  }) {
+    if (requirement == null) {
+      state = state.copyWith(
+        phase: CheckoutPhase.error,
+        step: CheckoutStep.summary,
+        submitting: false,
+      );
+      _stopPolling();
+      return;
+    }
+
+    if (requirement.overallStatus == 'INVARIANT_VIOLATION') {
       _stopPolling();
       state = state.copyWith(
-        phase: CheckoutPhase.success,
+        phase: CheckoutPhase.invariantBlocked,
         step: CheckoutStep.result,
         submitting: false,
         reviewOpen: false,
@@ -266,18 +393,7 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
       return;
     }
 
-    if (order.isRefundPending) {
-      _stopPolling();
-      state = state.copyWith(
-        phase: CheckoutPhase.refundPending,
-        step: CheckoutStep.result,
-        submitting: false,
-        reviewOpen: false,
-      );
-      return;
-    }
-
-    if (order.isRefunded) {
+    if (requirement.overallStatus == 'REFUNDED') {
       _stopPolling();
       state = state.copyWith(
         phase: CheckoutPhase.refunded,
@@ -288,10 +404,11 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
       return;
     }
 
-    if (order.isCancelled) {
+    if (requirement.overallStatus == 'REFUND_PENDING' ||
+        requirement.overallStatus == 'PARTIALLY_REFUNDED') {
       _stopPolling();
       state = state.copyWith(
-        phase: CheckoutPhase.orderCancelled,
+        phase: CheckoutPhase.partiallyRefunded,
         step: CheckoutStep.result,
         submitting: false,
         reviewOpen: false,
@@ -299,54 +416,124 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
       return;
     }
 
-    final active = order.activeAttempt;
-    final terminal = order.latestTerminalAttempt;
-
-    if (order.isCheckoutPending && active != null) {
-      if (active.status == 'PENDING') {
+    // Prefer live session status when present.
+    if (session != null) {
+      if (session.isSucceeded) {
+        _stopPolling();
         state = state.copyWith(
-          phase: CheckoutPhase.processing,
+          phase: CheckoutPhase.succeeded,
           step: CheckoutStep.result,
-          session: PaymentCheckoutSession(
-            orderId: order.id,
-            orderStatus: order.status,
-            attemptId: active.id,
-            attemptStatus: active.status,
-            checkoutUrl: state.session?.checkoutUrl ?? '',
-            expiresAt: active.expiresAt,
-          ),
           submitting: false,
           reviewOpen: false,
+          session: session,
         );
-        _startPolling();
         return;
       }
 
-      // CREATED — resume into method step with existing attempt.
-      state = state.copyWith(
-        phase: CheckoutPhase.method,
-        step: CheckoutStep.method,
-        session: PaymentCheckoutSession(
-          orderId: order.id,
-          orderStatus: order.status,
-          attemptId: active.id,
-          attemptStatus: active.status,
-          checkoutUrl: state.session?.checkoutUrl ?? '',
-          expiresAt: active.expiresAt,
-        ),
-        submitting: false,
-      );
+      if (session.isFailed) {
+        _stopPolling();
+        state = state.copyWith(
+          phase: CheckoutPhase.declined,
+          step: CheckoutStep.result,
+          submitting: false,
+          reviewOpen: false,
+          session: session,
+        );
+        return;
+      }
+
+      if (session.isCancelled) {
+        _stopPolling();
+        state = state.copyWith(
+          phase: CheckoutPhase.cancelled,
+          step: CheckoutStep.result,
+          submitting: false,
+          reviewOpen: false,
+          session: session,
+          clearSession: !preserveMethodStep,
+        );
+        return;
+      }
+
+      if (session.isExpired) {
+        _stopPolling();
+        state = state.copyWith(
+          phase: CheckoutPhase.expired,
+          step: CheckoutStep.result,
+          submitting: false,
+          reviewOpen: false,
+          session: session,
+          clearSession: !preserveMethodStep,
+        );
+        return;
+      }
+
+      if (session.isActive) {
+        final attemptStatus = session.attemptStatus;
+        if (attemptStatus == 'PENDING') {
+          state = state.copyWith(
+            phase: CheckoutPhase.processing,
+            step: CheckoutStep.result,
+            session: session,
+            submitting: false,
+            reviewOpen: false,
+          );
+          _startPolling();
+          return;
+        }
+
+        // CREATED (or active without PENDING) — resume into method step.
+        state = state.copyWith(
+          phase: CheckoutPhase.method,
+          step: CheckoutStep.method,
+          session: session,
+          submitting: false,
+        );
+        _stopPolling();
+        return;
+      }
+    }
+
+    final fullyPaid = requirement.overallStatus == 'PAID' ||
+        (requirement.outstandingPaymentOrderIds.isEmpty &&
+            requirement.material.isPaid &&
+            (requirement.deliveryFee == null ||
+                !requirement.deliveryFee!.required ||
+                requirement.deliveryFee!.isPaid));
+    if (fullyPaid) {
       _stopPolling();
+      state = state.copyWith(
+        phase: CheckoutPhase.alreadyPaid,
+        step: CheckoutStep.result,
+        submitting: false,
+        reviewOpen: false,
+        clearSession: true,
+      );
       return;
     }
 
+    if (requirement.reservationStatus == 'CANCELLED') {
+      _stopPolling();
+      state = state.copyWith(
+        phase: CheckoutPhase.orderCancelled,
+        step: CheckoutStep.result,
+        submitting: false,
+        reviewOpen: false,
+        clearSession: true,
+      );
+      return;
+    }
+
+    // Recoverable attempt outcomes from a primary order snapshot.
+    final order = state.order;
+    final terminal = order?.latestTerminalAttempt;
     if (terminal != null &&
         (terminal.isFailed || terminal.isCancelled || terminal.isExpired) &&
-        order.status == 'REQUIRES_PAYMENT' &&
-        !preserveMethodStep) {
-      // Surface the most recent recoverable outcome, then allow retry.
+        order!.isPayable &&
+        !preserveMethodStep &&
+        session == null) {
       final phase = terminal.isFailed
-          ? CheckoutPhase.failure
+          ? CheckoutPhase.declined
           : terminal.isExpired
               ? CheckoutPhase.expired
               : CheckoutPhase.cancelled;
@@ -361,21 +548,20 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
       return;
     }
 
-    if (order.status == 'REQUIRES_PAYMENT') {
+    if (state.canStartCheckout || requirement.overallStatus == 'REQUIRES_PAYMENT') {
       state = state.copyWith(
-        phase: CheckoutPhase.summary,
+        phase: CheckoutPhase.ready,
         step: CheckoutStep.summary,
         submitting: false,
         reviewOpen: false,
-        clearSession: true,
+        clearSession: session == null || !session.isActive,
       );
       _stopPolling();
       return;
     }
 
-    // Fallback for CHECKOUT_PENDING without active attempt — reconcile to summary.
     state = state.copyWith(
-      phase: CheckoutPhase.summary,
+      phase: CheckoutPhase.ready,
       step: CheckoutStep.summary,
       submitting: false,
       clearSession: true,
@@ -385,21 +571,17 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
 
   Future<void> continueToPayment() async {
     if (state.blocksDuplicateSubmission) return;
-    if (state.order == null || !state.order!.isPayable) return;
+    if (!state.canStartCheckout && state.session?.isActive != true) return;
 
-    final existingAttempt = state.order!.activeAttempt;
-    if (existingAttempt != null) {
+    final existing = state.session;
+    if (existing != null &&
+        existing.isActive &&
+        existing.attemptId != null &&
+        existing.attemptId!.isNotEmpty) {
       state = state.copyWith(
         phase: CheckoutPhase.method,
         step: CheckoutStep.method,
-        session: PaymentCheckoutSession(
-          orderId: state.order!.id,
-          orderStatus: state.order!.status,
-          attemptId: existingAttempt.id,
-          attemptStatus: existingAttempt.status,
-          checkoutUrl: state.session?.checkoutUrl ?? '',
-          expiresAt: existingAttempt.expiresAt,
-        ),
+        session: existing,
         clearError: true,
       );
       return;
@@ -412,13 +594,11 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
     state = state.copyWith(idempotencyKey: key);
 
     try {
-      final session = await _payments.startCheckout(
-        orderId: state.orderId,
+      final session = await _payments.startReservationCheckout(
+        reservationId: reservationId,
         idempotencyKey: key,
       );
-      final order = await _payments.fetchPaymentOrder(state.orderId);
       state = state.copyWith(
-        order: order,
         session: session,
         phase: CheckoutPhase.method,
         step: CheckoutStep.method,
@@ -438,7 +618,6 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
         return;
       }
 
-      // Force a fresh key after a failed/completed conflict so retry works.
       final refreshKey = error.code == 'IDEMPOTENCY_PREVIOUSLY_FAILED' ||
           error.code == 'IDEMPOTENCY_KEY_REUSED';
       state = state.copyWith(
@@ -448,15 +627,15 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
         errorStatusCode: error.statusCode,
         idempotencyKey:
             refreshKey ? generatePaymentCheckoutIdempotencyKey() : key,
-        phase: CheckoutPhase.summary,
+        phase: CheckoutPhase.ready,
         step: CheckoutStep.summary,
       );
-      await reconcile();
+      await reconcile(soft: true);
     } catch (error) {
       state = state.copyWith(
         submitting: false,
         errorMessage: error.toString(),
-        phase: CheckoutPhase.summary,
+        phase: CheckoutPhase.ready,
         step: CheckoutStep.summary,
         idempotencyKey: generatePaymentCheckoutIdempotencyKey(),
       );
@@ -487,36 +666,44 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
 
   Future<void> simulateDecline() => _act('decline');
 
+  Future<void> simulatePending() => _act('pending');
+
   Future<void> cancelActiveAttempt() async {
     final attemptId = state.activeAttemptId;
-    if (attemptId == null || state.blocksDuplicateSubmission) return;
+    final sessionId = state.activeSessionId;
+    if (attemptId == null ||
+        sessionId == null ||
+        state.blocksDuplicateSubmission) {
+      return;
+    }
 
     state = state.copyWith(submitting: true, clearError: true);
     try {
-      await _payments.cancelAttempt(
-        orderId: state.orderId,
+      final session = await _payments.cancelReservationCheckoutAttempt(
+        sessionId: sessionId,
         attemptId: attemptId,
       );
       state = state.copyWith(
+        session: session,
         submitting: false,
         reviewOpen: false,
         idempotencyKey: generatePaymentCheckoutIdempotencyKey(),
-        clearSession: true,
       );
-      await reconcile();
+      _invalidateReservationCaches();
+      await reconcile(soft: true);
     } on ApiException catch (error) {
       state = state.copyWith(
         submitting: false,
         errorMessage: error.message,
         errorCode: error.code,
       );
-      await reconcile();
+      await reconcile(soft: true);
     }
   }
 
   Future<void> retryFromFailure() async {
     state = state.copyWith(
-      phase: CheckoutPhase.summary,
+      phase: CheckoutPhase.ready,
       step: CheckoutStep.summary,
       reviewOpen: false,
       clearSession: true,
@@ -524,43 +711,23 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
       idempotencyKey: generatePaymentCheckoutIdempotencyKey(),
     );
 
-    try {
-      final order = await _payments.fetchPaymentOrder(state.orderId);
-      ReservationPaymentRequirement? requirement = state.requirement;
-      final reservationId = order.reservationId;
-      if (reservationId != null && reservationId.isNotEmpty) {
-        try {
-          requirement = await _payments
-              .fetchReservationPaymentRequirement(reservationId);
-        } catch (_) {}
-      }
+    _invalidateReservationCaches();
 
+    // Refresh requirement truth only — do not restore a terminal FAILED/CANCELLED
+    // session as the current handoff (that would block starting a new checkout).
+    try {
+      final requirement =
+          await _payments.fetchReservationPaymentRequirement(reservationId);
       state = state.copyWith(
-        order: order,
         requirement: requirement,
+        clearSession: true,
         clearError: true,
       );
-
-      if (order.isPaid ||
-          order.isRefundPending ||
-          order.isRefunded ||
-          order.isCancelled) {
-        _applyOrderTruth(order, preserveMethodStep: false);
-        return;
-      }
-
-      if (order.activeAttempt != null && order.isCheckoutPending) {
-        _applyOrderTruth(order, preserveMethodStep: true);
-        return;
-      }
-
-      state = state.copyWith(
-        phase: CheckoutPhase.summary,
-        step: CheckoutStep.summary,
-        submitting: false,
-        clearSession: true,
+      _applyReservationTruth(
+        requirement: requirement,
+        session: null,
+        preserveMethodStep: false,
       );
-      _stopPolling();
     } on ApiException catch (error) {
       _applyLoadError(error);
     }
@@ -579,36 +746,55 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
     );
 
     try {
-      final order = await _payments.actOnMockCheckout(
+      final result = await _payments.actOnMockCheckout(
         attemptId: attemptId,
         action: action,
       );
+
+      final session = result.checkoutSession ?? state.session;
+      final order = result.order ?? state.order;
+
       state = state.copyWith(
+        session: session,
         order: order,
         idempotencyKey: generatePaymentCheckoutIdempotencyKey(),
       );
 
+      // Soft-reconcile requirement without blanking the page.
+      try {
+        final requirement = await _payments
+            .fetchReservationPaymentRequirement(reservationId);
+        state = state.copyWith(requirement: requirement);
+      } catch (_) {}
+
       if (action == 'pending') {
         state = state.copyWith(submitting: false);
-        _applyOrderTruth(order, preserveMethodStep: true);
+        _applyReservationTruth(
+          requirement: state.requirement,
+          session: state.session,
+          preserveMethodStep: true,
+        );
         return;
       }
 
-      if (action == 'success' && order.isPaid) {
-        final chainedOk = await _payRemainingSiblingOrders();
-        if (!chainedOk) {
-          // Primary order paid; sibling failure is already on state.errorMessage.
-          state = state.copyWith(submitting: false);
-          _applyOrderTruth(order, preserveMethodStep: false);
-          return;
-        }
+      // Never claim success until backend session status is SUCCEEDED.
+      // Never auto-chain sibling order checkouts from Flutter.
+      if (session?.isSucceeded == true ||
+          (session == null && order?.isPaid == true)) {
+        _invalidateReservationCaches();
       }
 
       state = state.copyWith(submitting: false);
-      _applyOrderTruth(
-        state.order ?? order,
+      _applyReservationTruth(
+        requirement: state.requirement,
+        session: state.session,
         preserveMethodStep: false,
       );
+
+      if (state.phase == CheckoutPhase.succeeded ||
+          state.phase == CheckoutPhase.alreadyPaid) {
+        _invalidateReservationCaches();
+      }
     } on ApiException catch (error) {
       state = state.copyWith(
         submitting: false,
@@ -616,86 +802,14 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
         errorCode: error.code,
         errorStatusCode: error.statusCode,
       );
-      await reconcile();
+      await reconcile(soft: true);
     } catch (error) {
       state = state.copyWith(
         submitting: false,
         errorMessage: error.toString(),
       );
-      await reconcile();
+      await reconcile(soft: true);
     }
-  }
-
-  /// After material (or fee) succeeds, silently settle any other payable
-  /// sibling orders for the same reservation so the learner pays once.
-  Future<bool> _payRemainingSiblingOrders() async {
-    final reservationId = state.reservation?.id ??
-        state.requirement?.reservationId ??
-        state.order?.reservationId;
-    if (reservationId == null || reservationId.isEmpty) {
-      return true;
-    }
-
-    ReservationPaymentRequirement? requirement;
-    try {
-      requirement =
-          await _payments.fetchReservationPaymentRequirement(reservationId);
-      state = state.copyWith(requirement: requirement);
-    } catch (_) {
-      return true;
-    }
-
-    final siblings = requirement.orders
-        .where(
-          (row) =>
-              row.id != state.orderId &&
-              row.isCurrent &&
-              row.canStartCheckout,
-        )
-        .toList(growable: false);
-
-    for (final sibling in siblings) {
-      try {
-        final session = await _payments.startCheckout(
-          orderId: sibling.id,
-          idempotencyKey: generatePaymentCheckoutIdempotencyKey(),
-        );
-        final paid = await _payments.actOnMockCheckout(
-          attemptId: session.attemptId,
-          action: 'success',
-        );
-        if (!paid.isPaid) {
-          state = state.copyWith(
-            errorMessage:
-                'Primary payment succeeded, but a remaining payment could not be completed. Finish it from reservation details.',
-            errorCode: 'CHAINED_CHECKOUT_INCOMPLETE',
-          );
-          return false;
-        }
-      } on ApiException catch (error) {
-        state = state.copyWith(
-          errorMessage: error.message.isEmpty
-              ? 'Primary payment succeeded, but a remaining payment could not be completed.'
-              : error.message,
-          errorCode: error.code,
-          errorStatusCode: error.statusCode,
-        );
-        return false;
-      } catch (error) {
-        state = state.copyWith(
-          errorMessage: error.toString(),
-        );
-        return false;
-      }
-    }
-
-    try {
-      requirement =
-          await _payments.fetchReservationPaymentRequirement(reservationId);
-      state = state.copyWith(requirement: requirement);
-    } catch (_) {}
-
-    return true;
   }
 
   void _startPolling() {

@@ -8,7 +8,9 @@ import 'package:go_router/go_router.dart';
 
 import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
+import 'package:frontend/features/payments/application/learner_checkout_controller.dart';
 import 'package:frontend/features/payments/data/models/payment_order.dart';
+import 'package:frontend/features/payments/data/models/reservation_checkout_session.dart';
 import 'package:frontend/features/payments/data/models/reservation_payment_requirement.dart';
 import 'package:frontend/features/payments/data/payments_repository.dart';
 import 'package:frontend/features/payments/presentation/pages/learner_checkout_page.dart';
@@ -37,6 +39,43 @@ Map<String, dynamic> _orderJson({
   };
 }
 
+ReservationPaymentRequirement _requirementFor(PaymentOrder order) {
+  final paid = order.isPaid;
+  return ReservationPaymentRequirement.fromJson({
+    'reservationId': 'res-1',
+    'reservationStatus': 'ACCEPTED',
+    'paymentEnforcementEnabled': true,
+    'overallStatus': paid ? 'PAID' : 'REQUIRES_PAYMENT',
+    'fulfillmentMethod': 'PICKUP',
+    'material': {
+      'required': true,
+      'status': order.status == 'CHECKOUT_PENDING' ? 'CHECKOUT_PENDING' : order.status,
+      'paymentOrderId': order.id,
+      'amount': '16.00',
+      'currency': 'NIS',
+      'cycleNumber': 1,
+      'canStartCheckout': order.isPayable,
+    },
+    'deliveryFee': null,
+    'orders': [
+      {
+        'id': order.id,
+        'purpose': 'MATERIAL_SUBTOTAL',
+        'amount': '16.00',
+        'currency': 'NIS',
+        'status': order.status,
+        'cycleNumber': 1,
+        'isCurrent': true,
+        'canStartCheckout': order.isPayable,
+      },
+    ],
+    'paymentReady': paid,
+    'fulfillmentReady': paid,
+    'pickupCodeAvailable': paid,
+    'outstandingPaymentOrderIds': paid ? <String>[] : [order.id],
+  });
+}
+
 class _LearnerAuthController extends AuthController {
   @override
   AuthState build() {
@@ -56,10 +95,11 @@ class _LearnerAuthController extends AuthController {
 }
 
 class _FakePaymentsRepository implements PaymentsRepository {
-  _FakePaymentsRepository(this.order);
+  _FakePaymentsRepository(this.order) : requirement = _requirementFor(order);
 
   PaymentOrder order;
-  bool started = false;
+  ReservationPaymentRequirement requirement;
+  ReservationCheckoutSession? session;
 
   @override
   Future<PaymentOrder> fetchPaymentOrder(String orderId) async => order;
@@ -67,40 +107,42 @@ class _FakePaymentsRepository implements PaymentsRepository {
   @override
   Future<ReservationPaymentRequirement> fetchReservationPaymentRequirement(
     String reservationId,
-  ) async {
-    return ReservationPaymentRequirement.fromJson({
-      'reservationId': 'res-1',
-      'reservationStatus': 'ACCEPTED',
-      'paymentEnforcementEnabled': true,
-      'overallStatus': order.status == 'PAID' ? 'PAID' : 'REQUIRES_PAYMENT',
-      'fulfillmentMethod': 'PICKUP',
-      'material': {
-        'required': true,
-        'status': order.status,
-        'paymentOrderId': order.id,
-        'amount': '16.00',
-        'currency': 'NIS',
-        'cycleNumber': 1,
-        'canStartCheckout': order.isPayable,
-      },
-      'deliveryFee': null,
-      'orders': [],
-      'paymentReady': order.isPaid,
-      'fulfillmentReady': order.isPaid,
-      'pickupCodeAvailable': order.isPaid,
-      'outstandingPaymentOrderIds': order.isPayable ? [order.id] : [],
-    });
-  }
+  ) async =>
+      requirement;
 
   @override
-  Future<PaymentCheckoutSession> startCheckout({
-    required String orderId,
+  Future<ReservationCheckoutSession> startReservationCheckout({
+    required String reservationId,
     required String idempotencyKey,
   }) async {
-    started = true;
+    session = ReservationCheckoutSession.fromJson({
+      'checkoutSessionId': 'sess-1',
+      'reservationId': 'res-1',
+      'status': 'CREATED',
+      'currency': 'NIS',
+      'totalAmount': '16.00',
+      'totalAmountMinor': 1600,
+      'items': [
+        {
+          'paymentOrderId': order.id,
+          'purpose': 'MATERIAL_SUBTOTAL',
+          'amount': '16.00',
+          'amountMinor': 1600,
+          'currency': 'NIS',
+          'status': 'PENDING',
+        },
+      ],
+      'attemptId': 'att-1',
+      'attemptStatus': 'CREATED',
+      'checkoutUrl': 'https://example.test/mock/att-1',
+      'expiresAt': '2026-08-06T11:00:00.000Z',
+      'orderStatuses': [
+        {'paymentOrderId': order.id, 'status': 'CHECKOUT_PENDING'},
+      ],
+    });
     order = PaymentOrder.fromJson(
       _orderJson(
-        id: orderId,
+        id: order.id,
         status: 'CHECKOUT_PENDING',
         attempts: [
           {
@@ -116,64 +158,110 @@ class _FakePaymentsRepository implements PaymentsRepository {
         ],
       ),
     );
-    return PaymentCheckoutSession(
-      orderId: orderId,
-      orderStatus: 'CHECKOUT_PENDING',
-      attemptId: 'att-1',
-      attemptStatus: 'CREATED',
-      checkoutUrl: 'https://example.test/mock/att-1',
-    );
+    return session!;
   }
 
   @override
-  Future<PaymentOrder> actOnMockCheckout({
+  Future<ReservationCheckoutSession> fetchCheckoutSession(String sessionId) async {
+    return session!;
+  }
+
+  @override
+  Future<ReservationCheckoutSession?> fetchReservationCheckoutSession(
+    String reservationId,
+  ) async {
+    return session;
+  }
+
+  @override
+  Future<void> reconcileExpiredCheckoutSessions({String? reservationId}) async {}
+
+  @override
+  Future<ReservationCheckoutSession> cancelReservationCheckoutAttempt({
+    required String sessionId,
+    required String attemptId,
+  }) async {
+    session = ReservationCheckoutSession.fromJson({
+      ...{
+        'checkoutSessionId': 'sess-1',
+        'reservationId': 'res-1',
+        'status': 'CANCELLED',
+        'currency': 'NIS',
+        'totalAmount': '16.00',
+        'totalAmountMinor': 1600,
+        'items': const [],
+        'attemptId': attemptId,
+        'attemptStatus': 'CANCELLED',
+        'orderStatuses': const [],
+      },
+    });
+    return session!;
+  }
+
+  @override
+  Future<PaymentCheckoutSession> startCheckout({
+    required String orderId,
+    required String idempotencyKey,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<MockCheckoutActResult> actOnMockCheckout({
     required String attemptId,
     required String action,
     String? token,
   }) async {
     if (action == 'success') {
       order = PaymentOrder.fromJson(_orderJson(id: order.id, status: 'PAID'));
-    } else if (action == 'decline') {
-      order = PaymentOrder.fromJson(
-        _orderJson(
-          id: order.id,
-          status: 'REQUIRES_PAYMENT',
-          attempts: [
-            {
-              'id': attemptId,
-              'status': 'FAILED',
-              'provider': 'MOCK',
-              'providerMode': 'LOCAL',
-              'amount': '16.00',
-              'amountMinor': 1600,
-              'currency': 'NIS',
-              'failureMessage': 'Declined',
-              'createdAt': '2026-08-06T10:05:00.000Z',
-            },
-          ],
-        ),
-      );
-    } else if (action == 'pending') {
-      order = PaymentOrder.fromJson(
-        _orderJson(
-          id: order.id,
-          status: 'CHECKOUT_PENDING',
-          attempts: [
-            {
-              'id': attemptId,
-              'status': 'PENDING',
-              'provider': 'MOCK',
-              'providerMode': 'LOCAL',
-              'amount': '16.00',
-              'amountMinor': 1600,
-              'currency': 'NIS',
-              'createdAt': '2026-08-06T10:05:00.000Z',
-            },
-          ],
-        ),
-      );
+      requirement = _requirementFor(order);
+      session = ReservationCheckoutSession.fromJson({
+        'checkoutSessionId': 'sess-1',
+        'reservationId': 'res-1',
+        'status': 'SUCCEEDED',
+        'currency': 'NIS',
+        'totalAmount': '16.00',
+        'totalAmountMinor': 1600,
+        'items': const [],
+        'attemptId': attemptId,
+        'attemptStatus': 'SUCCEEDED',
+        'orderStatuses': [
+          {'paymentOrderId': order.id, 'status': 'PAID'},
+        ],
+      });
+      return MockCheckoutActResult(checkoutSession: session);
     }
-    return order;
+    if (action == 'decline') {
+      session = ReservationCheckoutSession.fromJson({
+        'checkoutSessionId': 'sess-1',
+        'reservationId': 'res-1',
+        'status': 'FAILED',
+        'currency': 'NIS',
+        'totalAmount': '16.00',
+        'totalAmountMinor': 1600,
+        'items': const [],
+        'attemptId': attemptId,
+        'attemptStatus': 'FAILED',
+        'orderStatuses': const [],
+      });
+      return MockCheckoutActResult(checkoutSession: session);
+    }
+    if (action == 'pending') {
+      session = ReservationCheckoutSession.fromJson({
+        'checkoutSessionId': 'sess-1',
+        'reservationId': 'res-1',
+        'status': 'CHECKOUT_PENDING',
+        'currency': 'NIS',
+        'totalAmount': '16.00',
+        'totalAmountMinor': 1600,
+        'items': const [],
+        'attemptId': attemptId,
+        'attemptStatus': 'PENDING',
+        'orderStatuses': const [],
+      });
+      return MockCheckoutActResult(checkoutSession: session);
+    }
+    return MockCheckoutActResult(checkoutSession: session);
   }
 
   @override
@@ -186,13 +274,8 @@ class _FakePaymentsRepository implements PaymentsRepository {
       })> cancelAttempt({
     required String orderId,
     required String attemptId,
-  }) async {
-    return (
-      orderId: orderId,
-      attemptId: attemptId,
-      attemptStatus: 'CANCELLED',
-      orderStatus: 'REQUIRES_PAYMENT',
-    );
+  }) {
+    throw UnimplementedError();
   }
 }
 
@@ -238,7 +321,11 @@ Future<void> _capture({
   required Size size,
   required String filename,
   Locale locale = const Locale('ar'),
-  Future<void> Function(WidgetTester tester)? interact,
+  Future<void> Function(
+    WidgetTester tester,
+    LearnerCheckoutController controller,
+  )? interact,
+  bool processingPump = false,
 }) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() async {
@@ -247,12 +334,13 @@ Future<void> _capture({
 
   final payments = _FakePaymentsRepository(order);
   final router = GoRouter(
-    initialLocation: '/learner/checkout/${order.id}',
+    initialLocation: '/learner/checkout/reservation/res-1',
     routes: [
       GoRoute(
-        path: '/learner/checkout/:orderId',
-        builder: (context, state) =>
-            LearnerCheckoutPage(orderId: state.pathParameters['orderId']!),
+        path: '/learner/checkout/reservation/:reservationId',
+        builder: (context, state) => LearnerCheckoutPage(
+          reservationId: state.pathParameters['reservationId']!,
+        ),
       ),
     ],
   );
@@ -282,9 +370,7 @@ Future<void> _capture({
     ),
   );
 
-  // Processing uses an indeterminate spinner + poll timer; settle would hang.
-  if (order.isCheckoutPending &&
-      order.activeAttempt?.status == 'PENDING') {
+  if (processingPump) {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
   } else {
@@ -292,8 +378,18 @@ Future<void> _capture({
   }
 
   if (interact != null) {
-    await interact(tester);
-    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(LearnerCheckoutPage)),
+    );
+    final controller =
+        container.read(learnerCheckoutControllerProvider('res-1').notifier);
+    await interact(tester, controller);
+    if (processingPump) {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+    } else {
+      await tester.pumpAndSettle();
+    }
   }
 
   await expectLater(
@@ -341,26 +437,14 @@ void main() {
   testWidgets('pay05c processing', (tester) async {
     await _capture(
       tester: tester,
-      order: PaymentOrder.fromJson(
-        _orderJson(
-          id: 'ord-proc',
-          status: 'CHECKOUT_PENDING',
-          attempts: [
-            {
-              'id': 'att-p',
-              'status': 'PENDING',
-              'provider': 'MOCK',
-              'providerMode': 'LOCAL',
-              'amount': '16.00',
-              'amountMinor': 1600,
-              'currency': 'NIS',
-              'createdAt': '2026-08-06T10:05:00.000Z',
-            },
-          ],
-        ),
-      ),
+      order: PaymentOrder.fromJson(_orderJson(id: 'ord-proc')),
       size: const Size(390, 844),
       filename: 'pay05c_processing_ar.png',
+      processingPump: true,
+      interact: (tester, controller) async {
+        await controller.continueToPayment();
+        await controller.simulatePending();
+      },
     );
   });
 

@@ -1,5 +1,9 @@
 export const PAYMENT_CHECKOUT_IDEMPOTENCY_SCOPE = 'PAYMENT_CHECKOUT';
 
+/** Reservation-scoped checkout (PAY-05D) — one session may settle many orders. */
+export const PAYMENT_RESERVATION_CHECKOUT_IDEMPOTENCY_SCOPE =
+  'PAYMENT_RESERVATION_CHECKOUT';
+
 export const PAYMENT_CURRENCY_MINOR_UNITS = 100;
 
 /** Max minor units representable in PostgreSQL INTEGER / Prisma Int. */
@@ -50,3 +54,14 @@ export const isPayablePaymentOrderStatus = (status: string): boolean =>
 
 export const isActivePaymentAttemptStatus = (status: string): boolean =>
   status === 'CREATED' || status === 'PENDING';
+
+/**
+ * Lease for in-flight provider.createCheckout claims (PAY-05D-R2).
+ * Abandoned CREATED attempts become recoverable after this window.
+ */
+export const PROVIDER_CHECKOUT_CLAIM_LEASE_MS = 60_000;
+
+export const LIFECYCLE_REFUND_REASONS_SESSION = {
+  DUPLICATE_ALLOCATION_AFTER_OTHER_CHARGE:
+    'DUPLICATE_ALLOCATION_AFTER_OTHER_CHARGE',
+} as const;

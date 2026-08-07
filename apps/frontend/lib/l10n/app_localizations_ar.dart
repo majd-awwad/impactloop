@@ -1243,7 +1243,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get checkoutReservationInfo => 'معلومات الحجز';
 
   @override
-  String get checkoutOrderIdLabel => 'رقم الطلب';
+  String get checkoutOrderIdLabel => 'الحجز';
 
   @override
   String get checkoutReservationDateLabel => 'التاريخ';
@@ -1297,25 +1297,25 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get checkoutCombinedPaymentHint =>
-      'تُحصَّل سعر المادة ورسوم التوصيل معًا في عملية الدفع هذه.';
+      'تُحصَّل المبالغ المتبقية للمادة والتوصيل معًا في جلسة دفع واحدة.';
 
   @override
   String get checkoutPurposeMaterialTitle => 'سعر المادة';
 
   @override
   String get checkoutPurposeMaterialHint =>
-      'يؤكد الحجز. رسوم التوصيل (إن وُجدت) تُدفع لاحقًا بشكل منفصل.';
+      'يدفع المبلغ المتبقي للمادة لهذا الحجز.';
 
   @override
   String get checkoutPurposeDeliveryTitle => 'رسوم التوصيل';
 
   @override
   String get checkoutPurposeDeliveryHint =>
-      'يدفع رسوم التوصيل لمجموعة هذا الحجز.';
+      'يدفع رسوم التوصيل المتبقية لهذا الحجز.';
 
   @override
   String get checkoutOtherOrderHint =>
-      'هناك دفعة أخرى مستحقة أيضًا. يمكنك دفعها بعد هذه.';
+      'أي مبالغ متبقية لهذا الحجز مشمولة في جلسة الدفع هذه.';
 
   @override
   String get checkoutPaymentIncludesTitle => 'يشمل الدفع';
@@ -1389,7 +1389,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'تم تأكيد دفع الحجز. ارجع إلى تفاصيل الحجز للخطوة التالية.';
 
   @override
-  String get checkoutSuccessTransactionLabel => 'طلب الدفع';
+  String get checkoutSuccessTransactionLabel => 'جلسة الدفع';
 
   @override
   String get checkoutBackToReservation => 'العودة إلى تفاصيل الحجز';
@@ -1429,42 +1429,56 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get checkoutAlreadyPaidBody =>
-      'طلب الدفع هذا مسدّد بالفعل. لا يلزم دفع إضافي.';
+      'دفع هذا الحجز مسدّد بالفعل. لا يلزم دفع إضافي.';
 
   @override
   String get checkoutRefundPendingTitle => 'استرداد قيد المعالجة';
 
   @override
   String get checkoutRefundPendingBody =>
-      'يوجد استرداد قيد المعالجة لطلب الدفع هذا. الدفع غير متاح.';
+      'يوجد استرداد قيد المعالجة لدفع هذا الحجز. الدفع غير متاح.';
+
+  @override
+  String get checkoutPartiallyRefundedTitle => 'استرداد جزئي';
+
+  @override
+  String get checkoutPartiallyRefundedBody =>
+      'يوجد استرداد قيد المعالجة أو مكتمل جزئيًا لهذا الحجز. الدفع غير متاح حتى تتضح حالة الدفع.';
 
   @override
   String get checkoutRefundedTitle => 'تم الاسترداد';
 
   @override
   String get checkoutRefundedBody =>
-      'تم استرداد طلب الدفع هذا. قد يلزم بدء دورة دفع جديدة من تفاصيل الحجز.';
+      'تم استرداد دفع هذا الحجز. قد يلزم بدء دورة دفع جديدة من تفاصيل الحجز.';
 
   @override
   String get checkoutOrderCancelledTitle => 'تم إلغاء طلب الدفع';
 
   @override
   String get checkoutOrderCancelledBody =>
-      'تم إلغاء طلب الدفع هذا ولا يمكن إتمام الدفع.';
+      'تم إلغاء دفع هذا الحجز ولا يمكن إتمام الدفع.';
+
+  @override
+  String get checkoutInvariantBlockedTitle => 'الدفع يحتاج مراجعة';
+
+  @override
+  String get checkoutInvariantBlockedBody =>
+      'الدفع محظور حتى تتم مراجعة حالة دفع هذا الحجز. ارجع إلى تفاصيل الحجز أو تواصل مع الدعم.';
 
   @override
   String get checkoutLoadErrorTitle => 'تعذّر تحميل صفحة الدفع';
 
   @override
   String get checkoutLoadErrorBody =>
-      'تعذّر تحميل طلب الدفع. تحقق من الاتصال وحاول مرة أخرى.';
+      'تعذّر تحميل دفع هذا الحجز. تحقق من الاتصال وحاول مرة أخرى.';
 
   @override
-  String get checkoutMissingTitle => 'طلب الدفع غير متاح';
+  String get checkoutMissingTitle => 'الدفع غير متاح';
 
   @override
   String get checkoutMissingBody =>
-      'لم يتم العثور على طلب الدفع أو ليس لديك صلاحية الوصول إليه.';
+      'لم يتم العثور على دفع هذا الحجز أو ليس لديك صلاحية الوصول إليه.';
 
   @override
   String get checkoutRetryLoad => 'حاول مرة أخرى';
@@ -1474,7 +1488,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'الدفع قيد التنفيذ بالفعل. يرجى الانتظار.';
 
   @override
-  String get checkoutableOrderReadyHint => 'يوجد طلب دفع جاهز لهذا الحجز.';
+  String get checkoutableOrderReadyHint => 'يوجد دفع جاهز لهذا الحجز.';
 
   @override
   String get paymentStatusRequired => 'دفع مطلوب';

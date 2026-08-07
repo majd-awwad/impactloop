@@ -11,16 +11,22 @@ import { validate } from '../../middlewares/validate.middleware.js';
 
 import {
   cancelPaymentAttemptHandler,
+  getCheckoutSessionHandler,
   getPaymentOrderHandler,
+  getReservationCheckoutSessionHandler,
   getReservationPaymentRequirementHandler,
   mockCheckoutActHandler,
   mockWebhookHandler,
+  reconcileExpiredCheckoutSessionsHandler,
   startPaymentCheckoutHandler,
+  startReservationCheckoutHandler,
+  cancelReservationCheckoutHandler,
 } from './payments.controller.js';
 import {
   mockCheckoutActSchema,
   paymentCancelAttemptSchema,
   paymentCheckoutSchema,
+  reservationCheckoutCancelSchema,
 } from './payments.validation.js';
 
 export const paymentsRouter = Router();
@@ -37,6 +43,43 @@ paymentsRouter.get(
   authMiddleware,
   requireRoles('LEARNER', 'ADMIN'),
   asyncHandler(getReservationPaymentRequirementHandler),
+);
+
+paymentsRouter.get(
+  '/reservations/:reservationId/checkout-session',
+  authMiddleware,
+  requireRoles('LEARNER', 'ADMIN'),
+  asyncHandler(getReservationCheckoutSessionHandler),
+);
+
+paymentsRouter.post(
+  '/reservations/:reservationId/checkout',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(paymentCheckoutSchema),
+  asyncHandler(startReservationCheckoutHandler),
+);
+
+paymentsRouter.post(
+  '/checkout-sessions/reconcile-expired',
+  authMiddleware,
+  requireRoles('LEARNER', 'ADMIN'),
+  asyncHandler(reconcileExpiredCheckoutSessionsHandler),
+);
+
+paymentsRouter.get(
+  '/checkout-sessions/:id',
+  authMiddleware,
+  requireRoles('LEARNER', 'ADMIN'),
+  asyncHandler(getCheckoutSessionHandler),
+);
+
+paymentsRouter.post(
+  '/checkout-sessions/:id/cancel-attempt',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationCheckoutCancelSchema),
+  asyncHandler(cancelReservationCheckoutHandler),
 );
 
 paymentsRouter.post(

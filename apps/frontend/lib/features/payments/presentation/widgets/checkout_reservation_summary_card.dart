@@ -82,13 +82,15 @@ class CheckoutSurfaceCard extends StatelessWidget {
 class CheckoutReservationSummaryCard extends StatelessWidget {
   const CheckoutReservationSummaryCard({
     super.key,
-    required this.order,
+    this.order,
     this.reservation,
+    this.reservationId,
     this.onViewDetails,
   });
 
-  final PaymentOrder order;
+  final PaymentOrder? order;
   final LearnerReservation? reservation;
+  final String? reservationId;
   final VoidCallback? onViewDetails;
 
   @override
@@ -180,7 +182,13 @@ class CheckoutReservationSummaryCard extends StatelessWidget {
           ],
           _InfoRow(
             label: l10n.checkoutOrderIdLabel,
-            value: _shortId(reservation?.id ?? order.reservationId ?? order.id),
+            value: _shortId(
+              reservation?.id ??
+                  reservationId ??
+                  order?.reservationId ??
+                  order?.id ??
+                  '',
+            ),
           ),
           if (reservation != null) ...[
             const SizedBox(height: AppSpacing.sm),
