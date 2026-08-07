@@ -68,6 +68,98 @@ export type UploadedVerificationDocument = {
   sizeBytes: number;
 };
 
+export type ResolvedSupplierVerificationDocument = {
+  absolutePath: string;
+  filename: string;
+  mimeType: string;
+};
+
+const VERIFICATION_FILENAME_PATTERN =
+  /^[a-zA-Z0-9_-]+\.(?:pdf|jpe?g|png)$/i;
+
+const mimeTypeForVerificationFilename = (filename: string): string => {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith('.pdf')) {
+    return 'application/pdf';
+  }
+  if (lower.endsWith('.png')) {
+    return 'image/png';
+  }
+  return 'image/jpeg';
+};
+
+const assertPathInsideUploadsDir = (absolutePath: string): void => {
+  const uploadsRoot = path.resolve(SUPPLIER_VERIFICATION_UPLOADS_DIR);
+  const resolved = path.resolve(absolutePath);
+  const prefix = uploadsRoot.endsWith(path.sep)
+    ? uploadsRoot
+    : `${uploadsRoot}${path.sep}`;
+
+  if (resolved !== uploadsRoot && !resolved.startsWith(prefix)) {
+    throw new AppError(
+      'Verification document is not available for download.',
+      404,
+      'NOT_FOUND',
+    );
+  }
+};
+
+/**
+ * Resolves a stored verification document object key
+ * (`/uploads/supplier-verification/<filename>`) to a local file.
+ * Remote/non-local URLs are not downloadable through this path.
+ */
+export const resolveLocalSupplierVerificationDocument = (
+  documentUrl: string | null | undefined,
+): ResolvedSupplierVerificationDocument => {
+  const trimmed = documentUrl?.trim() ?? '';
+
+  if (!trimmed) {
+    throw new AppError('Verification document not found.', 404, 'NOT_FOUND');
+  }
+
+  const prefix = `${SUPPLIER_VERIFICATION_UPLOAD_PUBLIC_PREFIX}/`;
+  if (!trimmed.startsWith(prefix)) {
+    throw new AppError(
+      'Verification document is not available for download.',
+      404,
+      'NOT_FOUND',
+    );
+  }
+
+  const filename = path.basename(trimmed.slice(prefix.length));
+  if (!VERIFICATION_FILENAME_PATTERN.test(filename)) {
+    throw new AppError(
+      'Verification document is not available for download.',
+      404,
+      'NOT_FOUND',
+    );
+  }
+
+  const absolutePath = path.join(SUPPLIER_VERIFICATION_UPLOADS_DIR, filename);
+  assertPathInsideUploadsDir(absolutePath);
+
+  if (!fs.existsSync(absolutePath)) {
+    throw new AppError(
+      'Verification document file not found.',
+      404,
+      'NOT_FOUND',
+    );
+  }
+
+  return {
+    absolutePath,
+    filename,
+    mimeType: mimeTypeForVerificationFilename(filename),
+  };
+};
+
+export const buildInlineContentDisposition = (filename: string): string => {
+  const safeAscii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+  const encoded = encodeURIComponent(filename);
+  return `inline; filename="${safeAscii}"; filename*=UTF-8''${encoded}`;
+};
+
 export const mapUploadedVerificationDocument = (
   file: Express.Multer.File | undefined,
 ): UploadedVerificationDocument => {

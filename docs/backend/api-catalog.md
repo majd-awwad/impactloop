@@ -12,6 +12,8 @@ Conventions for response shape: [04-api-conventions.md](../04-api-conventions.md
 |--------|------|------|--------|
 | GET | `/uploads/materials/*` | Public | `app.ts` — `express.static(MATERIAL_UPLOADS_DIR)` |
 | GET | `/uploads/profiles/*` | Public | `app.ts` — `express.static(PROFILE_UPLOADS_DIR)` |
+| GET | `/api/admin/supplier-verifications/:id/document` | Bearer JWT + `ADMIN` | Authenticated verification document download |
+| GET | `/api/supplier/verification/document` | Bearer JWT + `SUPPLIER` (owner) | Authenticated owner verification document download |
 
 ## Health
 
@@ -113,9 +115,9 @@ Validation schemas: `profile/profile.validation.ts`
 
 `POST /api/uploads/profile-image` accepts multipart field `image` (JPG/PNG/WebP, max 5 MB). Response: `{ image: { url, filename, mimeType, sizeBytes } }` with `url` under `/uploads/profiles/...`.
 
-Verification document upload: PDF/JPG/JPEG/PNG, max 5MB. Returns `{ url, fileName }`.
+Verification document upload: PDF/JPG/JPEG/PNG, max 5MB. Returns `{ url, fileName }` with a private object key under `/uploads/supplier-verification/...` (not publicly served).
 
-Static files: `GET /uploads/materials/*`, `GET /uploads/profiles/*`, `GET /uploads/supplier-verification/*` (`app.ts`).
+Static files: `GET /uploads/materials/*`, `GET /uploads/profiles/*` (`app.ts`). Supplier verification documents download only via authenticated owner/admin endpoints.
 
 ## Categories — `/api/categories`
 
@@ -385,6 +387,7 @@ Saved locations are private to the authenticated user. Response rows include `la
 **Admin invitation list/detail fields:** `recipientEmail`, `role`, `status`, `createdAt`, `expiresAt`, `acceptedAt`, `revokedAt`, `createdBy`, `canCopyLink`. Use `POST .../issue-link` to obtain `invitationUrl` for active pending invites only (token hash rotated; raw token never stored).
 | GET | `/api/admin/supplier-verifications` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | GET | `/api/admin/supplier-verifications/:id` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/supplier-verifications/:id/document` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | PATCH | `/api/admin/supplier-verifications/:id/approve` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | PATCH | `/api/admin/supplier-verifications/:id/reject` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | PATCH | `/api/admin/supplier-verifications/:id/request-changes` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
@@ -507,6 +510,7 @@ Organization suppliers (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) must s
 | Method | Path | Source file |
 |--------|------|-------------|
 | GET | `/api/supplier/verification/status` | `supplier-verification/supplier-verification.routes.ts` |
+| GET | `/api/supplier/verification/document` | `supplier-verification/supplier-verification.routes.ts` |
 | POST | `/api/supplier/verification/submit` | `supplier-verification/supplier-verification.routes.ts` |
 | POST | `/api/supplier/verification/resubmit` | `supplier-verification/supplier-verification.routes.ts` |
 

@@ -113,6 +113,42 @@ class AdminSupplierVerificationsApi {
     );
   }
 
+  Future<AdminVerificationDocumentBytes> downloadVerificationDocument(
+    String id,
+  ) async {
+    try {
+      final response = await _client.get<List<int>>(
+        '/api/admin/supplier-verifications/$id/document',
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: const {'Accept': '*/*'},
+        ),
+      );
+
+      final bytes = response.data;
+      if (bytes == null || bytes.isEmpty) {
+        throw const ApiException(
+          message: 'Verification document download returned no data',
+        );
+      }
+
+      final contentType =
+          response.headers.value('content-type')?.split(';').first.trim() ??
+          'application/octet-stream';
+      final disposition = response.headers.value('content-disposition');
+      final filename = _filenameFromContentDisposition(disposition) ??
+          'verification-document';
+
+      return AdminVerificationDocumentBytes(
+        bytes: bytes,
+        mimeType: contentType,
+        filename: filename,
+      );
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
   Future<AdminSupplierVerificationDetail> _patchAction(
     String path, {
     Map<String, dynamic>? body,
@@ -150,6 +186,42 @@ class AdminSupplierVerificationsApi {
       throw mapDioException(error);
     }
   }
+}
+
+String? _filenameFromContentDisposition(String? header) {
+  if (header == null || header.trim().isEmpty) {
+    return null;
+  }
+
+  final utf8Match = RegExp(
+    r"filename\*\s*=\s*UTF-8''([^;]+)",
+    caseSensitive: false,
+  ).firstMatch(header);
+  if (utf8Match != null) {
+    return Uri.decodeComponent(utf8Match.group(1)!.trim());
+  }
+
+  final plainMatch = RegExp(
+    r'filename\s*=\s*"([^"]+)"|filename\s*=\s*([^;]+)',
+    caseSensitive: false,
+  ).firstMatch(header);
+  if (plainMatch == null) {
+    return null;
+  }
+
+  return (plainMatch.group(1) ?? plainMatch.group(2))?.trim();
+}
+
+class AdminVerificationDocumentBytes {
+  const AdminVerificationDocumentBytes({
+    required this.bytes,
+    required this.mimeType,
+    required this.filename,
+  });
+
+  final List<int> bytes;
+  final String mimeType;
+  final String filename;
 }
 
 final adminSupplierVerificationsApiProvider =
