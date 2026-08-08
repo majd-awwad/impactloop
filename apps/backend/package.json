@@ -36,6 +36,8 @@
     "typecheck:recommendations:ml:local": "tsc --ignoreConfig --noEmit --target ES2022 --module Node16 --moduleResolution Node16 --strict --esModuleInterop --skipLibCheck src/types/express.d.ts scripts/train-local-lightfm.ts scripts/train-local-lightfm.test.ts",
     "validate:production-config": "tsx scripts/validate-production-config.ts",
     "test:validate:production-config": "node --import tsx --test scripts/validate-production-config.test.ts",
+    "validate:recommendation-release-config": "tsx scripts/validate-recommendation-release-config.ts",
+    "test:validate:recommendation-release-config": "node --import tsx --test scripts/validate-recommendation-release-config.test.ts",
     "taxonomy:category-ownership": "tsx scripts/category-taxonomy-ownership.ts",
     "taxonomy:material-audit": "tsx scripts/material-taxonomy-audit.ts",
     "clean-dev-notifications": "tsx ../../scripts/clean-dev-notifications.ts",
