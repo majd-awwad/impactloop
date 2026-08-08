@@ -146,6 +146,8 @@ String localizedApiErrorMessage(
       return l10n.driverAvailableJobsCursorInvalid;
     case 'VALIDATION_ERROR':
       return l10n.validationError;
+    case 'PROJECT_SUBMISSION_INCOMPLETE':
+      return localizedProjectSubmissionIncompleteMessage(error, l10n);
     case 'UNAUTHENTICATED':
       return l10n.sessionExpired;
     case 'FORBIDDEN':
@@ -194,14 +196,50 @@ ApiException normalizeApiException(Object error) {
   return ApiException(message: userFriendlyErrorMessage(error));
 }
 
-String? firstFieldError(ApiException error, List<String> fieldPaths) {
+String? firstFieldError(
+  ApiException error,
+  List<String> fieldPaths, {
+  AppLocalizations? l10n,
+}) {
   for (final issue in error.fieldIssues) {
     if (fieldPaths.contains(issue.path)) {
-      return issue.message;
+      return l10n == null
+          ? issue.message
+          : localizedFieldIssueMessage(issue, l10n);
     }
   }
 
   return null;
+}
+
+String localizedFieldIssueMessage(ApiFieldIssue issue, AppLocalizations l10n) {
+  final projectSubmissionMessage = _localizedProjectSubmissionFieldMessage(
+    issue.path,
+    l10n,
+  );
+  if (projectSubmissionMessage != null) {
+    return projectSubmissionMessage;
+  }
+
+  return l10n.completeRequiredDetail;
+}
+
+String? _localizedProjectSubmissionFieldMessage(
+  String path,
+  AppLocalizations l10n,
+) {
+  return switch (path) {
+    'coverImageUrl' => l10n.projectSubmissionCoverImageRequired,
+    'requiredComponents' => l10n.projectSubmissionRequiredComponentsRequired,
+    'steps' => l10n.projectSubmissionStepsRequired,
+    'categoryId' => l10n.projectSubmissionCategoryRequired,
+    'title' => l10n.projectSubmissionTitleRequired,
+    'shortDescription' => l10n.projectSubmissionShortDescriptionRequired,
+    'description' => l10n.projectSubmissionDescriptionRequired,
+    'difficulty' => l10n.projectSubmissionDifficultyRequired,
+    'estimatedDurationMinutes' => l10n.projectSubmissionDurationRequired,
+    _ => null,
+  };
 }
 
 String projectSubmissionFieldMessage(ApiFieldIssue issue) {
@@ -218,11 +256,33 @@ String projectSubmissionFieldMessage(ApiFieldIssue issue) {
     'difficulty' => 'Choose a difficulty level before submitting.',
     'estimatedDurationMinutes' =>
       'Add an estimated project duration before submitting.',
-    _ =>
-      issue.message.trim().isNotEmpty
-          ? issue.message
-          : 'Complete this required project detail before submitting.',
+    _ => 'Complete this required project detail before submitting.',
   };
+}
+
+String localizedProjectSubmissionIncompleteMessage(
+  ApiException error,
+  AppLocalizations l10n,
+) {
+  if (error.code != 'PROJECT_SUBMISSION_INCOMPLETE') {
+    return localizedApiErrorMessage(error, l10n);
+  }
+
+  final messages = error.fieldIssues
+      .map((issue) => localizedFieldIssueMessage(issue, l10n))
+      .where((message) => message.trim().isNotEmpty)
+      .toSet()
+      .toList(growable: false);
+
+  if (messages.isEmpty) {
+    return l10n.projectSubmissionDetailsRequired;
+  }
+
+  if (messages.length == 1) {
+    return messages.first;
+  }
+
+  return messages.map((message) => '• $message').join('\n');
 }
 
 bool projectSubmissionIncompleteRequiresImage(ApiException error) {

@@ -59,6 +59,46 @@ class AppLocalizationsAr extends AppLocalizations {
   String get completeRequiredDetail => 'أكمل هذا الحقل المطلوب قبل المتابعة.';
 
   @override
+  String get projectSubmissionCoverImageRequired =>
+      'أضف صورة واحدة على الأقل للمشروع قبل إرساله للمراجعة.';
+
+  @override
+  String get projectSubmissionRequiredComponentsRequired =>
+      'أضف مكوّنًا مطلوبًا واحدًا على الأقل قبل الإرسال.';
+
+  @override
+  String get projectSubmissionStepsRequired =>
+      'أضف خطوة واحدة على الأقل للمشروع قبل الإرسال.';
+
+  @override
+  String get projectSubmissionCategoryRequired =>
+      'اختر فئة المشروع قبل الإرسال.';
+
+  @override
+  String get projectSubmissionTitleRequired =>
+      'أضف عنوانًا للمشروع قبل الإرسال.';
+
+  @override
+  String get projectSubmissionShortDescriptionRequired =>
+      'أضف وصفًا قصيرًا قبل الإرسال.';
+
+  @override
+  String get projectSubmissionDescriptionRequired =>
+      'أضف وصفًا كاملاً للمشروع قبل الإرسال.';
+
+  @override
+  String get projectSubmissionDifficultyRequired =>
+      'اختر مستوى الصعوبة قبل الإرسال.';
+
+  @override
+  String get projectSubmissionDurationRequired =>
+      'أضف المدة التقديرية للمشروع قبل الإرسال.';
+
+  @override
+  String get projectSubmissionDetailsRequired =>
+      'أكمل تفاصيل المشروع المطلوبة قبل الإرسال.';
+
+  @override
   String currencyNis(String amount) {
     return '$amount شيكل';
   }

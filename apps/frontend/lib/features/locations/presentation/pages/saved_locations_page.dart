@@ -302,7 +302,7 @@ class _SavedLocationsPageState extends ConsumerState<SavedLocationsPage> {
             ),
             loading: () => const _SavedLocationsLoading(),
             error: (error, _) => _SavedLocationsError(
-              message: userFriendlyErrorMessage(error),
+              message: localizedApiErrorMessage(error, context.l10n),
               onRetry: () => ref.invalidate(savedLocationsProvider),
             ),
           ),
@@ -1172,7 +1172,7 @@ class _SavedLocationFormDialogState
       setState(() {
         _formError = SavedLocationsL10n.of(
           context,
-        ).reverseLookupFailed(error.displayMessage);
+        ).reverseLookupFailed(localizedApiErrorMessage(error, context.l10n));
       });
     } catch (_) {
       if (!mounted) {
@@ -1237,7 +1237,7 @@ class _SavedLocationFormDialogState
       setState(() {
         _formError = SavedLocationsL10n.of(
           context,
-        ).forwardLookupFailed(error.displayMessage);
+        ).forwardLookupFailed(localizedApiErrorMessage(error, context.l10n));
       });
     } catch (_) {
       if (!mounted) {
@@ -1360,16 +1360,24 @@ class _SavedLocationFormDialogState
 
       setState(() {
         _isSubmitting = false;
-        _labelError = firstFieldError(error, const ['label']);
-        _cityError = firstFieldError(error, const ['city']);
-        _latitudeError = firstFieldError(error, const ['latitude']);
-        _longitudeError = firstFieldError(error, const ['longitude']);
+        _labelError = firstFieldError(error, const ['label'], l10n: context.l10n);
+        _cityError = firstFieldError(error, const ['city'], l10n: context.l10n);
+        _latitudeError = firstFieldError(
+          error,
+          const ['latitude'],
+          l10n: context.l10n,
+        );
+        _longitudeError = firstFieldError(
+          error,
+          const ['longitude'],
+          l10n: context.l10n,
+        );
         _formError =
             _labelError == null &&
                 _cityError == null &&
                 _latitudeError == null &&
                 _longitudeError == null
-            ? error.displayMessage
+            ? localizedApiErrorMessage(error, context.l10n)
             : null;
       });
     } catch (_) {

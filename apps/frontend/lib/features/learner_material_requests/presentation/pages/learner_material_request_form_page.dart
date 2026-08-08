@@ -202,7 +202,7 @@ class _LearnerMaterialRequestFormPageState
           context,
         );
       default:
-        return error.displayMessage;
+        return localizedApiErrorMessage(error, context.l10n);
     }
   }
 

@@ -249,9 +249,7 @@ class _AdminLearningProjectsPageState
                   'Could not load learning projects.',
                   'تعذر تحميل مشاريع التعلم.',
                 ),
-                message: error is ApiException
-                    ? error.displayMessage
-                    : error.toString(),
+                message: AdminL10n.of(context).localizedError(error),
                 onRetry: _refresh,
               ),
               data: (data) => Column(
@@ -1559,7 +1557,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                 context: context,
                 builder: (context) => AppDialogShell(
                   title: const Text('Cannot approve project'),
-                  content: Text(error.message),
+                  content: Text(AdminL10n.of(context).localizedError(error)),
                   footer: AppDialogFooter.form(
                     primaryAction: FilledButton(
                       onPressed: () => Navigator.of(context).pop(),
@@ -1618,7 +1616,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
+      ).showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
     }
   }
 
@@ -1664,7 +1662,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      snapshot.error.toString(),
+                      AdminL10n.of(context).localizedError(snapshot.error!),
                       style: AdminTypography.pageSubtitle(palette),
                     ),
                     const SizedBox(height: 12),

@@ -173,7 +173,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
         return;
       }
       setState(() => _isSavingDraft = false);
-      showErrorSnackBar(context, error, l10n: context.l10n);
+      showErrorSnackBar(context, error);
     }
   }
 

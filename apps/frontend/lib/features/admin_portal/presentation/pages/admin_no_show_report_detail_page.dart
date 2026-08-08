@@ -86,7 +86,7 @@ class _AdminNoShowReportDetailPageState
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
+        ).showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
       }
     } catch (_) {
       if (mounted) {

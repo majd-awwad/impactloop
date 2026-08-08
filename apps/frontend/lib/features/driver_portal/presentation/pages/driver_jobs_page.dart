@@ -1336,7 +1336,7 @@ class _AvailableJobCard extends ConsumerWidget {
       showInfoSnackBar(context, message);
     } catch (error) {
       if (!context.mounted) return;
-      showErrorSnackBar(context, error, l10n: l10n);
+      showErrorSnackBar(context, error);
     }
   }
 }

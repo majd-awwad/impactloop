@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_dropdown_field.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
@@ -169,16 +170,28 @@ class _LearnerProfileEditPageState
 
       setState(() {
         _isSubmitting = false;
-        _learnerTypeError = firstFieldError(error, const ['learnerType']);
-        _skillLevelError = firstFieldError(error, const ['skillLevel']);
-        _interestsError = firstFieldError(error, const ['interests']);
-        _bioError = firstFieldError(error, const ['bio']);
+        _learnerTypeError = firstFieldError(
+          error,
+          const ['learnerType'],
+          l10n: context.l10n,
+        );
+        _skillLevelError = firstFieldError(
+          error,
+          const ['skillLevel'],
+          l10n: context.l10n,
+        );
+        _interestsError = firstFieldError(
+          error,
+          const ['interests'],
+          l10n: context.l10n,
+        );
+        _bioError = firstFieldError(error, const ['bio'], l10n: context.l10n);
         _formError =
             _learnerTypeError == null &&
                 _skillLevelError == null &&
                 _interestsError == null &&
                 _bioError == null
-            ? error.displayMessage
+            ? localizedApiErrorMessage(error, context.l10n)
             : null;
       });
     } catch (_) {

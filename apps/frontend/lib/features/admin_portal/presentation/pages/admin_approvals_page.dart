@@ -215,7 +215,7 @@ class _ApprovalsSummaryStrip extends ConsumerWidget {
           children: [
             Expanded(
               child: Text(
-                error.toString(),
+                AdminL10n.of(context).localizedError(error),
                 style: AdminTypography.pageSubtitle(palette),
               ),
             ),
@@ -642,7 +642,7 @@ class _CategoryRequestsPanel extends ConsumerWidget {
           AdminEmptyState(
             icon: Icons.error_outline,
             title: 'Could not load category requests',
-            subtitle: error.toString(),
+            subtitle: AdminL10n.of(context).localizedError(error),
           ),
           const SizedBox(height: 10),
           Align(
@@ -706,7 +706,7 @@ class _PriceRequestsPanel extends ConsumerWidget {
           AdminEmptyState(
             icon: Icons.error_outline,
             title: 'Could not load price requests',
-            subtitle: error.toString(),
+            subtitle: AdminL10n.of(context).localizedError(error),
           ),
           const SizedBox(height: 10),
           Align(
@@ -1438,7 +1438,7 @@ Future<void> _quickRejectCategory(
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.displayMessage),
+          content: Text(AdminL10n.of(context).localizedError(e)),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -1521,7 +1521,7 @@ Future<void> _quickApprovePrice(
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.displayMessage),
+          content: Text(AdminL10n.of(context).localizedError(e)),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -1628,7 +1628,7 @@ Future<void> _quickRejectPrice(
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.displayMessage),
+          content: Text(AdminL10n.of(context).localizedError(e)),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -1930,7 +1930,7 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.displayMessage),
+          content: Text(AdminL10n.of(context).localizedError(e)),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -2028,7 +2028,7 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.displayMessage),
+          content: Text(AdminL10n.of(context).localizedError(e)),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );

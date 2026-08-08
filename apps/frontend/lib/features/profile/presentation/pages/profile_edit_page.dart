@@ -117,7 +117,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       final message = switch (error.code) {
         'PROFILE_IMAGE_READ_FAILED' => l10n.imageReadFailed,
         'PROFILE_IMAGE_TOO_LARGE' => l10n.imageTooLarge,
-        _ => error.displayMessage,
+        _ => localizedApiErrorMessage(error, l10n),
       };
       showErrorSnackBar(context, message);
     }
@@ -203,10 +203,14 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       setState(() {
         _isSubmitting = false;
         _isUploading = false;
-        _displayNameError = firstFieldError(error, const ['displayName']);
-        _phoneError = firstFieldError(error, const ['phone']);
+        _displayNameError = firstFieldError(
+          error,
+          const ['displayName'],
+          l10n: l10n,
+        );
+        _phoneError = firstFieldError(error, const ['phone'], l10n: l10n);
         _formError = _displayNameError == null && _phoneError == null
-            ? error.displayMessage
+            ? localizedApiErrorMessage(error, l10n)
             : null;
       });
     } catch (_) {

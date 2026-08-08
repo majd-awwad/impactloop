@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_dialog_detail.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
@@ -303,9 +302,7 @@ class _AdminAuditLogsPageState extends ConsumerState<AdminAuditLogsPage> {
               ),
               error: (error, _) => _ErrorPanel(
                 title: 'Could not load audit logs.',
-                message: error is ApiException
-                    ? error.displayMessage
-                    : error.toString(),
+                message: AdminL10n.of(context).localizedError(error),
                 onRetry: _refresh,
               ),
               data: (data) => Column(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../materials/application/material_listing_providers.dart';
@@ -113,13 +114,15 @@ Map<String, dynamic> buildAdminComponentUpdatePayload({
   return body;
 }
 
-String formatAdminComponentEditorError(Object error) {
+String formatAdminComponentEditorError(Object error, AppLocalizations l10n) {
   final apiError = error is ApiException ? error : normalizeApiException(error);
   if (apiError.fieldIssues.isNotEmpty) {
-    return apiError.fieldIssues.map((issue) => issue.message).join('\n');
+    return apiError.fieldIssues
+        .map((issue) => localizedFieldIssueMessage(issue, l10n))
+        .join('\n');
   }
 
-  return apiError.displayMessage;
+  return localizedApiErrorMessage(apiError, l10n);
 }
 
 class AdminLearningProjectComponentEditorDialog extends ConsumerStatefulWidget {
@@ -275,7 +278,7 @@ class _AdminLearningProjectComponentEditorDialogState
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = formatAdminComponentEditorError(error);
+        _errorMessage = formatAdminComponentEditorError(error, context.l10n);
         _isSaving = false;
       });
     }

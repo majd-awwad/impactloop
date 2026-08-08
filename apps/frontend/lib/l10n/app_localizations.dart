@@ -188,6 +188,66 @@ abstract class AppLocalizations {
   /// **'Complete this required detail before continuing.'**
   String get completeRequiredDetail;
 
+  /// No description provided for @projectSubmissionCoverImageRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least one project image before submitting for review.'**
+  String get projectSubmissionCoverImageRequired;
+
+  /// No description provided for @projectSubmissionRequiredComponentsRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least one required component before submitting.'**
+  String get projectSubmissionRequiredComponentsRequired;
+
+  /// No description provided for @projectSubmissionStepsRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least one project step before submitting.'**
+  String get projectSubmissionStepsRequired;
+
+  /// No description provided for @projectSubmissionCategoryRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a project category before submitting.'**
+  String get projectSubmissionCategoryRequired;
+
+  /// No description provided for @projectSubmissionTitleRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a project title before submitting.'**
+  String get projectSubmissionTitleRequired;
+
+  /// No description provided for @projectSubmissionShortDescriptionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a short description before submitting.'**
+  String get projectSubmissionShortDescriptionRequired;
+
+  /// No description provided for @projectSubmissionDescriptionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a full project description before submitting.'**
+  String get projectSubmissionDescriptionRequired;
+
+  /// No description provided for @projectSubmissionDifficultyRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a difficulty level before submitting.'**
+  String get projectSubmissionDifficultyRequired;
+
+  /// No description provided for @projectSubmissionDurationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an estimated project duration before submitting.'**
+  String get projectSubmissionDurationRequired;
+
+  /// No description provided for @projectSubmissionDetailsRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete the required project details before submitting.'**
+  String get projectSubmissionDetailsRequired;
+
   /// No description provided for @currencyNis.
   ///
   /// In en, this message translates to:

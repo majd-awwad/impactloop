@@ -41,6 +41,31 @@ void main() {
     expect(labels.deliveryStatus('ON_THE_WAY'), ar.statusOnTheWay);
   });
 
+  test('localized field issues do not expose backend prose', () {
+    const error = ApiException(
+      message: 'title must be longer than 3 characters',
+      code: 'VALIDATION_ERROR',
+      details: {
+        'issues': [
+          {'path': 'title', 'message': 'title must be longer than 3 characters'},
+        ],
+      },
+    );
+
+    expect(
+      localizedFieldIssueMessage(error.fieldIssues.first, ar),
+      ar.projectSubmissionTitleRequired,
+    );
+    expect(
+      localizedFieldIssueMessage(error.fieldIssues.first, en),
+      en.projectSubmissionTitleRequired,
+    );
+    expect(
+      localizedFieldIssueMessage(error.fieldIssues.first, ar),
+      isNot(contains('characters')),
+    );
+  });
+
   test('localized API errors do not expose backend prose', () {
     const error = ApiException(
       message: 'Internal database detail that must not be shown',

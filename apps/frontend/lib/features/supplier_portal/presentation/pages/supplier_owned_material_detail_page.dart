@@ -93,7 +93,7 @@ class _MaterialWorkspaceState extends ConsumerState<_MaterialWorkspace> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.displayMessage),
+          content: Text(localizedApiErrorMessage(e, context.l10n)),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -117,7 +117,7 @@ class _MaterialWorkspaceState extends ConsumerState<_MaterialWorkspace> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.displayMessage),
+          content: Text(localizedApiErrorMessage(e, context.l10n)),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );

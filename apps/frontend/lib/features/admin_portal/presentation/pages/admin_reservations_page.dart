@@ -354,12 +354,12 @@ class _AdminReservationsPageState extends ConsumerState<AdminReservationsPage> {
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
       );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
       );
     } finally {
       if (mounted) {
@@ -407,9 +407,7 @@ class _AdminReservationsPageState extends ConsumerState<AdminReservationsPage> {
               loading: () => const _ReservationsSkeleton(),
               error: (error, _) => AdminMonitoringErrorPanel(
                 title: 'Could not load reservations.',
-                message: error is ApiException
-                    ? error.displayMessage
-                    : error.toString(),
+                message: AdminL10n.of(context).localizedError(error),
                 onRetry: _refresh,
               ),
               data: (data) => Column(
@@ -705,13 +703,13 @@ class _AdminReservationsExportDialogState
       if (!mounted) return;
       setState(() {
         _isDownloading = false;
-        _error = error.displayMessage;
+        _error = AdminL10n.of(context).localizedError(error);
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _isDownloading = false;
-        _error = error.toString();
+        _error = AdminL10n.of(context).localizedError(error);
       });
     }
   }
@@ -1994,9 +1992,7 @@ class _ReservationDetailDialog extends ConsumerWidget {
         ),
         error: (error, _) => AdminMonitoringErrorPanel(
           title: 'Could not load reservation details.',
-          message: error is ApiException
-              ? error.displayMessage
-              : error.toString(),
+          message: AdminL10n.of(context).localizedError(error),
           onRetry: () =>
               ref.invalidate(_adminReservationDetailProvider(reservationId)),
         ),
