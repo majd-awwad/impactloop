@@ -2393,6 +2393,7 @@ model LearnerMaterialRequest {
   projectBuildId              String?                       @map("project_build_id")
   projectBuildItemId          String?                       @map("project_build_item_id")
   status                      LearnerMaterialRequestStatus  @default(OPEN)
+  openBusinessKey             String?                       @unique @map("open_business_key")
   neededBy                    DateTime?                     @map("needed_by")
   expiresAt                   DateTime                      @map("expires_at")
   fulfilledAt                 DateTime?                     @map("fulfilled_at")

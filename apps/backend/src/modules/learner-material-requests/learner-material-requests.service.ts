@@ -2,7 +2,10 @@ import { prisma } from '../../database/prisma.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
 import { normalizeSearchText } from '../../utils/normalize-search-text.js';
-import { runSerializableTransaction } from '../../utils/transaction-retry.js';
+import {
+  isPrismaCode,
+  runSerializableTransaction,
+} from '../../utils/transaction-retry.js';
 import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
 import {
   syncBuildItemFromCompletedMaterialRequest,
@@ -19,6 +22,10 @@ import {
   MAX_OPEN_LEARNER_MATERIAL_REQUESTS,
   shouldLazyExpire,
 } from '../material-requests/material-requests.lifecycle.js';
+import {
+  buildLearnerMaterialRequestOpenBusinessKey,
+  clearLearnerMaterialRequestOpenBusinessKey,
+} from '../material-requests/material-requests.open-business-key.js';
 import { reconcileFulfilledRequestBuildSync } from '../material-requests/material-requests.build-sync-reconciliation.js';
 import { refreshUnavailableSuggestedMatches } from '../material-requests/material-requests.match-availability.js';
 
@@ -46,6 +53,7 @@ const ensureNotExpired = async <
   ) {
     return repository.updateRequest(request.id, {
       status: 'EXPIRED',
+      ...clearLearnerMaterialRequestOpenBusinessKey,
     });
   }
   return request;
@@ -188,7 +196,8 @@ export const createLearnerMaterialRequest = async (
   input: CreateLearnerMaterialRequestInput,
   tx?: Prisma.TransactionClient,
 ) => {
-  const persist = async (client: Prisma.TransactionClient | typeof prisma) => {
+  const persist = async (client: Prisma.TransactionClient) => {
+    await repository.lockLearnerForMaterialRequestCreate(learnerId, client);
     await assertSelectableCategory(input.categoryId, client);
     const openCount = await repository.countOpenRequestsForLearner(
       learnerId,
@@ -203,6 +212,11 @@ export const createLearnerMaterialRequest = async (
     }
 
     const normalized = normalizeSearchText(input.requestedItemName);
+    const openBusinessKey = buildLearnerMaterialRequestOpenBusinessKey(
+      learnerId,
+      input.categoryId,
+      normalized,
+    );
     const duplicate = await repository.findDuplicateOpenRequest(
       {
         learnerId,
@@ -254,6 +268,7 @@ export const createLearnerMaterialRequest = async (
           ? { projectBuildItem: { connect: { id: origin.projectBuildItemId } } }
           : {}),
         status: 'OPEN',
+        openBusinessKey,
         neededBy: input.neededBy ?? null,
         expiresAt,
       },
@@ -263,11 +278,24 @@ export const createLearnerMaterialRequest = async (
     return mapLearnerRequest(created);
   };
 
-  if (tx) {
-    return persist(tx);
-  }
+  try {
+    if (tx) {
+      return await persist(tx);
+    }
 
-  return persist(prisma);
+    return await runSerializableTransaction((serializableTx) =>
+      persist(serializableTx),
+    );
+  } catch (error) {
+    if (isPrismaCode(error, 'P2002')) {
+      throw new AppError(
+        'An open request already exists for this item and category',
+        409,
+        'DUPLICATE_OPEN_REQUEST',
+      );
+    }
+    throw error;
+  }
 };
 
 export const createLearnerMaterialRequestIdempotent = async (
@@ -440,6 +468,17 @@ export const updateLearnerMaterialRequest = async (
     ...(input.categoryId
       ? { category: { connect: { id: input.categoryId } } }
       : {}),
+    ...(input.requestedItemName || input.categoryId
+      ? {
+          openBusinessKey: buildLearnerMaterialRequestOpenBusinessKey(
+            learnerId,
+            input.categoryId ?? current.categoryId,
+            input.requestedItemName
+              ? normalizeSearchText(input.requestedItemName)
+              : current.normalizedRequestedItemName,
+          ),
+        }
+      : {}),
     ...(input.description !== undefined
       ? { description: input.description }
       : {}),
@@ -480,6 +519,7 @@ export const cancelLearnerMaterialRequest = async (
   const updated = await repository.updateRequest(requestId, {
     status: 'CANCELLED',
     cancelledAt: new Date(),
+    ...clearLearnerMaterialRequestOpenBusinessKey,
   });
   return mapLearnerRequest(updated);
 };
@@ -499,6 +539,7 @@ export const fulfillLearnerMaterialRequest = async (
   const updated = await repository.updateRequest(requestId, {
     status: 'FULFILLED',
     fulfilledAt: new Date(),
+    ...clearLearnerMaterialRequestOpenBusinessKey,
   });
   return mapLearnerRequest(updated);
 };
@@ -663,7 +704,10 @@ export const fulfillRequestFromCompletedReservation = async (
       ) {
         await tx.learnerMaterialRequest.update({
           where: { id: materialRequest.id },
-          data: { status: 'EXPIRED' },
+          data: {
+            status: 'EXPIRED',
+            ...clearLearnerMaterialRequestOpenBusinessKey,
+          },
         });
         return null;
       }
@@ -673,6 +717,7 @@ export const fulfillRequestFromCompletedReservation = async (
         data: {
           status: 'FULFILLED',
           fulfilledAt: new Date(),
+          ...clearLearnerMaterialRequestOpenBusinessKey,
         },
       });
       transitionedToFulfilled = true;
