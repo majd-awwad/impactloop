@@ -1,0 +1,27 @@
+# Dependencies and build output
+**/node_modules
+apps/backend/dist
+
+# Local secrets and runtime data
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.docker.example
+apps/backend/uploads
+
+# VCS and editor noise
+.git
+.github
+.cursor
+.vscode
+**/*.md
+!docs/deployment.md
+
+# Frontend and ML (not part of backend image)
+apps/frontend
+ml
+
+# Tests and dev artifacts
+**/*.test.ts
+**/__tests__
+.pytest_cache

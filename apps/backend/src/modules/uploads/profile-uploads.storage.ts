@@ -1,19 +1,13 @@
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
+import { resolveUploadSubdir } from '../../config/upload-storage.env.js';
 import {
   PROFILE_UPLOAD_ALLOWED_MIME_TYPES,
   PROFILE_UPLOAD_PUBLIC_PREFIX,
 } from '../../constants/profile-upload.js';
 
-const backendRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../../..',
-);
-
-export const PROFILE_UPLOADS_DIR = path.join(backendRoot, 'uploads', 'profiles');
+export const PROFILE_UPLOADS_DIR = resolveUploadSubdir('profiles');
 
 export const ensureProfileUploadsDir = (): void => {
   fs.mkdirSync(PROFILE_UPLOADS_DIR, { recursive: true });

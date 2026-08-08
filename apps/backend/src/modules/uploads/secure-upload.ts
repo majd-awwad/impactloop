@@ -2,18 +2,13 @@ import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import sharp from 'sharp';
 
+import { resolveUploadSubdir } from '../../config/upload-storage.env.js';
 import { AppError } from '../../utils/app-error.js';
 
-const backendRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../../..',
-);
-
-export const UPLOAD_TEMP_DIR = path.join(backendRoot, 'uploads', '.tmp');
+export const UPLOAD_TEMP_DIR = resolveUploadSubdir('.tmp');
 
 export const ensureUploadTempDir = (): void => {
   fs.mkdirSync(UPLOAD_TEMP_DIR, { recursive: true });

@@ -1,19 +1,14 @@
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
+import { resolveUploadSubdir } from '../../config/upload-storage.env.js';
 import {
   MATERIAL_UPLOAD_ALLOWED_MIME_TYPES,
   MATERIAL_UPLOAD_PUBLIC_PREFIX,
 } from '../../constants/material-upload.js';
 
-const backendRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../../..',
-);
-
-export const MATERIAL_UPLOADS_DIR = path.join(backendRoot, 'uploads', 'materials');
+export const MATERIAL_UPLOADS_DIR = resolveUploadSubdir('materials');
 
 export const ensureMaterialUploadsDir = (): void => {
   fs.mkdirSync(MATERIAL_UPLOADS_DIR, { recursive: true });

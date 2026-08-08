@@ -2,8 +2,8 @@ import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
+import { resolveUploadSubdir } from '../../config/upload-storage.env.js';
 import {
   SUPPLIER_VERIFICATION_UPLOAD_ALLOWED_MIME_TYPES,
   SUPPLIER_VERIFICATION_UPLOAD_PUBLIC_PREFIX,
@@ -16,14 +16,7 @@ import {
   validateVerificationDocumentAtPath,
 } from './secure-upload.js';
 
-const backendRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../../..',
-);
-
-export const SUPPLIER_VERIFICATION_UPLOADS_DIR = path.join(
-  backendRoot,
-  'uploads',
+export const SUPPLIER_VERIFICATION_UPLOADS_DIR = resolveUploadSubdir(
   'supplier-verification',
 );
 
