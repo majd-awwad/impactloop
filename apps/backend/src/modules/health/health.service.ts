@@ -1,7 +1,9 @@
+import type { DatabaseHealthSnapshot } from './database-health.probe.js';
 import type {
   RecommendationOutboxHealthSnapshot,
   RecommendationOutboxStopResult,
 } from '../recommendation-events/recommendation-events.outbox.worker.js';
+import type { ReservationLifecycleHealthSnapshot } from '../reservations/reservation-lifecycle.worker.js';
 
 export type HealthStatus = {
   status: 'ok';
@@ -14,9 +16,19 @@ export type RecommendationOutboxHealthProvider = {
   markShutdownRequested?: () => void;
 };
 
+export type DatabaseHealthProvider = {
+  getSnapshot: (nowMs?: number) => DatabaseHealthSnapshot;
+};
+
+export type ReservationLifecycleHealthProvider = {
+  getSnapshot: (nowMs?: number) => ReservationLifecycleHealthSnapshot;
+};
+
 export type ReadinessStatus = {
   ready: boolean;
   recommendationOutbox: RecommendationOutboxHealthSnapshot | null;
+  database: DatabaseHealthSnapshot | null;
+  reservationLifecycle: ReservationLifecycleHealthSnapshot | null;
   reasonCodes: string[];
 };
 
@@ -31,6 +43,9 @@ export type ReadinessAwareShutdownDeps = {
 };
 
 let outboxHealthProvider: RecommendationOutboxHealthProvider | null = null;
+let databaseHealthProvider: DatabaseHealthProvider | null = null;
+let reservationLifecycleHealthProvider: ReservationLifecycleHealthProvider | null =
+  null;
 let shutdownRequested = false;
 
 export const getHealthStatus = (): HealthStatus => ({
@@ -45,6 +60,18 @@ export const registerRecommendationOutboxHealthProvider = (
   outboxHealthProvider = provider;
 };
 
+export const registerDatabaseHealthProvider = (
+  provider: DatabaseHealthProvider | null,
+): void => {
+  databaseHealthProvider = provider;
+};
+
+export const registerReservationLifecycleHealthProvider = (
+  provider: ReservationLifecycleHealthProvider | null,
+): void => {
+  reservationLifecycleHealthProvider = provider;
+};
+
 export const beginReadinessShutdown = (): void => {
   shutdownRequested = true;
   outboxHealthProvider?.markShutdownRequested?.();
@@ -55,26 +82,63 @@ export const isReadinessShutdownRequested = (): boolean => shutdownRequested;
 export const resetHealthShutdownStateForTests = (): void => {
   shutdownRequested = false;
   outboxHealthProvider = null;
+  databaseHealthProvider = null;
+  reservationLifecycleHealthProvider = null;
+};
+
+const collectContributorReadiness = (
+  snapshot: { ready: boolean; reasonCodes: string[] } | null,
+  missingReasonCode: string,
+): { ready: boolean; reasonCodes: string[] } => {
+  if (!snapshot) {
+    return { ready: false, reasonCodes: [missingReasonCode] };
+  }
+  return {
+    ready: snapshot.ready,
+    reasonCodes: snapshot.reasonCodes,
+  };
 };
 
 export const getReadinessStatus = (nowMs: number = Date.now()): ReadinessStatus => {
-  if (!outboxHealthProvider) {
-    return {
-      ready: false,
-      recommendationOutbox: null,
-      reasonCodes: ['OUTBOX_HEALTH_PROVIDER_MISSING'],
-    };
-  }
+  const outboxSnapshot = outboxHealthProvider?.getSnapshot(nowMs) ?? null;
+  const databaseSnapshot = databaseHealthProvider?.getSnapshot(nowMs) ?? null;
+  const reservationLifecycleSnapshot =
+    reservationLifecycleHealthProvider?.getSnapshot(nowMs) ?? null;
 
-  const snapshot = outboxHealthProvider.getSnapshot(nowMs);
-  const ready = shutdownRequested ? false : snapshot.ready;
+  const outbox = collectContributorReadiness(
+    outboxSnapshot,
+    'OUTBOX_HEALTH_PROVIDER_MISSING',
+  );
+  const database = collectContributorReadiness(
+    databaseSnapshot,
+    'DATABASE_HEALTH_PROVIDER_MISSING',
+  );
+  const reservationLifecycle = collectContributorReadiness(
+    reservationLifecycleSnapshot,
+    'RESERVATION_LIFECYCLE_HEALTH_PROVIDER_MISSING',
+  );
+
+  const reasonCodes = Array.from(
+    new Set([
+      ...outbox.reasonCodes,
+      ...database.reasonCodes,
+      ...reservationLifecycle.reasonCodes,
+      ...(shutdownRequested ? ['SHUTDOWN_IN_PROGRESS'] : []),
+    ]),
+  );
+
+  const ready =
+    !shutdownRequested &&
+    outbox.ready &&
+    database.ready &&
+    reservationLifecycle.ready;
 
   return {
     ready,
-    recommendationOutbox: snapshot,
-    reasonCodes: shutdownRequested
-      ? Array.from(new Set([...snapshot.reasonCodes, 'SHUTDOWN_IN_PROGRESS']))
-      : snapshot.reasonCodes,
+    recommendationOutbox: outboxSnapshot,
+    database: databaseSnapshot,
+    reservationLifecycle: reservationLifecycleSnapshot,
+    reasonCodes,
   };
 };
 
