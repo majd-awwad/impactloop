@@ -13,9 +13,12 @@ import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../../core/polling/lifecycle_polling_controller.dart';
+import '../../../../core/polling/lifecycle_polling_host.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../deliveries/application/learner_deliveries_provider.dart';
 import '../../../deliveries/data/models/learner_delivery.dart';
+import '../../application/learner_reservation_refresh.dart';
 import '../../application/my_reservations_provider.dart';
 import '../../data/models/learner_reservation.dart';
 import '../widgets/learner_reservation_list_card.dart';
@@ -23,7 +26,6 @@ import '../learner_reservation_payment_presentation.dart';
 import '../learner_reservation_ui_helpers.dart';
 
 const _learnerReservationsMaxWidth = 1240.0;
-const _reservationRefreshInterval = Duration(seconds: 10);
 /// Comfort gap above the mobile bottom nav so the last card clears it.
 const _listBottomNavClearance = 24.0;
 
@@ -82,26 +84,51 @@ class _ReservationsContent extends ConsumerStatefulWidget {
       _ReservationsContentState();
 }
 
-class _ReservationsContentState extends ConsumerState<_ReservationsContent> {
+class _ReservationsContentState extends ConsumerState<_ReservationsContent>
+    with WidgetsBindingObserver, LifecyclePollingHost<_ReservationsContent> {
   LearnerReservationStatusFilter _selectedFilter =
       LearnerReservationStatusFilter.all;
-  Timer? _refreshTimer;
   var _hasLoadedOnce = false;
+
+  late final LifecyclePollingController _refreshController =
+      LifecyclePollingController(
+        interval: learnerReservationRefreshInterval,
+        onRefresh: _refreshReservations,
+      );
+
+  @override
+  LifecyclePollingController get lifecyclePollingController =>
+      _refreshController;
 
   @override
   void initState() {
     super.initState();
-    // Keep existing data visible; avoid forced invalidate on first frame in tests.
-    _refreshTimer = Timer.periodic(
-      _reservationRefreshInterval,
-      (_) => _refreshReservations(),
-    );
+    initLifecyclePollingHost();
   }
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
+    disposeLifecyclePollingHost();
     super.dispose();
+  }
+
+  @override
+  void onLifecyclePollingRouteVisible() {
+    _refreshReservations();
+  }
+
+  @override
+  void onLifecyclePollingAppResumed() {
+    _refreshReservations();
+  }
+
+  void _syncReservationPolling(
+    List<LearnerReservation> reservations,
+    List<LearnerDelivery> deliveries,
+  ) {
+    _refreshController.syncEnabled(
+      learnerReservationsListNeedsActiveRefresh(reservations, deliveries),
+    );
   }
 
   void _refreshReservations() {
@@ -133,6 +160,19 @@ class _ReservationsContentState extends ConsumerState<_ReservationsContent> {
           setState(() => _hasLoadedOnce = true);
         }
       });
+      final reservations = next.asData?.value;
+      final deliveries = ref.read(learnerDeliveriesProvider).asData?.value;
+      if (reservations != null && deliveries != null) {
+        _syncReservationPolling(reservations, deliveries);
+      }
+    });
+
+    ref.listen(learnerDeliveriesProvider, (previous, next) {
+      final deliveries = next.asData?.value;
+      final reservations = ref.read(myReservationsProvider).asData?.value;
+      if (reservations != null && deliveries != null) {
+        _syncReservationPolling(reservations, deliveries);
+      }
     });
 
     return RefreshIndicator(

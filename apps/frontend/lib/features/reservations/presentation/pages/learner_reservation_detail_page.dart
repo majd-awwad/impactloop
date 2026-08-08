@@ -12,16 +12,19 @@ import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../../core/polling/lifecycle_polling_controller.dart';
+import '../../../../core/polling/lifecycle_polling_host.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_route_helpers.dart';
 import '../../../deliveries/application/learner_deliveries_provider.dart';
 import '../../../deliveries/data/models/learner_delivery.dart';
 import '../../application/learner_reservation_provider.dart';
+import '../../data/models/learner_reservation.dart';
+import '../../application/learner_reservation_refresh.dart';
 import '../detail/reservation_detail_sticky_action_bar.dart';
 import '../widgets/learner_reservation_details_body.dart';
 
 const _detailMaxWidth = 1240.0;
-const _refreshInterval = Duration(seconds: 10);
 
 class LearnerReservationDetailPage extends ConsumerWidget {
   const LearnerReservationDetailPage({
@@ -107,17 +110,27 @@ class _ReservationDetailContent extends ConsumerStatefulWidget {
 }
 
 class _ReservationDetailContentState
-    extends ConsumerState<_ReservationDetailContent> {
-  Timer? _refreshTimer;
+    extends ConsumerState<_ReservationDetailContent>
+    with WidgetsBindingObserver, LifecyclePollingHost<_ReservationDetailContent> {
   String? _checkoutableOrderId;
   final _pickupCodeSectionKey = GlobalKey();
+
+  late final LifecyclePollingController _refreshController =
+      LifecyclePollingController(
+        interval: learnerReservationRefreshInterval,
+        onRefresh: _refresh,
+      );
+
+  @override
+  LifecyclePollingController get lifecyclePollingController =>
+      _refreshController;
 
   @override
   void initState() {
     super.initState();
+    initLifecyclePollingHost();
     _checkoutableOrderId = widget.focusPaymentOrderId;
     Future.microtask(_refresh);
-    _refreshTimer = Timer.periodic(_refreshInterval, (_) => _refresh());
   }
 
   @override
@@ -131,8 +144,27 @@ class _ReservationDetailContentState
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
+    disposeLifecyclePollingHost();
     super.dispose();
+  }
+
+  @override
+  void onLifecyclePollingRouteVisible() {
+    _refresh();
+  }
+
+  @override
+  void onLifecyclePollingAppResumed() {
+    _refresh();
+  }
+
+  void _syncReservationPolling(
+    LearnerReservation reservation,
+    List<LearnerDelivery> deliveries,
+  ) {
+    _refreshController.syncEnabled(
+      learnerReservationDetailNeedsActiveRefresh(reservation, deliveries),
+    );
   }
 
   void _refresh() {
@@ -168,6 +200,28 @@ class _ReservationDetailContentState
     final width = MediaQuery.sizeOf(context).width;
     final compact = width < 720;
     final showStickyOnMobile = width < 600;
+
+    ref.listen(learnerReservationProvider(widget.reservationId), (
+      previous,
+      next,
+    ) {
+      final reservation = next.asData?.value;
+      final deliveries = ref.read(learnerDeliveriesProvider).asData?.value;
+      if (reservation != null && deliveries != null) {
+        _syncReservationPolling(reservation, deliveries);
+      }
+    });
+
+    ref.listen(learnerDeliveriesProvider, (previous, next) {
+      final deliveries = next.asData?.value;
+      final reservation = ref
+          .read(learnerReservationProvider(widget.reservationId))
+          .asData
+          ?.value;
+      if (reservation != null && deliveries != null) {
+        _syncReservationPolling(reservation, deliveries);
+      }
+    });
 
     return Column(
       key: const Key('reservation-details-layout'),

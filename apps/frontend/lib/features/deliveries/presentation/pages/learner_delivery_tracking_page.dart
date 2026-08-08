@@ -5,6 +5,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/polling/lifecycle_polling_controller.dart';
+import '../../../../core/polling/lifecycle_polling_host.dart';
 import '../../../../l10n/l10n.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -33,19 +35,28 @@ class LearnerDeliveryTrackingPage extends ConsumerStatefulWidget {
 }
 
 class _LearnerDeliveryTrackingPageState
-    extends ConsumerState<LearnerDeliveryTrackingPage> {
-  Timer? _pollTimer;
+    extends ConsumerState<LearnerDeliveryTrackingPage>
+    with WidgetsBindingObserver, LifecyclePollingHost<LearnerDeliveryTrackingPage> {
   LearnerDeliveryTracking? _tracking;
   bool _initialLoading = true;
   bool _pollInFlight = false;
   bool _manualRefreshing = false;
   Object? _error;
   String? _backgroundWarning;
-  bool _pollTimerActive = false;
+
+  late final LifecyclePollingController _pollController =
+      LifecyclePollingController(
+        interval: _trackingPollInterval,
+        onRefresh: () => unawaited(_fetchTracking(silent: true)),
+      );
+
+  @override
+  LifecyclePollingController get lifecyclePollingController => _pollController;
 
   @override
   void initState() {
     super.initState();
+    initLifecyclePollingHost();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_fetchTracking(initial: true));
     });
@@ -53,9 +64,18 @@ class _LearnerDeliveryTrackingPageState
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
-    _pollTimer = null;
+    disposeLifecyclePollingHost();
     super.dispose();
+  }
+
+  @override
+  void onLifecyclePollingRouteVisible() {
+    unawaited(_fetchTracking(silent: true));
+  }
+
+  @override
+  void onLifecyclePollingAppResumed() {
+    unawaited(_fetchTracking(silent: true));
   }
 
   bool _trackingDataChanged(
@@ -90,28 +110,8 @@ class _LearnerDeliveryTrackingPageState
         prevLocation.capturedAt != nextLocation.capturedAt;
   }
 
-  void _stopPolling() {
-    _pollTimer?.cancel();
-    _pollTimer = null;
-    _pollTimerActive = false;
-  }
-
-  void _ensurePollTimer(LearnerDeliveryTracking tracking) {
-    final shouldPoll = tracking.canTrack && !tracking.isTerminal;
-
-    if (!shouldPoll) {
-      _stopPolling();
-      return;
-    }
-
-    if (_pollTimerActive) {
-      return;
-    }
-
-    _pollTimer = Timer.periodic(_trackingPollInterval, (_) {
-      unawaited(_fetchTracking(silent: true));
-    });
-    _pollTimerActive = true;
+  void _syncPolling(LearnerDeliveryTracking tracking) {
+    _pollController.syncEnabled(tracking.canTrack && !tracking.isTerminal);
   }
 
   Future<void> _fetchTracking({
@@ -166,9 +166,9 @@ class _LearnerDeliveryTrackingPageState
       }
 
       if (tracking.isTerminal || !tracking.canTrack) {
-        _stopPolling();
+        _pollController.syncEnabled(false);
       } else {
-        _ensurePollTimer(tracking);
+        _syncPolling(tracking);
       }
     } catch (error) {
       if (!mounted) {
@@ -180,7 +180,7 @@ class _LearnerDeliveryTrackingPageState
           _initialLoading = false;
           _error = error;
         });
-        _stopPolling();
+        _pollController.syncEnabled(false);
       } else if (silent || manual) {
         setState(() => _backgroundWarning = context.l10n.trackingRefreshFailed);
       }
