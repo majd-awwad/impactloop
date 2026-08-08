@@ -11,6 +11,7 @@ import {
   type MaterialComponentMatchReasonCode,
 } from '../learning-projects/learning-projects.build-candidate-ranking.js';
 import { mapSupplierRequest } from '../material-requests/material-requests.dto.js';
+import type { RequestRow } from '../material-requests/material-requests.dto.js';
 import {
   isWeakMatchScore,
   shouldLazyExpire,
@@ -122,7 +123,7 @@ export const listSupplierMaterialRequests = async (
 
   return {
     items: rows.map((row) =>
-      mapSupplierRequest(row, { supplierUserId, includeOwnMatches: false }),
+      mapSupplierRequest(row as unknown as RequestRow, { supplierUserId, includeOwnMatches: false }),
     ),
     page: query.page,
     limit: query.limit,
@@ -140,7 +141,7 @@ export const getSupplierMaterialRequest = async (
     supplierUserId,
   );
 
-  return mapSupplierRequest(row, { supplierUserId, includeOwnMatches: true });
+  return mapSupplierRequest(row as unknown as RequestRow, { supplierUserId, includeOwnMatches: true });
 };
 
 const requireOpenRequestForSupplier = async (
@@ -245,7 +246,7 @@ export const suggestMaterialForRequest = async (
       request.id,
       supplierUserId,
     );
-    return mapSupplierRequest(fresh!, {
+    return mapSupplierRequest(fresh! as unknown as RequestRow, {
       supplierUserId,
       includeOwnMatches: true,
     });
@@ -326,5 +327,5 @@ export const suggestMaterialForRequest = async (
     request.id,
     supplierUserId,
   );
-  return mapSupplierRequest(fresh!, { supplierUserId, includeOwnMatches: true });
+  return mapSupplierRequest(fresh! as unknown as RequestRow, { supplierUserId, includeOwnMatches: true });
 };
