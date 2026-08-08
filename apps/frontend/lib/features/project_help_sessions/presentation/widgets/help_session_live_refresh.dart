@@ -1,8 +1,8 @@
-import 'dart:async';
-
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/polling/lifecycle_polling_controller.dart';
+import '../../../../core/polling/lifecycle_polling_host.dart';
 import '../../application/project_help_sessions_providers.dart';
 import '../../data/models/project_help_session_models.dart';
 
@@ -29,13 +29,20 @@ class HelpSessionLiveRefresh extends ConsumerStatefulWidget {
 }
 
 class _HelpSessionLiveRefreshState extends ConsumerState<HelpSessionLiveRefresh>
-    with WidgetsBindingObserver {
-  Timer? _timer;
+    with WidgetsBindingObserver, LifecyclePollingHost<HelpSessionLiveRefresh> {
+  late final LifecyclePollingController _pollController =
+      LifecyclePollingController(
+        interval: widget.interval,
+        onRefresh: _invalidateDetail,
+      );
+
+  @override
+  LifecyclePollingController get lifecyclePollingController => _pollController;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
+    initLifecyclePollingHost();
     _schedulePolling();
   }
 
@@ -51,24 +58,22 @@ class _HelpSessionLiveRefreshState extends ConsumerState<HelpSessionLiveRefresh>
 
   @override
   void dispose() {
-    _timer?.cancel();
-    WidgetsBinding.instance.removeObserver(this);
+    disposeLifecyclePollingHost();
     super.dispose();
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _invalidateDetail();
-    }
+  void onLifecyclePollingRouteVisible() {
+    _invalidateDetail();
+  }
+
+  @override
+  void onLifecyclePollingAppResumed() {
+    _invalidateDetail();
   }
 
   void _schedulePolling() {
-    _timer?.cancel();
-    if (!widget.status.isActive) {
-      return;
-    }
-    _timer = Timer.periodic(widget.interval, (_) => _invalidateDetail());
+    _pollController.syncEnabled(widget.status.isActive);
   }
 
   void _invalidateDetail() {

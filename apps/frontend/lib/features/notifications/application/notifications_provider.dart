@@ -14,6 +14,26 @@ import 'notification_display.dart';
 import 'payment_notification_presentation.dart';
 
 const notificationsPageSize = 20;
+const notificationsPollInterval = Duration(seconds: 30);
+
+/// Number of open notification list screens. Badge polling pauses while > 0.
+final notificationsListPageVisibleProvider =
+    NotifierProvider<NotificationsListPageVisibleNotifier, int>(
+      NotificationsListPageVisibleNotifier.new,
+    );
+
+class NotificationsListPageVisibleNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void increment() => state++;
+
+  void decrement() {
+    if (state > 0) {
+      state--;
+    }
+  }
+}
 
 enum NotificationReadFilter { all, unread, read }
 
@@ -391,11 +411,11 @@ final myNotificationUnreadCountProvider =
     );
 
 class NotificationUnreadCountNotifier extends AsyncNotifier<int> {
-  static const _pollInterval = Duration(seconds: 30);
-
   @override
   Future<int> build() async {
     final authKey = ref.watch(authControllerProvider.select(_authListWatchKey));
+    final notificationsPageVisible =
+        ref.watch(notificationsListPageVisibleProvider) > 0;
 
     if (authKey.$1 == AuthStatus.unknown) {
       return 0;
@@ -407,13 +427,16 @@ class NotificationUnreadCountNotifier extends AsyncNotifier<int> {
 
     // Light polling so the bell badge updates without opening /notifications.
     // Reuses the existing unread-count endpoint — no new WebSocket system.
-    final timer = Timer.periodic(_pollInterval, (_) {
-      if (!ref.mounted) {
-        return;
-      }
-      ref.invalidateSelf();
-    });
-    ref.onDispose(timer.cancel);
+    // Pauses while the notifications list is open to avoid duplicate 30s timers.
+    if (!notificationsPageVisible) {
+      final timer = Timer.periodic(notificationsPollInterval, (_) {
+        if (!ref.mounted) {
+          return;
+        }
+        ref.invalidateSelf();
+      });
+      ref.onDispose(timer.cancel);
+    }
 
     return ref.read(notificationsApiProvider).fetchUnreadCount();
   }

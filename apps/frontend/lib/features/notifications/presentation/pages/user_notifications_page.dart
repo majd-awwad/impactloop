@@ -20,6 +20,8 @@ import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_route_helpers.dart';
 import '../../../auth/data/models/user.dart';
 import '../../application/notification_display.dart';
+import '../../../../core/polling/lifecycle_polling_controller.dart';
+import '../../../../core/polling/lifecycle_polling_host.dart';
 import '../../application/notifications_provider.dart';
 import '../../application/payment_notification_presentation.dart';
 import '../../data/models/app_notification.dart';
@@ -28,8 +30,6 @@ import '../../../project_help_sessions/presentation/l10n/project_help_sessions_l
 import '../notification_visual_presentation.dart';
 import '../notification_visuals.dart';
 import '../widgets/payment_notification_detail_sheet.dart';
-
-const _notificationsPollInterval = Duration(seconds: 30);
 
 class UserNotificationsPage extends ConsumerWidget {
   const UserNotificationsPage({super.key, this.embeddedInShell = false});
@@ -104,26 +104,50 @@ class _NotificationsBody extends ConsumerStatefulWidget {
   ConsumerState<_NotificationsBody> createState() => _NotificationsBodyState();
 }
 
-class _NotificationsBodyState extends ConsumerState<_NotificationsBody> {
+class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
+    with WidgetsBindingObserver, LifecyclePollingHost<_NotificationsBody> {
   bool _refreshInFlight = false;
-  Timer? _pollTimer;
   String? _openingNotificationId;
+
+  late final LifecyclePollingController _pollController =
+      LifecyclePollingController(
+        interval: notificationsPollInterval,
+        onRefresh: _pollNotifications,
+      );
+
+  @override
+  LifecyclePollingController get lifecyclePollingController => _pollController;
 
   @override
   void initState() {
     super.initState();
-    _pollTimer = Timer.periodic(_notificationsPollInterval, (_) {
-      if (!mounted || _refreshInFlight) {
-        return;
-      }
-      unawaited(refreshNotifications(ref));
-    });
+    initLifecyclePollingHost();
+    ref.read(notificationsListPageVisibleProvider.notifier).increment();
+    _pollController.syncEnabled(true);
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    ref.read(notificationsListPageVisibleProvider.notifier).decrement();
+    disposeLifecyclePollingHost();
     super.dispose();
+  }
+
+  @override
+  void onLifecyclePollingRouteVisible() {
+    _pollNotifications();
+  }
+
+  @override
+  void onLifecyclePollingAppResumed() {
+    _pollNotifications();
+  }
+
+  void _pollNotifications() {
+    if (!mounted || _refreshInFlight) {
+      return;
+    }
+    unawaited(refreshNotifications(ref));
   }
 
   Future<void> _handleRefresh() async {

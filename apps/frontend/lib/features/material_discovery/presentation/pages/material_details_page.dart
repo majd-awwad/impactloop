@@ -13,6 +13,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../core/polling/lifecycle_polling_controller.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
@@ -105,7 +106,11 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
   CancelToken? _viewerCancelToken;
   late String _viewOperationKey;
   bool _viewRecorded = false;
-  Timer? _reservationRefreshTimer;
+  late final LifecyclePollingController _reservationPollingController =
+      LifecyclePollingController(
+        interval: _reservationRefreshInterval,
+        onRefresh: () => unawaited(_loadViewerStateIfAuthenticated()),
+      );
   int _likeMutationGeneration = 0;
   bool _observingLifecycle = false;
   bool _isActive = true;
@@ -138,12 +143,14 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
     super.activate();
     _isActive = true;
     _startObservingLifecycle();
+    _reservationPollingController.setPaused(false);
     invalidateMaterialRelatedProjects(ref, widget.materialId);
   }
 
   @override
   void deactivate() {
     _isActive = false;
+    _reservationPollingController.setPaused(true);
     _stopObservingLifecycle();
     super.deactivate();
   }
@@ -185,8 +192,18 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (mounted && _isActive && state == AppLifecycleState.resumed) {
-      unawaited(_loadViewerStateIfAuthenticated());
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _reservationPollingController.setPaused(!_isActive);
+        if (mounted && _isActive) {
+          unawaited(_loadViewerStateIfAuthenticated());
+        }
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        _reservationPollingController.setPaused(true);
+      case AppLifecycleState.detached:
+        break;
     }
   }
 
@@ -205,7 +222,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
           _viewerStateLoading = false;
         });
       }
-      _reservationRefreshTimer?.cancel();
+      _reservationPollingController.syncEnabled(false);
       return;
     }
 
@@ -235,17 +252,12 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
   }
 
   void _syncReservationPolling() {
-    _reservationRefreshTimer?.cancel();
     final reservation = _viewerState?.reservation;
-    if (reservation == null || !_shouldPollReservation(reservation)) {
-      return;
-    }
-    _reservationRefreshTimer = Timer.periodic(_reservationRefreshInterval, (_) {
-      if (!mounted) {
-        return;
-      }
-      unawaited(_loadViewerStateIfAuthenticated());
-    });
+    final shouldPoll =
+        _isActive &&
+        reservation != null &&
+        _shouldPollReservation(reservation);
+    _reservationPollingController.syncEnabled(shouldPoll);
   }
 
   bool _shouldPollReservation(LearnerReservation reservation) {
@@ -264,7 +276,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
   void dispose() {
     _isActive = false;
     _stopObservingLifecycle();
-    _reservationRefreshTimer?.cancel();
+    _reservationPollingController.dispose();
     _materialCancelToken?.cancel('Material details disposed');
     _viewerCancelToken?.cancel('Material details disposed');
     super.dispose();
