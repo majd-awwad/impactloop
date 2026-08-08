@@ -83,6 +83,15 @@ export const countOpenRequestsForLearner = (
     where: { learnerId, status: 'OPEN' },
   });
 
+/** Serializes create/update paths that enforce open-request invariants per learner. */
+export const lockLearnerForMaterialRequestCreate = (
+  learnerId: string,
+  client: PrismaClientLike = prisma,
+) =>
+  client.$executeRaw`
+    SELECT id FROM users WHERE id = ${learnerId} FOR UPDATE
+  `;
+
 export const findDuplicateOpenRequest = (
   input: {
     learnerId: string;

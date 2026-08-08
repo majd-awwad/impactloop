@@ -51,7 +51,7 @@ export const supplierRequestInclude = (
 export const expireStaleOpenRequests = () =>
   prisma.learnerMaterialRequest.updateMany({
     where: { status: 'OPEN', expiresAt: { lte: new Date() } },
-    data: { status: 'EXPIRED' },
+    data: { status: 'EXPIRED', openBusinessKey: null },
   });
 
 export const buildSupplierFeedWhere = (input: {
