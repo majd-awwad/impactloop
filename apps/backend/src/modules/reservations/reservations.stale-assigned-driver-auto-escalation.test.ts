@@ -410,6 +410,11 @@ describe('stale assigned-driver auto-escalation', () => {
       'ARRIVED_PICKUP',
     );
 
+    const { escalateStaleAssignedDriverPickupsForRequester } = await import(
+      './reservations.stale-assigned-driver-auto-escalation.repository.js'
+    );
+    await escalateStaleAssignedDriverPickupsForRequester(ctx.learnerId);
+
     const listed = await listMyReservations(ctx.learnerId);
     const mapped = listed.find((entry) => entry.id === reservation.id);
     assert.ok(mapped);

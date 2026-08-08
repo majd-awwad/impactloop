@@ -47,7 +47,7 @@ export const supplierRequestInclude = (
     _count: { select: { matches: true } },
   }) satisfies Prisma.LearnerMaterialRequestInclude;
 
-/** Lazily flips OPEN requests that already passed expiresAt. Safe to call from any read path. */
+/** Batch expiry for the material-request lifecycle worker. */
 export const expireStaleOpenRequests = () =>
   prisma.learnerMaterialRequest.updateMany({
     where: { status: 'OPEN', expiresAt: { lte: new Date() } },

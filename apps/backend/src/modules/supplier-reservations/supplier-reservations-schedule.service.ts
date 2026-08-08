@@ -9,7 +9,6 @@ import {
 import type { ListSupplierScheduleQuery } from './supplier-reservations-schedule.validation.js';
 import {
   mapSupplierReservation,
-  runSupplierReservationLazyCleanup,
 } from './supplier-reservations.service.js';
 import type { SupplierReservationListRecord } from './supplier-reservations.repository.js';
 
@@ -274,8 +273,6 @@ export const listSupplierSchedulePage = async (
   ownerId: string,
   query: ListSupplierScheduleQuery,
 ) => {
-  await runSupplierReservationLazyCleanup(ownerId);
-
   const now = new Date();
   const dayStart = new Date(query.dayStart ?? now.toISOString());
   const dayEnd = new Date(query.dayEnd ?? new Date(now.getTime() + 86_400_000).toISOString());

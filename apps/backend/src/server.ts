@@ -21,6 +21,7 @@ import {
 } from './modules/recommendation-events/recommendation-events.outbox.worker.js';
 import { preloadRecommendationMlRuntime } from './modules/recommendations/ml-runtime-state.service.js';
 import { ReservationLifecycleWorker } from './modules/reservations/reservation-lifecycle.worker.js';
+import { MaterialRequestLifecycleWorker } from './modules/material-requests/material-request-lifecycle.worker.js';
 
 logAiPriceSuggestionStartupConfig();
 logAiPlatformDiagnostics();
@@ -76,6 +77,9 @@ registerRecommendationOutboxHealthProvider({
 const reservationLifecycleWorker = new ReservationLifecycleWorker();
 reservationLifecycleWorker.start();
 
+const materialRequestLifecycleWorker = new MaterialRequestLifecycleWorker();
+materialRequestLifecycleWorker.start();
+
 const server = app.listen(env.port, () => {
   console.log(
     `ImpactLoop API pid=${process.pid} listening on port ${env.port} pool=${JSON.stringify(getDatabasePoolSnapshot())}`,
@@ -89,6 +93,7 @@ const shutdown = async (signal: string): Promise<void> => {
   }
   shuttingDown = true;
   reservationLifecycleWorker.stop();
+  materialRequestLifecycleWorker.stop();
   console.log(`[ImpactLoop API] ${signal} received; shutting down`);
 
   await runReadinessAwareShutdown({

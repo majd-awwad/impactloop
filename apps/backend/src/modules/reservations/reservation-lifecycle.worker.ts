@@ -2,6 +2,10 @@ import { databasePool, prisma } from '../../database/prisma.js';
 import { logger } from '../../observability/logger.js';
 import type { PoolClient } from 'pg';
 import { expireStalePendingReservationsForMaterials } from './reservations.service.js';
+import { expireStaleMissedPickupsForOwner } from './reservations.missed-pickup-expiry.repository.js';
+import { expireStalePendingReservationsForOwner } from './reservations.pending-expiry.repository.js';
+import { escalateStaleNoDriverDeliveriesForOwner } from './reservations.no-driver-auto-escalation.repository.js';
+import { escalateStaleAssignedDriverPickupsForOwner } from './reservations.stale-assigned-driver-auto-escalation.repository.js';
 import { escalateStaleNoDriverDeliveriesForRequester } from './reservations.no-driver-auto-escalation.repository.js';
 import { escalateStaleAssignedDriverPickupsForRequester } from './reservations.stale-assigned-driver-auto-escalation.repository.js';
 
@@ -61,10 +65,17 @@ export class ReservationLifecycleWorker {
         : null;
       const materialIds = [...new Set(candidates.map((item) => item.materialId))];
       const requesterIds = [...new Set(candidates.map((item) => item.requesterId))];
+      const ownerIds = [...new Set(candidates.map((item) => item.ownerId))];
       await expireStalePendingReservationsForMaterials(materialIds);
       for (const requesterId of requesterIds) {
         await escalateStaleNoDriverDeliveriesForRequester(requesterId);
         await escalateStaleAssignedDriverPickupsForRequester(requesterId);
+      }
+      for (const ownerId of ownerIds) {
+        await expireStalePendingReservationsForOwner(ownerId);
+        await expireStaleMissedPickupsForOwner(ownerId);
+        await escalateStaleNoDriverDeliveriesForOwner(ownerId);
+        await escalateStaleAssignedDriverPickupsForOwner(ownerId);
       }
       logger.debug(
         {
@@ -129,6 +140,7 @@ export class ReservationLifecycleWorker {
         createdAt: true,
         materialId: true,
         requesterId: true,
+        ownerId: true,
       },
       take: this.batchSize,
       orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],

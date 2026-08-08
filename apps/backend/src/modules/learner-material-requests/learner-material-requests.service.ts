@@ -26,8 +26,7 @@ import {
   buildLearnerMaterialRequestOpenBusinessKey,
   clearLearnerMaterialRequestOpenBusinessKey,
 } from '../material-requests/material-requests.open-business-key.js';
-import { reconcileFulfilledRequestBuildSync } from '../material-requests/material-requests.build-sync-reconciliation.js';
-import { refreshUnavailableSuggestedMatches } from '../material-requests/material-requests.match-availability.js';
+import { getHeldQuantitiesByMaterialIds } from '../reservations/reservations.quantity.js';
 
 import * as repository from './learner-material-requests.repository.js';
 import type {
@@ -36,27 +35,53 @@ import type {
   UpdateLearnerMaterialRequestInput,
 } from './learner-material-requests.validation.js';
 
-const ensureNotExpired = async <
-  T extends {
-    id: string;
-    status: string;
-    expiresAt: Date;
-  },
->(
-  request: T,
-) => {
+const assertRequestOpen = (row: { status: string; expiresAt: Date }) => {
   if (
     shouldLazyExpire({
-      status: request.status as 'OPEN',
-      expiresAt: request.expiresAt,
+      status: 'OPEN',
+      expiresAt: row.expiresAt,
     })
   ) {
-    return repository.updateRequest(request.id, {
-      status: 'EXPIRED',
-      ...clearLearnerMaterialRequestOpenBusinessKey,
-    });
+    throw new AppError('Request is not open', 409, 'REQUEST_NOT_OPEN');
   }
-  return request;
+  if (row.status !== 'OPEN') {
+    throw new AppError('Request is not open', 409, 'REQUEST_NOT_OPEN');
+  }
+};
+
+const assertRequestEditable = (row: { status: string; expiresAt: Date }) => {
+  if (
+    shouldLazyExpire({
+      status: 'OPEN',
+      expiresAt: row.expiresAt,
+    })
+  ) {
+    throw new AppError(
+      'Request cannot be edited',
+      409,
+      'REQUEST_NOT_EDITABLE',
+    );
+  }
+  if (row.status !== 'OPEN') {
+    throw new AppError(
+      'Request cannot be edited',
+      409,
+      'REQUEST_NOT_EDITABLE',
+    );
+  }
+};
+
+const buildHeldByMaterialId = async (
+  matches: Array<{ materialId: string }>,
+) => {
+  const held = await getHeldQuantitiesByMaterialIds(
+    matches.map((match) => match.materialId),
+  );
+  const heldByMaterialId = new Map<string, number>();
+  for (const [materialId, quantity] of held.entries()) {
+    heldByMaterialId.set(materialId, Number(quantity));
+  }
+  return heldByMaterialId;
 };
 
 const resolveLocationSnapshot = async (
@@ -327,16 +352,9 @@ export const listLearnerMaterialRequests = async (
     take: query.limit,
   });
 
-  const items = [];
-  for (const row of rows) {
-    const ensured = await ensureNotExpired(row);
-    const fresh =
-      ensured.id === row.id && ensured.status === row.status
-        ? row
-        : ((await repository.findRequestByIdForLearner(row.id, learnerId)) ??
-          row);
-    items.push(mapLearnerRequest(fresh, { includeMatches: false }));
-  }
+  const items = rows.map((row) =>
+    mapLearnerRequest(row, { includeMatches: false }),
+  );
 
   return {
     items,
@@ -355,41 +373,9 @@ export const getLearnerMaterialRequest = async (
   if (!row) {
     throw new AppError('Material request not found', 404, 'NOT_FOUND');
   }
-  const ensured = await ensureNotExpired(row);
-  let fresh =
-    ensured.status !== row.status
-      ? await repository.findRequestByIdForLearner(requestId, learnerId)
-      : row;
-  if (!fresh) {
-    throw new AppError('Material request not found', 404, 'NOT_FOUND');
-  }
 
-  const marked = await refreshUnavailableSuggestedMatches({
-    matches: fresh.matches,
-    learnerId: fresh.learnerId,
-    requestedItemName: fresh.requestedItemName,
-  });
-  if (marked.length > 0) {
-    fresh =
-      (await repository.findRequestByIdForLearner(requestId, learnerId)) ??
-      fresh;
-  }
-
-  const reconciliation = await reconcileFulfilledRequestBuildSync(
-    requestId,
-    learnerId,
-    fulfillRequestFromCompletedReservation,
-  );
-  if (reconciliation.repaired) {
-    fresh =
-      (await repository.findRequestByIdForLearner(requestId, learnerId)) ??
-      fresh;
-  }
-
-  return {
-    ...mapLearnerRequest(fresh),
-    buildSyncRepaired: reconciliation.repaired,
-  };
+  const heldByMaterialId = await buildHeldByMaterialId(row.matches ?? []);
+  return mapLearnerRequest(row, { heldByMaterialId });
 };
 
 export const updateLearnerMaterialRequest = async (
@@ -401,16 +387,9 @@ export const updateLearnerMaterialRequest = async (
   if (!row) {
     throw new AppError('Material request not found', 404, 'NOT_FOUND');
   }
-  const current = await ensureNotExpired(row);
-  if (current.status !== 'OPEN') {
-    throw new AppError(
-      'Request cannot be edited',
-      409,
-      'REQUEST_NOT_EDITABLE',
-    );
-  }
+  assertRequestEditable(row);
 
-  const hasMatches = (current._count?.matches ?? current.matches?.length ?? 0) > 0;
+  const hasMatches = (row._count?.matches ?? row.matches?.length ?? 0) > 0;
   if (hasMatches) {
     if (
       input.requestedItemName != null ||
@@ -440,20 +419,20 @@ export const updateLearnerMaterialRequest = async (
   ) {
     locationUpdate = await resolveLocationSnapshot(learnerId, {
       sourceSavedLocationId: input.sourceSavedLocationId,
-      locationCountry: input.locationCountry ?? current.locationCountry,
-      locationCity: input.locationCity ?? current.locationCity,
+      locationCountry: input.locationCountry ?? row.locationCountry,
+      locationCity: input.locationCity ?? row.locationCity,
       locationArea:
         input.locationArea !== undefined
           ? input.locationArea
-          : current.locationArea,
+          : row.locationArea,
     });
   }
 
   const neededBy =
-    input.neededBy !== undefined ? input.neededBy : current.neededBy;
+    input.neededBy !== undefined ? input.neededBy : row.neededBy;
   const expiresAt =
     input.neededBy !== undefined || locationUpdate
-      ? computeExpiresAt(current.createdAt, neededBy)
+      ? computeExpiresAt(row.createdAt, neededBy)
       : undefined;
 
   const updated = await repository.updateRequest(requestId, {
@@ -472,10 +451,10 @@ export const updateLearnerMaterialRequest = async (
       ? {
           openBusinessKey: buildLearnerMaterialRequestOpenBusinessKey(
             learnerId,
-            input.categoryId ?? current.categoryId,
+            input.categoryId ?? row.categoryId,
             input.requestedItemName
               ? normalizeSearchText(input.requestedItemName)
-              : current.normalizedRequestedItemName,
+              : row.normalizedRequestedItemName,
           ),
         }
       : {}),
@@ -512,10 +491,7 @@ export const cancelLearnerMaterialRequest = async (
   if (!row) {
     throw new AppError('Material request not found', 404, 'NOT_FOUND');
   }
-  const current = await ensureNotExpired(row);
-  if (current.status !== 'OPEN') {
-    throw new AppError('Request is not open', 409, 'REQUEST_NOT_OPEN');
-  }
+  assertRequestOpen(row);
   const updated = await repository.updateRequest(requestId, {
     status: 'CANCELLED',
     cancelledAt: new Date(),
@@ -532,10 +508,7 @@ export const fulfillLearnerMaterialRequest = async (
   if (!row) {
     throw new AppError('Material request not found', 404, 'NOT_FOUND');
   }
-  const current = await ensureNotExpired(row);
-  if (current.status !== 'OPEN') {
-    throw new AppError('Request is not open', 409, 'REQUEST_NOT_OPEN');
-  }
+  assertRequestOpen(row);
   const updated = await repository.updateRequest(requestId, {
     status: 'FULFILLED',
     fulfilledAt: new Date(),
