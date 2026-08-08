@@ -18,6 +18,7 @@ import '../../../../shared/widgets/review_status_presentation.dart';
 import '../../../../shared/widgets/supplier_verification_status_presentation.dart';
 import '../../data/admin_materials_api.dart';
 import '../../data/admin_reservations_api.dart' show AdminExportFormatEligibility;
+import '../l10n/admin_l10n.dart';
 import '../theme/admin_decoration_set.dart';
 import '../theme/admin_palette.dart';
 import '../utils/admin_material_moderation_policy.dart';
@@ -240,9 +241,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
     if (!kIsWeb) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Export is available on Admin Web only.'),
-        ),
+        SnackBar(content: Text(AdminL10n.of(context).exportWebOnly)),
       );
       return;
     }
@@ -271,8 +270,8 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
 
       if (preflight.count == 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No materials match the current filters.'),
+          SnackBar(
+            content: Text(AdminL10n.of(context).noMaterialsMatchFilters),
           ),
         );
         return;
@@ -334,9 +333,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
     if (!kIsWeb) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Export is available on Admin Web only.'),
-        ),
+        SnackBar(content: Text(AdminL10n.of(context).exportWebOnly)),
       );
       return;
     }
@@ -358,8 +355,8 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
 
       if (preflight.count == 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No material reports match the current filters.'),
+          SnackBar(
+            content: Text(AdminL10n.of(context).noMaterialReportsMatchFilters),
           ),
         );
         return;
@@ -773,7 +770,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
                   onPressed: submitting
                       ? null
                       : () => Navigator.pop(dialogContext),
-                  child: const Text('Cancel'),
+                  child: Text(AdminL10n.of(context).cancel),
                 ),
                 primaryAction: FilledButton(
                   style: AppStatusButtonStyle.filled(context, confirmTone),
@@ -878,7 +875,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
                   onPressed: submitting
                       ? null
                       : () => Navigator.pop(dialogContext),
-                  child: const Text('Cancel'),
+                  child: Text(AdminL10n.of(context).cancel),
                 ),
                 primaryAction: FilledButton(
                   style: AppStatusButtonStyle.filled(context, confirmTone),
@@ -1281,6 +1278,7 @@ class _AdminMaterialsExportDialogState
 
   @override
   Widget build(BuildContext context) {
+    final adminL10n = AdminL10n.of(context);
     final limitMessage = (_selectedEligibility?.exceedsLimit ?? false)
         ? 'This export matches ${widget.count} materials, which exceeds the '
               'limit of ${_selectedEligibility?.maxAllowed ?? 0}. Narrow your '
@@ -1288,7 +1286,7 @@ class _AdminMaterialsExportDialogState
         : null;
 
     return AppDialogShell(
-      title: const Text('Export materials'),
+      title: Text(adminL10n.exportMaterials),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1304,12 +1302,12 @@ class _AdminMaterialsExportDialogState
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 16),
-          const Text('Format'),
+          Text(adminL10n.format),
           const SizedBox(height: 8),
           SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'xlsx', label: Text('Excel')),
-              ButtonSegment(value: 'csv', label: Text('CSV')),
+            segments: [
+              ButtonSegment(value: 'xlsx', label: Text(adminL10n.excel)),
+              ButtonSegment(value: 'csv', label: Text(adminL10n.csv)),
             ],
             selected: {_selectedFormat},
             onSelectionChanged: _isDownloading
@@ -1345,7 +1343,7 @@ class _AdminMaterialsExportDialogState
           onPressed: _isDownloading
               ? null
               : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(adminL10n.cancel),
         ),
         primaryAction: FilledButton(
           onPressed: _canExport ? _confirm : null,
@@ -1355,7 +1353,7 @@ class _AdminMaterialsExportDialogState
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Export'),
+              : Text(adminL10n.exportAction),
         ),
       ),
     );
@@ -1430,6 +1428,7 @@ class _AdminMaterialReportsExportDialogState
 
   @override
   Widget build(BuildContext context) {
+    final adminL10n = AdminL10n.of(context);
     final limitMessage = (_selectedEligibility?.exceedsLimit ?? false)
         ? 'This export matches ${widget.count} material reports, which '
               'exceeds the limit of ${_selectedEligibility?.maxAllowed ?? 0}. '
@@ -1437,7 +1436,7 @@ class _AdminMaterialReportsExportDialogState
         : null;
 
     return AppDialogShell(
-      title: const Text('Export material reports'),
+      title: Text(adminL10n.exportMaterialReports),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1453,12 +1452,12 @@ class _AdminMaterialReportsExportDialogState
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 16),
-          const Text('Format'),
+          Text(adminL10n.format),
           const SizedBox(height: 8),
           SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'xlsx', label: Text('Excel')),
-              ButtonSegment(value: 'csv', label: Text('CSV')),
+            segments: [
+              ButtonSegment(value: 'xlsx', label: Text(adminL10n.excel)),
+              ButtonSegment(value: 'csv', label: Text(adminL10n.csv)),
             ],
             selected: {_selectedFormat},
             onSelectionChanged: _isDownloading
@@ -1494,7 +1493,7 @@ class _AdminMaterialReportsExportDialogState
           onPressed: _isDownloading
               ? null
               : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(adminL10n.cancel),
         ),
         primaryAction: FilledButton(
           onPressed: _canExport ? _confirm : null,
@@ -1504,7 +1503,7 @@ class _AdminMaterialReportsExportDialogState
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Export'),
+              : Text(adminL10n.exportAction),
         ),
       ),
     );
@@ -1544,6 +1543,7 @@ class _FiltersPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final adminL10n = AdminL10n.of(context);
     final compact = MediaQuery.sizeOf(context).width < 900;
 
     final searchField = TextField(
@@ -1572,7 +1572,7 @@ class _FiltersPanel extends StatelessWidget {
     );
 
     final statusField = _FilterField(
-      label: 'Status',
+      label: adminL10n.status,
       value: filters.status,
       options: const {
         'ALL': 'All statuses',
@@ -1604,7 +1604,7 @@ class _FiltersPanel extends StatelessWidget {
     final resetButton = OutlinedButton.icon(
       onPressed: onReset,
       icon: const Icon(Icons.filter_alt_off_outlined, size: 17),
-      label: const Text('Reset'),
+      label: Text(adminL10n.reset),
       style: OutlinedButton.styleFrom(
         foregroundColor: palette.textSecondary,
         side: BorderSide(color: palette.cardBorder),
@@ -1634,7 +1634,7 @@ class _FiltersPanel extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.download_outlined, size: 17),
-            label: Text(exportLoading ? 'Preparing…' : 'Export'),
+            label: Text(exportLoading ? 'Preparing…' : adminL10n.exportAction),
             style: OutlinedButton.styleFrom(
               foregroundColor: palette.textPrimary,
               side: BorderSide(color: palette.cardBorder),
@@ -2401,10 +2401,11 @@ class _MaterialActionArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final adminL10n = AdminL10n.of(context);
     final detailsButton = OutlinedButton.icon(
       onPressed: onDetails,
       icon: const Icon(Icons.visibility_outlined, size: 16),
-      label: const Text('View details'),
+      label: Text(adminL10n.viewDetails),
       style: _compactStyle(context, AppStatusTone.neutral),
     );
 

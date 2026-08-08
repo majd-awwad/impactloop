@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../l10n/l10n.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -20,6 +21,7 @@ class SuggestedMaterialsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final materialsState = ref.watch(homeSuggestedMaterialsProvider);
 
     return LayoutBuilder(
@@ -30,18 +32,18 @@ class SuggestedMaterialsSection extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             HomeSectionHeader(
-              title: 'Suggested materials',
-              subtitle: 'A few currently listed materials to help you start.',
+              title: l10n.sectionHomeSuggestedMaterialsTitle,
+              subtitle: l10n.sectionHomeSuggestedMaterialsSubtitle,
               compactInlineAction: useMobileList,
               action: useMobileList
                   ? TextButton(
                       onPressed: () => context.go('/materials'),
-                      child: const Text('Browse all'),
+                      child: Text(l10n.browseAll),
                     )
                   : HomeSectionActionButton(
                       onPressed: () => context.go('/materials'),
                       icon: const Icon(Icons.arrow_forward_rounded),
-                      label: 'Browse all',
+                      label: l10n.browseAll,
                     ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -54,10 +56,9 @@ class SuggestedMaterialsSection extends ConsumerWidget {
                 if (materials.isEmpty) {
                   return EmptyActivityCard(
                     icon: Icons.inventory_2_outlined,
-                    title: 'No materials available yet',
-                    description:
-                        'When suppliers list reusable materials, a small set will appear here.',
-                    actionLabel: 'Open materials',
+                    title: l10n.sectionHomeSuggestedMaterialsEmpty,
+                    description: l10n.sectionHomeSuggestedMaterialsEmptyDescription,
+                    actionLabel: l10n.openMaterials,
                     onAction: () => context.go('/materials'),
                   );
                 }
@@ -264,6 +265,7 @@ class _SuggestedMaterialsError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final palette = MaterialsUiPalette.of(context);
 
     return Container(
@@ -283,14 +285,14 @@ class _SuggestedMaterialsError extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Unable to load suggested materials',
+                  l10n.homeSuggestedMaterialsLoadError,
                   style: AppTextStyles.title(
                     context,
                   ).copyWith(color: palette.textPrimary, letterSpacing: 0),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'The home page is still available. Try again when the materials API is running.',
+                  l10n.homeSuggestedMaterialsLoadErrorSubtitle,
                   style: AppTextStyles.body(context).copyWith(
                     color: palette.textSecondary,
                     height: 1.45,
@@ -304,7 +306,7 @@ class _SuggestedMaterialsError extends StatelessWidget {
                     context,
                     AppStatusTone.primary,
                   ),
-                  child: const Text('Retry'),
+                  child: Text(l10n.retry),
                 ),
               ],
             ),

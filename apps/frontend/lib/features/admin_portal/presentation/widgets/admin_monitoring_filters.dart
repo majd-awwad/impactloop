@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/widgets/app_dialog_detail.dart';
+import '../l10n/admin_l10n.dart';
 import '../theme/admin_decoration_set.dart';
 import 'admin_kpi_card.dart' show AdminTypography;
 import 'admin_monitoring_utils.dart';
@@ -233,7 +234,10 @@ class AdminMonitoringErrorPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Text(message, style: AdminTypography.pageSubtitle(palette)),
           const SizedBox(height: 12),
-          FilledButton(onPressed: onRetry, child: const Text('Retry')),
+          FilledButton(
+            onPressed: onRetry,
+            child: Text(AdminL10n.of(context).retry),
+          ),
         ],
       ),
     );

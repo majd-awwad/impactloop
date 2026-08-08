@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/l10n.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_decorations.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -72,7 +73,7 @@ class _FullContent extends StatelessWidget {
                   child: Icon(Icons.eco, color: colors.textOnPrimary, size: 28),
                 ),
                 const SizedBox(width: AppSpacing.sm),
-                Text('ImpactLoop', style: AppTextStyles.brandingTitle(context)),
+                Text(context.l10n.authBrandTitle, style: AppTextStyles.brandingTitle(context)),
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -119,7 +120,7 @@ class _CompactContent extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
-                'ImpactLoop',
+                context.l10n.authBrandTitle,
                 style: AppTextStyles.mobileHeroTitle(context),
               ),
             ),
@@ -127,7 +128,7 @@ class _CompactContent extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          'Learn. Reuse. Build.',
+          context.l10n.learnReuseBuild,
           style: AppTextStyles.mobileHeroSubtitle(context),
         ),
         const SizedBox(height: AppSpacing.md),

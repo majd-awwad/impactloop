@@ -14791,6 +14791,1692 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You were assigned to deliver {materialTitle}.'**
   String notificationDeliveryDriverAssignedBody(String materialTitle);
+
+  /// No description provided for @adminNavOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get adminNavOverview;
+
+  /// No description provided for @adminNavUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'Users'**
+  String get adminNavUsers;
+
+  /// No description provided for @adminNavSuppliers.
+  ///
+  /// In en, this message translates to:
+  /// **'Suppliers'**
+  String get adminNavSuppliers;
+
+  /// No description provided for @adminNavMaterials.
+  ///
+  /// In en, this message translates to:
+  /// **'Materials'**
+  String get adminNavMaterials;
+
+  /// No description provided for @adminNavApprovals.
+  ///
+  /// In en, this message translates to:
+  /// **'Approvals'**
+  String get adminNavApprovals;
+
+  /// No description provided for @adminNavInvitations.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitations'**
+  String get adminNavInvitations;
+
+  /// No description provided for @adminNavImpactAnalytics.
+  ///
+  /// In en, this message translates to:
+  /// **'Impact Analytics'**
+  String get adminNavImpactAnalytics;
+
+  /// No description provided for @adminNavAuditLogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Audit Logs'**
+  String get adminNavAuditLogs;
+
+  /// No description provided for @adminNavReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservations'**
+  String get adminNavReservations;
+
+  /// No description provided for @adminNavDeliveries.
+  ///
+  /// In en, this message translates to:
+  /// **'Deliveries'**
+  String get adminNavDeliveries;
+
+  /// No description provided for @adminNavLearningProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Projects'**
+  String get adminNavLearningProjects;
+
+  /// No description provided for @adminNavExportCenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Export Center'**
+  String get adminNavExportCenter;
+
+  /// No description provided for @adminAccessDeniedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Access denied'**
+  String get adminAccessDeniedTitle;
+
+  /// No description provided for @adminOverviewPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Overview'**
+  String get adminOverviewPageTitle;
+
+  /// No description provided for @adminImpactSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reuse Impact'**
+  String get adminImpactSectionTitle;
+
+  /// No description provided for @adminEstimatedAvoidedSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'estimated avoided'**
+  String get adminEstimatedAvoidedSuffix;
+
+  /// No description provided for @adminPlatformMetricsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Platform metrics'**
+  String get adminPlatformMetricsTitle;
+
+  /// No description provided for @adminAdminOperationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin operations'**
+  String get adminAdminOperationsTitle;
+
+  /// No description provided for @adminOpenModuleCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get adminOpenModuleCta;
+
+  /// No description provided for @adminStatUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'Users'**
+  String get adminStatUsers;
+
+  /// No description provided for @adminStatSuppliers.
+  ///
+  /// In en, this message translates to:
+  /// **'Suppliers'**
+  String get adminStatSuppliers;
+
+  /// No description provided for @adminStatMaterials.
+  ///
+  /// In en, this message translates to:
+  /// **'Materials'**
+  String get adminStatMaterials;
+
+  /// No description provided for @adminStatActiveInvitations.
+  ///
+  /// In en, this message translates to:
+  /// **'Active invitations'**
+  String get adminStatActiveInvitations;
+
+  /// No description provided for @adminStatActiveDrivers.
+  ///
+  /// In en, this message translates to:
+  /// **'Active drivers'**
+  String get adminStatActiveDrivers;
+
+  /// No description provided for @adminEstimatedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated'**
+  String get adminEstimatedBadge;
+
+  /// No description provided for @adminViewAllAuditLogs.
+  ///
+  /// In en, this message translates to:
+  /// **'View all logs'**
+  String get adminViewAllAuditLogs;
+
+  /// No description provided for @adminReviewQueuesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review queues'**
+  String get adminReviewQueuesTitle;
+
+  /// No description provided for @adminEmptyNoDataYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No data yet'**
+  String get adminEmptyNoDataYet;
+
+  /// No description provided for @adminEmptyAllClearTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All clear'**
+  String get adminEmptyAllClearTitle;
+
+  /// No description provided for @adminPendingCategoryRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Category requests'**
+  String get adminPendingCategoryRequests;
+
+  /// No description provided for @adminPendingPriceRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Price requests'**
+  String get adminPendingPriceRequests;
+
+  /// No description provided for @adminPendingReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports'**
+  String get adminPendingReports;
+
+  /// No description provided for @adminCategoryRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Category request'**
+  String get adminCategoryRequest;
+
+  /// No description provided for @adminCreateNewCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Create new category'**
+  String get adminCreateNewCategory;
+
+  /// No description provided for @adminExistingCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Existing category'**
+  String get adminExistingCategory;
+
+  /// No description provided for @adminUseThisCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this category'**
+  String get adminUseThisCategory;
+
+  /// No description provided for @adminExactNameMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Exact match'**
+  String get adminExactNameMatch;
+
+  /// No description provided for @adminPossibleNameMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Possible match'**
+  String get adminPossibleNameMatch;
+
+  /// No description provided for @adminRequestDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Request details'**
+  String get adminRequestDetails;
+
+  /// No description provided for @adminCategoryMatching.
+  ///
+  /// In en, this message translates to:
+  /// **'Category matching'**
+  String get adminCategoryMatching;
+
+  /// No description provided for @adminSimilarCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Similar categories'**
+  String get adminSimilarCategories;
+
+  /// No description provided for @adminRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get adminRequired;
+
+  /// No description provided for @adminMaterialFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Material family'**
+  String get adminMaterialFamily;
+
+  /// No description provided for @adminActiveMapping.
+  ///
+  /// In en, this message translates to:
+  /// **'Active mapping'**
+  String get adminActiveMapping;
+
+  /// No description provided for @adminRequestSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Request summary'**
+  String get adminRequestSummary;
+
+  /// No description provided for @adminAdminGuidance.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin guidance'**
+  String get adminAdminGuidance;
+
+  /// No description provided for @adminSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted'**
+  String get adminSubmitted;
+
+  /// No description provided for @adminRequestedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested by'**
+  String get adminRequestedBy;
+
+  /// No description provided for @adminStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get adminStatus;
+
+  /// No description provided for @adminSupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier'**
+  String get adminSupplier;
+
+  /// No description provided for @adminMaterial.
+  ///
+  /// In en, this message translates to:
+  /// **'Material'**
+  String get adminMaterial;
+
+  /// No description provided for @adminDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get adminDescription;
+
+  /// No description provided for @adminQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity'**
+  String get adminQuantity;
+
+  /// No description provided for @adminCondition.
+  ///
+  /// In en, this message translates to:
+  /// **'Condition'**
+  String get adminCondition;
+
+  /// No description provided for @adminLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get adminLocation;
+
+  /// No description provided for @adminReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get adminReason;
+
+  /// No description provided for @adminApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get adminApprove;
+
+  /// No description provided for @adminReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get adminReject;
+
+  /// No description provided for @adminClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get adminClose;
+
+  /// No description provided for @adminRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get adminRetry;
+
+  /// No description provided for @adminNavSupplierVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier Verification'**
+  String get adminNavSupplierVerification;
+
+  /// No description provided for @adminAccessDeniedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You do not have permission to access the Admin Portal.'**
+  String get adminAccessDeniedBody;
+
+  /// No description provided for @adminOverviewPageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Platform control dashboard'**
+  String get adminOverviewPageSubtitle;
+
+  /// No description provided for @adminWelcomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back, {name}'**
+  String adminWelcomeTitle(String name);
+
+  /// No description provided for @adminWelcomeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Here is today\'\'s platform activity, approvals, reuse impact, and operational health.'**
+  String get adminWelcomeSubtitle;
+
+  /// No description provided for @adminBannerOverviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Platform overview'**
+  String get adminBannerOverviewLabel;
+
+  /// No description provided for @adminPlatformDistributionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Platform account distribution'**
+  String get adminPlatformDistributionTitle;
+
+  /// No description provided for @adminPlatformDistributionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Users, suppliers, and active drivers on ImpactLoop'**
+  String get adminPlatformDistributionSubtitle;
+
+  /// No description provided for @adminCo2RingCenterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Listed materials reused'**
+  String get adminCo2RingCenterLabel;
+
+  /// No description provided for @adminControlCenterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Platform Control Center'**
+  String get adminControlCenterTitle;
+
+  /// No description provided for @adminControlCenterSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Monitor platform activity, approvals, invitations, supplier verification, and reuse impact from one place.'**
+  String get adminControlCenterSubtitle;
+
+  /// No description provided for @adminChartsAnalyticsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Charts & analytics'**
+  String get adminChartsAnalyticsTitle;
+
+  /// No description provided for @adminChartsAnalyticsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reuse trends, category distribution, reservations, and approval queues.'**
+  String get adminChartsAnalyticsSubtitle;
+
+  /// No description provided for @adminPlatformMetricsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Live counts across users, listings, approvals, and operations.'**
+  String get adminPlatformMetricsSubtitle;
+
+  /// No description provided for @adminAdminOperationsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Jump into each admin module from the control dashboard.'**
+  String get adminAdminOperationsSubtitle;
+
+  /// No description provided for @adminStatAvailableMaterials.
+  ///
+  /// In en, this message translates to:
+  /// **'Available materials'**
+  String get adminStatAvailableMaterials;
+
+  /// No description provided for @adminStatPendingApprovals.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending approvals'**
+  String get adminStatPendingApprovals;
+
+  /// No description provided for @adminStatCompletedReuse.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed reuse'**
+  String get adminStatCompletedReuse;
+
+  /// No description provided for @adminEstimatedCo2Avoided.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated CO₂ avoided'**
+  String get adminEstimatedCo2Avoided;
+
+  /// No description provided for @adminEstimatedCo2Helper.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated from reused materials and category-based reuse factors.'**
+  String get adminEstimatedCo2Helper;
+
+  /// No description provided for @adminEstimatedCo2ShortHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated from reused materials'**
+  String get adminEstimatedCo2ShortHelper;
+
+  /// No description provided for @adminReuseCompletionRateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reuse completion rate'**
+  String get adminReuseCompletionRateLabel;
+
+  /// No description provided for @adminHintUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'Registered accounts on ImpactLoop'**
+  String get adminHintUsers;
+
+  /// No description provided for @adminHintSuppliers.
+  ///
+  /// In en, this message translates to:
+  /// **'Suppliers with portal access'**
+  String get adminHintSuppliers;
+
+  /// No description provided for @adminHintMaterials.
+  ///
+  /// In en, this message translates to:
+  /// **'All listed materials on the platform'**
+  String get adminHintMaterials;
+
+  /// No description provided for @adminHintAvailableMaterials.
+  ///
+  /// In en, this message translates to:
+  /// **'Materials currently open for reservation'**
+  String get adminHintAvailableMaterials;
+
+  /// No description provided for @adminHintPendingApprovals.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier, category, and price requests waiting'**
+  String get adminHintPendingApprovals;
+
+  /// No description provided for @adminHintActiveInvitations.
+  ///
+  /// In en, this message translates to:
+  /// **'Open driver, moderator, and admin invites'**
+  String get adminHintActiveInvitations;
+
+  /// No description provided for @adminHintCompletedReuse.
+  ///
+  /// In en, this message translates to:
+  /// **'Materials marked as reused'**
+  String get adminHintCompletedReuse;
+
+  /// No description provided for @adminHintActiveDrivers.
+  ///
+  /// In en, this message translates to:
+  /// **'Users with driver role assigned'**
+  String get adminHintActiveDrivers;
+
+  /// No description provided for @adminReuseActivityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reuse activity over time'**
+  String get adminReuseActivityTitle;
+
+  /// No description provided for @adminReuseActivitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly completed reuse across the platform'**
+  String get adminReuseActivitySubtitle;
+
+  /// No description provided for @adminMaterialsByCategoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Materials by category'**
+  String get adminMaterialsByCategoryTitle;
+
+  /// No description provided for @adminMaterialsByCategorySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Distribution of listed materials across categories'**
+  String get adminMaterialsByCategorySubtitle;
+
+  /// No description provided for @adminReservationStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation status overview'**
+  String get adminReservationStatusTitle;
+
+  /// No description provided for @adminReservationStatusSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Current reservation pipeline by status'**
+  String get adminReservationStatusSubtitle;
+
+  /// No description provided for @adminPendingActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval queue breakdown'**
+  String get adminPendingActionsTitle;
+
+  /// No description provided for @adminPendingActionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending supplier, category, price, and report reviews'**
+  String get adminPendingActionsSubtitle;
+
+  /// No description provided for @adminRecentInvitationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent invitations'**
+  String get adminRecentInvitationsTitle;
+
+  /// No description provided for @adminRecentActivityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent admin activity'**
+  String get adminRecentActivityTitle;
+
+  /// No description provided for @adminRecentActivitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest administrative events when available'**
+  String get adminRecentActivitySubtitle;
+
+  /// No description provided for @adminRecentActivityEmptySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No admin activity yet'**
+  String get adminRecentActivityEmptySubtitle;
+
+  /// No description provided for @adminSupplierVerificationQueueTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier verification queue'**
+  String get adminSupplierVerificationQueueTitle;
+
+  /// No description provided for @adminReviewQueuesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier verification, invitations, and admin activity'**
+  String get adminReviewQueuesSubtitle;
+
+  /// No description provided for @adminSupplierVerificationFutureNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier verification workflow will appear after organization verification documents are enabled.'**
+  String get adminSupplierVerificationFutureNote;
+
+  /// No description provided for @adminImpactSnapshotTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reuse Impact Snapshot'**
+  String get adminImpactSnapshotTitle;
+
+  /// No description provided for @adminImpactSnapshotSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Platform reuse outcomes from completed reservations and materials'**
+  String get adminImpactSnapshotSubtitle;
+
+  /// No description provided for @adminImpactReusedMaterials.
+  ///
+  /// In en, this message translates to:
+  /// **'Reused materials'**
+  String get adminImpactReusedMaterials;
+
+  /// No description provided for @adminImpactCompletedReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed reservations'**
+  String get adminImpactCompletedReservations;
+
+  /// No description provided for @adminImpactLearnersBenefited.
+  ///
+  /// In en, this message translates to:
+  /// **'Learners benefited'**
+  String get adminImpactLearnersBenefited;
+
+  /// No description provided for @adminImpactSuppliersContributed.
+  ///
+  /// In en, this message translates to:
+  /// **'Suppliers contributed'**
+  String get adminImpactSuppliersContributed;
+
+  /// No description provided for @adminImpactTopCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Top reused category'**
+  String get adminImpactTopCategory;
+
+  /// No description provided for @adminImpactTopCategoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Top reused category: —'**
+  String get adminImpactTopCategoryEmpty;
+
+  /// No description provided for @adminImpactEnvironmentalNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated environmental impact is calculated using category-based reuse factors and available material quantities. Values are approximate.'**
+  String get adminImpactEnvironmentalNote;
+
+  /// No description provided for @adminEmptyNoInvitations.
+  ///
+  /// In en, this message translates to:
+  /// **'Create role invitations from the Invitations page once enabled.'**
+  String get adminEmptyNoInvitations;
+
+  /// No description provided for @adminEmptyNoInvitationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No active invitations'**
+  String get adminEmptyNoInvitationsTitle;
+
+  /// No description provided for @adminEmptyNoInvitationsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the Invitations module to create driver, moderator, or admin invites.'**
+  String get adminEmptyNoInvitationsHint;
+
+  /// No description provided for @adminEmptyNoActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'No admin activity yet'**
+  String get adminEmptyNoActivity;
+
+  /// No description provided for @adminEmptyNoActivityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Audit events will appear after admin actions are enabled.'**
+  String get adminEmptyNoActivityHint;
+
+  /// No description provided for @adminEmptyNoSupplierVerifications.
+  ///
+  /// In en, this message translates to:
+  /// **'No supplier verification requests waiting.'**
+  String get adminEmptyNoSupplierVerifications;
+
+  /// No description provided for @adminEmptyNoPendingApprovals.
+  ///
+  /// In en, this message translates to:
+  /// **'No supplier, category, price, or report reviews waiting.'**
+  String get adminEmptyNoPendingApprovals;
+
+  /// No description provided for @adminPendingSupplierVerifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier verification'**
+  String get adminPendingSupplierVerifications;
+
+  /// No description provided for @adminOpUsersDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage platform user accounts'**
+  String get adminOpUsersDesc;
+
+  /// No description provided for @adminOpSuppliersDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Review supplier accounts and profiles'**
+  String get adminOpSuppliersDesc;
+
+  /// No description provided for @adminOpSupplierVerificationDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Process supplier verification requests'**
+  String get adminOpSupplierVerificationDesc;
+
+  /// No description provided for @adminOpMaterialsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderate and review material listings'**
+  String get adminOpMaterialsDesc;
+
+  /// No description provided for @adminOpApprovalsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Category, price, and listing approvals'**
+  String get adminOpApprovalsDesc;
+
+  /// No description provided for @adminOpInvitationsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Create and track role invitations'**
+  String get adminOpInvitationsDesc;
+
+  /// No description provided for @adminOpImpactDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore reuse and impact analytics'**
+  String get adminOpImpactDesc;
+
+  /// No description provided for @adminOpAuditLogsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Review administrative audit history'**
+  String get adminOpAuditLogsDesc;
+
+  /// No description provided for @adminResolveCategoryRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolve category request'**
+  String get adminResolveCategoryRequest;
+
+  /// No description provided for @adminUseExistingCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Use existing category'**
+  String get adminUseExistingCategory;
+
+  /// No description provided for @adminUseExistingGuidance.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended when an existing category already covers this material.'**
+  String get adminUseExistingGuidance;
+
+  /// No description provided for @adminCreateNewGuidance.
+  ///
+  /// In en, this message translates to:
+  /// **'Create only when existing categories do not accurately represent this request.'**
+  String get adminCreateNewGuidance;
+
+  /// No description provided for @adminSuggestedExistingCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested existing category'**
+  String get adminSuggestedExistingCategory;
+
+  /// No description provided for @adminSearchOtherCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Search or select another active category'**
+  String get adminSearchOtherCategories;
+
+  /// No description provided for @adminSearchCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Search existing categories…'**
+  String get adminSearchCategories;
+
+  /// No description provided for @adminChooseExistingCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an existing category'**
+  String get adminChooseExistingCategory;
+
+  /// No description provided for @adminExistingCategoryRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an active existing category.'**
+  String get adminExistingCategoryRequired;
+
+  /// No description provided for @adminLoadingCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading existing categories…'**
+  String get adminLoadingCategories;
+
+  /// No description provided for @adminFailedCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load existing categories.'**
+  String get adminFailedCategories;
+
+  /// No description provided for @adminNoCategoriesAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No active owned material categories are available.'**
+  String get adminNoCategoriesAvailable;
+
+  /// No description provided for @adminApproveWithExisting.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve with existing category'**
+  String get adminApproveWithExisting;
+
+  /// No description provided for @adminCreateAndApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Create and approve'**
+  String get adminCreateAndApprove;
+
+  /// No description provided for @adminCreateJustification.
+  ///
+  /// In en, this message translates to:
+  /// **'Why is a separate category needed?'**
+  String get adminCreateJustification;
+
+  /// No description provided for @adminCreateJustificationHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Explain briefly why the suggested category does not fit.'**
+  String get adminCreateJustificationHelper;
+
+  /// No description provided for @adminCreateJustificationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter at least 10 characters explaining why a new category is needed.'**
+  String get adminCreateJustificationRequired;
+
+  /// No description provided for @adminExistingNameConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'This category already exists'**
+  String get adminExistingNameConflict;
+
+  /// No description provided for @adminNoSimilarCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'No suggested existing category'**
+  String get adminNoSimilarCategories;
+
+  /// No description provided for @adminApprovalConfiguration.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval configuration'**
+  String get adminApprovalConfiguration;
+
+  /// No description provided for @adminRequestedCategoryName.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested name'**
+  String get adminRequestedCategoryName;
+
+  /// No description provided for @adminFinalCategoryNameEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Final category name in English'**
+  String get adminFinalCategoryNameEn;
+
+  /// No description provided for @adminFinalCategoryNameAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Final category name in Arabic'**
+  String get adminFinalCategoryNameAr;
+
+  /// No description provided for @adminBilingualNamesHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Review both final marketplace names. Users see the name matching their app language. Automated checks only catch obvious structure and language-placement problems; they do not verify grammar or translation.'**
+  String get adminBilingualNamesHelper;
+
+  /// No description provided for @adminNamingGuidance.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a short, clear marketplace category name. Avoid material titles, full descriptions, and vague wording.'**
+  String get adminNamingGuidance;
+
+  /// No description provided for @adminEnglishNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an English category name between 2 and 120 characters.'**
+  String get adminEnglishNameRequired;
+
+  /// No description provided for @adminArabicNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an Arabic category name between 2 and 120 characters.'**
+  String get adminArabicNameRequired;
+
+  /// No description provided for @adminEnglishNameWrongScript.
+  ///
+  /// In en, this message translates to:
+  /// **'The English name appears to contain Arabic text.'**
+  String get adminEnglishNameWrongScript;
+
+  /// No description provided for @adminArabicNameWrongScript.
+  ///
+  /// In en, this message translates to:
+  /// **'The Arabic name appears to contain English-only text.'**
+  String get adminArabicNameWrongScript;
+
+  /// No description provided for @adminNameControlCharacters.
+  ///
+  /// In en, this message translates to:
+  /// **'Category names cannot contain control characters.'**
+  String get adminNameControlCharacters;
+
+  /// No description provided for @adminNamePunctuationBoundary.
+  ///
+  /// In en, this message translates to:
+  /// **'Category names cannot begin or end with punctuation.'**
+  String get adminNamePunctuationBoundary;
+
+  /// No description provided for @adminNameRepeatedWords.
+  ///
+  /// In en, this message translates to:
+  /// **'Avoid repeating the same word consecutively.'**
+  String get adminNameRepeatedWords;
+
+  /// No description provided for @adminNameDescriptionLike.
+  ///
+  /// In en, this message translates to:
+  /// **'This looks like a full description rather than a concise category name.'**
+  String get adminNameDescriptionLike;
+
+  /// No description provided for @adminNamesAppearIdentical.
+  ///
+  /// In en, this message translates to:
+  /// **'Both marketplace names are identical. Confirm that this term is intentionally used in both languages.'**
+  String get adminNamesAppearIdentical;
+
+  /// No description provided for @adminConfirmSharedTechnicalTerm.
+  ///
+  /// In en, this message translates to:
+  /// **'I confirm this shared technical term is intentional.'**
+  String get adminConfirmSharedTechnicalTerm;
+
+  /// No description provided for @adminSharedNameAcknowledgementRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm that this shared technical term is intentionally used in both languages.'**
+  String get adminSharedNameAcknowledgementRequired;
+
+  /// No description provided for @adminNameUnusuallyLong.
+  ///
+  /// In en, this message translates to:
+  /// **'This name is unusually long for a category.'**
+  String get adminNameUnusuallyLong;
+
+  /// No description provided for @adminEnglishNameCasingWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Review English capitalization; marketplace categories normally use title-style names.'**
+  String get adminEnglishNameCasingWarning;
+
+  /// No description provided for @adminRepeatedWhitespaceWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeated whitespace will be saved as one ordinary space.'**
+  String get adminRepeatedWhitespaceWarning;
+
+  /// No description provided for @adminMaterialTitleWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This looks like a material title rather than a reusable category name.'**
+  String get adminMaterialTitleWarning;
+
+  /// No description provided for @adminSimilarWordingWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This wording is very similar to an existing category.'**
+  String get adminSimilarWordingWarning;
+
+  /// No description provided for @adminAssignMaterialFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign material family'**
+  String get adminAssignMaterialFamily;
+
+  /// No description provided for @adminChooseMaterialFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a material family'**
+  String get adminChooseMaterialFamily;
+
+  /// No description provided for @adminSearchMaterialFamilies.
+  ///
+  /// In en, this message translates to:
+  /// **'Search material families'**
+  String get adminSearchMaterialFamilies;
+
+  /// No description provided for @adminLoadingMaterialFamilies.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading material families…'**
+  String get adminLoadingMaterialFamilies;
+
+  /// No description provided for @adminFailedMaterialFamilies.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load material families.'**
+  String get adminFailedMaterialFamilies;
+
+  /// No description provided for @adminNoMaterialFamilies.
+  ///
+  /// In en, this message translates to:
+  /// **'No active material families are available.'**
+  String get adminNoMaterialFamilies;
+
+  /// No description provided for @adminMaterialFamilyRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Material family is required.'**
+  String get adminMaterialFamilyRequired;
+
+  /// No description provided for @adminMaterialFamilyInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected material family is inactive.'**
+  String get adminMaterialFamilyInactive;
+
+  /// No description provided for @adminTaxonomyConceptWrongType.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected taxonomy concept is not a material family.'**
+  String get adminTaxonomyConceptWrongType;
+
+  /// No description provided for @adminMaterialFamilyNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected material family is no longer available.'**
+  String get adminMaterialFamilyNotFound;
+
+  /// No description provided for @adminOwnershipHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Select the canonical material family that best represents this new category.'**
+  String get adminOwnershipHelper;
+
+  /// No description provided for @adminOwnershipExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'This mapping connects the category to the taxonomy and recommendation system.'**
+  String get adminOwnershipExplanation;
+
+  /// No description provided for @adminOwnershipGuidance.
+  ///
+  /// In en, this message translates to:
+  /// **'Review similar categories, then select the appropriate material family before approving.'**
+  String get adminOwnershipGuidance;
+
+  /// No description provided for @adminApprovalSucceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Category request approved.'**
+  String get adminApprovalSucceeded;
+
+  /// No description provided for @adminCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get adminCancel;
+
+  /// No description provided for @adminConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get adminConfirm;
+
+  /// No description provided for @adminDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get adminDone;
+
+  /// No description provided for @adminExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get adminExport;
+
+  /// No description provided for @adminFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Format'**
+  String get adminFormat;
+
+  /// No description provided for @adminExcel.
+  ///
+  /// In en, this message translates to:
+  /// **'Excel'**
+  String get adminExcel;
+
+  /// No description provided for @adminCsv.
+  ///
+  /// In en, this message translates to:
+  /// **'CSV'**
+  String get adminCsv;
+
+  /// No description provided for @adminPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF'**
+  String get adminPdf;
+
+  /// No description provided for @adminPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get adminPrevious;
+
+  /// No description provided for @adminNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get adminNext;
+
+  /// No description provided for @adminSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get adminSearch;
+
+  /// No description provided for @adminReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get adminReset;
+
+  /// No description provided for @adminResetFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset filters'**
+  String get adminResetFilters;
+
+  /// No description provided for @adminActions.
+  ///
+  /// In en, this message translates to:
+  /// **'ACTIONS'**
+  String get adminActions;
+
+  /// No description provided for @adminView.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get adminView;
+
+  /// No description provided for @adminViewDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View details'**
+  String get adminViewDetails;
+
+  /// No description provided for @adminInviteUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite user'**
+  String get adminInviteUser;
+
+  /// No description provided for @adminSuspendAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspend account'**
+  String get adminSuspendAccount;
+
+  /// No description provided for @adminReactivateAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Reactivate account'**
+  String get adminReactivateAccount;
+
+  /// No description provided for @adminSuspendAccountQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspend {name}?'**
+  String adminSuspendAccountQuestion(String name);
+
+  /// No description provided for @adminSuspendAccountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This will prevent the user from performing important actions, but their existing data and history will remain.'**
+  String get adminSuspendAccountBody;
+
+  /// No description provided for @adminReasonRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason (required)'**
+  String get adminReasonRequired;
+
+  /// No description provided for @adminSuspensionReasonMinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'A suspension reason of at least 3 characters is required.'**
+  String get adminSuspensionReasonMinLength;
+
+  /// No description provided for @adminAccountSuspended.
+  ///
+  /// In en, this message translates to:
+  /// **'Account suspended.'**
+  String get adminAccountSuspended;
+
+  /// No description provided for @adminReactivateAccountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore access for {name}? Their existing data and history were kept while suspended.'**
+  String adminReactivateAccountBody(String name);
+
+  /// No description provided for @adminAccountReactivated.
+  ///
+  /// In en, this message translates to:
+  /// **'Account reactivated.'**
+  String get adminAccountReactivated;
+
+  /// No description provided for @adminExportWebOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Export is available on Admin Web only.'**
+  String get adminExportWebOnly;
+
+  /// No description provided for @adminNoUsersMatchFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'No users match the current filters.'**
+  String get adminNoUsersMatchFilters;
+
+  /// No description provided for @adminExportUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'Export users'**
+  String get adminExportUsers;
+
+  /// No description provided for @adminNoProjectBuildsWithLearningData.
+  ///
+  /// In en, this message translates to:
+  /// **'No project builds with learning data.'**
+  String get adminNoProjectBuildsWithLearningData;
+
+  /// No description provided for @adminExportReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Export reservations'**
+  String get adminExportReservations;
+
+  /// No description provided for @adminNoReservationsMatchFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'No reservations match the current filters.'**
+  String get adminNoReservationsMatchFilters;
+
+  /// No description provided for @adminReservationDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation details'**
+  String get adminReservationDetails;
+
+  /// No description provided for @adminOpenReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Open report'**
+  String get adminOpenReport;
+
+  /// No description provided for @adminOpenDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Open delivery'**
+  String get adminOpenDelivery;
+
+  /// No description provided for @adminExportIncidentReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Export incident reports'**
+  String get adminExportIncidentReports;
+
+  /// No description provided for @adminNoIncidentReportsMatchFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'No incident reports match the current filters.'**
+  String get adminNoIncidentReportsMatchFilters;
+
+  /// No description provided for @adminCouldNotLoadIncidentReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load incident reports.'**
+  String get adminCouldNotLoadIncidentReports;
+
+  /// No description provided for @adminExportMaterials.
+  ///
+  /// In en, this message translates to:
+  /// **'Export materials'**
+  String get adminExportMaterials;
+
+  /// No description provided for @adminNoMaterialsMatchFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'No materials match the current filters.'**
+  String get adminNoMaterialsMatchFilters;
+
+  /// No description provided for @adminExportMaterialReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Export material reports'**
+  String get adminExportMaterialReports;
+
+  /// No description provided for @adminNoMaterialReportsMatchFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'No material reports match the current filters.'**
+  String get adminNoMaterialReportsMatchFilters;
+
+  /// No description provided for @adminSupplierVerificationDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier verification details'**
+  String get adminSupplierVerificationDetails;
+
+  /// No description provided for @adminApproveSupplierVerificationQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve supplier verification?'**
+  String get adminApproveSupplierVerificationQuestion;
+
+  /// No description provided for @adminRequestChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Request changes'**
+  String get adminRequestChanges;
+
+  /// No description provided for @adminApproveSupplierVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve supplier verification'**
+  String get adminApproveSupplierVerification;
+
+  /// No description provided for @sectionLearningSpotlightTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning spotlight'**
+  String get sectionLearningSpotlightTitle;
+
+  /// No description provided for @sectionLearningSpotlightSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with project guides built from real reusable materials.'**
+  String get sectionLearningSpotlightSubtitle;
+
+  /// No description provided for @sectionLearningSpotlightEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No learning projects published yet'**
+  String get sectionLearningSpotlightEmpty;
+
+  /// No description provided for @sectionLearningSpotlightEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'When learning projects are published, featured guides will appear here.'**
+  String get sectionLearningSpotlightEmptyDescription;
+
+  /// No description provided for @sectionHomeSuggestedMaterialsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested materials'**
+  String get sectionHomeSuggestedMaterialsTitle;
+
+  /// No description provided for @sectionHomeSuggestedMaterialsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A few currently listed materials to help you start.'**
+  String get sectionHomeSuggestedMaterialsSubtitle;
+
+  /// No description provided for @sectionHomeSuggestedMaterialsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No materials available yet'**
+  String get sectionHomeSuggestedMaterialsEmpty;
+
+  /// No description provided for @sectionHomeSuggestedMaterialsEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'When suppliers list reusable materials, a small set will appear here.'**
+  String get sectionHomeSuggestedMaterialsEmptyDescription;
+
+  /// No description provided for @completeLearnerProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete your learner profile'**
+  String get completeLearnerProfileTitle;
+
+  /// No description provided for @completeLearnerProfileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Help us personalize projects and material recommendations.'**
+  String get completeLearnerProfileSubtitle;
+
+  /// No description provided for @registerLearnerProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner profile'**
+  String get registerLearnerProfileTitle;
+
+  /// No description provided for @registerSupplierProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier profile'**
+  String get registerSupplierProfileTitle;
+
+  /// No description provided for @registerBothProfilesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You will complete learner and supplier details in the next steps.'**
+  String get registerBothProfilesHint;
+
+  /// No description provided for @registerFullNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Full name'**
+  String get registerFullNameLabel;
+
+  /// No description provided for @registerYourNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your name'**
+  String get registerYourNameHint;
+
+  /// No description provided for @registerFullNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Full name is required'**
+  String get registerFullNameRequired;
+
+  /// No description provided for @registerEmailAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email address'**
+  String get registerEmailAddressLabel;
+
+  /// No description provided for @registerPhoneOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number (optional)'**
+  String get registerPhoneOptionalLabel;
+
+  /// No description provided for @registerConfirmPasswordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password is required'**
+  String get registerConfirmPasswordRequired;
+
+  /// No description provided for @registerLearnerTypeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner type'**
+  String get registerLearnerTypeTitle;
+
+  /// No description provided for @registerSkillLevelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Skill level'**
+  String get registerSkillLevelTitle;
+
+  /// No description provided for @registerReviewAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get registerReviewAccount;
+
+  /// No description provided for @registerReviewIntent.
+  ///
+  /// In en, this message translates to:
+  /// **'Intent'**
+  String get registerReviewIntent;
+
+  /// No description provided for @registerReviewName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get registerReviewName;
+
+  /// No description provided for @registerReviewInterests.
+  ///
+  /// In en, this message translates to:
+  /// **'Interests'**
+  String get registerReviewInterests;
+
+  /// No description provided for @registerReviewGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Goals'**
+  String get registerReviewGoals;
+
+  /// No description provided for @registerReviewLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get registerReviewLocation;
+
+  /// No description provided for @registerReviewLearnerType.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner type'**
+  String get registerReviewLearnerType;
+
+  /// No description provided for @registerReviewSkillLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Skill level'**
+  String get registerReviewSkillLevel;
+
+  /// No description provided for @registerInterestsOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Interests (optional)'**
+  String get registerInterestsOptionalLabel;
+
+  /// No description provided for @registerBioOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Bio (optional)'**
+  String get registerBioOptionalLabel;
+
+  /// No description provided for @registerSkillLevelHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'How comfortable are you with building learning projects?'**
+  String get registerSkillLevelHelper;
+
+  /// No description provided for @registerLearnerTypeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner type is required'**
+  String get registerLearnerTypeRequired;
+
+  /// No description provided for @registerSkillLevelRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Skill level is required'**
+  String get registerSkillLevelRequired;
+
+  /// No description provided for @registerSelectLearnerType.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your learner type'**
+  String get registerSelectLearnerType;
+
+  /// No description provided for @registerSelectSkillLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your skill level'**
+  String get registerSelectSkillLevel;
+
+  /// No description provided for @registerBioHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell others a little about your learning goals'**
+  String get registerBioHint;
+
+  /// No description provided for @registerSupplierNextHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Next, we\'\'ll help you set up your supplier profile too.'**
+  String get registerSupplierNextHint;
+
+  /// No description provided for @authLearnLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn'**
+  String get authLearnLabel;
+
+  /// No description provided for @authReuseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reuse'**
+  String get authReuseLabel;
+
+  /// No description provided for @authBuildLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Build'**
+  String get authBuildLabel;
+
+  /// No description provided for @authMaterialsReusedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Materials reused'**
+  String get authMaterialsReusedLabel;
+
+  /// No description provided for @authProjectsLaunchedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects launched'**
+  String get authProjectsLaunchedLabel;
+
+  /// No description provided for @authRegistrationMovedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration has moved'**
+  String get authRegistrationMovedTitle;
+
+  /// No description provided for @authRegistrationMovedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'ImpactLoop now completes sign-up in one place. Redirecting you to the registration wizard…'**
+  String get authRegistrationMovedSubtitle;
+
+  /// No description provided for @authBrandTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'ImpactLoop'**
+  String get authBrandTitle;
+
+  /// No description provided for @homeSuggestedMaterialsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load suggested materials'**
+  String get homeSuggestedMaterialsLoadError;
+
+  /// No description provided for @homeSuggestedMaterialsLoadErrorSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The home page is still available. Try again when the materials API is running.'**
+  String get homeSuggestedMaterialsLoadErrorSubtitle;
+
+  /// No description provided for @homeLearningSpotlightLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load learning projects'**
+  String get homeLearningSpotlightLoadError;
+
+  /// No description provided for @homeLearningSpotlightLoadErrorSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The home page is still available. Try again when the Learning Hub API is running.'**
+  String get homeLearningSpotlightLoadErrorSubtitle;
 }
 
 class _AppLocalizationsDelegate

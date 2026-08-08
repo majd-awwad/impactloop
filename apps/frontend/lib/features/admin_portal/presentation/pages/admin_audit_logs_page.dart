@@ -8,6 +8,7 @@ import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_audit_logs_api.dart';
 import '../../data/models/admin_audit_logs_models.dart';
+import '../l10n/admin_l10n.dart';
 import '../theme/admin_decoration_set.dart';
 import '../theme/admin_palette.dart';
 import '../widgets/admin_audit_stat_card.dart';
@@ -660,7 +661,7 @@ class _FiltersPanelState extends State<_FiltersPanel> {
         isDense: true,
         suffixIcon: IconButton(
           icon: const Icon(Icons.search, size: 20),
-          tooltip: 'Search',
+          tooltip: AdminL10n.of(context).search,
           onPressed: widget.onSearch,
         ),
       ),
@@ -848,7 +849,7 @@ class _FiltersPanelState extends State<_FiltersPanel> {
                       AppStatusTone.neutral,
                     ),
                     icon: const Icon(Icons.filter_alt_off, size: 18),
-                    label: const Text('Reset'),
+                    label: Text(AdminL10n.of(context).reset),
                   ),
                 ],
               ),
@@ -1192,12 +1193,12 @@ class _PaginationRow extends StatelessWidget {
         OutlinedButton(
           onPressed: onPrevious,
           style: buttonStyle,
-          child: const Text('Previous'),
+          child: Text(AdminL10n.of(context).previous),
         ),
         OutlinedButton(
           onPressed: onNext,
           style: buttonStyle,
-          child: const Text('Next'),
+          child: Text(AdminL10n.of(context).next),
         ),
         Text(
           'Page $page of $totalPages · $total total',
@@ -1239,7 +1240,7 @@ class _ErrorPanel extends StatelessWidget {
                 context,
                 AppStatusTone.primary,
               ),
-              child: const Text('Retry'),
+              child: Text(AdminL10n.of(context).retry),
             ),
           ],
         ],

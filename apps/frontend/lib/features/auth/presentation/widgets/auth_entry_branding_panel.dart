@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/l10n.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/widgets/impact_loop_logo.dart';
@@ -311,30 +312,33 @@ class _SignalStage extends StatelessWidget {
               if (stackMetrics)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     _SignalMetric(
-                      label: 'Materials reused',
+                      label: context.l10n.materialsReused,
                       value: '12.5k+',
                       highlight: true,
                     ),
-                    SizedBox(height: AppSpacing.md),
-                    _SignalMetric(label: 'Projects launched', value: '840+'),
+                    const SizedBox(height: AppSpacing.md),
+                    _SignalMetric(
+                      label: context.l10n.authProjectsLaunchedLabel,
+                      value: '840+',
+                    ),
                   ],
                 )
               else
                 Row(
-                  children: const [
+                  children: [
                     Expanded(
                       child: _SignalMetric(
-                        label: 'Materials reused',
+                        label: context.l10n.materialsReused,
                         value: '12.5k+',
                         highlight: true,
                       ),
                     ),
-                    SizedBox(width: AppSpacing.md),
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: _SignalMetric(
-                        label: 'Projects launched',
+                        label: context.l10n.authProjectsLaunchedLabel,
                         value: '840+',
                       ),
                     ),

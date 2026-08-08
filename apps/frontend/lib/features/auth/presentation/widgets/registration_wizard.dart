@@ -263,11 +263,11 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
 
       case RegistrationWizardStep.learnerBasics:
         if (_learnerType == null || _learnerType!.isEmpty) {
-          setState(() => _learnerTypeError = 'Learner type is required');
+          setState(() => _learnerTypeError = context.l10n.registerLearnerTypeRequired);
           return false;
         }
         if (_skillLevel == null || _skillLevel!.isEmpty) {
-          setState(() => _skillLevelError = 'Skill level is required');
+          setState(() => _skillLevelError = context.l10n.registerSkillLevelRequired);
           return false;
         }
         return true;
@@ -597,7 +597,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
             _stepIndex = _steps.length - 1;
           }
         } else {
-          _formError = 'Something went wrong. Please try again.';
+          _formError = context.l10n.somethingWentWrong;
         }
       });
     }
@@ -924,29 +924,29 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         ],
         if (_intent == RegistrationIntent.both) ...[
           const SizedBox(height: AppSpacing.md),
-          const AuthSectionTitle(title: 'Learner profile'),
+          AuthSectionTitle(title: context.l10n.registerLearnerProfileTitle),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'You will complete learner and supplier details in the next steps.',
+            context.l10n.registerBothProfilesHint,
             style: TextStyle(
               fontSize: 13,
               color: AuthUiPalette.of(context).textSecondary,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          const AuthSectionTitle(title: 'Supplier profile'),
+          AuthSectionTitle(title: context.l10n.registerSupplierProfileTitle),
         ],
         const SizedBox(height: AppSpacing.lg),
         AuthTextField(
           controller: _displayNameController,
-          label: 'Full name',
-          hint: 'Your name',
+          label: context.l10n.registerFullNameLabel,
+          hint: context.l10n.registerYourNameHint,
           textInputAction: TextInputAction.next,
           autofillHints: const [AutofillHints.name],
           onChanged: (_) => _clearErrors(),
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
-              return 'Full name is required';
+              return context.l10n.registerFullNameRequired;
             }
             return null;
           },
@@ -954,8 +954,8 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         const AuthFieldGap(),
         AuthTextField(
           controller: _emailController,
-          label: 'Email address',
-          hint: 'you@example.com',
+          label: context.l10n.registerEmailAddressLabel,
+          hint: context.l10n.emailHint,
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
           autofillHints: const [AutofillHints.email],
@@ -963,10 +963,10 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           validator: (value) {
             final trimmed = value?.trim() ?? '';
             if (trimmed.isEmpty) {
-              return 'Email is required';
+              return context.l10n.emailRequired;
             }
             if (!trimmed.contains('@')) {
-              return 'Enter a valid email address';
+              return context.l10n.validEmailRequired;
             }
             return null;
           },
@@ -974,7 +974,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         const AuthFieldGap(),
         AuthTextField(
           controller: _phoneController,
-          label: 'Phone number (optional)',
+          label: context.l10n.registerPhoneOptionalLabel,
           hint: '+970 000 000 000',
           keyboardType: TextInputType.phone,
           textInputAction: TextInputAction.next,
@@ -984,13 +984,13 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         const AuthFieldGap(),
         AuthPasswordField(
           controller: _passwordController,
-          label: 'Password',
+          label: context.l10n.password,
           textInputAction: TextInputAction.next,
           autofillHints: const [AutofillHints.newPassword],
           onChanged: (_) => _clearErrors(),
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return 'Password is required';
+              return context.l10n.passwordRequired;
             }
             return null;
           },
@@ -998,16 +998,16 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         const AuthFieldGap(),
         AuthPasswordField(
           controller: _confirmPasswordController,
-          label: 'Confirm password',
+          label: context.l10n.confirmPassword,
           textInputAction: TextInputAction.done,
           autofillHints: const [AutofillHints.newPassword],
           onChanged: (_) => _clearErrors(),
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return 'Confirm password is required';
+              return context.l10n.registerConfirmPasswordRequired;
             }
             if (value != _passwordController.text) {
-              return 'Passwords do not match';
+              return context.l10n.passwordsDoNotMatch;
             }
             return null;
           },
@@ -1140,10 +1140,11 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   }
 
   Widget _buildLearnerBasicsStep() {
+    final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const AuthSectionTitle(title: 'Learner type'),
+        AuthSectionTitle(title: l10n.registerLearnerTypeTitle),
         const SizedBox(height: AppSpacing.sm),
         for (final type in registrationLearnerTypes) ...[
           AuthSelectCard(
@@ -1160,9 +1161,9 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         if (_learnerTypeError != null)
           AppInlineError(message: _learnerTypeError!),
         const SizedBox(height: AppSpacing.md),
-        const AuthSectionTitle(title: 'Skill level'),
+        AuthSectionTitle(title: l10n.registerSkillLevelTitle),
         Text(
-          'How comfortable are you with building learning projects?',
+          l10n.registerSkillLevelHelper,
           style: TextStyle(
             fontSize: 13,
             height: 1.45,
@@ -1385,32 +1386,32 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
       children: [
         if (_isAddToExistingAccount) ...[
           if (user != null) ...[
-            _ReviewRow(label: 'Account', value: user.displayName.trim()),
-            _ReviewRow(label: 'Email', value: user.email.trim()),
+            _ReviewRow(label: l10n.registerReviewAccount, value: user.displayName.trim()),
+            _ReviewRow(label: l10n.email, value: user.email.trim()),
           ],
         ] else ...[
-          _ReviewRow(label: 'Intent', value: _intentLabel(_intent)),
-          _ReviewRow(label: 'Name', value: _displayNameController.text.trim()),
-          _ReviewRow(label: 'Email', value: _emailController.text.trim()),
+          _ReviewRow(label: l10n.registerReviewIntent, value: _intentLabel(_intent)),
+          _ReviewRow(label: l10n.registerReviewName, value: _displayNameController.text.trim()),
+          _ReviewRow(label: l10n.email, value: _emailController.text.trim()),
         ],
         if (interests.isNotEmpty)
           _ReviewRow(
-            label: 'Interests',
+            label: l10n.registerReviewInterests,
             value: interests.map(learnerInterestLabel).join(', '),
           ),
         if (goals.isNotEmpty)
-          _ReviewRow(label: 'Goals', value: goals.join(', ')),
+          _ReviewRow(label: l10n.registerReviewGoals, value: goals.join(', ')),
         if (_isAddToExistingAccount && learnerLocation != null)
-          _ReviewRow(label: 'Location', value: learnerLocation),
+          _ReviewRow(label: l10n.registerReviewLocation, value: learnerLocation),
         if (!_isAddToExistingAccount && pickupArea != null)
-          _ReviewRow(label: 'Location', value: pickupArea),
+          _ReviewRow(label: l10n.registerReviewLocation, value: pickupArea),
         if (draft.learnerProfile != null) ...[
           _ReviewRow(
-            label: 'Learner type',
+            label: l10n.registerReviewLearnerType,
             value: draft.learnerProfile!.learnerType,
           ),
           _ReviewRow(
-            label: 'Skill level',
+            label: l10n.registerReviewSkillLevel,
             value: draft.learnerProfile!.skillLevel,
           ),
         ],

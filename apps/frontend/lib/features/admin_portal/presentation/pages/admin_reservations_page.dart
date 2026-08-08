@@ -16,6 +16,7 @@ import '../../data/admin_reservations_api.dart';
 import '../../data/models/admin_reservations_models.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../reservations/presentation/learner_reservation_ui_helpers.dart';
+import '../l10n/admin_l10n.dart';
 import '../theme/admin_decoration_set.dart';
 import '../theme/admin_palette.dart';
 import '../widgets/admin_empty_state.dart';
@@ -277,9 +278,7 @@ class _AdminReservationsPageState extends ConsumerState<AdminReservationsPage> {
     if (!kIsWeb) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Export is available on Admin Web only.'),
-        ),
+        SnackBar(content: Text(AdminL10n.of(context).exportWebOnly)),
       );
       return;
     }
@@ -315,8 +314,8 @@ class _AdminReservationsPageState extends ConsumerState<AdminReservationsPage> {
 
       if (preflight.count == 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No reservations match the current filters.'),
+          SnackBar(
+            content: Text(AdminL10n.of(context).noReservationsMatchFilters),
           ),
         );
         return;
@@ -719,6 +718,7 @@ class _AdminReservationsExportDialogState
 
   @override
   Widget build(BuildContext context) {
+    final adminL10n = AdminL10n.of(context);
     final pdfEligibility = widget.formats['pdf'];
     final pdfSelectable = pdfEligibility?.allowed ?? false;
     final limitMessage = (_selectedEligibility?.exceedsLimit ?? false)
@@ -728,7 +728,7 @@ class _AdminReservationsExportDialogState
         : null;
 
     return AppDialogShell(
-      title: const Text('Export reservations'),
+      title: Text(adminL10n.exportReservations),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -742,17 +742,17 @@ class _AdminReservationsExportDialogState
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 16),
-          const Text('Format'),
+          Text(adminL10n.format),
           const SizedBox(height: 8),
           SegmentedButton<String>(
             segments: [
-              const ButtonSegment(value: 'xlsx', label: Text('Excel')),
+              ButtonSegment(value: 'xlsx', label: Text(adminL10n.excel)),
               ButtonSegment(
                 value: 'pdf',
-                label: const Text('PDF'),
+                label: Text(adminL10n.pdf),
                 enabled: pdfSelectable,
               ),
-              const ButtonSegment(value: 'csv', label: Text('CSV')),
+              ButtonSegment(value: 'csv', label: Text(adminL10n.csv)),
             ],
             selected: {_selectedFormat},
             onSelectionChanged: _isDownloading
@@ -791,7 +791,7 @@ class _AdminReservationsExportDialogState
           onPressed: _isDownloading
               ? null
               : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(adminL10n.cancel),
         ),
         primaryAction: FilledButton(
           onPressed: _canExport ? _confirm : null,
@@ -801,7 +801,7 @@ class _AdminReservationsExportDialogState
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Export'),
+              : Text(adminL10n.exportAction),
         ),
       ),
     );
@@ -857,6 +857,7 @@ class _FiltersPanelState extends State<_FiltersPanel> {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final adminL10n = AdminL10n.of(context);
     final dropdownWidth = widget.compact ? double.infinity : 176.0;
     final statusValue =
         safeDropdownValue(widget.filters.status, widget.statuses) ?? 'ALL';
@@ -912,7 +913,7 @@ class _FiltersPanelState extends State<_FiltersPanel> {
           ),
           suffixIcon: IconButton(
             icon: const Icon(Icons.search, size: 20),
-            tooltip: 'Search',
+            tooltip: adminL10n.search,
             onPressed: widget.onSearch,
           ),
         ),
@@ -921,7 +922,7 @@ class _FiltersPanelState extends State<_FiltersPanel> {
     );
 
     final statusFilter = AdminCompactFilterDropdown(
-      label: 'Status',
+      label: adminL10n.status,
       value: statusValue,
       width: dropdownWidth,
       enabled: widget.statuses.isNotEmpty,
@@ -984,7 +985,7 @@ class _FiltersPanelState extends State<_FiltersPanel> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.download_outlined, size: 18),
-              label: Text(widget.exportLoading ? 'Preparing…' : 'Export'),
+              label: Text(widget.exportLoading ? 'Preparing…' : adminL10n.exportAction),
             ),
           );
 
@@ -1131,7 +1132,7 @@ class _FiltersPanelState extends State<_FiltersPanel> {
                     AppStatusTone.neutral,
                   ),
                   icon: const Icon(Icons.filter_alt_off, size: 18),
-                  label: const Text('Reset'),
+                  label: Text(adminL10n.reset),
                 ),
                 if (widget.onExport != null)
                   OutlinedButton.icon(
@@ -1141,7 +1142,7 @@ class _FiltersPanelState extends State<_FiltersPanel> {
                       side: BorderSide(color: palette.cardBorder),
                     ),
                     icon: const Icon(Icons.download_outlined, size: 18),
-                    label: const Text('Export'),
+                    label: Text(adminL10n.exportAction),
                   ),
               ],
             ),
@@ -1299,6 +1300,8 @@ class _TableHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final adminL10n = AdminL10n.of(context);
     Widget label(String text, {TextAlign align = TextAlign.start}) => Text(
       text,
       textAlign: align,
@@ -1319,11 +1322,11 @@ class _TableHeader extends StatelessWidget {
         material: label('Material'),
         learner: label('Learner'),
         supplier: label('Supplier'),
-        status: label('Status'),
+        status: label(adminL10n.status),
         qty: label('Qty'),
         created: label('Created'),
         delivery: label('Delivery'),
-        actions: label('Actions', align: TextAlign.center),
+        actions: label(adminL10n.actions, align: TextAlign.center),
       ),
     );
   }
@@ -1408,7 +1411,7 @@ class _ReservationTableRow extends StatelessWidget {
           actions: Center(
             child: IconButton(
               onPressed: onTap,
-              tooltip: 'View reservation details',
+              tooltip: AdminL10n.of(context).reservationDetails,
               visualDensity: VisualDensity.compact,
               icon: Icon(
                 Icons.visibility_outlined,
@@ -1432,6 +1435,7 @@ class _ReservationMobileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final adminL10n = AdminL10n.of(context);
     final created = formatAdminDateTime(item.createdAt) ?? item.createdAt;
     final learnerLabel = displayPersonLabel(
       item.learner.displayName,
@@ -1525,7 +1529,7 @@ class _ReservationMobileCard extends StatelessWidget {
                   AppStatusTone.neutral,
                 ),
                 icon: const Icon(Icons.visibility_outlined, size: 17),
-                label: const Text('View details'),
+                label: Text(adminL10n.viewDetails),
               ),
             ),
           ],
@@ -1680,6 +1684,7 @@ class _Pagination extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final adminL10n = AdminL10n.of(context);
     final neutralStyle =
         AppStatusButtonStyle.outlined(context, AppStatusTone.neutral).copyWith(
           minimumSize: const WidgetStatePropertyAll(Size(0, 40)),
@@ -1696,7 +1701,7 @@ class _Pagination extends StatelessWidget {
         OutlinedButton(
           onPressed: page > 1 ? () => onPageChanged(page - 1) : null,
           style: neutralStyle,
-          child: const Text('Previous'),
+          child: Text(adminL10n.previous),
         ),
         for (final item in _visiblePages())
           if (item == '…')
@@ -1713,7 +1718,7 @@ class _Pagination extends StatelessWidget {
         OutlinedButton(
           onPressed: page < totalPages ? () => onPageChanged(page + 1) : null,
           style: neutralStyle,
-          child: const Text('Next'),
+          child: Text(adminL10n.next),
         ),
       ],
     );
@@ -1789,6 +1794,7 @@ class _ReservationsEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final adminL10n = AdminL10n.of(context);
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
@@ -1818,7 +1824,7 @@ class _ReservationsEmptyState extends StatelessWidget {
                     AppStatusTone.neutral,
                   ),
                   icon: const Icon(Icons.filter_alt_off, size: 18),
-                  label: const Text('Reset filters'),
+                  label: Text(adminL10n.resetFilters),
                 ),
               ],
             ],
@@ -1972,12 +1978,13 @@ class _ReservationDetailDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final adminL10n = AdminL10n.of(context);
     final detailAsync = ref.watch(
       _adminReservationDetailProvider(reservationId),
     );
 
     return AppDialogShell(
-      title: const Text('Reservation details'),
+      title: Text(adminL10n.reservationDetails),
       maxWidth: 1020,
       borderRadius: AppRadius.xlAll,
       content: detailAsync.when(
@@ -1999,12 +2006,12 @@ class _ReservationDetailDialog extends ConsumerWidget {
         secondaryAction: OutlinedButton(
           onPressed: () => Navigator.of(context).maybePop(),
           style: OutlinedButton.styleFrom(minimumSize: const Size(100, 44)),
-          child: const Text('Close'),
+          child: Text(adminL10n.close),
         ),
         primaryAction: FilledButton(
           onPressed: () => Navigator.of(context).maybePop(),
           style: FilledButton.styleFrom(minimumSize: const Size(100, 44)),
-          child: const Text('Done'),
+          child: Text(adminL10n.done),
         ),
       ),
     );
@@ -2018,6 +2025,7 @@ class _ReservationDetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final adminL10n = AdminL10n.of(context);
     final learnerLabel = displayPersonLabel(
       detail.learner.displayName,
       detail.learner.email,
@@ -2043,7 +2051,7 @@ class _ReservationDetailBody extends StatelessWidget {
         _MetaItem(
           icon: Icons.hourglass_bottom_rounded,
           tone: _fromStatusTone(statusTone),
-          label: 'Status',
+          label: adminL10n.status,
           valueWidget: AppStatusBadge(
             label: _statusLabel(detail.status),
             tone: statusTone,
@@ -2178,7 +2186,7 @@ class _ReservationDetailBody extends StatelessWidget {
             _TwoColRow(
               leftLabel: 'Reason',
               leftValue: humanizeEnum(report.reasonCode),
-              rightLabel: 'Status',
+              rightLabel: adminL10n.status,
               rightValue: adminIncidentReportStatusLabel(report.status),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -2194,7 +2202,7 @@ class _ReservationDetailBody extends StatelessWidget {
               },
               style: AppStatusButtonStyle.outlined(context, AppStatusTone.info),
               icon: const Icon(Icons.open_in_new_rounded, size: 16),
-              label: const Text('Open report'),
+              label: Text(adminL10n.openReport),
             ),
           ],
         ),
@@ -2239,7 +2247,7 @@ class _ReservationDetailBody extends StatelessWidget {
                 AppStatusTone.neutral,
               ),
               icon: const Icon(Icons.open_in_new_rounded, size: 16),
-              label: const Text('Open delivery'),
+              label: Text(adminL10n.openDelivery),
             ),
           ],
         ),
