@@ -108,6 +108,7 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
     with WidgetsBindingObserver, LifecyclePollingHost<_NotificationsBody> {
   bool _refreshInFlight = false;
   String? _openingNotificationId;
+  NotificationsListPageVisibleNotifier? _pageVisibleNotifier;
 
   late final LifecyclePollingController _pollController =
       LifecyclePollingController(
@@ -122,13 +123,20 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
   void initState() {
     super.initState();
     initLifecyclePollingHost();
-    ref.read(notificationsListPageVisibleProvider.notifier).increment();
-    _pollController.syncEnabled(true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _pageVisibleNotifier =
+          ref.read(notificationsListPageVisibleProvider.notifier);
+      _pageVisibleNotifier!.increment();
+      _pollController.syncEnabled(true);
+    });
   }
 
   @override
   void dispose() {
-    ref.read(notificationsListPageVisibleProvider.notifier).decrement();
+    _pageVisibleNotifier?.decrement();
     disposeLifecyclePollingHost();
     super.dispose();
   }

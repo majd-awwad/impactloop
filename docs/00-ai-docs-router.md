@@ -32,6 +32,7 @@ Update:
 Read:
 
 - [frontend/routes-map.md](frontend/routes-map.md)
+- [frontend/accessibility-checklist.md](frontend/accessibility-checklist.md) if semantics, tooltips, text-scale, or a11y CI changed
 - [frontend/reusable-widgets.md](frontend/reusable-widgets.md)
 - [frontend/state-management.md](frontend/state-management.md) if Riverpod providers/controllers/repositories changed
 - [07-theme-system.md](07-theme-system.md) if theme, tokens, palettes, reusable visual primitives, or dark/light behavior changed
@@ -41,6 +42,7 @@ Read:
 Update:
 
 - [frontend/routes-map.md](frontend/routes-map.md) if routes/guards changed
+- [frontend/accessibility-checklist.md](frontend/accessibility-checklist.md) if critical-route a11y coverage or smoke tests changed
 - [frontend/reusable-widgets.md](frontend/reusable-widgets.md) if a shared widget was added/changed
 - [frontend/state-management.md](frontend/state-management.md) if provider/controller/repository organization changed
 - [07-theme-system.md](07-theme-system.md) if shared theme, tokens, palettes, dark/light handling, or reusable visual architecture changed

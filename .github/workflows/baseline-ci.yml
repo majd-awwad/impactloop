@@ -239,3 +239,26 @@ jobs:
             test/driver_portal_first_release_test.dart \
             test/features/ai/ai_content_blocks_test.dart \
             test/features/ai/ai_recommendation_blocks_widget_test.dart
+
+  flutter-a11y-smoke:
+    name: flutter-a11y-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Critical-route accessibility smoke suite
+        run: flutter test test/a11y/critical_route_smoke_test.dart
