@@ -1,8 +1,8 @@
-import { prisma } from '../../database/prisma.js';
-import { seedCategoryTaxonomyOwnership } from '../../modules/taxonomy/category-taxonomy-ownership.seed.js';
-import { seedTaxonomyCompatibilityRelations } from '../../modules/taxonomy/taxonomy-compatibility-relations.seed.js';
-import { seedTaxonomyFoundation } from '../../modules/taxonomy/taxonomy-foundation.repository.js';
-import { hashPassword } from '../../utils/password.js';
+import { prisma } from '../../src/database/prisma.js';
+import { seedCategoryTaxonomyOwnership } from '../../src/modules/taxonomy/category-taxonomy-ownership.seed.js';
+import { seedTaxonomyCompatibilityRelations } from '../../src/modules/taxonomy/taxonomy-compatibility-relations.seed.js';
+import { seedTaxonomyFoundation } from '../../src/modules/taxonomy/taxonomy-foundation.repository.js';
+import { hashPassword } from '../../src/utils/password.js';
 
 const CI_MARKER = '[ci-database-seed]';
 
