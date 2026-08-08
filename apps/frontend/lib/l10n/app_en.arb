@@ -1269,7 +1269,23 @@
   "comingLater": "Coming later",
   "comingLaterSubtitle": "Impact insights are planned but not available yet.",
   "impactSnapshot": "Impact snapshot",
-  "impactSnapshotDescription": "Your reuse impact will appear here after you complete reservations and projects.",
+  "impactSnapshotSubtitle": "Reuse progress from completed pickups and project builds.",
+  "impactSnapshotDescription": "Complete material pickups and project builds to start tracking your reuse impact.",
+  "impactSnapshotCompletedPickups": "Completed pickups",
+  "impactSnapshotCompletedBuilds": "Completed builds",
+  "impactSnapshotActiveReservations": "Active reservations",
+  "impactSnapshotActiveBuilds": "Builds in progress",
+  "impactSnapshotInProgressNote": "{activeReservations} active reservations and {activeBuilds} builds in progress.",
+  "@impactSnapshotInProgressNote": {
+    "placeholders": {
+      "activeReservations": {
+        "type": "String"
+      },
+      "activeBuilds": {
+        "type": "String"
+      }
+    }
+  },
   "landingFutureBadge": "Build a better future",
   "landingHeroSubtitle": "Discover reusable materials, share surplus resources, and turn surplus into projects with a cleaner, community-driven workflow.",
   "landingCtaNote": "No credit card. No noise. Just building.",

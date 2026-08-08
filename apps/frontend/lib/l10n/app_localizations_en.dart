@@ -2702,8 +2702,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get impactSnapshot => 'Impact snapshot';
 
   @override
+  String get impactSnapshotSubtitle =>
+      'Reuse progress from completed pickups and project builds.';
+
+  @override
   String get impactSnapshotDescription =>
-      'Your reuse impact will appear here after you complete reservations and projects.';
+      'Complete material pickups and project builds to start tracking your reuse impact.';
+
+  @override
+  String get impactSnapshotCompletedPickups => 'Completed pickups';
+
+  @override
+  String get impactSnapshotCompletedBuilds => 'Completed builds';
+
+  @override
+  String get impactSnapshotActiveReservations => 'Active reservations';
+
+  @override
+  String get impactSnapshotActiveBuilds => 'Builds in progress';
+
+  @override
+  String impactSnapshotInProgressNote(
+    String activeReservations,
+    String activeBuilds,
+  ) {
+    return '$activeReservations active reservations and $activeBuilds builds in progress.';
+  }
 
   @override
   String get landingFutureBadge => 'Build a better future';
