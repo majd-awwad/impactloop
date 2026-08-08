@@ -1,6 +1,12 @@
 # ImpactLoop Learner AI System — Architecture Plan (Phase 0)
 
-**Status:** Planning only — no production implementation in this phase.  
+> **Historical — planning document (2026-07-14).** Several sections below describe a pre-implementation snapshot and are **no longer accurate** as a whole-system description.
+>
+> **Current state:** see [08-implementation-status.md](../08-implementation-status.md), [01-general-learning-chat.md](01-general-learning-chat.md), and [features/ai-agent.md](../features/ai-agent.md) (material matching gap).
+>
+> **Shipped since this plan:** `apps/backend/src/modules/ai/` mounted at `/api/ai/v1`; Flutter `features/ai/` (`/ai/assistant`); general learning, build-guide tools, and project authoring waves. **Not shipped:** material-matching agent, credit wallets, `ai_material_matches` schema.
+
+**Status:** Historical planning doc — superseded for status by code-derived inventories above.  
 **Date:** 2026-07-14  
 **Sources inspected:** `apps/backend/src/`, `apps/backend/prisma/schema.prisma`, `apps/frontend/lib/`, `docs/08-implementation-status.md`, `docs/features/ai-agent.md`, `docs/features/learning-hub.md`, `docs/features/home-learner.md`, `docs/features/material-discovery.md`, `docs/features/reservations.md`, `AGENTS.md`
 
@@ -17,7 +23,7 @@
 
 ## 1. Executive decision summary
 
-ImpactLoop today has **no learner-facing AI system**. The only live AI path is **internal price-rule review** (`suggestPriceReferenceForReview` in `apps/backend/src/services/ai-price-suggestion.service.ts`) used by `price-rule-requests.service.ts`, with provider selection via `env.aiProvider` (`gemini` \| `mock` \| `disabled`) in `apps/backend/src/config/env.ts`. Material matching, project authoring assistance, and conversational learner agents are **not implemented** (`docs/features/ai-agent.md`, `docs/08-implementation-status.md`).
+ImpactLoop today has a **partial learner-facing AI system** at `/api/ai/v1` (ImpactLoop Assistant) plus **internal price-rule review** AI (`suggestPriceReferenceForReview` in `apps/backend/src/services/ai-price-suggestion.service.ts`). Material **matching** with credits, `ai_material_matches`, and auto-reservation remains **not implemented** — see [features/ai-agent.md](../features/ai-agent.md) and [01-general-learning-chat.md](01-general-learning-chat.md).
 
 **RECOMMENDED CHANGE — core architectural decisions:**
 
@@ -38,9 +44,9 @@ ImpactLoop today has **no learner-facing AI system**. The only live AI path is *
 **VERIFIED CURRENT STATE — Express app** (`apps/backend/src/app.ts`, export `app`):
 
 - Global middleware order: `requestContextMiddleware` → `helmet` → `cors` (allows `Idempotency-Key`, `Authorization`) → static uploads → `express.json()`.
-- Routes mounted under `/health`, `/api/auth`, `/api/profile`, `/api/categories`, `/api/material-types`, `/api/price-rule-requests`, `/api/invitations`, `/api/learning-projects`, `/api/materials`, `/api/reservations`, `/api/deliveries`, `/api/driver`, `/api/uploads`, `/api/locations`, `/api/learner/saved-dropoff-addresses`, `/api/learner`, `/api/notifications`, `/api/supplier`, `/api/admin`.
+- Routes mounted under `/health`, `/api/auth`, `/api/profile`, `/api/categories`, `/api/material-types`, `/api/price-rule-requests`, `/api/invitations`, `/api/learning-projects`, `/api/materials`, `/api/reservations`, `/api/payments`, `/api/deliveries`, `/api/driver`, `/api/uploads`, `/api/locations`, `/api/learner/*`, `/api/ai/v1`, `/api/notifications`, `/api/supplier`, `/api/admin`.
 - Terminal: `notFoundMiddleware`, `errorMiddleware`.
-- **No `/api/ai` router.** **No global auth or rate limit.**
+- **`/api/ai/v1` router exists** (ImpactLoop Assistant). See [01-general-learning-chat.md](01-general-learning-chat.md). **No global auth or rate limit** on all routes (AI has module-local limits).
 
 **VERIFIED CURRENT STATE — Auth & roles:**
 

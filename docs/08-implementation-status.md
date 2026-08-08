@@ -75,7 +75,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 
 `users`, `roles`, `ai-agent`, `moderator`, `reports`, `reviews`
 
-(`profile` module handles authenticated user/learner profile updates; supplier org profile remains under `supplier`. `ai` module covers Phase 1.1 ImpactLoop Assistant — general learning turns only; not LEARNER_AGENT tools or authoring.)
+(`profile` module handles authenticated user/learner profile updates; supplier org profile remains under `supplier`. `ai` module is **Partial** — `/api/ai/v1` ImpactLoop Assistant with general learning, build-guide agent tools, and project authoring waves; roadmap **material-matching agent** with credits/schema remains **not implemented** — see [ai-agent.md](features/ai-agent.md).)
 
 ---
 
@@ -149,7 +149,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Delivery domain                       | Yes       | Yes                                                      | Partial                                                                                                          |
 | Operational delivery rows             | Yes       | Yes (`deliveries` is the source of delivery state)        | Partial learner/driver/supplier delivery surfaces                                                                |
 | Learning projects                     | Yes       | Yes (PUBLISHED only + learner submit + admin moderation + learner engagement/reviews/build checklists) | **Partial** — browse/detail/spotlight API-backed; add-draft submits for admin review; learner likes/saves/follows/reviews; persisted manual build checklist; admin moderation UI exists |
-| Reviews                               | Yes       | No                                                       | No                                                                                                               |
+| Reviews                               | Yes       | Partial (`project_user_reviews` via learning-projects)   | Partial (learning hub detail)                                                                                    |
 | Notifications (generic)               | Yes       | Yes                                                      | Partial (`/notifications` page)                                                                                  |
 | Price/category requests               | Yes       | Yes                                                      | Yes (supplier add flow)                                                                                          |
 
@@ -192,7 +192,7 @@ Mapped from [05-roadmap.md](05-roadmap.md) to **code reality** — roadmap text 
 | Phase 2A feature docs (`docs/features/`)                               | **Partial** — core feature docs plus role capability framing documented                                        |
 | Phase 2A flow docs (`docs/flows/`)                                     | **Partial** — 5 flows documented                                                                               |
 | Phase 2B supporting docs (`docs/features/`, `docs/flows/`)             | **Partial** — 5 features + 1 flow documented (see tables below)                                                |
-| Phase 2C gap docs + [09-open-questions.md](09-open-questions.md)       | **Partial** — 5 gap features + 3 stub flows + open-question index                                              |
+| Phase 2C gap docs + [09-open-questions.md](09-open-questions.md)       | **Partial** — gap features + open-question index; historical plans in [archive/README.md](archive/README.md) |
 | ADRs (`docs/adr/`)                                                     | **Implemented** — accepted decision records exist for stack, roles, delivery, docs, theme, and delivery domain |
 
 

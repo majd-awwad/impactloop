@@ -29,7 +29,7 @@ impactloop/
         app/                # app shell, router, theme, widgets
         core/               # network, auth, config, errors
         shared/             # shared models and widgets
-        features/           # 14 feature folders (see below)
+        features/           # feature folders (see [08-implementation-status.md](08-implementation-status.md) for ship status)
   docs/
   .cursor/                  # rules and skills
 ```
@@ -66,7 +66,16 @@ Derived **only** from `apps/backend/src/modules/`:
 | `supplier-notifications` | `/api/supplier/notifications` | Supplier action notifications list |
 | `supplier-reservations` | `/api/supplier/reservations` | Supplier reservation list/accept/decline/complete |
 | `supplier-verification` | Mounted through supplier/admin flows | Supplier verification submit/status support |
-| `uploads` | `/api/uploads` | Supplier material image upload |
+| `ai` | `/api/ai/v1` | ImpactLoop Assistant — general learning, build-guide tools, project authoring |
+| `notifications` | `/api/notifications` | Generic persisted learner inbox |
+| `payments` | `/api/payments` | Mock checkout + reservation/delivery fee settlement |
+| `learner-home` | `/api/learner` | Personalized home feed |
+| `learner-builds` | `/api/learner` | Build lifecycle (pause/resume/archive) |
+| `learner-material-requests` | `/api/learner/material-requests` | Learner missing-material requests |
+| `saved-dropoff-addresses` | `/api/learner/saved-dropoff-addresses` | Learner delivery dropoff CRUD |
+| `fulfillment-failures` | via reservations/supplier/driver routes | Post-grace failure transitions |
+| `admin-no-show-reports` | via `/api/admin` | Incident queue + pickup recovery |
+| `uploads` | `/api/uploads` | Profile, supplier material, verification, and build-completion uploads |
 
 Detail: [backend/modules-map.md](backend/modules-map.md), [backend/api-catalog.md](backend/api-catalog.md)
 
@@ -74,25 +83,28 @@ Detail: [backend/modules-map.md](backend/modules-map.md), [backend/api-catalog.m
 
 These names appear in older docs or roadmap but **do not exist** under `apps/backend/src/modules/`:
 
-`users`, `roles`, `ai-agent`, `notifications` (general), `moderator`, `reports`, `reviews`
+`users`, `roles`, `ai-agent` (roadmap name — use `ai` module), `moderator`, `reports`, `reviews`
 
-Some concerns are partially covered (e.g. reservations via learner create + `supplier-reservations`; notifications via `supplier-notifications`; reports via `material_reports` and admin material report review, not a general reports module).
+Some concerns are partially covered (e.g. reservations via learner create + `supplier-reservations`; `notifications` module exists; reports via `material_reports` and admin material report review, not a general reports module).
 
-## Flutter features (14)
+## Flutter features
 
-Derived **only** from `apps/frontend/lib/features/`:
+Derived from `apps/frontend/lib/features/`. For folder count and ship status, prefer [08-implementation-status.md](08-implementation-status.md).
 
 | Feature | Primary routes | Data source (summary) |
 |---------|----------------|------------------------|
-| `admin_portal` | `/admin/*` | **Partial** — dashboard, invitations, approvals, supplier verification, materials moderation, learning project moderation, people management, impact/audit, and read-only operations monitors |
+| `ai` | `/ai/assistant` | **Partial** — ImpactLoop Assistant API |
+| `admin_portal` | `/admin/*` | **Partial** — dashboard, invitations, approvals, supplier verification, materials moderation, learning project moderation, people management, impact/audit, delivery/reservation monitors |
 | `auth` | `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth/checking`, profile completion paths | **Implemented for auth MVP** — register/login/me/change-password/forgot-reset API and UI |
 | `deliveries` | `/learner/deliveries/:id` | **Partial** — learner delivery status/detail, latest ping summary, polling map marker |
 | `driver_portal` | `/driver/*` | **Partial** — job board, accept, active delivery detail/status/location pings |
 | `health` | `/health` | API (`/health`) |
-| `home` | `/home` | **Partial** — materials and learning spotlight via API; personalization pending |
+| `home` | `/home` | **Partial** — personalized feed via `GET /api/learner/home` (7 sections) |
 | `invitations` | `/invite/accept` | **Implemented** — invitation validate/accept UI backed by API |
 | `landing` | `/` | Static UI |
-| `learning_hub` | `/learning`, `/learning/:id`, `/learning/add-draft` | **Partial** — read path API-backed; add-draft submits for admin review; search/filters, server-side page navigation, project likes/saves/follows/reviews, and admin moderation wired; AI/checklist/material linking pending |
+| `learning_hub` | `/learning`, `/learning/:id`, `/learning/add-draft` | **Partial** — browse/detail API-backed; builds, moderation, engagement, material linking wired; AI material matching pending |
+| `notifications` | `/notifications` | **Partial** — generic inbox UI |
+| `payments` | reservation checkout flows | **Partial** — Mock payment when enforcement ON |
 | `material_discovery` | `/materials`, `/materials/:id` | API default (`ApiMaterialDiscoveryRepository`); detail reserve CTA calls reservations data layer |
 | `materials` | (no dedicated routes) | Shared data layer for listing/taxonomy — used by supplier add material |
 | `profile` | `/profile`, `/profile/edit`, `/profile/learner/edit`, `/profile/security` | **Implemented** — account/profile/security pages |
@@ -103,7 +115,7 @@ Detail: [frontend/routes-map.md](frontend/routes-map.md), [08-implementation-sta
 
 ### Flutter features **not** present as folders
 
-`ai_agent`, `moderator`, `reports`, `reviews`
+`ai_agent` (roadmap name — use `features/ai`), `moderator`, `reports`, `reviews`
 
 ## Cross-cutting backend services
 

@@ -1,8 +1,11 @@
 # AI Material Matching Flow (Planned — Not Implemented)
 
-**Gap / stub flow.** Product “AI agent” for matching project components to materials is **not built**. Internal **price** AI is separate.
+**Gap / stub flow.** Product “AI agent” for matching project components to materials is **not built**. This is distinct from:
 
-**Sources inspected:** `docs/01-requirements.md`, `docs/05-roadmap.md`, `docs/features/ai-agent.md`, `apps/backend/src/app.ts`, `apps/backend/prisma/schema.prisma`, `apps/frontend/lib/features/learning_hub/presentation/widgets/project_build_actions_panel.dart`, `apps/frontend/lib/features/home/presentation/pages/learner_home_page.dart`, `apps/backend/src/services/ai-price-suggestion.service.ts`
+- **ImpactLoop Assistant** — shipped at `/api/ai/v1` + Flutter `/ai/assistant` ([01-general-learning-chat.md](../ai/01-general-learning-chat.md))
+- **Price-rule AI** — internal supplier listing review ([materials-listing.md](../features/materials-listing.md))
+
+**Sources inspected:** `docs/features/ai-agent.md`, `apps/backend/src/modules/ai/`, `apps/backend/prisma/schema.prisma`, `apps/frontend/lib/features/ai/`, `apps/frontend/lib/features/learning_hub/`, `apps/backend/src/services/ai-price-suggestion.service.ts`
 
 ## Trigger (planned)
 
@@ -14,11 +17,12 @@ Authenticated learner views a learning project (or home AI helper) and requests 
 
 | Step | Status |
 |------|--------|
-| `ai-agent` module / matching API | **Not implemented** |
-| `ai_requests`, `ai_material_matches`, credit tables | **Not implemented** in schema |
-| Learning hub AI panel | **Not implemented** — old disabled panel removed; detail shows non-AI build planning actions |
-| Home AI helper card | **Frontend-only** — coming soon |
+| Material-matching API (`ai_requests`, credits, match cards) | **Not implemented** |
+| `ai_material_matches`, `ai_credit_wallets` tables | **Not implemented** in schema |
+| Learning hub LLM material matching panel | **Not implemented** — build checklist uses deterministic ranking/linking |
+| Home AI material helper card | **Frontend-only** — coming soon placeholder |
 | Price suggestion on price-rule create | **Partial** — not material matching |
+| ImpactLoop Assistant (`/api/ai/v1`) | **Partial** — general learning + build-guide + authoring; **not** component match cards |
 
 ---
 
@@ -36,12 +40,12 @@ Authenticated learner views a learning project (or home AI helper) and requests 
 
 ### Backend path (planned)
 
-- New module: create `ai_request`, debit credits, call model, persist `ai_material_matches`.
+- New endpoints or mode under `ai` module: create `ai_request`, debit credits, call model, persist `ai_material_matches`.
 - Query materials discovery data — integration TBD.
 
 ### Database changes (planned)
 
-- Roadmap tables not migrated; only `ai_price_lookup_logs` exists today for price lookups.
+- Roadmap matching/credit tables not migrated; `ai_price_lookup_logs` exists for price lookups only; `ai_conversations` exists for assistant chat.
 
 ### Success state (planned)
 
@@ -55,15 +59,15 @@ Structured match list per component with links to `/materials` items.
 
 ### Files involved today (non-matching)
 
-`project_build_actions_panel.dart` (non-AI planning handoff), `learner_home_page.dart` (placeholder), `ai-price-suggestion.service.ts` (price only)
+`features/ai/*` (assistant only), `project_build_actions_panel.dart` (non-AI planning handoff), `learner_home_page.dart` (placeholder), `ai-price-suggestion.service.ts` (price only)
 
 ---
 
 ## Not implemented
 
-Do not invent `/api/ai/*` paths, request bodies, or credit amounts.
+Do not document `/api/ai/requests` or `/api/ai/credits/me` as shipped — they are absent from [api-catalog](../backend/api-catalog.md).
 
-**Distinct from:** price-rule AI in [materials-listing](../features/materials-listing.md).
+**Distinct from:** `/api/ai/v1` ImpactLoop Assistant and price-rule AI in [materials-listing](../features/materials-listing.md).
 
 ---
 

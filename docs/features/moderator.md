@@ -22,7 +22,7 @@ Moderator is invitation-only. It is not available through public registration.
 | Category request approval | **Implemented for ADMIN** | `/api/admin/approvals/category-requests*` |
 | Price request approval | **Implemented for ADMIN** | `/api/admin/approvals/price-requests*` |
 | Material reports review | **Implemented for ADMIN** | `/api/admin/material-reports*` |
-| Learning project moderation API | **Not implemented** | Public read `PUBLISHED` only; no submit/review endpoints |
+| Learning project moderation API | **Implemented for ADMIN** | Learner submit → `PENDING_REVIEW`; `/api/admin/learning-projects/*` approve/request-changes/reject/hide/restore/archive |
 
 **Overall:** Moderator exists as a role and invitation target, but there is no moderator portal or moderator-specific API. Some planned moderation work is currently handled by admin routes.
 
@@ -36,7 +36,7 @@ Moderator is invitation-only. It is not available through public registration.
 | Category request approval | Admin approvals UI/API |
 | Price request approval | Admin approvals UI/API |
 | Supplier verification review | Admin supplier verification UI/API |
-| Project publishing/review | Not implemented |
+| Project publishing/review | **Implemented for ADMIN** | `/admin/learning-projects` moderation UI + `/api/admin/learning-projects/*` |
 
 ## Planned moderator scope
 
@@ -71,7 +71,7 @@ Admin remains the current implemented owner for approvals and material report re
 - Moderator-authenticated backend routes.
 - Moderator queue API and UI.
 - Clear permission matrix for moderator vs admin actions.
-- Project submission/review workflow.
+- Project submission/review workflow for moderators (admin owns it today).
 - Notifications to suppliers/learners after moderator actions.
 
 ## Questions before implementation

@@ -11,6 +11,22 @@ Before editing code, read this file.
 - [09-open-questions.md](09-open-questions.md) — unresolved risks and **Needs verification** items
 - [features/roles-and-capabilities.md](features/roles-and-capabilities.md) — canonical role-scope framing with implemented vs planned capabilities
 
+## If editing AI / ImpactLoop Assistant
+
+Read:
+
+- [ai/01-general-learning-chat.md](ai/01-general-learning-chat.md)
+- [features/ai-agent.md](features/ai-agent.md) — material-matching gap only
+- [08-implementation-status.md](08-implementation-status.md) (`ai` module row)
+
+Update:
+
+- [ai/01-general-learning-chat.md](ai/01-general-learning-chat.md) when assistant behavior/API changes
+- [features/ai-agent.md](features/ai-agent.md) only if material-matching scope changes
+- [08-implementation-status.md](08-implementation-status.md) if ship status changes
+
+**Historical:** [ai/00-ai-system-architecture-plan.md](ai/00-ai-system-architecture-plan.md) — do not update for routine changes; see [archive/README.md](archive/README.md).
+
 ## If editing Flutter
 
 Read:
@@ -93,16 +109,17 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 | Feature | Feature doc | Flow doc(s) | Ship status (summary) |
 |---------|-------------|-------------|------------------------|
 | Roles and capabilities | [features/roles-and-capabilities.md](features/roles-and-capabilities.md) | — | Product framing; mixes current code status with planned capabilities |
-| Auth | [features/auth.md](features/auth.md) | [flows/auth-flow.md](flows/auth-flow.md) | **Implemented for auth MVP** — login/register/refresh/logout/me, forgot/reset, role switch; email/phone verification not implemented; change-password does not revoke sessions |
+| Auth | [features/auth.md](features/auth.md) | [flows/auth-flow.md](flows/auth-flow.md) | **Implemented for auth MVP** — login/register/refresh/logout/me, forgot/reset, role switch; email/phone verification not implemented; change-password revokes other refresh sessions |
 | Material discovery | [features/material-discovery.md](features/material-discovery.md) | [flows/material-discovery-flow.md](flows/material-discovery-flow.md) | **Implemented** |
 | Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** — material read/create/edit/delete; supplier reservations; delivery complete guarded backend-only |
-| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — read path API-backed (`/learning`, `/learning/:id`, Home spotlight); add-draft submit, admin moderation, server-side page navigation, and learner project likes/saves/follows/reviews wired; legacy mock file retained for sample catalog only |
+| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — read path API-backed; builds, moderation, engagement, and material linking wired; AI material matching pending |
+| ImpactLoop Assistant (AI) | [ai/01-general-learning-chat.md](ai/01-general-learning-chat.md) | — | **Partial** — `/api/ai/v1` + Flutter assistant UI; general learning + build-guide + authoring; material-matching agent **not implemented** |
 
 ### Phase 2B — supporting features
 
 | Area | Feature doc | Flow doc(s) | Ship status (summary) |
 |------|-------------|-------------|------------------------|
-| Materials listing (shared data layer) | [features/materials-listing.md](features/materials-listing.md) | — (see [supplier-material-listing-flow](flows/supplier-material-listing-flow.md)) | **Partial** — supplier create support; no update/delete |
+| Materials listing (shared data layer) | [features/materials-listing.md](features/materials-listing.md) | — (see [supplier-material-listing-flow](flows/supplier-material-listing-flow.md)) | **Partial** — supplier create/edit/delete with lifecycle gates |
 | Locations | [features/locations.md](features/locations.md) | — | **Partial** — forward/reverse geocode + profile/material usage; public redaction **Needs verification** |
 | Invitations | [features/invitations.md](features/invitations.md) | [flows/invitation-flow.md](flows/invitation-flow.md) | **Implemented** — admin UI + accept UI exist; email delivery depends on provider |
 | Landing | [features/landing.md](features/landing.md) | — | **Implemented** — static UI; no API |
@@ -117,12 +134,12 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 | Payments (Mock) | [features/payments.md](features/payments.md) | [flows/payment-flow.md](flows/payment-flow.md) | **Implemented** for local Mock + enforcement-ON (PAY-01…PAY-07); real PSP / Admin Payment Center not implemented |
 | Delivery | [features/delivery.md](features/delivery.md) | [flows/delivery-flow.md](flows/delivery-flow.md) | **Partial** — learner request/status/tracking summary/map marker UI and driver jobs/status/manual ping UI; realtime tracking stream not implemented |
 | AI material matching agent | [features/ai-agent.md](features/ai-agent.md) | [flows/ai-material-matching-flow.md](flows/ai-material-matching-flow.md) | **Not implemented** (distinct from price suggestion **Partial**) |
-| Admin portal | [features/admin.md](features/admin.md) | — | **Partial** — dashboard, invitations, supplier verification, approvals, materials moderation, and people management |
+| Admin portal | [features/admin.md](features/admin.md) | — | **Partial** — dashboard, invitations, supplier verification, approvals, materials moderation, learning project moderation, people management, impact/audit, delivery/reservation monitors |
 | Moderator portal | [features/moderator.md](features/moderator.md) | — | **Not implemented** |
 
 Gap docs are stubs — see [09-open-questions.md](09-open-questions.md) before implementing.
 
-**Not documented as implemented:** live realtime tracking stream, AI material matching agent, moderator portal, persisted project build checklist, and moderator-owned project review workflow.
+**Not documented as implemented:** live realtime delivery tracking stream, AI material matching agent (credits/wallet schema), moderator portal, and moderator-owned project review workflow (admin owns moderation today).
 
 ADRs (`docs/adr/`) — accepted architecture decisions.
 
