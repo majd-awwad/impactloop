@@ -23,6 +23,10 @@ import {
   createReservationMessage,
 } from './reservation-messages.repository.js';
 import {
+  loadReservationReviewsStateForLearner,
+  type ReservationReviewsStateDto,
+} from './reservation-reviews.service.js';
+import {
   RESERVATION_MESSAGE_MAX_LENGTH,
   reservationAllowsMessaging,
   resolveReservationFollowUp,
@@ -215,6 +219,7 @@ export const mapLearnerReservation = (
   options?: {
     paymentAllowsPickupCode?: boolean;
     paymentSummary?: ReservationPaymentListSummary | null;
+    reviews?: ReservationReviewsStateDto | null;
   },
 ) => {
   const followUp = resolveReservationFollowUp({
@@ -390,6 +395,7 @@ export const mapLearnerReservation = (
     groupTotal,
     ...mapPricingFields(reservation),
     paymentSummary: options?.paymentSummary ?? null,
+    reviews: options?.reviews ?? null,
   };
 };
 
@@ -470,6 +476,10 @@ export const listMyReservations = async (requesterId: string) => {
       };
     }),
   );
+  const reviewsByReservationId = await loadReservationReviewsStateForLearner(
+    requesterId,
+    reservations,
+  );
 
   return reservations.map((reservation) => {
     const paymentSummary = paymentSummaries.get(reservation.id) ?? null;
@@ -483,6 +493,7 @@ export const listMyReservations = async (requesterId: string) => {
           paymentSummary?.pickupCodeAvailable ??
           !isElectronicPaymentEnforced(),
         paymentSummary,
+        reviews: reviewsByReservationId.get(reservation.id) ?? null,
       },
     );
   });
@@ -567,6 +578,10 @@ export const getMyReservationById = async (
     },
   ]);
   const paymentSummary = paymentSummaries.get(reservation.id) ?? null;
+  const reviewsByReservationId = await loadReservationReviewsStateForLearner(
+    requesterId,
+    [reservation],
+  );
 
   return mapLearnerReservation(
     reservation,
@@ -577,6 +592,7 @@ export const getMyReservationById = async (
       paymentAllowsPickupCode:
         paymentSummary?.pickupCodeAvailable ?? !isElectronicPaymentEnforced(),
       paymentSummary,
+      reviews: reviewsByReservationId.get(reservation.id) ?? null,
     },
   );
 };

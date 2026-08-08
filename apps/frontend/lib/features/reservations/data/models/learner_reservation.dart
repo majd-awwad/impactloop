@@ -3,6 +3,7 @@ import '../../../../core/config/api_config.dart';
 import 'reservation_message.dart';
 import 'reservation_payment_summary.dart';
 import 'reservation_preferred_window.dart';
+import 'reservation_review.dart';
 
 class LearnerReservationPickupLocation {
   const LearnerReservationPickupLocation({
@@ -202,6 +203,7 @@ class LearnerReservation {
     this.groupDeliveryFee,
     this.groupTotal,
     this.paymentSummary,
+    this.reviews,
   });
 
   final String id;
@@ -259,6 +261,7 @@ class LearnerReservation {
   final double? groupDeliveryFee;
   final double? groupTotal;
   final ReservationPaymentSummary? paymentSummary;
+  final ReservationReviewsState? reviews;
 
   factory LearnerReservation.fromJson(Map<String, dynamic> json) {
     final materialJson = json['material'];
@@ -380,6 +383,11 @@ class LearnerReservation {
         }
         return null;
       }(),
+      reviews: json['reviews'] is Map
+          ? ReservationReviewsState.fromJson(
+              Map<String, dynamic>.from(json['reviews'] as Map),
+            )
+          : null,
     );
   }
 

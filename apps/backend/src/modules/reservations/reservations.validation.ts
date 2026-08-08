@@ -208,3 +208,32 @@ export const reportNoDriverSchema = z.object({
 });
 
 export type ReportNoDriverInput = z.infer<typeof reportNoDriverSchema>;
+
+export const reservationReviewSchema = z.object({
+  targetType: z.enum(['SUPPLIER', 'DRIVER']),
+  rating: z.number().int().min(1).max(5),
+  comment: z
+    .string()
+    .trim()
+    .max(1200)
+    .optional()
+    .nullable()
+    .transform((value) => {
+      if (!value) {
+        return null;
+      }
+
+      return value.length === 0 ? null : value;
+    }),
+});
+
+export type ReservationReviewInput = z.infer<typeof reservationReviewSchema>;
+
+export const reservationReviewTargetParamsSchema = z.object({
+  id: z.string().trim().min(1),
+  targetType: z.enum(['SUPPLIER', 'DRIVER']),
+});
+
+export type ReservationReviewTargetParams = z.infer<
+  typeof reservationReviewTargetParamsSchema
+>;

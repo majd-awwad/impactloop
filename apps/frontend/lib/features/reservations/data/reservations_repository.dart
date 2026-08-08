@@ -6,6 +6,7 @@ import 'models/created_reservation.dart';
 import 'models/learner_reservation.dart';
 import 'models/reservation_message.dart';
 import 'models/reservation_quote.dart';
+import 'models/reservation_review.dart';
 import 'reservations_api.dart';
 
 final reservationsApiProvider = Provider<ReservationsApi>((ref) {
@@ -111,6 +112,30 @@ class ReservationsRepository {
     return _api.reportNoDriverAvailable(
       reservationId: reservationId,
       note: note,
+    );
+  }
+
+  Future<ReservationReviewsState> saveReservationReview({
+    required String reservationId,
+    required String targetType,
+    required int rating,
+    String? comment,
+  }) {
+    return _api.upsertReservationReview(
+      reservationId: reservationId,
+      targetType: targetType,
+      rating: rating,
+      comment: comment,
+    );
+  }
+
+  Future<ReservationReviewsState> deleteReservationReview({
+    required String reservationId,
+    required String targetType,
+  }) {
+    return _api.deleteReservationReview(
+      reservationId: reservationId,
+      targetType: targetType,
     );
   }
 }

@@ -2222,6 +2222,7 @@ model Review {
   reviewer       User             @relation("ReviewReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
   reviewedUser   User?            @relation("ReviewReviewedUser", fields: [reviewedUserId], references: [id], onDelete: SetNull)
 
+  @@unique([reservationId, reviewerId, targetType])
   @@index([reviewedUserId, targetType])
   @@index([reservationId])
   @@map("reviews")

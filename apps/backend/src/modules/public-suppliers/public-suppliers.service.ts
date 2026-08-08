@@ -6,6 +6,7 @@ import type { MaterialsQuery } from '../materials/materials.validation.js';
 import type { PublicSupplierMaterialsQuery } from './public-suppliers.routes.js';
 
 import * as publicSuppliersRepository from './public-suppliers.repository.js';
+import { aggregateSupplierReviews } from '../supplier/supplier.repository.js';
 
 export type PublicSupplierProfileDto = {
   id: string;
@@ -19,6 +20,8 @@ export type PublicSupplierProfileDto = {
   isVerified: boolean;
   materialsCount: number;
   followersCount: number;
+  averageRating: number | null;
+  totalReviews: number;
   isFollowedByViewer: boolean;
 };
 
@@ -80,6 +83,8 @@ const mapPublicSupplierProfile = (
   engagement: {
     materialsCount: number;
     followersCount: number;
+    averageRating: number | null;
+    totalReviews: number;
     isFollowedByViewer: boolean;
   },
 ): PublicSupplierProfileDto => ({
@@ -94,6 +99,8 @@ const mapPublicSupplierProfile = (
   isVerified: resolvePublicSupplierVerified(profile.verificationStatus),
   materialsCount: engagement.materialsCount,
   followersCount: engagement.followersCount,
+  averageRating: engagement.averageRating,
+  totalReviews: engagement.totalReviews,
   isFollowedByViewer: engagement.isFollowedByViewer,
 });
 
@@ -132,14 +139,21 @@ export const getPublicSupplierById = async (
 ) => {
   const profile = await assertSupplierProfileExists(supplierProfileId);
 
-  const [materialsCount, followersCount] = await Promise.all([
+  const [materialsCount, followersCount, reviewAggregate] = await Promise.all([
       publicSuppliersRepository.countPublicMaterialsForSupplier(profile.id),
       publicSuppliersRepository.countSupplierFollowers(profile.id),
+      aggregateSupplierReviews(profile.userId),
     ]);
+
+  const totalReviews = reviewAggregate._count._all;
+  const averageRating =
+    totalReviews > 0 ? reviewAggregate._avg.rating ?? 0 : null;
 
   const result = mapPublicSupplierProfile(profile, {
     materialsCount,
     followersCount,
+    averageRating,
+    totalReviews,
     isFollowedByViewer: false,
   });
   if (!viewer) {

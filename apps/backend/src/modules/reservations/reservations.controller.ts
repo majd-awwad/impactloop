@@ -15,6 +15,10 @@ import {
   reportNoDriverAvailable,
   resolveLearnerConfirmation,
 } from './reservations.service.js';
+import {
+  deleteReservationReviewForLearner,
+  upsertReservationReviewForLearner,
+} from './reservation-reviews.service.js';
 import type {
   CreateReservationInput,
   CreateReservationMessageInput,
@@ -23,6 +27,7 @@ import type {
   ReportSupplierIssueInput,
   RequestPickupRescheduleInput,
   ReservationQuoteInput,
+  ReservationReviewInput,
 } from './reservations.validation.js';
 
 export const createReservationHandler = async (
@@ -159,4 +164,30 @@ export const reportNoDriverAvailableHandler = async (
   );
 
   res.json(successResponse('No-driver case reported to admin.', reservation));
+};
+
+export const upsertReservationReviewHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const result = await upsertReservationReviewForLearner(
+    req.auth!.sub,
+    req.params.id as string,
+    req.body as ReservationReviewInput,
+  );
+
+  res.json(successResponse('Reservation review saved.', result));
+};
+
+export const deleteReservationReviewHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const result = await deleteReservationReviewForLearner(
+    req.auth!.sub,
+    req.params.id as string,
+    req.params.targetType as ReservationReviewInput['targetType'],
+  );
+
+  res.json(successResponse('Reservation review deleted.', result));
 };
