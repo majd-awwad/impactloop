@@ -1,0 +1,81 @@
+# ImpactLoop production-style stack (API + PostgreSQL + persistent uploads).
+# See docs/deployment.md for the full runbook.
+#
+# Quick start:
+#   cp .env.docker.example .env.docker
+#   # edit .env.docker with real secrets
+#   docker compose --env-file .env.docker up --build -d
+
+services:
+  db:
+    image: postgis/postgis:16-3.5
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-impactloop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.docker}
+      POSTGRES_DB: ${POSTGRES_DB:-impactloop}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-impactloop} -d ${POSTGRES_DB:-impactloop}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-4000}:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-impactloop}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-impactloop}?schema=public
+      UPLOAD_ROOT_DIR: /data/uploads
+      SERVICE_NAME: impactloop-api
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_PRETTY: "false"
+      CORS_ORIGIN: ${CORS_ORIGIN:?Set CORS_ORIGIN in .env.docker}
+      APP_PUBLIC_BASE_URL: ${APP_PUBLIC_BASE_URL:?Set APP_PUBLIC_BASE_URL in .env.docker}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?Set JWT_ACCESS_SECRET in .env.docker}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET in .env.docker}
+      HANDOVER_CODE_SECRET: ${HANDOVER_CODE_SECRET:?Set HANDOVER_CODE_SECRET in .env.docker}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-smtp}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-disabled}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      RECOMMENDATION_SCORER_VERSION: ${RECOMMENDATION_SCORER_VERSION:-legacy-v1}
+      RECOMMENDATION_ML_SHADOW_ENABLED: ${RECOMMENDATION_ML_SHADOW_ENABLED:-false}
+      RECOMMENDATION_OUTBOX_WORKER_ENABLED: ${RECOMMENDATION_OUTBOX_WORKER_ENABLED:-true}
+      RECOMMENDATION_OUTBOX_WORKER_REQUIRED: ${RECOMMENDATION_OUTBOX_WORKER_REQUIRED:-true}
+    volumes:
+      - upload_data:/data/uploads
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:4000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  postgres_data:
+  upload_data:

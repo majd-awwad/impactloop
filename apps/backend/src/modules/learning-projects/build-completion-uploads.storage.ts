@@ -1,21 +1,14 @@
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
+import { resolveUploadSubdir } from '../../config/upload-storage.env.js';
 import {
   MATERIAL_UPLOAD_ALLOWED_MIME_TYPES,
 } from '../../constants/material-upload.js';
 import { AppError } from '../../utils/app-error.js';
 
-const backendRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../../..',
-);
-
-export const BUILD_COMPLETION_UPLOADS_DIR = path.join(
-  backendRoot,
-  'uploads',
+export const BUILD_COMPLETION_UPLOADS_DIR = resolveUploadSubdir(
   'build-completion',
 );
 
