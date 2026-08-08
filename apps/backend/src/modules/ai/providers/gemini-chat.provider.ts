@@ -13,7 +13,7 @@ import {
   aiProviderAnswerSchema,
   aiScopeClassifierSchema,
 } from '../ai.content-blocks.js';
-import { GENERAL_LEARNING_SYSTEM_POLICY, EXTERNAL_RETRIEVAL_SYSTEM_POLICY } from '../ai.policy.js';
+import { resolveGeneralLearningSystemPolicy } from '../ai.policy.js';
 import { extractJsonObject } from '../../../services/gemini-price-suggestion.provider.js';
 import {
   buildAnswerUserPrompt,
@@ -724,9 +724,9 @@ export class GeminiAiChatProvider implements AiChatProvider {
     const ai = this.getClient();
 
     try {
-      const systemInstruction = isExternalRetrievalSynthesisInput(input.userMessage)
-        ? `${GENERAL_LEARNING_SYSTEM_POLICY}\n\n${EXTERNAL_RETRIEVAL_SYSTEM_POLICY}`
-        : GENERAL_LEARNING_SYSTEM_POLICY;
+      const { policy: systemInstruction } = resolveGeneralLearningSystemPolicy(
+        input.userMessage,
+      );
 
       const { response, model } = await withTimeout(
         generateContentWithModelFallback(

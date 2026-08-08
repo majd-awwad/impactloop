@@ -16,7 +16,10 @@ import { buildGeminiAnswerContents } from './providers/gemini-chat.provider.js';
 import { setExternalKnowledgeProviderForTests } from './providers/external-knowledge-provider.factory.js';
 import { MockExternalKnowledgeProvider } from './providers/mock-external-knowledge.provider.js';
 import { aiContentBlocksSchema } from './ai.content-blocks.js';
-import { EXTERNAL_RETRIEVAL_SYSTEM_POLICY } from './ai.policy.js';
+import {
+  EXTERNAL_DOMAIN_KNOWLEDGE_SYSTEM_POLICY,
+  GENERAL_LEARNING_SYSTEM_POLICY,
+} from './ai.policy.js';
 
 describe('ai external knowledge', () => {
   after(() => {
@@ -246,7 +249,12 @@ describe('ai external knowledge', () => {
       history: [],
       scopeClassification: 'DOMAIN_KNOWLEDGE',
     });
-    assert.ok(openAiPrompt.includes(EXTERNAL_RETRIEVAL_SYSTEM_POLICY));
+    assert.ok(openAiPrompt.includes(EXTERNAL_DOMAIN_KNOWLEDGE_SYSTEM_POLICY));
+    assert.equal(
+      openAiPrompt.includes('Never imply that you searched the web or accessed external sources.'),
+      false,
+    );
+    assert.equal(openAiPrompt.includes(GENERAL_LEARNING_SYSTEM_POLICY), false);
     assert.ok(openAiPrompt.includes(UNTRUSTED_EXTERNAL_RETRIEVAL_HEADER));
     assert.equal(openAiPrompt.includes('Scope classification:'), false);
   });
