@@ -2171,6 +2171,7 @@ model ReservationMessage {
 
 model NoShowReport {
   id                      String                 @id @default(cuid())
+  incidentKey             String                 @unique @map("incident_key")
   reservationId           String                 @map("reservation_id")
   deliveryId              String?                @map("delivery_id")
   reporterUserId          String                 @map("reporter_user_id")

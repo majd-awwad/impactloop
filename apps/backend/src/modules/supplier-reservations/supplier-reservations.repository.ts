@@ -36,6 +36,7 @@ import {
   MIN_PICKUP_NOTICE_MINUTES,
 } from '../reservations/reservation-timing-policy.js';
 import { evaluateHandoverWindow, isAfterAllowedEnd } from '../../utils/handover-timing.js';
+import { createNoShowReportOnce } from '../no-show-reports/no-show-report.create.js';
 import {
   isSupplierGeneralIncidentReasonCode,
   type SupplierNoShowReportReasonCode,
@@ -1565,20 +1566,14 @@ export const createSupplierNoShowReport = async (input: {
       }
     }
 
-    const duplicate = await tx.noShowReport.findFirst({
-      where: {
+    const reportResult = await createNoShowReportOnce(tx, {
+      key: {
         reservationId: existing.id,
         deliveryId: latestDelivery?.id ?? null,
+        targetRole,
         targetUserId,
         reasonCode: input.reasonCode,
       },
-    });
-
-    if (duplicate) {
-      return { duplicate: true as const, report: duplicate };
-    }
-
-    const report = await tx.noShowReport.create({
       data: {
         reservationId: existing.id,
         deliveryId: latestDelivery?.id ?? null,
@@ -1591,6 +1586,12 @@ export const createSupplierNoShowReport = async (input: {
         pickupWindowEnd: existing.pickupWindowEnd,
       },
     });
+
+    if (!reportResult.created) {
+      return { duplicate: true as const, report: reportResult.report };
+    }
+
+    const report = reportResult.report;
 
     const isSelfPickupOverdue =
       existing.fulfillmentMethod === 'PICKUP' &&

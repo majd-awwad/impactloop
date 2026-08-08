@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 
 import { prisma } from '../../database/prisma.js';
+import { resolveNoShowReportIncidentKey } from '../no-show-reports/no-show-report.incident-key.js';
 import { AppError } from '../../utils/app-error.js';
 import { hashPassword } from '../../utils/password.js';
 import { assertExportWithinLimit } from '../admin-export/admin-export.preflight.js';
@@ -145,6 +146,14 @@ async function createDelivery(input: {
   if (input.withIncident) {
     const report = await prisma.noShowReport.create({
       data: {
+        incidentKey: resolveNoShowReportIncidentKey({
+          reservationId: reservation.id,
+          deliveryId: delivery.id,
+          targetUserId: ctx.supplierId,
+          targetRole: 'SUPPLIER',
+          reasonCode: 'SUPPLIER_UNAVAILABLE',
+          note: 'SENSITIVE_INCIDENT_NOTE_SHOULD_NOT_EXPORT',
+        }),
         reservationId: reservation.id,
         deliveryId: delivery.id,
         reporterUserId: ctx.learnerId,

@@ -4,6 +4,7 @@ import { after, before, describe, test } from 'node:test';
 import ExcelJS from 'exceljs';
 
 import { prisma } from '../../database/prisma.js';
+import { resolveNoShowReportIncidentKey } from '../no-show-reports/no-show-report.incident-key.js';
 import { AppError } from '../../utils/app-error.js';
 import { hashPassword } from '../../utils/password.js';
 import { assertExportWithinLimit } from '../admin-export/admin-export.preflight.js';
@@ -182,21 +183,30 @@ async function createReport(input: {
   }
 
   const stamp = input.createdAt ?? new Date();
+  const targetUserId =
+    input.targetUserId === undefined
+      ? input.targetRole === 'SYSTEM'
+        ? null
+        : input.targetRole === 'LEARNER'
+          ? ctx.learnerId
+          : input.targetRole === 'DRIVER'
+            ? ctx.driverId
+            : ctx.supplierId
+      : input.targetUserId;
   const report = await prisma.noShowReport.create({
     data: {
+      incidentKey: resolveNoShowReportIncidentKey({
+        reservationId: reservation.id,
+        deliveryId,
+        targetRole: input.targetRole,
+        targetUserId,
+        reasonCode: input.reasonCode,
+        note: input.note === undefined ? `${TEST_MARKER} note ${input.suffix}` : input.note,
+      }),
       reservationId: reservation.id,
       deliveryId,
       reporterUserId: ctx.supplierId,
-      targetUserId:
-        input.targetUserId === undefined
-          ? input.targetRole === 'SYSTEM'
-            ? null
-            : input.targetRole === 'LEARNER'
-              ? ctx.learnerId
-              : input.targetRole === 'DRIVER'
-                ? ctx.driverId
-                : ctx.supplierId
-          : input.targetUserId,
+      targetUserId,
       targetRole: input.targetRole,
       reasonCode: input.reasonCode,
       status: input.status ?? 'PENDING_REVIEW',

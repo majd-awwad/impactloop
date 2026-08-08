@@ -21,6 +21,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
 import { PrismaClient } from '../src/generated/prisma/client.js';
+import { resolveNoShowReportIncidentKey } from '../src/modules/no-show-reports/no-show-report.incident-key.js';
 import { hashPassword } from '../src/utils/password.js';
 import {
   buildDeliveryHandoverCodeData,
@@ -418,6 +419,14 @@ async function createIncident(
   await prisma.noShowReport.create({
     data: {
       id,
+      incidentKey: resolveNoShowReportIncidentKey({
+        reservationId: input.reservationId,
+        deliveryId: input.deliveryId,
+        targetRole: input.targetRole,
+        targetUserId: input.targetUserId,
+        reasonCode: input.reasonCode,
+        note: `${MARKER} ${input.slug}`,
+      }),
       reservationId: input.reservationId,
       deliveryId: input.deliveryId,
       reporterUserId: input.reporterUserId,

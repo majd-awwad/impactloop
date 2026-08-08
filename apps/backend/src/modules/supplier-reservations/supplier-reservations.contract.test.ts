@@ -4,6 +4,7 @@ import type { AddressInfo } from 'node:net';
 
 import { app } from '../../app.js';
 import { prisma } from '../../database/prisma.js';
+import { resolveNoShowReportIncidentKey } from '../no-show-reports/no-show-report.incident-key.js';
 import { signAccessToken } from '../../utils/jwt.js';
 import {
   getSupplierReservationDetail,
@@ -256,6 +257,13 @@ describe('supplier reservations persisted contract', () => {
     const resolvingDelivery = await createDelivery(resolving.id, 'AWAITING_RESOLUTION');
     await prisma.noShowReport.create({
       data: {
+        incidentKey: resolveNoShowReportIncidentKey({
+          reservationId: resolving.id,
+          deliveryId: resolvingDelivery.id,
+          targetRole: 'SYSTEM',
+          reasonCode: 'NO_DRIVER_AVAILABLE',
+          note: 'Persisted recovery incident.',
+        }),
         reservationId: resolving.id,
         deliveryId: resolvingDelivery.id,
         reporterUserId: learner.id,
