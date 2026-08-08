@@ -91,6 +91,26 @@ docker run --rm -p 4000:4000 \
   impactloop-api
 ```
 
+## Flutter web (API base URL)
+
+Release web builds must not rely on the development fallback (`same host:4000`). Configure the API endpoint at **build time**:
+
+```bash
+cd apps/frontend
+flutter build web \
+  --dart-define=API_BASE_URL=https://api.your-domain.com
+```
+
+If the reverse proxy serves the API on the **same origin** as the Flutter web app (e.g. `https://app.example.com/api` → backend), you can omit `API_BASE_URL` and opt into the same-origin contract:
+
+```bash
+flutter build web --dart-define=API_USE_SAME_ORIGIN=true
+```
+
+Without either flag, release builds fail at startup with a clear configuration error instead of calling the wrong host.
+
+Local development (`flutter run -d chrome`) continues to default to port `4000` on the current host.
+
 ## Reverse proxy
 
 Place nginx, Caddy, or a cloud load balancer in front of the API:
