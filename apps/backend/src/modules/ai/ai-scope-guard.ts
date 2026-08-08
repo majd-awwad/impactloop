@@ -50,6 +50,26 @@ const DOMAIN_PATTERNS: Array<{ id: string; pattern: RegExp }> = [
   },
   { id: 'diy', pattern: /(diy|project idea|recycling|reuse|upcycle|مشروع|اعادة استخدام|إعادة استخدام)/u },
   { id: 'tools', pattern: /(solder|soldering iron|drill|tool safety|لحام|كاوية|كاويه|ادوات|أدوات)/u },
+  {
+    id: 'batteries',
+    pattern: /(battery|batteries|lithium|aa\b|aaa\b|power pack|بطارية|بطاريات|ليثيوم)/u,
+  },
+  {
+    id: 'heat_tools',
+    pattern: /(hot glue|glue gun|heat gun|مسدس شمع|لصق حراري|صمغ حراري)/u,
+  },
+  {
+    id: 'sharp_tools',
+    pattern: /(scissors|craft knife|utility knife|cutting tool|مقص|سكين|منشار)/u,
+  },
+  {
+    id: 'adhesives',
+    pattern: /(glue|adhesive|epoxy|super glue|غراء|لاصق|صمغ)/u,
+  },
+  {
+    id: 'solvents',
+    pattern: /(solvent|acetone|thinner|paint thinner|مذيب|اسيتون)/u,
+  },
   { id: 'materials', pattern: /(material|component|alternative|substitute|مواد|بديل)/u },
   { id: 'safety', pattern: /(safety|precaution|safe|احتياط|احتياطات|سلامة|بأمان)/u },
 ];
