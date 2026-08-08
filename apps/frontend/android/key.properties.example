@@ -1,0 +1,11 @@
+# Copy to key.properties and fill in values before building a distributable release APK/AAB.
+# Never commit key.properties or your keystore to version control.
+#
+# Generate a release keystore (one-time):
+#   keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#
+# Example values:
+storePassword=your-store-password
+keyPassword=your-key-password
+keyAlias=upload
+storeFile=../upload-keystore.jks
