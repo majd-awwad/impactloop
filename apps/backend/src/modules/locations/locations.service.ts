@@ -15,12 +15,20 @@ import type {
   UpdateSavedLocationInput,
 } from './locations.validation.js';
 
-export const reverseGeocodeLocation = async (input: ReverseGeocodeInput) => {
-  return reverseGeocodeCoordinates(input.latitude, input.longitude);
+export const reverseGeocodeLocation = async (
+  userId: string,
+  input: ReverseGeocodeInput,
+) => {
+  return reverseGeocodeCoordinates(input.latitude, input.longitude, {
+    userId,
+  });
 };
 
-export const forwardGeocodeLocation = async (input: ForwardGeocodeInput) => {
-  return forwardGeocodeLocationWithProvider(input);
+export const forwardGeocodeLocation = async (
+  userId: string,
+  input: ForwardGeocodeInput,
+) => {
+  return forwardGeocodeLocationWithProvider(input, { userId });
 };
 
 const toNullableNumber = (

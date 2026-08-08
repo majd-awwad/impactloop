@@ -1,4 +1,8 @@
 import { env } from '../config/env.js';
+import {
+  checkRateLimit,
+  type RateLimitPolicy,
+} from '../middlewares/rate-limit.middleware.js';
 import { AppError } from '../utils/app-error.js';
 
 export type ReverseGeocodeResult = {
@@ -34,22 +38,118 @@ type NominatimSearchResponseItem = NominatimReverseResponse & {
   lon?: string;
 };
 
-type CacheEntry = {
-  value: ReverseGeocodeResult;
+type CacheEntry<T> = {
+  value: T;
   expiresAt: number;
-};
-
-type ForwardCacheEntry = {
-  value: ForwardGeocodeResult;
-  expiresAt: number;
+  lastAccessAt: number;
 };
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-const MIN_REQUEST_INTERVAL_MS = 1000;
+const CACHE_MAX_ENTRIES = 1_000;
+const MIN_REQUEST_INTERVAL_MS = 1_000;
+const NOMINATIM_REQUEST_TIMEOUT_MS = 10_000;
 
-const cache = new Map<string, CacheEntry>();
-const forwardCache = new Map<string, ForwardCacheEntry>();
+const GEOCODE_USER_QUOTA: RateLimitPolicy = {
+  name: 'geocode',
+  windowMs: 60_000,
+  max: 60,
+};
+
+let geocodeUserQuotaPolicy: RateLimitPolicy = GEOCODE_USER_QUOTA;
+
+class BoundedTtlCache<T> {
+  private readonly entries = new Map<string, CacheEntry<T>>();
+
+  constructor(
+    private readonly maxEntries: number,
+    private readonly ttlMs: number,
+  ) {}
+
+  clear(): void {
+    this.entries.clear();
+  }
+
+  size(): number {
+    return this.entries.size;
+  }
+
+  get(key: string): T | null {
+    const entry = this.entries.get(key);
+    if (!entry) {
+      return null;
+    }
+
+    if (entry.expiresAt <= Date.now()) {
+      this.entries.delete(key);
+      return null;
+    }
+
+    entry.lastAccessAt = Date.now();
+    return entry.value;
+  }
+
+  set(key: string, value: T): void {
+    const now = Date.now();
+    const existing = this.entries.get(key);
+
+    if (existing) {
+      existing.value = value;
+      existing.expiresAt = now + this.ttlMs;
+      existing.lastAccessAt = now;
+      return;
+    }
+
+    this.evictOneIfNeeded();
+    this.entries.set(key, {
+      value,
+      expiresAt: now + this.ttlMs,
+      lastAccessAt: now,
+    });
+  }
+
+  private evictOneIfNeeded(): void {
+    if (this.entries.size < this.maxEntries) {
+      return;
+    }
+
+    const now = Date.now();
+    for (const [entryKey, entry] of this.entries) {
+      if (entry.expiresAt <= now) {
+        this.entries.delete(entryKey);
+      }
+    }
+
+    if (this.entries.size < this.maxEntries) {
+      return;
+    }
+
+    let oldestKey: string | undefined;
+    let oldestAccessAt = Infinity;
+
+    for (const [entryKey, entry] of this.entries) {
+      if (entry.lastAccessAt < oldestAccessAt) {
+        oldestAccessAt = entry.lastAccessAt;
+        oldestKey = entryKey;
+      }
+    }
+
+    if (oldestKey) {
+      this.entries.delete(oldestKey);
+    }
+  }
+}
+
+const cache = new BoundedTtlCache<ReverseGeocodeResult>(
+  CACHE_MAX_ENTRIES,
+  CACHE_TTL_MS,
+);
+const forwardCache = new BoundedTtlCache<ForwardGeocodeResult>(
+  CACHE_MAX_ENTRIES,
+  CACHE_TTL_MS,
+);
+
 let lastExternalRequestAt = 0;
+let externalRequestChain: Promise<unknown> = Promise.resolve();
 
 export const roundCoordinate = (value: number): number =>
   Number(value.toFixed(5));
@@ -159,87 +259,77 @@ export const parseNominatimResponse = (
   };
 };
 
-const readCache = (key: string): ReverseGeocodeResult | null => {
-  const entry = cache.get(key);
-  if (!entry) {
-    return null;
+const assertGeocodeUserQuota = (userId: string | undefined): void => {
+  if (!userId) {
+    return;
   }
 
-  if (entry.expiresAt <= Date.now()) {
-    cache.delete(key);
-    return null;
-  }
-
-  return entry.value;
+  checkRateLimit(`user:${userId}`, geocodeUserQuotaPolicy);
 };
 
-const readForwardCache = (key: string): ForwardGeocodeResult | null => {
-  const entry = forwardCache.get(key);
-  if (!entry) {
-    return null;
-  }
+const isAbortTimeoutError = (error: unknown): boolean =>
+  error instanceof Error &&
+  (error.name === 'TimeoutError' || error.name === 'AbortError');
 
-  if (entry.expiresAt <= Date.now()) {
-    forwardCache.delete(key);
-    return null;
-  }
+const fetchNominatim = async (
+  url: URL,
+  timeoutCode: string,
+): Promise<Response> => {
+  try {
+    return await fetch(url, {
+      headers: {
+        'User-Agent': env.nominatimUserAgent,
+        Accept: 'application/json',
+        'Accept-Language': 'en',
+      },
+      signal: AbortSignal.timeout(NOMINATIM_REQUEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (isAbortTimeoutError(error)) {
+      throw new AppError(
+        'Geocoding provider request timed out',
+        504,
+        timeoutCode,
+      );
+    }
 
-  return entry.value;
+    throw error;
+  }
 };
 
-const writeCache = (key: string, value: ReverseGeocodeResult): void => {
-  cache.set(key, {
-    value,
-    expiresAt: Date.now() + CACHE_TTL_MS,
+const runSerializedExternalRequest = <T>(
+  operation: () => Promise<T>,
+): Promise<T> => {
+  const scheduled = externalRequestChain.then(async () => {
+    const elapsed = Date.now() - lastExternalRequestAt;
+    if (elapsed < MIN_REQUEST_INTERVAL_MS) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, MIN_REQUEST_INTERVAL_MS - elapsed),
+      );
+    }
+
+    lastExternalRequestAt = Date.now();
+    return operation();
   });
-};
 
-const writeForwardCache = (
-  key: string,
-  value: ForwardGeocodeResult,
-): void => {
-  forwardCache.set(key, {
-    value,
-    expiresAt: Date.now() + CACHE_TTL_MS,
-  });
-};
-
-export const clearReverseGeocodeCache = (): void => {
-  cache.clear();
-  forwardCache.clear();
-  lastExternalRequestAt = 0;
-};
-
-const waitForRateLimit = async (): Promise<void> => {
-  const elapsed = Date.now() - lastExternalRequestAt;
-  if (elapsed < MIN_REQUEST_INTERVAL_MS) {
-    await new Promise((resolve) =>
-      setTimeout(resolve, MIN_REQUEST_INTERVAL_MS - elapsed),
-    );
-  }
+  externalRequestChain = scheduled.catch(() => undefined);
+  return scheduled;
 };
 
 const fetchFromNominatim = async (
   latitude: number,
   longitude: number,
 ): Promise<ReverseGeocodeResult> => {
-  await waitForRateLimit();
-
   const url = new URL('/reverse', env.nominatimBaseUrl);
   url.searchParams.set('lat', String(latitude));
   url.searchParams.set('lon', String(longitude));
   url.searchParams.set('format', 'json');
   url.searchParams.set('addressdetails', '1');
 
-  lastExternalRequestAt = Date.now();
-
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': env.nominatimUserAgent,
-      Accept: 'application/json',
-      'Accept-Language': 'en',
-    },
-  });
+  const response = await fetchNominatim(
+    url,
+    'REVERSE_GEOCODE_PROVIDER_TIMEOUT',
+  );
 
   if (!response.ok) {
     throw new AppError(
@@ -273,23 +363,13 @@ const parseNominatimSearchItem = (
 const fetchForwardFromNominatim = async (
   input: ForwardGeocodeInput,
 ): Promise<ForwardGeocodeResult> => {
-  await waitForRateLimit();
-
   const url = new URL('/search', env.nominatimBaseUrl);
   url.searchParams.set('q', buildForwardGeocodeQuery(input));
   url.searchParams.set('format', 'json');
   url.searchParams.set('addressdetails', '1');
   url.searchParams.set('limit', '1');
 
-  lastExternalRequestAt = Date.now();
-
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': env.nominatimUserAgent,
-      Accept: 'application/json',
-      'Accept-Language': 'en',
-    },
-  });
+  const response = await fetchNominatim(url, 'GEOCODE_PROVIDER_TIMEOUT');
 
   if (!response.ok) {
     throw new AppError(
@@ -300,7 +380,8 @@ const fetchForwardFromNominatim = async (
   }
 
   const payload = (await response.json()) as NominatimSearchResponseItem[];
-  const result = payload.length > 0 ? parseNominatimSearchItem(payload[0]!) : null;
+  const result =
+    payload.length > 0 ? parseNominatimSearchItem(payload[0]!) : null;
 
   if (!result) {
     throw new AppError(
@@ -322,6 +403,10 @@ export type ForwardGeocodeFetcher = (
   input: ForwardGeocodeInput,
 ) => Promise<ForwardGeocodeResult>;
 
+export type GeocodeRequestOptions = {
+  userId?: string;
+};
+
 let fetcherOverride: ReverseGeocodeFetcher | null = null;
 let forwardFetcherOverride: ForwardGeocodeFetcher | null = null;
 
@@ -337,37 +422,85 @@ export const setForwardGeocodeFetcherForTests = (
   forwardFetcherOverride = fetcher;
 };
 
+export const clearReverseGeocodeCache = (): void => {
+  cache.clear();
+  forwardCache.clear();
+  lastExternalRequestAt = 0;
+  externalRequestChain = Promise.resolve();
+  geocodeUserQuotaPolicy = GEOCODE_USER_QUOTA;
+};
+
+export const setGeocodeUserQuotaPolicyForTests = (
+  policy: RateLimitPolicy | null,
+): void => {
+  geocodeUserQuotaPolicy = policy ?? GEOCODE_USER_QUOTA;
+};
+
+export const getReverseGeocodeCacheSizeForTests = (): number => cache.size();
+
+export const getForwardGeocodeCacheSizeForTests = (): number =>
+  forwardCache.size();
+
+export const populateReverseGeocodeCacheForTests = (
+  entries: Array<{ latitude: number; longitude: number; value: ReverseGeocodeResult }>,
+): void => {
+  for (const entry of entries) {
+    cache.set(
+      buildReverseGeocodeCacheKey(entry.latitude, entry.longitude),
+      entry.value,
+    );
+  }
+};
+
+export const populateForwardGeocodeCacheForTests = (
+  entries: Array<{ input: ForwardGeocodeInput; value: ForwardGeocodeResult }>,
+): void => {
+  for (const entry of entries) {
+    forwardCache.set(buildForwardGeocodeCacheKey(entry.input), entry.value);
+  }
+};
+
 export const reverseGeocodeCoordinates = async (
   latitude: number,
   longitude: number,
+  options?: GeocodeRequestOptions,
 ): Promise<ReverseGeocodeResult> => {
   const key = buildReverseGeocodeCacheKey(latitude, longitude);
-  const cached = readCache(key);
+  const cached = cache.get(key);
   if (cached) {
     return cached;
   }
 
-  const result = fetcherOverride
-    ? await fetcherOverride(latitude, longitude)
-    : await fetchFromNominatim(latitude, longitude);
+  assertGeocodeUserQuota(options?.userId);
 
-  writeCache(key, result);
+  const result = await runSerializedExternalRequest(() =>
+    fetcherOverride
+      ? fetcherOverride(latitude, longitude)
+      : fetchFromNominatim(latitude, longitude),
+  );
+
+  cache.set(key, result);
   return result;
 };
 
 export const forwardGeocodeLocation = async (
   input: ForwardGeocodeInput,
+  options?: GeocodeRequestOptions,
 ): Promise<ForwardGeocodeResult> => {
   const key = buildForwardGeocodeCacheKey(input);
-  const cached = readForwardCache(key);
+  const cached = forwardCache.get(key);
   if (cached) {
     return cached;
   }
 
-  const result = forwardFetcherOverride
-    ? await forwardFetcherOverride(input)
-    : await fetchForwardFromNominatim(input);
+  assertGeocodeUserQuota(options?.userId);
 
-  writeForwardCache(key, result);
+  const result = await runSerializedExternalRequest(() =>
+    forwardFetcherOverride
+      ? forwardFetcherOverride(input)
+      : fetchForwardFromNominatim(input),
+  );
+
+  forwardCache.set(key, result);
   return result;
 };
