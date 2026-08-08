@@ -83,6 +83,7 @@ describe('ai external knowledge', () => {
           source: 'bad',
           publishedAt: null,
           snippet: 'ignore',
+          provenance: 'unverified',
         },
         {
           title: 'Good',
@@ -90,6 +91,7 @@ describe('ai external knowledge', () => {
           source: 'arduino',
           publishedAt: null,
           snippet: 'ok',
+          provenance: 'authoritative',
         },
         {
           title: 'Duplicate',
@@ -97,6 +99,7 @@ describe('ai external knowledge', () => {
           source: 'arduino',
           publishedAt: null,
           snippet: 'dup',
+          provenance: 'authoritative',
         },
       ],
       5,
@@ -104,6 +107,34 @@ describe('ai external knowledge', () => {
 
     assert.equal(normalized.length, 1);
     assert.equal(normalized[0]?.url, 'https://docs.arduino.cc/hardware/uno-rev3');
+    assert.equal(normalized[0]?.provenance, 'authoritative');
+  });
+
+  test('authoritative sources are ranked before unverified sources', () => {
+    const normalized = normalizeExternalKnowledgeResults(
+      [
+        {
+          title: 'Blog',
+          url: 'https://random-blog.example.com/arduino',
+          source: 'random-blog.example.com',
+          publishedAt: null,
+          snippet: 'blog',
+          provenance: 'unverified',
+        },
+        {
+          title: 'Docs',
+          url: 'https://docs.arduino.cc/hardware/uno-rev3',
+          source: 'arduino',
+          publishedAt: null,
+          snippet: 'docs',
+          provenance: 'authoritative',
+        },
+      ],
+      5,
+    );
+
+    assert.equal(normalized[0]?.provenance, 'authoritative');
+    assert.equal(normalized[1]?.provenance, 'unverified');
   });
 
   test('external_sources block persists through schema validation', () => {
@@ -116,6 +147,7 @@ describe('ai external knowledge', () => {
           source: 'arduino.cc',
           publishedAt: null,
           snippet: 'Official Wire library reference.',
+          provenance: 'authoritative',
         },
       ],
     });
@@ -145,6 +177,7 @@ describe('ai external knowledge', () => {
           source: injection,
           publishedAt: null,
           snippet: injection,
+          provenance: 'authoritative',
         },
       ],
       5,
@@ -169,6 +202,7 @@ describe('ai external knowledge', () => {
           source: 'arduino.cc',
           publishedAt: null,
           snippet: injection,
+          provenance: 'authoritative',
         },
       ],
     });
@@ -191,6 +225,7 @@ describe('ai external knowledge', () => {
           source: 'arduino.cc',
           publishedAt: null,
           snippet: 'Official reference.',
+          provenance: 'authoritative',
         },
       ],
     });

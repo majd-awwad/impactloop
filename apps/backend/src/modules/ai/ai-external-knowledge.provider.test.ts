@@ -116,6 +116,7 @@ describe('gemini grounding external knowledge provider', () => {
       response.results[0]?.url,
       'https://www.arduino.cc/reference/en/language/functions/communication/wire/',
     );
+    assert.equal(response.results[0]?.provenance, 'authoritative');
   });
 
   test('invalid and non-HTTPS URLs are removed during normalization', () => {
@@ -153,6 +154,7 @@ describe('gemini grounding external knowledge provider', () => {
           source: 'arduino',
           publishedAt: null,
           snippet: null,
+          provenance: 'authoritative',
         },
         {
           title: 'B',
@@ -160,6 +162,7 @@ describe('gemini grounding external knowledge provider', () => {
           source: 'arduino',
           publishedAt: null,
           snippet: null,
+          provenance: 'authoritative',
         },
       ],
       5,

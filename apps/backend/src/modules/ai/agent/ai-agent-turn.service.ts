@@ -2041,8 +2041,8 @@ const handleExternalDomainKnowledgeTurn = async (input: {
       blocks: [
         textBlock(
           input.locale === 'ar'
-            ? 'لم أجد مصادر خارجية موثوقة لهذا السؤال.'
-            : 'I could not find trustworthy external references for this question.',
+            ? 'لم أجد مراجع خارجية لهذا السؤال.'
+            : 'I could not find external references for this question.',
           'clarification',
         ),
       ],

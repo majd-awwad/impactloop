@@ -1617,6 +1617,7 @@ class _AiExternalSourcesBlock extends StatelessWidget {
 
     return _AiBlockSection(
       title: AiL10n.externalSourcesSection.resolve(context),
+      subtitle: AiL10n.externalSourcesCaveat.resolve(context),
       child: Column(
         children: [
           for (var i = 0; i < items.length; i++)
