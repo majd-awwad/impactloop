@@ -18,6 +18,8 @@ import {
   reportNoDriverAvailableHandler,
   requestLearnerPickupRescheduleHandler,
   resolveLearnerConfirmationHandler,
+  upsertReservationReviewHandler,
+  deleteReservationReviewHandler,
 } from './reservations.controller.js';
 import {
   createReservationSchema,
@@ -28,6 +30,8 @@ import {
   requestPickupRescheduleSchema,
   reservationIdParamsSchema,
   reservationQuoteSchema,
+  reservationReviewSchema,
+  reservationReviewTargetParamsSchema,
 } from './reservations.validation.js';
 import { requestDeliveryForReservationHandler } from '../deliveries/deliveries.controller.js';
 import {
@@ -136,4 +140,21 @@ reservationsRouter.post(
   validate(reservationIdParamsSchema, 'params'),
   validate(requestDeliverySchema),
   asyncHandler(requestDeliveryForReservationHandler),
+);
+
+reservationsRouter.put(
+  '/:id/review',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(reservationReviewSchema),
+  asyncHandler(upsertReservationReviewHandler),
+);
+
+reservationsRouter.delete(
+  '/:id/review/:targetType',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationReviewTargetParamsSchema, 'params'),
+  asyncHandler(deleteReservationReviewHandler),
 );

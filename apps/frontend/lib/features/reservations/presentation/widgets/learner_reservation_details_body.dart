@@ -24,6 +24,7 @@ import '../detail/reservation_detail_timeline.dart';
 import '../learner_reservation_ui_helpers.dart';
 import 'learner_awaiting_confirmation_panel.dart';
 import 'learner_reservation_messages_panel.dart';
+import 'reservation_reviews_section.dart';
 
 
 const _threeColumnBreakpoint = 1024.0;
@@ -214,6 +215,10 @@ class _LearnerReservationDetailsBodyState
                 reservation.pendingRescheduleReason?.trim().isNotEmpty == true
             ? _RescheduleReasonNote(reservation: reservation)
             : null;
+        final reviewsSection = reservation.isCompleted &&
+                (reservation.reviews?.hasReviewableTarget ?? false)
+            ? ReservationReviewsSection(reservation: reservation)
+            : null;
 
         final pickupOrDelivery = reservation.isDeliveryFulfillment ||
                 hasDeliveryRecord
@@ -244,6 +249,10 @@ class _LearnerReservationDetailsBodyState
               if (messages != null) messages,
               quickActions,
               if (rescheduleNote != null) rescheduleNote,
+              if (reviewsSection != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                reviewsSection,
+              ],
             ],
           );
         }
@@ -287,6 +296,10 @@ class _LearnerReservationDetailsBodyState
                 if (rescheduleNote != null) ...[
                   const SizedBox(height: AppSpacing.md),
                   rescheduleNote,
+                ],
+                if (reviewsSection != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  reviewsSection,
                 ],
               ],
             ),
@@ -353,6 +366,10 @@ class _LearnerReservationDetailsBodyState
               if (rescheduleNote != null) ...[
                 const SizedBox(height: AppSpacing.md),
                 rescheduleNote,
+              ],
+              if (reviewsSection != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                reviewsSection,
               ],
             ],
           ),

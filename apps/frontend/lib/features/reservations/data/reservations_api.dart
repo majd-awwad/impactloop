@@ -7,6 +7,7 @@ import 'models/created_reservation.dart';
 import 'models/learner_reservation.dart';
 import 'models/reservation_message.dart';
 import 'models/reservation_quote.dart';
+import 'models/reservation_review.dart';
 
 class ReservationsApi {
   const ReservationsApi(this._client);
@@ -186,6 +187,46 @@ class ReservationsApi {
         data: {'note': note.trim()},
       ),
       LearnerReservation.fromJson,
+    );
+  }
+
+  Future<ReservationReviewsState> upsertReservationReview({
+    required String reservationId,
+    required String targetType,
+    required int rating,
+    String? comment,
+  }) {
+    return unwrapApiResponse(
+      _client.put<Map<String, dynamic>>(
+        '/api/reservations/$reservationId/review',
+        data: {
+          'targetType': targetType,
+          'rating': rating,
+          if (comment != null && comment.trim().isNotEmpty)
+            'comment': comment.trim(),
+        },
+      ),
+      (json) => ReservationReviewsState.fromJson(
+        Map<String, dynamic>.from(
+          json['reviews'] as Map? ?? const <String, dynamic>{},
+        ),
+      ),
+    );
+  }
+
+  Future<ReservationReviewsState> deleteReservationReview({
+    required String reservationId,
+    required String targetType,
+  }) {
+    return unwrapApiResponse(
+      _client.delete<Map<String, dynamic>>(
+        '/api/reservations/$reservationId/review/$targetType',
+      ),
+      (json) => ReservationReviewsState.fromJson(
+        Map<String, dynamic>.from(
+          json['reviews'] as Map? ?? const <String, dynamic>{},
+        ),
+      ),
     );
   }
 }

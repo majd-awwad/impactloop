@@ -55,6 +55,8 @@ const reservationInclude = {
 // yet received newer pricing / delivery-group columns from schema migrations.
 const learnerReservationListScalarSelect = {
   id: true,
+  requesterId: true,
+  ownerId: true,
   status: true,
   quantityRequested: true,
   message: true,
@@ -148,9 +150,14 @@ const learnerReservationListSelect = {
       id: true,
       status: true,
       assignedDriverProfileId: true,
+      assignedDriverProfile: {
+        select: {
+          userId: true,
+          displayName: true,
+        },
+      },
     },
     orderBy: { requestedAt: 'desc' },
-    take: 1,
   },
   noShowReports: {
     select: {

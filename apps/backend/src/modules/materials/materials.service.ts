@@ -42,6 +42,7 @@ import {
   resolveRecommendationSourceOperationId,
 } from '../recommendation-events/recommendation-events.service.js';
 import * as publicSuppliersRepository from '../public-suppliers/public-suppliers.repository.js';
+import { summarizeSupplierReviewsByUserIds } from '../reservations/reservation-reviews.repository.js';
 
 import * as materialsRepository from './materials.repository.js';
 import {
@@ -628,6 +629,20 @@ const approximateDistanceKm = (distanceKm: number | null | undefined) => {
   return Math.round(distanceKm * 10) / 10;
 };
 
+const mapMaterialRatingSummary = (
+  summary: { average: number; count: number } | undefined,
+) => {
+  if (!summary || summary.count <= 0) {
+    return null;
+  }
+
+  return Math.round(summary.average * 10) / 10;
+};
+
+const loadSupplierRatingSummariesForMaterials = async (
+  materials: Array<{ ownerId: string }>,
+) => summarizeSupplierReviewsByUserIds(materials.map((material) => material.ownerId));
+
 export const mapMaterial = (
   material: {
     id: string;
@@ -669,6 +684,7 @@ export const mapMaterial = (
   options: {
     includeApproximateLocation?: boolean;
     distanceKm?: number | null;
+    ratingSummary?: number | null;
   } = {},
 ) => {
   const quantity = toDecimal(material.quantity);
@@ -698,7 +714,7 @@ export const mapMaterial = (
     imageUrl: primaryImageUrl,
     primaryImageUrl,
     supplierName: resolveSupplierName(material),
-    ratingSummary: null,
+    ratingSummary: options.ratingSummary ?? null,
     viewsCount: material.viewsCount,
     likesCount: engagement.likesCount ?? 0,
     isLiked: engagement.isLiked ?? false,
@@ -858,11 +874,12 @@ export const getMaterials = async (
   );
   const materialIds = result.items.map((item) => item.id);
 
-  const [heldByMaterialId, likesByMaterialId, likedMaterialIds] =
+  const [heldByMaterialId, likesByMaterialId, likedMaterialIds, ratingSummaries] =
     await Promise.all([
       getHeldQuantitiesByMaterialIds(materialIds),
       materialsRepository.countLikesByMaterialIds(materialIds),
       materialsRepository.findLikedMaterialIds(viewer?.sub, materialIds),
+      loadSupplierRatingSummariesForMaterials(result.items),
     ]);
 
   const mappedItems = result.items.map((item) =>
@@ -876,6 +893,9 @@ export const getMaterials = async (
       {
         includeApproximateLocation: true,
         distanceKm: result.distanceByMaterialId.get(item.id),
+        ratingSummary: mapMaterialRatingSummary(
+          ratingSummaries.get(item.ownerId),
+        ),
       },
     ),
   );
@@ -978,6 +998,9 @@ export const getMaterialById = async (
     getHeldQuantitiesByMaterialIds([material.id]),
     materialsRepository.countLikesByMaterialIds([material.id]),
   ]);
+  const ratingSummaries = await loadSupplierRatingSummariesForMaterials([
+    material,
+  ]);
   assertRequestActive(abortSignal);
   const heldQuantity = heldByMaterialId.get(material.id) ?? toDecimal(0);
   const mappedMaterial = mapMaterial(
@@ -986,6 +1009,11 @@ export const getMaterialById = async (
     {
       likesCount: likesByMaterialId.get(material.id) ?? 0,
       isLiked: false,
+    },
+    {
+      ratingSummary: mapMaterialRatingSummary(
+        ratingSummaries.get(material.ownerId),
+      ),
     },
   );
   const detailFields = mapMaterialDetailFields(material);
@@ -1171,15 +1199,20 @@ export const mapFocusedMaterialCards = async (
   viewer?: AccessTokenPayload,
 ) => {
   const ids = records.map((item) => item.id);
-  const [held, likes, liked] = await Promise.all([
+  const [held, likes, liked, ratingSummaries] = await Promise.all([
     getHeldQuantitiesByMaterialIds(ids),
     materialsRepository.countLikesByMaterialIds(ids),
     materialsRepository.findLikedMaterialIds(viewer?.sub, ids),
+    loadSupplierRatingSummariesForMaterials(records),
   ]);
   return records.map((item) =>
     mapMaterial(item, held.get(item.id) ?? toDecimal(0), {
       likesCount: likes.get(item.id) ?? 0,
       isLiked: liked.has(item.id),
+    }, {
+      ratingSummary: mapMaterialRatingSummary(
+        ratingSummaries.get(item.ownerId),
+      ),
     }),
   );
 };
