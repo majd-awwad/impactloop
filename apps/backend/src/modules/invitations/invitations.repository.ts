@@ -9,6 +9,10 @@ import type {
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 
+import {
+  buildRoleInvitationActiveKey,
+  clearRoleInvitationActiveKey,
+} from './invitations.active-key.js';
 import type { UserWithRoles } from '../auth/auth.repository.js';
 
 export type InvitationRecord = RoleInvitation & {
@@ -82,6 +86,31 @@ export const findActivePendingInvitationByEmailAndRole = async (
   });
 };
 
+export const clearInactiveInvitationActiveKeys = async (
+  targetEmail: string,
+  targetRole: RoleInvitationTargetRole,
+): Promise<void> => {
+  const normalizedEmail = targetEmail.trim().toLowerCase();
+
+  await prisma.roleInvitation.updateMany({
+    where: {
+      targetEmail: {
+        equals: normalizedEmail,
+        mode: 'insensitive',
+      },
+      targetRole,
+      activeKey: { not: null },
+      OR: [
+        { expiresAt: { lte: new Date() } },
+        { status: { not: 'PENDING' } },
+        { usedAt: { not: null } },
+        { revokedAt: { not: null } },
+      ],
+    },
+    data: clearRoleInvitationActiveKey,
+  });
+};
+
 export const createInvitationRecord = async (input: {
   targetEmail: string;
   targetRole: RoleInvitationTargetRole;
@@ -90,14 +119,17 @@ export const createInvitationRecord = async (input: {
   expiresAt: Date;
   notes?: string;
 }): Promise<InvitationRecord> => {
+  const targetEmail = input.targetEmail.trim().toLowerCase();
+
   return prisma.roleInvitation.create({
     data: {
-      targetEmail: input.targetEmail.trim().toLowerCase(),
+      targetEmail,
       targetRole: input.targetRole,
       tokenHash: input.tokenHash,
       invitedBy: input.invitedBy,
       expiresAt: input.expiresAt,
       notes: input.notes,
+      activeKey: buildRoleInvitationActiveKey(targetEmail, input.targetRole),
     },
     include: {
       invitedByUser: {
@@ -192,6 +224,7 @@ export const revokeInvitationRecord = async (id: string): Promise<InvitationReco
     data: {
       status: 'REVOKED',
       revokedAt: new Date(),
+      ...clearRoleInvitationActiveKey,
     },
     include: {
       invitedByUser: {
@@ -294,6 +327,7 @@ export const acceptInvitationTransaction = async (input: {
         status: 'ACCEPTED',
         usedAt: new Date(),
         usedByUserId: user.id,
+        ...clearRoleInvitationActiveKey,
       },
     });
 

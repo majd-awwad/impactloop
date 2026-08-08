@@ -667,6 +667,51 @@ describe('admin invitation duplicate prevention', () => {
     assert.equal(second.canCopyLink, true);
   });
 
+  test('concurrent duplicate active pending invites are blocked by activeKey', async () => {
+    const provider = new RecordingEmailProvider();
+    setEmailInvitationProviderForTests(provider);
+    const admin = await createAdminUser();
+    const email = `${TEST_MARKER}-concurrent-${Date.now()}@impactloop.test`;
+
+    const [first, second] = await Promise.allSettled([
+      createEmailInvitation(admin.id, {
+        role: 'DRIVER',
+        recipientEmail: email,
+        expiresInMinutes: 60,
+      }),
+      createEmailInvitation(admin.id, {
+        role: 'DRIVER',
+        recipientEmail: email,
+        expiresInMinutes: 60,
+      }),
+    ]);
+
+    const successes = [first, second].filter(
+      (result) => result.status === 'fulfilled',
+    );
+    const failures = [first, second].filter(
+      (result) => result.status === 'rejected',
+    );
+
+    assert.equal(successes.length, 1);
+    assert.equal(failures.length, 1);
+    const failure = failures[0];
+    assert.equal(failure.status, 'rejected');
+    assert.ok(failure.reason instanceof AppError);
+    assert.equal(failure.reason.code, 'DUPLICATE_PENDING_INVITATION');
+
+    const success = successes[0] as PromiseFulfilledResult<{ id: string }>;
+    ids.invitations.push(success.value.id);
+
+    const count = await prisma.roleInvitation.count({
+      where: {
+        targetEmail: email.toLowerCase(),
+        targetRole: 'DRIVER',
+      },
+    });
+    assert.equal(count, 1);
+  });
+
   test('different role for same email is allowed', async () => {
     const provider = new RecordingEmailProvider();
     setEmailInvitationProviderForTests(provider);
