@@ -58,6 +58,7 @@ import {
   resolveSelfPickupHandoverPhase,
 } from '../reservations/reservation-reschedule.js';
 import { mapReservationFulfillmentLabel } from '../reservations/reservation-delivery.js';
+import { mapReservationStatusHistoryForClient } from '../reservations/reservation-status-history.js';
 import {
   canSupplierMarkLearnerPickupNoShow,
   canSupplierMarkDeliveryPickupExpired as isSupplierDeliveryPickupExpiryAllowed,
@@ -843,20 +844,7 @@ export const getSupplierReservationDetail = async (
     delivery: common.deliverySummary,
     group: common.groupSummary,
     incident: common.incidentSummary,
-    history: reservation.statusHistory.map((entry) => ({
-      id: entry.id,
-      statusGroup: entry.statusGroup,
-      oldStatus: entry.oldStatus,
-      newStatus: entry.newStatus,
-      note: entry.note,
-      createdAt: entry.createdAt.toISOString(),
-      actor: entry.changedByUser
-        ? {
-            id: entry.changedByUser.id,
-            displayName: entry.changedByUser.displayName,
-          }
-        : null,
-    })),
+    history: reservation.statusHistory.map(mapReservationStatusHistoryForClient),
   };
 };
 

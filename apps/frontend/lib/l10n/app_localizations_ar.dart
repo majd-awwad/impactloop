@@ -5973,6 +5973,153 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierNoHistoryEvents => 'لم يتم إرجاع أي أحداث في السجل.';
 
   @override
+  String get supplierHistoryEventAcceptedBySupplier => 'قبل المورد الحجز';
+
+  @override
+  String get supplierHistoryEventDeclinedBySupplier => 'رفض المورد الحجز';
+
+  @override
+  String get supplierHistoryEventPickupCompletedBySupplier =>
+      'أكمل المورد الاستلام';
+
+  @override
+  String get supplierHistoryEventSupplierRequestedReschedule =>
+      'طلب المورد إعادة جدولة';
+
+  @override
+  String get supplierHistoryEventSupplierAcceptedLearnerReschedule =>
+      'قبل المورد اقتراح إعادة الجدولة من المتعلم';
+
+  @override
+  String get supplierHistoryEventSupplierCancelled => 'ألغى المورد الحجز';
+
+  @override
+  String get supplierHistoryEventSupplierCancelledPendingReschedule =>
+      'ألغى المورد الحجز بعد طلب إعادة الجدولة';
+
+  @override
+  String get supplierHistoryEventReportedAfterMissedPickup =>
+      'أُبلغ للمشرف بعد فوات نافذة الاستلام';
+
+  @override
+  String get supplierHistoryEventRequestedByLearner => 'طلب المتعلم الحجز';
+
+  @override
+  String get supplierHistoryEventCancelledByLearner => 'ألغى المتعلم الحجز';
+
+  @override
+  String get supplierHistoryEventCancelledByLearnerAwaitingConfirmation =>
+      'ألغى المتعلم الحجز أثناء انتظار التأكيد';
+
+  @override
+  String get supplierHistoryEventLearnerAcceptedSupplierPickupWindow =>
+      'قبل المتعلم نافذة الاستلام المقترحة من المورد';
+
+  @override
+  String get supplierHistoryEventLearnerConfirmedDeliveryWindow =>
+      'أكد المتعلم نافذة التوصيل المناسبة';
+
+  @override
+  String get supplierHistoryEventLearnerRequestedReschedule =>
+      'طلب المتعلم إعادة جدولة';
+
+  @override
+  String get supplierHistoryEventLearnerCancelledAfterReschedule =>
+      'ألغى المتعلم الحجز بعد طلب إعادة الجدولة';
+
+  @override
+  String get supplierHistoryEventLearnerNoShowAfterPickup =>
+      'لم يحضر المتعلم بعد نافذة الاستلام';
+
+  @override
+  String get supplierHistoryEventLearnerReportedSupplierIssue =>
+      'أبلغ المتعلم عن مشكلة مع المورد بعد نافذة الاستلام';
+
+  @override
+  String get supplierHistoryEventPendingExpiredAfterPreferredWindow =>
+      'انتهت صلاحية الحجز بعد مرور آخر نافذة جدولة مفضلة دون رد من المورد';
+
+  @override
+  String get supplierHistoryEventPendingExpiredAfterTimeout =>
+      'انتهت صلاحية الحجز بعد انتهاء المهلة دون رد من المورد';
+
+  @override
+  String get supplierHistoryEventMissedPickupAutoExpired =>
+      'انتهت صلاحية الحجز تلقائيًا بعد فوات نافذة الاستلام';
+
+  @override
+  String get supplierHistoryEventNoDriverAvailable => 'لا يوجد سائق متاح';
+
+  @override
+  String get supplierHistoryEventNoDriverAutoEscalated =>
+      'تصعيد تلقائي لعدم توفر سائق';
+
+  @override
+  String get supplierHistoryEventAssignedDriverPickupAutoEscalated =>
+      'تصعيد تلقائي لتأخر سائق معيّن عند الاستلام';
+
+  @override
+  String get supplierHistoryEventDeliveryPickupWindowExpired =>
+      'انتهت نافذة استلام التوصيل';
+
+  @override
+  String get supplierHistoryEventDriverNoShowAtSupplier =>
+      'لم يحضر السائق لاستلام المورد';
+
+  @override
+  String get supplierHistoryEventDriverNoShowReportedBySupplier =>
+      'أبلغ المورد عن عدم حضور السائق';
+
+  @override
+  String get supplierHistoryEventSupplierMarkedPickupExpired =>
+      'علّم المورد نافذة الاستلام منتهية';
+
+  @override
+  String get supplierHistoryEventSupplierPickupWindowExpiredNoDriver =>
+      'انتهت نافذة استلام المورد دون تعيين سائق';
+
+  @override
+  String get supplierHistoryEventDeliveryCompletedByDriver =>
+      'أكمل السائق التوصيل';
+
+  @override
+  String get supplierHistoryEventGroupedDeliveryCompletedByDriver =>
+      'أكمل السائق التوصيل المجمّع';
+
+  @override
+  String get supplierHistoryEventSupplierSubmittedPickupWindowNoDriver =>
+      'قدّم المورد نافذة استلام جديدة بعد عدم توفر سائق';
+
+  @override
+  String get supplierHistoryEventSupplierSubmittedReplacementPickupWindow =>
+      'قدّم المورد نافذة استلام بديلة بعد استلام جزئي';
+
+  @override
+  String get supplierHistoryEventSupplierSubmittedPickupWindowAdminRecovery =>
+      'قدّم المورد نافذة استلام جديدة بعد استرداد إداري';
+
+  @override
+  String get supplierHistoryEventAdminRequestedNewPickupWindowNoDriver =>
+      'طلب المشرف من المورد اختيار نافذة استلام جديدة بعد عدم توفر سائق';
+
+  @override
+  String
+  get supplierHistoryEventAdminRequestedNewPickupWindowPickupIncomplete =>
+      'طلب المشرف من المورد اختيار نافذة استلام جديدة بعد عدم اكتمال الاستلام';
+
+  @override
+  String get supplierHistoryEventAdminCancelledNoDriver =>
+      'ألغى المشرف الحجز وأفرج عن الحجز بعد عدم توفر سائق';
+
+  @override
+  String get supplierHistoryEventAdminCancelledPickupIncomplete =>
+      'ألغى المشرف الحجز وأفرج عن الحجز بعد عدم اكتمال الاستلام';
+
+  @override
+  String get supplierHistoryEventFulfillmentIssueReported =>
+      'أُبلغ عن مشكلة في التنفيذ';
+
+  @override
   String get supplierWorkflowField => 'سير العمل';
 
   @override

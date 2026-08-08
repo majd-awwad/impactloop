@@ -19,6 +19,7 @@ import {
 } from '../payments/payments.lifecycle.js';
 import { afterFinalAcceptanceInTransaction } from '../payments/payments.acceptance.js';
 import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
+import { formatReservationHistoryNote } from './reservation-status-history.js';
 
 const learnerConfirmationExistingSelect = {
   id: true,
@@ -102,7 +103,9 @@ export const resolveLearnerConfirmation = async (input: {
           oldStatus: 'AWAITING_LEARNER_CONFIRMATION',
           newStatus: 'CANCELLED',
           changedBy: input.requesterId,
-          note: 'Cancelled by learner while awaiting confirmation',
+          note: formatReservationHistoryNote(
+            'CANCELLED_BY_LEARNER_AWAITING_CONFIRMATION',
+          ),
         },
       });
 
@@ -171,7 +174,9 @@ export const resolveLearnerConfirmation = async (input: {
           oldStatus: 'AWAITING_LEARNER_CONFIRMATION',
           newStatus: 'ACCEPTED',
           changedBy: input.requesterId,
-          note: 'Learner accepted supplier proposed pickup window',
+          note: formatReservationHistoryNote(
+            'LEARNER_ACCEPTED_SUPPLIER_PICKUP_WINDOW',
+          ),
         },
       });
 
@@ -255,7 +260,7 @@ export const resolveLearnerConfirmation = async (input: {
         oldStatus: 'AWAITING_LEARNER_CONFIRMATION',
         newStatus: 'ACCEPTED',
         changedBy: input.requesterId,
-        note: 'Learner confirmed feasible delivery window',
+        note: formatReservationHistoryNote('LEARNER_CONFIRMED_DELIVERY_WINDOW'),
       },
     });
 

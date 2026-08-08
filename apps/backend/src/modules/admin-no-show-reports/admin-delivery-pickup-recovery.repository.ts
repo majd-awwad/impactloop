@@ -11,6 +11,7 @@ import {
   recomputeAndUpdateMaterialStatus,
   runSerializableTransaction,
 } from '../reservations/reservations.quantity.js';
+import { formatReservationHistoryNote } from '../reservations/reservation-status-history.js';
 import { findNoShowReportByIdForAdmin } from './admin-no-show-reports.repository.js';
 import {
   classifyAdminReportContract,
@@ -303,7 +304,12 @@ export const requestSupplierRescheduleForPickupRecoveryReport = async (input: {
           oldStatus: 'AWAITING_RESOLUTION',
           newStatus: 'AWAITING_SUPPLIER_CONFIRMATION',
           changedBy: input.adminUserId,
-          note: input.adminNote?.trim() || defaultNote,
+          note: formatReservationHistoryNote(
+            kind === 'NO_DRIVER'
+              ? 'ADMIN_REQUESTED_NEW_PICKUP_WINDOW_NO_DRIVER'
+              : 'ADMIN_REQUESTED_NEW_PICKUP_WINDOW_PICKUP_INCOMPLETE',
+            { reasonText: input.adminNote?.trim() },
+          ),
         },
       });
     }
@@ -434,7 +440,12 @@ export const cancelAndReleaseHoldForPickupRecoveryReport = async (input: {
           oldStatus: 'AWAITING_RESOLUTION',
           newStatus: 'EXPIRED',
           changedBy: input.adminUserId,
-          note: input.adminNote?.trim() || defaultNote,
+          note: formatReservationHistoryNote(
+            kind === 'NO_DRIVER'
+              ? 'ADMIN_CANCELLED_NO_DRIVER'
+              : 'ADMIN_CANCELLED_PICKUP_INCOMPLETE',
+            { reasonText: input.adminNote?.trim() },
+          ),
         },
       });
       await recomputeAndUpdateMaterialStatus(tx, affected.materialId);

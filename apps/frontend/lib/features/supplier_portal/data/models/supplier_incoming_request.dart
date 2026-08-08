@@ -1490,6 +1490,8 @@ class SupplierReservationHistoryEntry {
     this.statusGroup,
     this.oldStatus,
     this.newStatus,
+    this.eventCode,
+    this.reasonText,
     this.note,
     this.createdAt,
     this.actor,
@@ -1499,6 +1501,8 @@ class SupplierReservationHistoryEntry {
   final String? statusGroup;
   final String? oldStatus;
   final String? newStatus;
+  final String? eventCode;
+  final String? reasonText;
   final String? note;
   final DateTime? createdAt;
   final Map<String, dynamic>? actor;
@@ -1509,6 +1513,8 @@ class SupplierReservationHistoryEntry {
         statusGroup: json['statusGroup'] as String?,
         oldStatus: json['oldStatus'] as String?,
         newStatus: json['newStatus'] as String?,
+        eventCode: json['eventCode'] as String?,
+        reasonText: json['reasonText'] as String?,
         note: json['note'] as String?,
         createdAt: _jsonDate(json['createdAt']),
         actor: _jsonMap(json['actor']),

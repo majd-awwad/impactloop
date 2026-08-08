@@ -12,6 +12,7 @@ import {
 } from './reservations.quantity.js';
 import { expireStalePendingReservationsForLearnerMaterial } from './reservations.pending-expiry.repository.js';
 import { expireStaleMissedPickupsForMaterialIdsInTransaction } from './reservations.missed-pickup-expiry.repository.js';
+import { formatReservationHistoryNote } from './reservation-status-history.js';
 import {
   resolveReservationPricingForCreate,
   type ReservationQuoteInput,
@@ -571,7 +572,7 @@ export const createLearnerReservation = async (input: {
         oldStatus: null,
         newStatus: 'PENDING',
         changedBy: input.requesterId,
-        note: 'Reservation requested by learner',
+        note: formatReservationHistoryNote('REQUESTED_BY_LEARNER'),
       },
     });
 
@@ -669,7 +670,7 @@ export const cancelLearnerReservation = async (input: {
         oldStatus: existing.status,
         newStatus: 'CANCELLED',
         changedBy: input.requesterId,
-        note: 'Cancelled by learner',
+        note: formatReservationHistoryNote('CANCELLED_BY_LEARNER'),
       },
     });
 
