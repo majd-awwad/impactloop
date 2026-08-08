@@ -4,6 +4,7 @@ import { env, getAppPublicBaseUrl, getResolvedEmailProvider, isAppPublicBaseUrlC
 import { AppError } from '../../utils/app-error.js';
 import { hashPassword } from '../../utils/password.js';
 import { generateOpaqueToken, hashToken } from '../../utils/token.js';
+import { isPrismaCode } from '../../utils/transaction-retry.js';
 
 import * as authRepository from '../auth/auth.repository.js';
 
@@ -172,6 +173,28 @@ export const issueInvitationLinkForAdmin = async (
   };
 };
 
+const throwDuplicatePendingInvitation = async (
+  recipientEmail: string,
+  role: RoleInvitationTargetRole,
+): Promise<never> => {
+  const existing =
+    await invitationsRepository.findActivePendingInvitationByEmailAndRole(
+      recipientEmail,
+      role,
+    );
+
+  throw new AppError(
+    'An active pending invitation already exists for this email and role.',
+    409,
+    'DUPLICATE_PENDING_INVITATION',
+    existing
+      ? {
+          existingInvitation: toAdminDto(existing),
+        }
+      : undefined,
+  );
+};
+
 export const createEmailInvitation = async (
   adminUserId: string,
   input: AdminCreateInvitationInput,
@@ -180,6 +203,11 @@ export const createEmailInvitation = async (
 
   const recipientEmail = input.recipientEmail.trim().toLowerCase();
 
+  await invitationsRepository.clearInactiveInvitationActiveKeys(
+    recipientEmail,
+    input.role,
+  );
+
   const existing =
     await invitationsRepository.findActivePendingInvitationByEmailAndRole(
       recipientEmail,
@@ -187,27 +215,29 @@ export const createEmailInvitation = async (
     );
 
   if (existing) {
-    throw new AppError(
-      'An active pending invitation already exists for this email and role.',
-      409,
-      'DUPLICATE_PENDING_INVITATION',
-      {
-        existingInvitation: toAdminDto(existing),
-      },
-    );
+    await throwDuplicatePendingInvitation(recipientEmail, input.role);
   }
 
   const rawToken = generateOpaqueToken();
   const expiresAt = new Date(Date.now() + input.expiresInMinutes * 60 * 1000);
 
-  const invitation = await invitationsRepository.createInvitationRecord({
-    targetEmail: recipientEmail,
-    targetRole: input.role,
-    tokenHash: hashToken(rawToken),
-    invitedBy: adminUserId,
-    expiresAt,
-    notes: input.note,
-  });
+  let invitation: invitationsRepository.InvitationRecord;
+  try {
+    invitation = await invitationsRepository.createInvitationRecord({
+      targetEmail: recipientEmail,
+      targetRole: input.role,
+      tokenHash: hashToken(rawToken),
+      invitedBy: adminUserId,
+      expiresAt,
+      notes: input.note,
+    });
+  } catch (error) {
+    if (isPrismaCode(error, 'P2002')) {
+      await throwDuplicatePendingInvitation(recipientEmail, input.role);
+    }
+
+    throw error;
+  }
 
   const inviteLink = buildInviteLink(rawToken);
   const sent = await sendInvitationEmail({
