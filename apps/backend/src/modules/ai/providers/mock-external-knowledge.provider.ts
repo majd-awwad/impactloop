@@ -3,6 +3,7 @@ import type {
   AiExternalKnowledgeSearchInput,
   AiExternalKnowledgeSearchOutput,
 } from './ai-external-knowledge.types.js';
+import { scoreExternalSourceProvenance } from '../external-source-provenance.js';
 
 export class MockExternalKnowledgeProvider implements AiExternalKnowledgeProvider {
   async search(
@@ -17,7 +18,8 @@ export class MockExternalKnowledgeProvider implements AiExternalKnowledgeProvide
           url: 'https://docs.arduino.cc/hardware/uno-rev3',
           source: 'docs.arduino.cc',
           publishedAt: null,
-          snippet: 'Official Arduino Uno hardware documentation and pinout reference.',
+          snippet: 'Arduino Uno hardware documentation and pinout reference.',
+          provenance: scoreExternalSourceProvenance('https://docs.arduino.cc/hardware/uno-rev3'),
         },
         {
           title: 'Wire library reference',
@@ -25,6 +27,9 @@ export class MockExternalKnowledgeProvider implements AiExternalKnowledgeProvide
           source: 'arduino.cc',
           publishedAt: null,
           snippet: 'I2C communication library reference for Arduino boards.',
+          provenance: scoreExternalSourceProvenance(
+            'https://www.arduino.cc/reference/en/language/functions/communication/wire/',
+          ),
         },
       ].slice(0, input.maxResults),
     };

@@ -886,6 +886,11 @@ class AiL10n {
     ar: 'المصادر',
   );
 
+  static const externalSourcesCaveat = LocalizedText(
+    en: 'External web results; ImpactLoop has not verified these sources.',
+    ar: 'نتائج خارجية من الويب؛ لم تتحقق ImpactLoop من هذه المصادر.',
+  );
+
   static const availableLabel = LocalizedText(
     en: 'Available',
     ar: 'متاح',

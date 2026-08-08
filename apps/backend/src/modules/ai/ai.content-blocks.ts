@@ -282,6 +282,7 @@ export const aiExternalSourcesBlockSchema = z.object({
         source: z.string().trim().min(1).max(120).optional(),
         publishedAt: z.string().datetime().nullable().optional(),
         snippet: z.string().trim().min(1).max(500).optional(),
+        provenance: z.enum(['authoritative', 'unverified']).optional(),
       }),
     )
     .min(1)

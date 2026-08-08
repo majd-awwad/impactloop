@@ -9,6 +9,7 @@ import type {
   AiExternalKnowledgeSearchInput,
   AiExternalKnowledgeSearchOutput,
 } from './ai-external-knowledge.types.js';
+import { scoreExternalSourceProvenance } from '../external-source-provenance.js';
 
 const MAX_SNIPPET_LENGTH = 500;
 
@@ -119,6 +120,7 @@ export const mapGeminiGroundingResponse = (
       source: extractHostname(uri).slice(0, 120),
       publishedAt: null,
       snippet: buildSnippetForChunk(index, supports),
+      provenance: scoreExternalSourceProvenance(uri),
     });
 
     if (results.length >= maxResults) {
@@ -161,8 +163,8 @@ const mapGeminiGroundingFailure = (error: unknown): AppError => {
 
 const buildSearchPrompt = (query: string, locale: 'en' | 'ar') =>
   locale === 'ar'
-    ? `ابحث عن مصادر تقنية رسمية فقط لهذا السؤال: ${query}`
-    : `Find official technical documentation and manufacturer references only for: ${query}`;
+    ? `ابحث عن مراجع تقنية واضحة لهذا السؤال: ${query}`
+    : `Find clear technical references for: ${query}`;
 
 export class GeminiGroundingExternalKnowledgeProvider
   implements AiExternalKnowledgeProvider

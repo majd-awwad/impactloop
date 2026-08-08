@@ -457,6 +457,7 @@ class AiExternalSourceItem {
     required this.title,
     required this.url,
     this.snippet,
+    this.provenance,
   });
 
   factory AiExternalSourceItem.fromJson(Map<String, dynamic> json) {
@@ -464,12 +465,14 @@ class AiExternalSourceItem {
       title: json['title'] as String? ?? '',
       url: json['url'] as String? ?? '',
       snippet: json['snippet'] as String?,
+      provenance: json['provenance'] as String?,
     );
   }
 
   final String title;
   final String url;
   final String? snippet;
+  final String? provenance;
 }
 
 class AiAuthoringKnownFact {

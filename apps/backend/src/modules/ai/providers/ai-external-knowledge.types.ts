@@ -1,9 +1,12 @@
+import type { ExternalSourceProvenance } from '../external-source-provenance.js';
+
 export type AiExternalKnowledgeResult = {
   title: string;
   url: string;
   source: string;
   publishedAt: string | null;
   snippet: string | null;
+  provenance: ExternalSourceProvenance;
 };
 
 export type AiExternalKnowledgeSearchInput = {
