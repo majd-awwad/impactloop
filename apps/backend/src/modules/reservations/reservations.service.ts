@@ -1,4 +1,5 @@
 import { AppError } from '../../utils/app-error.js';
+import type { ReservationStatus } from '../../generated/prisma/client.js';
 import { ACTIVE_DELIVERY_STATUSES } from '../deliveries/deliveries.service.js';
 import { notifyNewJobForReservationWaitingDelivery } from '../notifications/driver-notification-events.service.js';
 import { notifyReservationCancelledByLearner } from '../notifications/reservation-notifications.js';
@@ -55,23 +56,13 @@ import {
   invalidateLearnerHomeForReservationTransition,
 } from '../learner-home/learner-home.service.js';
 import {
-  expireStalePendingReservationsByIds,
   expireStalePendingReservationsForMaterialIds,
 } from './reservations.pending-expiry.repository.js';
 import {
-  expireStaleMissedPickupsByIds,
   expireStaleMissedPickupsForMaterialIds,
-  expireStaleMissedPickupsForRequester,
 } from './reservations.missed-pickup-expiry.repository.js';
-import {
-  escalateStaleNoDriverDeliveriesByIds,
-  escalateStaleNoDriverDeliveriesForRequester,
-} from './reservations.no-driver-auto-escalation.repository.js';
-import {
-  escalateStaleAssignedDriverPickupsByIds,
-  escalateStaleAssignedDriverPickupsForRequester,
-} from './reservations.stale-assigned-driver-auto-escalation.repository.js';
 import { isAssignedDriverPickupOverdue } from './reservation-assigned-driver-pickup-overdue.js';
+import { deriveEffectiveReservationView } from './reservation-effective-status.js';
 import { notifyReservationCreated } from '../notifications/reservation-notifications.js';
 import {
   buildReservationQuote,
@@ -222,11 +213,6 @@ export const mapLearnerReservation = (
     reviews?: ReservationReviewsStateDto | null;
   },
 ) => {
-  const followUp = resolveReservationFollowUp({
-    status: reservation.status,
-    pickupWindowStart: reservation.pickupWindowStart,
-    pickupWindowEnd: reservation.pickupWindowEnd,
-  });
   const {
     effectiveDelivery: latestDelivery,
     deliveryCount,
@@ -234,21 +220,31 @@ export const mapLearnerReservation = (
     groupDeliveryFee,
     groupTotal,
   } = resolveReservationOperationalDelivery(reservation);
+  const effectiveView = deriveEffectiveReservationView(
+    reservation,
+    deliveryCount,
+  );
+  const effectiveStatus = effectiveView.status as ReservationStatus;
+  const followUp = resolveReservationFollowUp({
+    status: effectiveStatus,
+    pickupWindowStart: reservation.pickupWindowStart,
+    pickupWindowEnd: reservation.pickupWindowEnd,
+  });
   const pickupHandoverPhase = resolveSelfPickupHandoverPhase({
-    status: reservation.status,
+    status: effectiveStatus,
     pickupWindowStart: reservation.pickupWindowStart,
     pickupWindowEnd: reservation.pickupWindowEnd,
     fulfillmentMethod: reservation.fulfillmentMethod,
     deliveryCount,
   });
   const canLearnerReschedule = canRequestPickupReschedule({
-    status: reservation.status,
+    status: effectiveStatus,
     fulfillmentMethod: reservation.fulfillmentMethod,
     deliveryCount,
     pickupWindowStart: reservation.pickupWindowStart,
     pickupWindowEnd: reservation.pickupWindowEnd,
     hasFinalReport:
-      reservation.status === 'AWAITING_RESOLUTION' ||
+      effectiveStatus === 'AWAITING_RESOLUTION' ||
       reservation.noShowReports.some(
         (report) => report.status === 'PENDING_REVIEW',
       ),
@@ -263,14 +259,14 @@ export const mapLearnerReservation = (
     reservation.noShowReports.find((report) => report.status === 'PENDING_REVIEW')
       ?.reasonCode ?? null;
   const canLearnerReportSupplier = canLearnerReportSupplierIssue({
-    status: reservation.status,
+    status: effectiveStatus,
     fulfillmentMethod: reservation.fulfillmentMethod,
     deliveryCount,
     pickupWindowEnd: reservation.pickupWindowEnd,
     hasPendingReport: hasOpenIncident,
   });
   const canReportNoDriverAvailableFlag = canReportNoDriverAvailable({
-    status: reservation.status,
+    status: effectiveStatus,
     fulfillmentMethod: reservation.fulfillmentMethod,
     supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
     pickupWindowEnd: reservation.pickupWindowEnd,
@@ -285,7 +281,7 @@ export const mapLearnerReservation = (
     deliveryStatus: latestDelivery?.status ?? null,
   });
   const canLearnerRequestDelivery =
-    reservation.status === 'ACCEPTED' &&
+    effectiveStatus === 'ACCEPTED' &&
     reservation.fulfillmentMethod === 'PICKUP' &&
     reservation.material.deliveryAllowed &&
     (!latestDelivery ||
@@ -295,7 +291,7 @@ export const mapLearnerReservation = (
 
   return {
     id: reservation.id,
-    status: reservation.status,
+    status: effectiveStatus,
     quantityRequested: Number(reservation.quantityRequested),
     message: reservation.message,
     fulfillmentMethod: reservation.fulfillmentMethod,
@@ -336,9 +332,9 @@ export const mapLearnerReservation = (
       : (reservation.earliestDeliveryStart?.toISOString() ?? null),
     schedulingConflictReason: reservation.schedulingConflictReason,
     supplierNote: reservation.supplierNote,
-    rejectionReason: reservation.rejectionReason,
+    rejectionReason: effectiveView.rejectionReason,
     selfPickupCode:
-      reservation.status === 'ACCEPTED' &&
+      effectiveStatus === 'ACCEPTED' &&
       reservation.fulfillmentMethod === 'PICKUP' &&
       (options?.paymentSummary?.pickupCodeAvailable ??
         options?.paymentAllowsPickupCode ??
@@ -350,7 +346,7 @@ export const mapLearnerReservation = (
           id: latestDelivery.id,
           status: latestDelivery.status,
           learnerDeliveryCode:
-            reservation.status === 'ACCEPTED' &&
+            effectiveStatus === 'ACCEPTED' &&
             LEARNER_DELIVERY_CODE_VISIBLE_STATUSES.has(latestDelivery.status)
               ? deriveHandoverCode('learner-delivery', latestDelivery.id)
               : null,
@@ -366,7 +362,7 @@ export const mapLearnerReservation = (
     assignedDriverPickupOverdue,
     canLearnerRequestDelivery,
     canSendMessage:
-      reservationAllowsMessaging(reservation.status) && !hasOpenIncident,
+      reservationAllowsMessaging(effectiveStatus) && !hasOpenIncident,
     incidentReviewStatus,
     pendingIncidentReasonCode,
     latestMessage: latestMessage ?? null,
@@ -387,7 +383,7 @@ export const mapLearnerReservation = (
       id: reservation.owner.id,
       displayName: resolveSupplierDisplayName(reservation.owner),
     },
-    pickupLocationFull: PICKUP_LOCATION_REVEAL_STATUSES.has(reservation.status)
+    pickupLocationFull: PICKUP_LOCATION_REVEAL_STATUSES.has(effectiveStatus)
       ? mapPickupLocationFull(reservation.material.location)
       : null,
     groupItemCount: groupItemCount > 0 ? groupItemCount : null,
@@ -416,23 +412,7 @@ const mapCancelledReservation = (
 });
 
 export const listMyReservations = async (requesterId: string) => {
-  let reservations =
-    await reservationsRepository.findLearnerReservations(requesterId);
-
-  const pendingIds = reservations
-    .filter((reservation) => reservation.status === 'PENDING')
-    .map((reservation) => reservation.id);
-
-  if (pendingIds.length > 0) {
-    await expireStalePendingReservationsByIds(pendingIds, requesterId);
-    reservations =
-      await reservationsRepository.findLearnerReservations(requesterId);
-  }
-
-  await expireStaleMissedPickupsForRequester(requesterId);
-  await escalateStaleNoDriverDeliveriesForRequester(requesterId);
-  await escalateStaleAssignedDriverPickupsForRequester(requesterId);
-  reservations =
+  const reservations =
     await reservationsRepository.findLearnerReservations(requesterId);
 
   const legacyPickupReservations = reservations.filter(
@@ -510,32 +490,6 @@ export const getMyReservationById = async (
 
   if (!reservation) {
     throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
-  }
-
-  if (reservation.status === 'PENDING') {
-    await expireStalePendingReservationsByIds([reservationId], requesterId);
-    reservation = await reservationsRepository.findLearnerReservationById(
-      requesterId,
-      reservationId,
-    );
-
-    if (!reservation) {
-      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
-    }
-  }
-
-  if (reservation.status === 'ACCEPTED') {
-    await expireStaleMissedPickupsByIds([reservationId], requesterId);
-    await escalateStaleNoDriverDeliveriesByIds([reservationId]);
-    await escalateStaleAssignedDriverPickupsByIds([reservationId]);
-    reservation = await reservationsRepository.findLearnerReservationById(
-      requesterId,
-      reservationId,
-    );
-
-    if (!reservation) {
-      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
-    }
   }
 
   if (

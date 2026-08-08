@@ -848,9 +848,6 @@ describe('Candidate materials exclude already-matched materials', () => {
 
 describe('Lazy UNAVAILABLE match refresh', () => {
   test('marks SUGGESTED matches UNAVAILABLE and notifies when material becomes REUSED', async () => {
-    const { getSupplierMaterialRequest } = await import(
-      './supplier-material-requests.service.js'
-    );
     const { getLearnerMaterialRequest } = await import(
       '../learner-material-requests/learner-material-requests.service.js'
     );
@@ -888,7 +885,10 @@ describe('Lazy UNAVAILABLE match refresh', () => {
       data: { status: 'REUSED' },
     });
 
-    await getSupplierMaterialRequest(supplier.id, request.id);
+    const { reconcileUnavailableSuggestedMatchesBatch } = await import(
+      '../material-requests/material-requests.match-availability.js'
+    );
+    await reconcileUnavailableSuggestedMatchesBatch({ batchSize: 100 });
 
     const refreshedMatch = await prisma.learnerMaterialRequestMatch.findUnique({
       where: { id: match.id },
@@ -905,8 +905,12 @@ describe('Lazy UNAVAILABLE match refresh', () => {
       'MATERIAL_REQUEST_MATCH_UNAVAILABLE',
     );
 
-    // Second refresh must not create a duplicate notification.
-    await getLearnerMaterialRequest(learner.id, request.id);
+    // Learner detail reflects unavailable match without mutating on read.
+    const detail = await getLearnerMaterialRequest(learner.id, request.id);
+    const unavailableMatch = detail.matches?.find((entry) => entry.id === match.id);
+    assert.ok(unavailableMatch);
+    assert.equal(unavailableMatch?.status, 'UNAVAILABLE');
+
     const notificationCount = await prisma.notification.count({
       where: { eventKey: `mr:unavail:${match.id}` },
     });

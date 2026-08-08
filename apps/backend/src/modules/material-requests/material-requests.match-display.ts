@@ -1,5 +1,6 @@
 import { decimalToNumber } from '../../utils/decimal.js';
 import { cardMaterialImageUrl } from '../../utils/material-image-url.js';
+import { deriveEffectiveMatchStatus } from './material-requests.match-availability.js';
 
 type MatchMaterialRow = {
   id: string;
@@ -177,10 +178,12 @@ export const sortLearnerMatches = <T extends { canReserve: boolean; status: stri
 export const mapMatchForLearner = (
   match: LearnerMatchRow,
   requestStatus: string,
+  options?: { heldQuantity?: number },
 ) => {
+  const effectiveMatchStatus = deriveEffectiveMatchStatus(match, options?.heldQuantity);
   const material = match.material;
   const eligibility = deriveMatchReserveEligibility({
-    matchStatus: match.status,
+    matchStatus: effectiveMatchStatus,
     requestStatus,
     materialStatus: material?.status,
     reservationId: match.reservationId,
@@ -195,7 +198,7 @@ export const mapMatchForLearner = (
     id: match.id,
     materialRequestId: match.materialRequestId,
     materialId: match.materialId,
-    status: match.status,
+    status: effectiveMatchStatus,
     matchReasonCode: match.matchReasonCode,
     rankingScore: match.rankingScore,
     reservationId: match.reservationId,
@@ -242,5 +245,19 @@ export const mapMatchForLearner = (
   };
 };
 
-export const countActiveSuggestions = (matches: Array<{ status: string }>) =>
-  matches.filter((match) => match.status === 'SUGGESTED').length;
+export const countActiveSuggestions = (
+  matches: Array<{
+    status: string;
+    materialId: string;
+    material?: MatchMaterialRow | null;
+  }>,
+  _requestStatus?: string,
+  heldByMaterialId?: Map<string, number>,
+) =>
+  matches.filter((match) => {
+    const effectiveStatus = deriveEffectiveMatchStatus(
+      match,
+      heldByMaterialId?.get(match.materialId),
+    );
+    return effectiveStatus === 'SUGGESTED';
+  }).length;

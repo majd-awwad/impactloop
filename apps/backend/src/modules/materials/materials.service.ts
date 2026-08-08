@@ -20,7 +20,6 @@ import { cardMaterialImageUrl } from '../../utils/material-image-url.js';
 import * as categoriesRepository from '../categories/categories.repository.js';
 import * as materialTypesRepository from '../material-types/material-types.repository.js';
 import {
-  expireStalePendingReservationsForMaterials,
   mapLearnerReservation,
   resolvePickupCodeVisibilityByReservationIds,
 } from '../reservations/reservations.service.js';

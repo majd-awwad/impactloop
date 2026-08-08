@@ -306,8 +306,6 @@ describe('accepted missed pickup expiry', () => {
       hoursPastGrace: 1,
     });
 
-    await listSupplierReservations(ctx.supplierId, { status: 'accepted' });
-
     await assert.rejects(
       () =>
         completeSupplierReservation(ctx.supplierId, reservation.id, {

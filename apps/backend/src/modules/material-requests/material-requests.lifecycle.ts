@@ -42,6 +42,24 @@ export const shouldLazyExpire = (input: {
   return input.status === 'OPEN' && input.expiresAt.getTime() <= now.getTime();
 };
 
+/** Read-only OPEN→EXPIRED view for list/detail responses without mutating rows. */
+export const effectiveRequestStatus = (input: {
+  status: LearnerMaterialRequestStatus;
+  expiresAt: Date;
+  now?: Date;
+}): LearnerMaterialRequestStatus => {
+  if (
+    shouldLazyExpire({
+      status: input.status,
+      expiresAt: input.expiresAt,
+      now: input.now,
+    })
+  ) {
+    return 'EXPIRED';
+  }
+  return input.status;
+};
+
 export const isWeakMatchScore = (input: {
   rankingScore: number;
   sameCategory: boolean;

@@ -1103,7 +1103,7 @@ describe('material request fulfillment build synchronization', () => {
     assert.equal(notifications.length, 1);
   });
 
-  test('getLearnerMaterialRequest repairs fulfilled unsynced request on load', async () => {
+  test('getLearnerMaterialRequest repairs fulfilled unsynced request via worker reconciliation', async () => {
     const ctx = await setupBuildLinkedMaterialRequest();
     const match = await prisma.learnerMaterialRequestMatch.create({
       data: {
@@ -1142,8 +1142,19 @@ describe('material request fulfillment build synchronization', () => {
     assert.equal(buildItemBefore?.linkedMaterialId, null);
     assert.equal(buildItemBefore?.linkedReservationId, null);
 
+    const { reconcileStaleFulfilledBuildSyncBatch } = await import(
+      '../material-requests/material-requests.build-sync-reconciliation.js'
+    );
+    const { fulfillRequestFromCompletedReservation } = await import(
+      '../learner-material-requests/learner-material-requests.service.js'
+    );
+    const batch = await reconcileStaleFulfilledBuildSyncBatch(
+      fulfillRequestFromCompletedReservation,
+      { batchSize: 20 },
+    );
+    assert.equal(batch.repairedCount, 1);
+
     const detail = await getLearnerMaterialRequest(ctx.learner.id, ctx.request.id);
-    assert.equal(detail.buildSyncRepaired, true);
     assert.equal(detail.status, 'FULFILLED');
 
     const acquiredMatch = detail.matches?.find((entry) => entry.id === match.id);

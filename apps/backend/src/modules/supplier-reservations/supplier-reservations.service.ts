@@ -652,8 +652,6 @@ export const listSupplierReservations = async (
   ownerId: string,
   query: Partial<ListSupplierReservationsQuery>,
 ) => {
-  await runSupplierReservationLazyCleanup(ownerId);
-
   const statuses = resolveSupplierReservationStatuses(query.status);
 
   const reservations =
@@ -706,8 +704,6 @@ export const listSupplierReservationsPage = async (
   ownerId: string,
   query: ListSupplierReservationsQuery,
 ) => {
-  await runSupplierReservationLazyCleanup(ownerId);
-
   const page = query.page;
   const limit = query.limit;
   const offset = (page - 1) * limit;
@@ -774,7 +770,6 @@ export const getSupplierReservationDetail = async (
   ownerId: string,
   reservationId: string,
 ) => {
-  await runSupplierReservationLazyCleanup(ownerId);
   const reservation =
     await supplierReservationsRepository.findSupplierReservationDetailForOwner(
       ownerId,

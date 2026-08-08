@@ -196,3 +196,61 @@ export const reconcileProjectBuildMaterialRequestSync = async (
 
   return { repairedCount };
 };
+
+export const reconcileStaleFulfilledBuildSyncBatch = async (
+  fulfillRequestFromCompletedReservation: (
+    reservationId: string,
+  ) => Promise<{
+    buildSyncOutcome: BuildMaterialRequestSyncOutcome;
+  } | null>,
+  input: {
+    batchSize: number;
+    cursor?: { updatedAt: Date; id: string } | null;
+  },
+): Promise<{
+  processed: number;
+  repairedCount: number;
+  nextCursor: { updatedAt: Date; id: string } | null;
+}> => {
+  const cursor = input.cursor;
+  const requests = await prisma.learnerMaterialRequest.findMany({
+    where: {
+      status: 'FULFILLED',
+      projectBuildItemId: { not: null },
+      ...(cursor
+        ? {
+            OR: [
+              { updatedAt: { gt: cursor.updatedAt } },
+              { updatedAt: cursor.updatedAt, id: { gt: cursor.id } },
+            ],
+          }
+        : {}),
+    },
+    select: { id: true, learnerId: true, updatedAt: true },
+    orderBy: [{ updatedAt: 'asc' as const }, { id: 'asc' as const }],
+    take: input.batchSize,
+  });
+
+  if (requests.length === 0) {
+    return { processed: 0, repairedCount: 0, nextCursor: null };
+  }
+
+  let repairedCount = 0;
+  for (const request of requests) {
+    const outcome = await reconcileFulfilledRequestBuildSync(
+      request.id,
+      request.learnerId,
+      fulfillRequestFromCompletedReservation,
+    );
+    if (outcome.repaired) {
+      repairedCount += 1;
+    }
+  }
+
+  const last = requests.at(-1)!;
+  return {
+    processed: requests.length,
+    repairedCount,
+    nextCursor: { updatedAt: last.updatedAt, id: last.id },
+  };
+};

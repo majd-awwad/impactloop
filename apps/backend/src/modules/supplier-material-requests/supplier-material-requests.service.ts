@@ -15,7 +15,6 @@ import {
   isWeakMatchScore,
   shouldLazyExpire,
 } from '../material-requests/material-requests.lifecycle.js';
-import { refreshUnavailableSuggestedMatches } from '../material-requests/material-requests.match-availability.js';
 import {
   computeAvailableQuantity,
   getHeldQuantitiesByMaterialIds,
@@ -43,41 +42,13 @@ const ensureNotOwnRequest = <T extends { learnerId: string }>(
   return row;
 };
 
-const refreshUnavailableMatchesForRequest = async (
-  row: SupplierRequestRow,
-  supplierUserId: string,
-): Promise<SupplierRequestRow> => {
-  const marked = await refreshUnavailableSuggestedMatches({
-    matches: row.matches,
-    learnerId: row.learnerId,
-    requestedItemName: row.requestedItemName,
-  });
-  if (marked.length === 0) {
-    return row;
+const assertOpenRequestForSupplier = (row: SupplierRequestRow) => {
+  if (shouldLazyExpire(row)) {
+    throw new AppError('Material request is not open', 409, 'REQUEST_NOT_OPEN');
   }
-  const fresh = await repository.findRequestByIdForSupplier(
-    row.id,
-    supplierUserId,
-  );
-  return fresh ?? row;
-};
-
-const refreshIfExpired = async (
-  row: SupplierRequestRow,
-  supplierUserId: string,
-): Promise<SupplierRequestRow> => {
-  if (!shouldLazyExpire(row)) {
-    return refreshUnavailableMatchesForRequest(row, supplierUserId);
+  if (row.status !== 'OPEN') {
+    throw new AppError('Material request is not open', 409, 'REQUEST_NOT_OPEN');
   }
-  await repository.updateRequestStatus(row.id, { status: 'EXPIRED' });
-  const fresh = await repository.findRequestByIdForSupplier(
-    row.id,
-    supplierUserId,
-  );
-  if (!fresh) {
-    throw new AppError('Material request not found', 404, 'NOT_FOUND');
-  }
-  return refreshUnavailableMatchesForRequest(fresh, supplierUserId);
 };
 
 const buildRequestRankingComponent = (request: {
@@ -136,8 +107,6 @@ export const listSupplierMaterialRequests = async (
   supplierUserId: string,
   query: ListSupplierMaterialRequestsQuery,
 ) => {
-  await repository.expireStaleOpenRequests();
-
   const skip = (query.page - 1) * query.limit;
   const [rows, total] = await repository.listRequestsForSupplierFeed({
     supplierUserId,
@@ -151,15 +120,8 @@ export const listSupplierMaterialRequests = async (
     take: query.limit,
   });
 
-  const refreshedRows = [];
-  for (const row of rows) {
-    refreshedRows.push(
-      await refreshUnavailableMatchesForRequest(row, supplierUserId),
-    );
-  }
-
   return {
-    items: refreshedRows.map((row) =>
+    items: rows.map((row) =>
       mapSupplierRequest(row, { supplierUserId, includeOwnMatches: false }),
     ),
     page: query.page,
@@ -173,34 +135,24 @@ export const getSupplierMaterialRequest = async (
   supplierUserId: string,
   requestId: string,
 ) => {
-  await repository.expireStaleOpenRequests();
-
   const row = ensureNotOwnRequest(
     await repository.findRequestByIdForSupplier(requestId, supplierUserId),
     supplierUserId,
   );
-  const fresh = await refreshIfExpired(row, supplierUserId);
 
-  return mapSupplierRequest(fresh, { supplierUserId, includeOwnMatches: true });
+  return mapSupplierRequest(row, { supplierUserId, includeOwnMatches: true });
 };
 
 const requireOpenRequestForSupplier = async (
   supplierUserId: string,
   requestId: string,
 ): Promise<SupplierRequestRow> => {
-  await repository.expireStaleOpenRequests();
-
   const row = ensureNotOwnRequest(
     await repository.findRequestByIdForSupplier(requestId, supplierUserId),
     supplierUserId,
   );
-  const fresh = await refreshIfExpired(row, supplierUserId);
-
-  if (fresh.status !== 'OPEN') {
-    throw new AppError('Material request is not open', 409, 'REQUEST_NOT_OPEN');
-  }
-
-  return fresh;
+  assertOpenRequestForSupplier(row);
+  return row;
 };
 
 export const getSupplierCandidateMaterialsForRequest = async (

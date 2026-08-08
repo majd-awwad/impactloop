@@ -1,4 +1,11 @@
 import { decimalToNumber } from '../../utils/decimal.js';
+import type { LearnerMaterialRequestStatus } from '../../generated/prisma/client.js';
+import {
+  effectiveRequestStatus,
+} from './material-requests.lifecycle.js';
+import {
+  deriveEffectiveMatchStatus,
+} from './material-requests.match-availability.js';
 import {
   countActiveSuggestions,
   mapMatchForLearner,
@@ -78,15 +85,28 @@ export const mapAnonymizedProjectContext = (
 
 export const mapLearnerRequest = (
   row: RequestRow,
-  options?: { includeMatches?: boolean },
+  options?: {
+    includeMatches?: boolean;
+    heldByMaterialId?: Map<string, number>;
+  },
 ) => {
-  const activeSuggestionCount = countActiveSuggestions(row.matches ?? []);
+  const effectiveStatus = effectiveRequestStatus({
+    status: row.status as LearnerMaterialRequestStatus,
+    expiresAt: row.expiresAt,
+  });
+  const activeSuggestionCount = countActiveSuggestions(
+    row.matches ?? [],
+    effectiveStatus,
+    options?.heldByMaterialId,
+  );
   const mappedMatches =
     options?.includeMatches === false
       ? undefined
       : sortLearnerMatches(
           (row.matches ?? []).map((match) =>
-            mapMatchForLearner(match, row.status),
+            mapMatchForLearner(match, effectiveStatus, {
+              heldQuantity: options?.heldByMaterialId?.get(match.materialId),
+            }),
           ),
         );
 
@@ -106,7 +126,7 @@ export const mapLearnerRequest = (
   projectBuildId: row.projectBuildId,
   projectBuildItemId: row.projectBuildItemId,
   projectContext: mapAnonymizedProjectContext(row),
-  status: row.status,
+  status: effectiveStatus,
   neededBy: row.neededBy?.toISOString() ?? null,
   expiresAt: row.expiresAt.toISOString(),
   fulfilledAt: row.fulfilledAt?.toISOString() ?? null,
@@ -121,8 +141,16 @@ export const mapLearnerRequest = (
 
 export const mapSupplierRequest = (
   row: RequestRow,
-  options: { supplierUserId: string; includeOwnMatches?: boolean },
+  options: {
+    supplierUserId: string;
+    includeOwnMatches?: boolean;
+    heldByMaterialId?: Map<string, number>;
+  },
 ) => {
+  const effectiveStatus = effectiveRequestStatus({
+    status: row.status as LearnerMaterialRequestStatus,
+    expiresAt: row.expiresAt,
+  });
   const ownMatches = (row.matches ?? []).filter(
     (match) => match.supplierUserId === options.supplierUserId,
   );
@@ -138,7 +166,7 @@ export const mapSupplierRequest = (
     alternativesAllowed: row.alternativesAllowed,
     location: mapBroadLocation(row),
     projectContext: mapAnonymizedProjectContext(row),
-    status: row.status,
+    status: effectiveStatus,
     neededBy: row.neededBy?.toISOString() ?? null,
     expiresAt: row.expiresAt.toISOString(),
     createdAt: row.createdAt.toISOString(),
@@ -148,7 +176,7 @@ export const mapSupplierRequest = (
       ? ownMatches.map((match) => ({
           id: match.id,
           materialId: match.materialId,
-          status: match.status,
+          status: deriveEffectiveMatchStatus(match, options.heldByMaterialId?.get(match.materialId)),
           matchReasonCode: match.matchReasonCode,
           rankingScore: match.rankingScore,
           reservationId: match.reservationId,

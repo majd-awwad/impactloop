@@ -281,6 +281,11 @@ describe('reservation no-driver auto-escalation', () => {
       supplierPickupWindowEnd,
     );
 
+    const { escalateStaleNoDriverDeliveriesForRequester } = await import(
+      './reservations.no-driver-auto-escalation.repository.js'
+    );
+    await escalateStaleNoDriverDeliveriesForRequester(ctx.learnerId);
+
     const listed = await listMyReservations(ctx.learnerId);
     const mapped = listed.find((entry) => entry.id === reservation.id);
     assert.ok(mapped);
