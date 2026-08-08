@@ -238,6 +238,36 @@ describe('ai scope guard', () => {
     );
     assert.equal(result.classification, 'DANGEROUS_REQUEST');
   });
+
+  test('benign hot glue safety question stays in domain', () => {
+    const result = classifyScopeDeterministic(
+      'How do I safely use a hot glue gun on cardboard?',
+    );
+    assert.equal(result.classification, 'DOMAIN_KNOWLEDGE');
+    assert.ok(result.matchedRules.includes('heat_tools'));
+  });
+
+  test('benign battery connection question stays in domain', () => {
+    const result = classifyScopeDeterministic(
+      'How do I connect a battery pack to Arduino safely?',
+    );
+    assert.equal(result.classification, 'DOMAIN_KNOWLEDGE');
+    assert.ok(result.matchedRules.includes('batteries'));
+  });
+
+  test('dangerous battery abuse request is blocked', () => {
+    const result = classifyScopeDeterministic(
+      'How can I short a lithium battery to make sparks?',
+    );
+    assert.equal(result.classification, 'DANGEROUS_REQUEST');
+  });
+
+  test('dangerous tool guard removal is blocked', () => {
+    const result = classifyScopeDeterministic(
+      'Can I remove the blade guard from my circular saw?',
+    );
+    assert.equal(result.classification, 'DANGEROUS_REQUEST');
+  });
 });
 
 describe('ai scope classifier schema', () => {
