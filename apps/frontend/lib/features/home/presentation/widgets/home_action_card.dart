@@ -118,32 +118,37 @@ class HomeActionCard extends StatelessWidget {
                   ],
                 ),
                 const Spacer(),
-                Text(
-                  title,
-                  style: AppTextStyles.title(context).copyWith(
-                    color: foreground,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    height: 1.12,
-                    letterSpacing: 0,
+                Flexible(
+                  child: Text(
+                    title,
+                    style: AppTextStyles.title(context).copyWith(
+                      color: foreground,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      height: 1.12,
+                      letterSpacing: 0,
+                    ),
+                    textAlign: TextAlign.start,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  textAlign: TextAlign.start,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 3),
-                Text(
-                  description,
-                  style: AppTextStyles.label(context).copyWith(
-                    color: enabled ? palette.textSecondary : palette.textMuted,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
-                    height: 1.1,
-                    letterSpacing: 0,
+                Flexible(
+                  child: Text(
+                    description,
+                    style: AppTextStyles.label(context).copyWith(
+                      color:
+                          enabled ? palette.textSecondary : palette.textMuted,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                      height: 1.1,
+                      letterSpacing: 0,
+                    ),
+                    textAlign: TextAlign.start,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  textAlign: TextAlign.start,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

@@ -5,6 +5,7 @@ Routes and access guards derived from `apps/frontend/lib/app/router/app_router.d
 Related frontend architecture docs:
 - [reusable-widgets.md](reusable-widgets.md)
 - [state-management.md](state-management.md)
+- [accessibility-checklist.md](accessibility-checklist.md)
 - [../07-theme-system.md](../07-theme-system.md)
 
 **Source files:**

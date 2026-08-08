@@ -14,6 +14,7 @@
 ## Verification
 - [ ] flutter analyze
 - [ ] flutter test
+- [ ] critical-route a11y smoke (`flutter test test/a11y/critical_route_smoke_test.dart`)
 - [ ] backend typecheck/test
 - [ ] prisma migrate/check if DB changed
 - [ ] manual UI test

@@ -353,32 +353,36 @@ class ImpactMaterialCompactCard extends StatelessWidget {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          title,
-                                          style: textTheme.titleMedium
-                                              ?.copyWith(
-                                                color: palette.textPrimary,
-                                                fontWeight: FontWeight.w600,
-                                                height: 1.18,
-                                              ),
-                                          textAlign: TextAlign.start,
-                                          maxLines: title.runes.length > 34
-                                              ? 2
-                                              : 1,
-                                          overflow: TextOverflow.ellipsis,
+                                        Flexible(
+                                          child: Text(
+                                            title,
+                                            style: textTheme.titleMedium
+                                                ?.copyWith(
+                                                  color: palette.textPrimary,
+                                                  fontWeight: FontWeight.w600,
+                                                  height: 1.18,
+                                                ),
+                                            textAlign: TextAlign.start,
+                                            maxLines: title.runes.length > 34
+                                                ? 2
+                                                : 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
                                         const SizedBox(height: 4),
-                                        Text(
-                                          '$category · $conditionLabel',
-                                          style: textTheme.labelMedium
-                                              ?.copyWith(
-                                                color: palette.textSecondary,
-                                                fontWeight: FontWeight.w500,
-                                                height: 1.2,
-                                              ),
-                                          textAlign: TextAlign.start,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                                        Flexible(
+                                          child: Text(
+                                            '$category · $conditionLabel',
+                                            style: textTheme.labelMedium
+                                                ?.copyWith(
+                                                  color: palette.textSecondary,
+                                                  fontWeight: FontWeight.w500,
+                                                  height: 1.2,
+                                                ),
+                                            textAlign: TextAlign.start,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
                                         const SizedBox(height: 5),
                                         if (locationLabel.isNotEmpty)
