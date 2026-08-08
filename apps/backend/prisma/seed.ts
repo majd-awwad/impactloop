@@ -5,6 +5,7 @@ import { seedTaxonomyCompatibilityRelations } from "../src/modules/taxonomy/taxo
 import { seedTaxonomyFoundation } from "../src/modules/taxonomy/taxonomy-foundation.repository.js";
 import { hashPassword } from "../src/utils/password.js";
 import { normalizeSearchText } from "../src/utils/normalize-search-text.js";
+import { resolveNoShowReportIncidentKey } from "../src/modules/no-show-reports/no-show-report.incident-key.js";
 
 const SEED_PASSWORD = "password";
 const CURRENCY = "NIS";
@@ -8706,6 +8707,14 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
 
     await prisma.noShowReport.create({
       data: {
+        incidentKey: resolveNoShowReportIncidentKey({
+          reservationId: supplierTargetPickupFailureReservationId,
+          deliveryId,
+          targetUserId: reservation.ownerId,
+          targetRole: "SUPPLIER",
+          reasonCode: "PICKUP_FAILED",
+          note: "Seed incident: supplier-target pickup failure moved to admin review.",
+        }),
         reservationId: supplierTargetPickupFailureReservationId,
         deliveryId,
         reporterUserId: driverUserId,
@@ -8762,6 +8771,13 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
 
     await prisma.noShowReport.create({
       data: {
+        incidentKey: resolveNoShowReportIncidentKey({
+          reservationId: systemRecoveryReservationId,
+          deliveryId,
+          targetRole: "SYSTEM",
+          reasonCode: "NO_DRIVER_AVAILABLE",
+          note: "Seed incident: no driver was available for the pickup window.",
+        }),
         reservationId: systemRecoveryReservationId,
         deliveryId,
         reporterUserId: reservation.requesterId,
@@ -8781,6 +8797,13 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
   if (accountabilityReservationId) {
     await prisma.noShowReport.create({
       data: {
+        incidentKey: resolveNoShowReportIncidentKey({
+          reservationId: accountabilityReservationId,
+          targetUserId: majdLearnerId,
+          targetRole: "LEARNER",
+          reasonCode: "REPEATED_DELAY",
+          note: "Seed incident: repeated pickup coordination delays.",
+        }),
         reservationId: accountabilityReservationId,
         reporterUserId: majdSupplierId,
         targetUserId: majdLearnerId,

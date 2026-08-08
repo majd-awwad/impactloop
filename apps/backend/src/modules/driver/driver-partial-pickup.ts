@@ -4,6 +4,7 @@ import {
   type ReservationStatus,
 } from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
+import { upsertNoShowReportByIncidentKey } from '../no-show-reports/no-show-report.create.js';
 import { PARTIAL_PICKUP_HOLD_REASON_PREFIX } from '../reservations/reservations.quantity.js';
 
 export const PARTIAL_PICKUP_UNPICKED_REASONS = [
@@ -227,15 +228,6 @@ export const applyPartialPickupSplit = async (
         .filter(Boolean)
         .join('; ');
 
-      const existingReport = await tx.noShowReport.findFirst({
-        where: {
-          reservationId: member.id,
-          deliveryId: input.deliveryId,
-          targetUserId: member.ownerId,
-          reasonCode: 'PICKUP_FAILED',
-        },
-        select: { id: true },
-      });
       const reportData = {
         reservationId: member.id,
         deliveryId: input.deliveryId,
@@ -249,28 +241,31 @@ export const applyPartialPickupSplit = async (
         pickupWindowStart: member.supplierPickupWindowStart,
         pickupWindowEnd: member.supplierPickupWindowEnd,
       };
-      if (existingReport) {
-        await tx.noShowReport.update({
-          where: { id: existingReport.id },
-          data: {
-            deliveryId: input.deliveryId,
-            reporterUserId: input.driverUserId,
-            targetRole: 'SUPPLIER',
-            reasonCode: 'PICKUP_FAILED',
-            note: structuredNote,
-            reporterReasonDetail: item.reason,
-            reporterNote: item.note?.trim() || null,
-            pickupWindowStart: member.supplierPickupWindowStart,
-            pickupWindowEnd: member.supplierPickupWindowEnd,
-            status: 'PENDING_REVIEW',
-            reviewedById: null,
-            reviewedAt: null,
-            reviewNote: null,
-          },
-        });
-      } else {
-        await tx.noShowReport.create({ data: reportData });
-      }
+      await upsertNoShowReportByIncidentKey(tx, {
+        key: {
+          reservationId: member.id,
+          deliveryId: input.deliveryId,
+          targetRole: 'SUPPLIER',
+          targetUserId: member.ownerId,
+          reasonCode: 'PICKUP_FAILED',
+        },
+        create: reportData,
+        update: {
+          deliveryId: input.deliveryId,
+          reporterUserId: input.driverUserId,
+          targetRole: 'SUPPLIER',
+          reasonCode: 'PICKUP_FAILED',
+          note: structuredNote,
+          reporterReasonDetail: item.reason,
+          reporterNote: item.note?.trim() || null,
+          pickupWindowStart: member.supplierPickupWindowStart,
+          pickupWindowEnd: member.supplierPickupWindowEnd,
+          status: 'PENDING_REVIEW',
+          reviewedById: null,
+          reviewedAt: null,
+          reviewNote: null,
+        },
+      });
     }
   }
 

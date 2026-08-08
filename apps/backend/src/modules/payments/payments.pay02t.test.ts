@@ -3,6 +3,7 @@ import { after, before, beforeEach, afterEach, describe, test } from 'node:test'
 
 import { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
+import { resolveNoShowReportIncidentKey } from '../no-show-reports/no-show-report.incident-key.js';
 import { AppError } from '../../utils/app-error.js';
 import { deriveHandoverCode } from '../../utils/handover-codes.js';
 
@@ -887,6 +888,12 @@ describe('PAY-02T final-ACCEPTED production-path payment coverage', () => {
 
     await prisma.noShowReport.create({
       data: {
+        incidentKey: resolveNoShowReportIncidentKey({
+          reservationId: created.id,
+          deliveryId,
+          targetRole: 'SYSTEM',
+          reasonCode: 'NO_DRIVER_AVAILABLE',
+        }),
         reservationId: created.id,
         deliveryId,
         targetRole: 'SYSTEM',
