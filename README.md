@@ -61,7 +61,7 @@ flutter pub get
 flutter run -d chrome   # or another device
 ```
 
-**Needs verification:** API base URL wiring — inspect `apps/frontend/lib/core/config/api_config.dart`.
+Release builds require `--dart-define=API_BASE_URL=...` (or `API_USE_SAME_ORIGIN=true` for same-origin web proxy). See `apps/frontend/lib/core/config/api_config.dart` and `docs/deployment.md`.
 
 ### Health check
 
