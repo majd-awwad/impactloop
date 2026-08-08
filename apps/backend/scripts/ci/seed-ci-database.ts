@@ -6,6 +6,32 @@ import { hashPassword } from '../../src/utils/password.js';
 
 const CI_MARKER = '[ci-database-seed]';
 
+/** Must match `MATERIAL_CATEGORIES` / `PROJECT_CATEGORIES` in `prisma/seed.ts`. */
+const MATERIAL_CATEGORIES = [
+  { nameEn: 'Electronics & Components', nameAr: 'إلكترونيات وقطع إلكترونية' },
+  { nameEn: 'Motors & Mechanical Parts', nameAr: 'محركات وقطع ميكانيكية' },
+  { nameEn: 'Power & Batteries', nameAr: 'طاقة وبطاريات' },
+  { nameEn: 'Wood & Boards', nameAr: 'خشب وألواح' },
+  { nameEn: 'Plastics & Acrylic', nameAr: 'بلاستيك وأكريليك' },
+  { nameEn: 'Metal & Fasteners', nameAr: 'معادن ومثبتات' },
+  { nameEn: 'Fabric & Textiles', nameAr: 'أقمشة ومنسوجات' },
+  { nameEn: 'Paper & Cardboard', nameAr: 'ورق وكرتون' },
+  { nameEn: 'Tools & Hardware', nameAr: 'أدوات وعدد' },
+  { nameEn: 'Art & Craft Supplies', nameAr: 'مستلزمات فن وحرف' },
+  { nameEn: 'Packaging & Containers', nameAr: 'تغليف وحاويات' },
+  { nameEn: 'Lab & Education Supplies', nameAr: 'مستلزمات مختبر وتعليم' },
+  { nameEn: 'Other Reusable Materials', nameAr: 'مواد أخرى قابلة لإعادة الاستخدام' },
+] as const;
+
+const PROJECT_CATEGORIES = [
+  { nameEn: 'Robotics', nameAr: 'روبوتات' },
+  { nameEn: 'Electronics', nameAr: 'إلكترونيات' },
+  { nameEn: 'Recycling Crafts', nameAr: 'حرف إعادة التدوير' },
+  { nameEn: 'Woodworking', nameAr: 'أعمال خشبية' },
+  { nameEn: 'Home Experiments', nameAr: 'تجارب منزلية' },
+  { nameEn: 'Textile Crafts', nameAr: 'حرف نسيجية' },
+] as const;
+
 const fail = (message: string): never => {
   console.error(`seed-ci-database: ${message}`);
   process.exit(1);
@@ -23,24 +49,51 @@ const assertCiDatabaseMode = () => {
   }
 };
 
-const ensureMaterialCategories = async () => {
-  const existing = await prisma.category.count({
-    where: { categoryType: { in: ['MATERIAL', 'BOTH'] }, isActive: true },
+const ensureLegacyCategories = async () => {
+  const materialCount = await prisma.category.count({
+    where: { categoryType: 'MATERIAL', isActive: true, parentId: null },
   });
-  if (existing > 0) {
-    return existing;
+  const projectCount = await prisma.category.count({
+    where: { categoryType: 'PROJECT', isActive: true, parentId: null },
+  });
+
+  if (materialCount === MATERIAL_CATEGORIES.length && projectCount === PROJECT_CATEGORIES.length) {
+    return { materialCount, projectCount, created: 0 };
   }
 
-  await prisma.category.create({
-    data: {
-      nameEn: `${CI_MARKER} Electronics`,
-      nameAr: `${CI_MARKER} إلكترونيات`,
-      categoryType: 'BOTH',
-      isActive: true,
-    },
-  });
+  if (materialCount > 0 || projectCount > 0) {
+    fail(
+      `expected ${MATERIAL_CATEGORIES.length} material and ${PROJECT_CATEGORIES.length} project categories, found material=${materialCount}, project=${projectCount}`,
+    );
+  }
 
-  return 1;
+  for (const category of MATERIAL_CATEGORIES) {
+    await prisma.category.create({
+      data: {
+        nameEn: category.nameEn,
+        nameAr: category.nameAr,
+        categoryType: 'MATERIAL',
+        isActive: true,
+      },
+    });
+  }
+
+  for (const category of PROJECT_CATEGORIES) {
+    await prisma.category.create({
+      data: {
+        nameEn: category.nameEn,
+        nameAr: category.nameAr,
+        categoryType: 'PROJECT',
+        isActive: true,
+      },
+    });
+  }
+
+  return {
+    materialCount: MATERIAL_CATEGORIES.length,
+    projectCount: PROJECT_CATEGORIES.length,
+    created: MATERIAL_CATEGORIES.length + PROJECT_CATEGORIES.length,
+  };
 };
 
 const ensureLearners = async () => {
@@ -127,10 +180,9 @@ const main = async () => {
   assertCiDatabaseMode();
 
   await seedTaxonomyFoundation();
-  await seedCategoryTaxonomyOwnership();
+  const legacyCategories = await ensureLegacyCategories();
+  const categoryOwnership = await seedCategoryTaxonomyOwnership();
   await seedTaxonomyCompatibilityRelations();
-
-  const materialCategories = await ensureMaterialCategories();
   const learnersCreated = await ensureLearners();
   const driverCreated = await ensureEligibleDriver();
 
@@ -139,7 +191,8 @@ const main = async () => {
       {
         seed: 'ci-database',
         status: 'ok',
-        materialCategories,
+        legacyCategories,
+        categoryOwnership,
         learnersCreated,
         driverCreated,
       },
