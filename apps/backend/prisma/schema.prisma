@@ -2206,6 +2206,7 @@ model NoShowReport {
   @@index([reporterUserId])
   @@index([reporterUserId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([deliveryId])
+  @@index([reservationId, targetRole, reasonCode, status])
   @@map("no_show_reports")
 }
 
