@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/models/project_build.dart';
-import '../presentation/widgets/project_build_acquisition_state.dart';
+import '../domain/project_build_acquisition_state.dart';
 import 'learning_hub_providers.dart';
 
 const projectBuildRefreshInterval = Duration(seconds: 10);

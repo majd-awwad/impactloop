@@ -5,10 +5,10 @@ import type {
   LearnerInterestUnmappedReason,
 } from '../taxonomy/learner-interest-resolver.js';
 import { resolveLearnerInterests } from '../taxonomy/learner-interest-resolver.js';
-import type { WeightedFeature } from './ml-lightfm-scorer.js';
+import type { WeightedFeature } from './recommendations.ml-feature.types.js';
+import { asciiCompare } from './recommendations.compare.js';
 
-export const asciiCompare = (a: string, b: string): number =>
-  a < b ? -1 : a > b ? 1 : 0;
+export { asciiCompare } from './recommendations.compare.js';
 
 export type ArtifactUserFeatureOverlapStatus =
   | 'NO_RUNTIME_FEATURES'

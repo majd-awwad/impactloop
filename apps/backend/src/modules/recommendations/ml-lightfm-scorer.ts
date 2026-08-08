@@ -21,8 +21,10 @@ import {
   type GroupCoverageSnapshot,
   type RecommendationFeatureReadiness,
 } from './recommendation-feature-readiness.js';
+import type { WeightedFeature } from './recommendations.ml-feature.types.js';
+import { asciiCompare } from './recommendations.compare.js';
 
-export type WeightedFeature = readonly [name: string, weight: number];
+export type { WeightedFeature } from './recommendations.ml-feature.types.js';
 export type ScoredCandidate = { candidateKey: string; score: number };
 
 export const LIGHTFM_SCORER_RESULT_SCHEMA_VERSION =
@@ -632,9 +634,6 @@ export type PortableLightFmV2Scorer = Readonly<{
   metadata: PortableLightFmV2ScorerMetadata;
   score: (input: LocalMlScoringInput) => LocalMlContainedScoringResult;
 }>;
-
-const asciiCompare = (left: string, right: string): number =>
-  left < right ? -1 : left > right ? 1 : 0;
 
 const emptyLocalDiagnostics = (
   candidateCount: number,

@@ -8,6 +8,9 @@ import type {
 import type { AiContentBlock } from './ai.content-blocks.js';
 
 import type { AuthoringSnapshot } from './ai-project-authoring-sequential.snapshot.js';
+import type { BoundedHistoryMessage } from './ai-conversation-history.types.js';
+
+export type { BoundedHistoryMessage } from './ai-conversation-history.types.js';
 
 export type AiLocale = 'en' | 'ar';
 
@@ -64,9 +67,4 @@ export type AiMessageDto = {
   policyVersion: string | null;
   errorCode: string | null;
   createdAt: string;
-};
-
-export type BoundedHistoryMessage = {
-  role: 'user' | 'assistant';
-  text: string;
 };

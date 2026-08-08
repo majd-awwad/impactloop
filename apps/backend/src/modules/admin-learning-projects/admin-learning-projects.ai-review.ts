@@ -13,7 +13,7 @@ import type { AiLocale } from '../ai/ai.types.js';
 import { PROFILE_UPLOADS_DIR } from '../uploads/profile-uploads.storage.js';
 import { MATERIAL_UPLOADS_DIR } from '../uploads/uploads.storage.js';
 
-import type { AdminLearningProjectDetailRecord } from './admin-learning-projects.repository.js';
+import type { AdminLearningProjectDetailRecord } from './admin-learning-projects.repository.types.js';
 
 export const ADMIN_PROJECT_REVIEW_MARKER = 'ADMIN_PROJECT_REVIEW_V1';
 

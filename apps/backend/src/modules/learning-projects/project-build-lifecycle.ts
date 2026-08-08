@@ -7,7 +7,7 @@ import type {
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 
-import { projectBuildInclude } from './learning-projects.repository.js';
+import { projectBuildInclude } from './learning-projects.project-build.includes.js';
 import { createProjectBuildCompletionSnapshot } from './project-build-completion-snapshot.js';
 
 export const ACTIVE_PROJECT_BUILD_STATUSES = [

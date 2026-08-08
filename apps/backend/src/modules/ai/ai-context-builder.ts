@@ -2,7 +2,7 @@ import type { AiMessage } from '../../generated/prisma/client.js';
 
 import type { AiContentBlock } from './ai.content-blocks.js';
 import { aiContentBlocksSchema } from './ai.content-blocks.js';
-import type { BoundedHistoryMessage } from './ai.types.js';
+import type { BoundedHistoryMessage } from './ai-conversation-history.types.js';
 
 export const buildBoundedConversationHistory = (
   messages: AiMessage[],

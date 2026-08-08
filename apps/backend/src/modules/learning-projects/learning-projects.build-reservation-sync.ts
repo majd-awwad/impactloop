@@ -1,6 +1,6 @@
 import type { Prisma, ReservationStatus } from '../../generated/prisma/client.js';
 
-import { ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES } from './learning-projects.build-reservation-linking.js';
+import { ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES } from './learning-projects.build-reservation.constants.js';
 
 export const UNSUCCESSFUL_TERMINAL_RESERVATION_STATUSES = [
   'CANCELLED',

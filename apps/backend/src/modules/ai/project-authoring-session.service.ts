@@ -35,7 +35,7 @@ import {
   type PersistedActionBody,
   type PersistedAuthoringAction as SessionPersistedAuthoringAction,
 } from './project-authoring-session.actions.js';
-import { PROJECT_AUTHORING_SESSION_POLICY_VERSION } from './project-authoring-session.controller.js';
+import { PROJECT_AUTHORING_SESSION_POLICY_VERSION } from './project-authoring-session.constants.js';
 import {
   advanceOverviewToTitleProposal,
   assertPersistedAuthoringContext,

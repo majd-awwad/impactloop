@@ -15,6 +15,7 @@ import {
   type DeliveryFeeEligibility,
   type MaterialRefundEligibility,
 } from './payments.lifecycle.policy.js';
+import { requestFullRefundForPaidOrder } from './payments.refunds.js';
 
 export type PostCommitRefundTask = {
   orderId: string;
@@ -1211,8 +1212,6 @@ export const flushPostCommitPaymentRefunds = async (
   if (!tasks.length || !isElectronicPaymentEnforced()) {
     return result;
   }
-
-  const { requestFullRefundForPaidOrder } = await import('./payments.service.js');
 
   const seen = new Set<string>();
   for (const task of tasks) {

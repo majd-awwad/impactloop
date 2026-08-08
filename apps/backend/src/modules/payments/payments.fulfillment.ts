@@ -23,6 +23,7 @@ import {
   notifyRefundFailed,
 } from './payments.notifications.js';
 import { LIFECYCLE_REFUND_REASONS } from './payments.lifecycle.policy.js';
+import { refundDuplicateSessionAllocationsKeepingOrdersPaid } from './payments.refunds.js';
 
 const REOPENABLE_DELIVERY_STATUSES = [
   'AWAITING_RESOLUTION',
@@ -478,9 +479,6 @@ export const afterVerifiedPaymentEventProcessed = async (input: {
   ];
 
   if (duplicateIds.length > 0 && input.checkoutSessionId) {
-    const { refundDuplicateSessionAllocationsKeepingOrdersPaid } = await import(
-      './payments.service.js'
-    );
     await refundDuplicateSessionAllocationsKeepingOrdersPaid({
       checkoutSessionId: input.checkoutSessionId,
       paymentOrderIds: duplicateIds,

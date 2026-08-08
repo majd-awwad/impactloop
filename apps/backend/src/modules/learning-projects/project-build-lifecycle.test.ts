@@ -28,7 +28,7 @@ import {
 } from './project-build-completion-story.js';
 import { createProjectBuildCompletionSnapshot } from './project-build-completion-snapshot.js';
 import { findOwnedBuildById } from './project-build-lifecycle.js';
-import { projectBuildInclude } from './learning-projects.repository.js';
+import { projectBuildInclude } from './learning-projects.project-build.includes.js';
 import { buildContinuableProjectBuildWhere } from './project-build-continuation.js';
 import * as learnerHomeRepository from '../learner-home/learner-home.repository.js';
 

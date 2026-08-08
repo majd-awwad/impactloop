@@ -17,10 +17,6 @@ import {
   loadBuildAllocationPeers,
   validateMaterialLinkAllocationInBuild,
 } from './learning-projects.build-material-allocation.js';
-import {
-  resolveBuildItemReadinessFromState,
-  resolveBuildItemStepUnlockReadinessFromState,
-} from './learning-projects.build-item-state.js';
 import * as learningProjectsRepository from './learning-projects.repository.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
@@ -37,73 +33,16 @@ const TERMINAL_RESERVATION_STATUSES = new Set([
   'FULFILLMENT_FAILED',
 ]);
 
-const linkedMaterialSelect = {
-  id: true,
-  title: true,
-  condition: true,
-  status: true,
-  isFree: true,
-  price: true,
-  currency: true,
-  pickupAllowed: true,
-  deliveryAllowed: true,
-  ownerId: true,
-  materialType: true,
-  unit: true,
-  category: {
-    select: {
-      id: true,
-      nameEn: true,
-      nameAr: true,
-    },
-  },
-  location: {
-    select: {
-      city: true,
-      area: true,
-    },
-  },
-  images: {
-    orderBy: [{ isCover: 'desc' as const }, { sortOrder: 'asc' as const }],
-    take: 1,
-    select: {
-      imageUrl: true,
-      isCover: true,
-    },
-  },
-  supplierProfile: {
-    select: {
-      publicName: true,
-      supplierType: true,
-      verificationStatus: true,
-      user: {
-        select: {
-          displayName: true,
-        },
-      },
-    },
-  },
-  owner: {
-    select: {
-      displayName: true,
-    },
-  },
-} satisfies Prisma.MaterialSelect;
+import {
+  linkedMaterialSelect,
+  type LinkedMaterialRecord,
+  type LinkedReservationRecord,
+} from './learning-projects.build-material-linking.types.js';
 
-const linkedReservationSelect = {
-  id: true,
-  status: true,
-  materialId: true,
-  quantityRequested: true,
-} satisfies Prisma.ReservationSelect;
-
-export type LinkedMaterialRecord = Prisma.MaterialGetPayload<{
-  select: typeof linkedMaterialSelect;
-}>;
-
-export type LinkedReservationRecord = Prisma.ReservationGetPayload<{
-  select: typeof linkedReservationSelect;
-}>;
+export type {
+  LinkedMaterialRecord,
+  LinkedReservationRecord,
+} from './learning-projects.build-material-linking.types.js';
 
 const decimalToNumber = (value: Prisma.Decimal | null | undefined): number | null => {
   if (value == null) {
@@ -235,29 +174,10 @@ const BUILD_ITEM_READY_STATUSES = new Set([
   'ALTERNATIVE',
 ]);
 
-export const resolveBuildItemStepUnlockReadiness = (input: {
-  status: string;
-  componentRole?: string;
-  requiredQuantity?: number;
-  requiredUnit?: string;
-  materialUnit?: string | null;
-  linkedReservation?: LinkedReservationRecord | null;
-  linkedMaterial?: LinkedMaterialRecord | null;
-  allocationWarning?: string | null;
-}) => resolveBuildItemStepUnlockReadinessFromState(input);
-
-export const resolveBuildItemReadiness = (input: {
-  status: string;
-  componentRole?: string;
-  requiredQuantity?: number;
-  requiredUnit?: string;
-  materialUnit?: string | null;
-  availableQuantity?: number | null;
-  peerClaimsOnMaterial?: number;
-  linkedReservation?: LinkedReservationRecord | null;
-  linkedMaterial?: LinkedMaterialRecord | null;
-  allocationWarning?: string | null;
-}) => resolveBuildItemReadinessFromState(input);
+export {
+  resolveBuildItemReadiness,
+  resolveBuildItemStepUnlockReadiness,
+} from './learning-projects.build-item-state.js';
 
 const parseSearchKeywords = (value: Prisma.JsonValue | null | undefined) => {
   if (!Array.isArray(value)) {

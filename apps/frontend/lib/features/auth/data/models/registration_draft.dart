@@ -1,4 +1,4 @@
-import '../../presentation/models/registration_intent.dart';
+import '../../domain/models/registration_intent.dart';
 
 class LearnerProfileDraft {
   const LearnerProfileDraft({
