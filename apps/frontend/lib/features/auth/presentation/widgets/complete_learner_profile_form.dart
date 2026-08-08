@@ -178,13 +178,14 @@ class _CompleteLearnerProfileFormState
 
       setState(() => _isSubmitting = false);
       setState(() {
-        _formError = 'Something went wrong. Please try again.';
+        _formError = context.l10n.somethingWentWrong;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final optionsAsync = ref.watch(learnerInterestOptionsProvider);
     final draft = ref.watch(registrationDraftProvider);
 
@@ -200,7 +201,7 @@ class _CompleteLearnerProfileFormState
           setState(() => _selectedInterestKeys = value);
         },
         customInterestController: _customInterestController,
-        label: 'Interests (optional)',
+        label: l10n.registerInterestsOptionalLabel,
         errorText: _interestsError,
       ),
       data: (options) {
@@ -221,15 +222,15 @@ class _CompleteLearnerProfileFormState
             children: [
               if (widget.showSupplierNextHint) ...[
                 Text(
-                  'Next, we’ll help you set up your supplier profile too.',
+                  l10n.registerSupplierNextHint,
                   style: AppTextStyles.subtitle(context),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppSpacing.md),
               ],
               AppDropdownField<String>(
-                label: 'Learner type',
-                hint: 'Select your learner type',
+                label: l10n.registerLearnerTypeTitle,
+                hint: l10n.registerSelectLearnerType,
                 value: _learnerType,
                 errorText: _learnerTypeError,
                 items: [
@@ -244,15 +245,15 @@ class _CompleteLearnerProfileFormState
                 },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Learner type is required';
+                    return l10n.registerLearnerTypeRequired;
                   }
                   return null;
                 },
               ),
               const AppFieldGap(),
               AppDropdownField<String>(
-                label: 'Skill level',
-                hint: 'Select your skill level',
+                label: l10n.registerSkillLevelTitle,
+                hint: l10n.registerSelectSkillLevel,
                 value: _skillLevel,
                 errorText: _skillLevelError,
                 items: [
@@ -267,7 +268,7 @@ class _CompleteLearnerProfileFormState
                 },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Skill level is required';
+                    return l10n.registerSkillLevelRequired;
                   }
                   return null;
                 },
@@ -283,14 +284,14 @@ class _CompleteLearnerProfileFormState
                   setState(() => _selectedInterestKeys = value);
                 },
                 customInterestController: _customInterestController,
-                label: 'Interests (optional)',
+                label: l10n.registerInterestsOptionalLabel,
                 errorText: _interestsError,
               ),
               const AppFieldGap(),
               AppTextArea(
                 controller: _bioController,
-                label: 'Bio (optional)',
-                hint: 'Tell others a little about your learning goals',
+                label: l10n.registerBioOptionalLabel,
+                hint: l10n.registerBioHint,
                 textInputAction: TextInputAction.done,
                 onFieldSubmitted: (_) => _handleSubmit(),
                 errorText: _bioError,
@@ -306,7 +307,7 @@ class _CompleteLearnerProfileFormState
               ],
               const SizedBox(height: AppSpacing.lg),
               AppPrimaryButton(
-                label: 'Continue',
+                label: l10n.actionContinue,
                 isLoading: _isSubmitting,
                 onPressed: _handleSubmit,
               ),

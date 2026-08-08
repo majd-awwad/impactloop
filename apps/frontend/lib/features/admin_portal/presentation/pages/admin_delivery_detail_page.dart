@@ -9,6 +9,7 @@ import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../data/admin_deliveries_api.dart';
 import '../../data/models/admin_deliveries_models.dart';
+import '../l10n/admin_l10n.dart';
 import '../theme/admin_decoration_set.dart';
 import '../widgets/admin_monitoring_utils.dart';
 import '../widgets/admin_kpi_card.dart' show AdminTypography;
@@ -53,7 +54,7 @@ class _AdminDeliveryDetailPageState
         footer: AppDialogFooter.decision(
           secondaryAction: TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(AdminL10n.of(context).cancel),
           ),
           primaryAction: FilledButton(
             onPressed: () => Navigator.pop(context, true),
@@ -738,7 +739,7 @@ class _IncidentSummaryCard extends StatelessWidget {
         children: [
           _Info(label: 'Report', value: _shortId(incident.id)),
           _Info(label: 'Reason', value: humanizeEnum(incident.reasonCode)),
-          _Info(label: 'Status', value: humanizeEnum(incident.status)),
+          _Info(label: AdminL10n.of(context).status, value: humanizeEnum(incident.status)),
           _Info(label: 'Workflow', value: humanizeEnum(incident.workflowType)),
           _Info(
             label: 'Operational state',
@@ -770,7 +771,7 @@ class _GroupSummaryCard extends StatelessWidget {
       children: [
         _Info(label: 'Group ID', value: _shortId(detail.group!.id)),
         _Info(label: 'Items', value: '${detail.group!.itemCount}'),
-        _Info(label: 'Status', value: humanizeEnum(detail.group!.status)),
+        _Info(label: AdminL10n.of(context).status, value: humanizeEnum(detail.group!.status)),
         OutlinedButton(
           onPressed: () => onTab('Group'),
           child: const Text('View group'),
@@ -1183,7 +1184,10 @@ class _DetailFailure extends StatelessWidget {
             spacing: 8,
             children: [
               if (!notFound)
-                OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
+                OutlinedButton(
+                  onPressed: onRetry,
+                  child: Text(AdminL10n.of(context).retry),
+                ),
               FilledButton(
                 onPressed: onBack,
                 child: const Text('Back to Deliveries'),

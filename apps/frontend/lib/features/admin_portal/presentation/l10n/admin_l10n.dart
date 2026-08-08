@@ -1,475 +1,272 @@
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/app_localizations_ar.dart';
+import '../../../../l10n/app_localizations_en.dart';
+import '../../../../l10n/l10n.dart';
+
+/// Admin Portal UI strings bridged to [AppLocalizations].
 class AdminL10n {
-  AdminL10n._(this._lang);
+  AdminL10n(this._l10n);
+
+  final AppLocalizations _l10n;
+
+  bool get isArabic => _l10n.localeName.startsWith('ar');
+
+  static AdminL10n of(BuildContext context) => AdminL10n(context.l10n);
 
   @visibleForTesting
-  factory AdminL10n.forTest(String lang) => AdminL10n._(lang);
-
-  final String _lang;
-
-  bool get isArabic => _lang == 'ar';
-
-  static AdminL10n of(BuildContext context) {
-    final code = Localizations.localeOf(context).languageCode;
-    return AdminL10n._(code);
+  factory AdminL10n.forTest(String lang) {
+    final l10n = lang == 'ar' ? AppLocalizationsAr() : AppLocalizationsEn();
+    return AdminL10n(l10n);
   }
 
   String t(String en, String ar) => isArabic ? ar : en;
 
-  String get navOverview => t('Overview', 'نظرة عامة');
-  String get navUsers => t('Users', 'المستخدمون');
-  String get navSuppliers => t('Suppliers', 'الموردون');
-  String get navSupplierVerification =>
-      t('Supplier Verification', 'التحقق من المورد');
-  String get navMaterials => t('Materials', 'المواد');
-  String get navApprovals => t('Approvals', 'الموافقات');
-  String get navInvitations => t('Invitations', 'الدعوات');
-  String get navImpactAnalytics => t('Impact Analytics', 'تحليلات الأثر');
-  String get navAuditLogs => t('Audit Logs', 'سجلات التدقيق');
-  String get navReservations => t('Reservations', 'الحجوزات');
-  String get navDeliveries => t('Deliveries', 'التوصيل');
-  String get navLearningProjects => t('Learning Projects', 'مشاريع التعلم');
-  String get navExportCenter => t('Export Center', 'مركز التصدير');
+  String get navOverview => _l10n.adminNavOverview;
+  String get navUsers => _l10n.adminNavUsers;
+  String get navSuppliers => _l10n.adminNavSuppliers;
+  String get navSupplierVerification => _l10n.adminNavSupplierVerification;
+  String get navMaterials => _l10n.adminNavMaterials;
+  String get navApprovals => _l10n.adminNavApprovals;
+  String get navInvitations => _l10n.adminNavInvitations;
+  String get navImpactAnalytics => _l10n.adminNavImpactAnalytics;
+  String get navAuditLogs => _l10n.adminNavAuditLogs;
+  String get navReservations => _l10n.adminNavReservations;
+  String get navDeliveries => _l10n.adminNavDeliveries;
+  String get navLearningProjects => _l10n.adminNavLearningProjects;
+  String get navExportCenter => _l10n.adminNavExportCenter;
+  String get accessDeniedTitle => _l10n.adminAccessDeniedTitle;
+  String get accessDeniedBody => _l10n.adminAccessDeniedBody;
+  String get overviewPageTitle => _l10n.adminOverviewPageTitle;
+  String get overviewPageSubtitle => _l10n.adminOverviewPageSubtitle;
+  String welcomeTitle(String name) => _l10n.adminWelcomeTitle(name);
+  String get welcomeSubtitle => _l10n.adminWelcomeSubtitle;
+  String get bannerOverviewLabel => _l10n.adminBannerOverviewLabel;
+  String get platformDistributionTitle => _l10n.adminPlatformDistributionTitle;
+  String get platformDistributionSubtitle => _l10n.adminPlatformDistributionSubtitle;
+  String get impactSectionTitle => _l10n.adminImpactSectionTitle;
+  String get co2RingCenterLabel => _l10n.adminCo2RingCenterLabel;
+  String get estimatedAvoidedSuffix => _l10n.adminEstimatedAvoidedSuffix;
+  String get controlCenterTitle => _l10n.adminControlCenterTitle;
+  String get controlCenterSubtitle => _l10n.adminControlCenterSubtitle;
+  String get chartsAnalyticsTitle => _l10n.adminChartsAnalyticsTitle;
+  String get chartsAnalyticsSubtitle => _l10n.adminChartsAnalyticsSubtitle;
+  String get platformMetricsTitle => _l10n.adminPlatformMetricsTitle;
+  String get platformMetricsSubtitle => _l10n.adminPlatformMetricsSubtitle;
+  String get adminOperationsTitle => _l10n.adminAdminOperationsTitle;
+  String get adminOperationsSubtitle => _l10n.adminAdminOperationsSubtitle;
+  String get openModuleCta => _l10n.adminOpenModuleCta;
+  String get statUsers => _l10n.adminStatUsers;
+  String get statSuppliers => _l10n.adminStatSuppliers;
+  String get statMaterials => _l10n.adminStatMaterials;
+  String get statAvailableMaterials => _l10n.adminStatAvailableMaterials;
+  String get statPendingApprovals => _l10n.adminStatPendingApprovals;
+  String get statActiveInvitations => _l10n.adminStatActiveInvitations;
+  String get statCompletedReuse => _l10n.adminStatCompletedReuse;
+  String get statActiveDrivers => _l10n.adminStatActiveDrivers;
+  String get estimatedCo2Avoided => _l10n.adminEstimatedCo2Avoided;
+  String get estimatedBadge => _l10n.adminEstimatedBadge;
+  String get estimatedCo2Helper => _l10n.adminEstimatedCo2Helper;
+  String get estimatedCo2ShortHelper => _l10n.adminEstimatedCo2ShortHelper;
+  String get reuseCompletionRateLabel => _l10n.adminReuseCompletionRateLabel;
+  String get hintUsers => _l10n.adminHintUsers;
+  String get hintSuppliers => _l10n.adminHintSuppliers;
+  String get hintMaterials => _l10n.adminHintMaterials;
+  String get hintAvailableMaterials => _l10n.adminHintAvailableMaterials;
+  String get hintPendingApprovals => _l10n.adminHintPendingApprovals;
+  String get hintActiveInvitations => _l10n.adminHintActiveInvitations;
+  String get hintCompletedReuse => _l10n.adminHintCompletedReuse;
+  String get hintActiveDrivers => _l10n.adminHintActiveDrivers;
+  String get reuseActivityTitle => _l10n.adminReuseActivityTitle;
+  String get reuseActivitySubtitle => _l10n.adminReuseActivitySubtitle;
+  String get materialsByCategoryTitle => _l10n.adminMaterialsByCategoryTitle;
+  String get materialsByCategorySubtitle => _l10n.adminMaterialsByCategorySubtitle;
+  String get reservationStatusTitle => _l10n.adminReservationStatusTitle;
+  String get reservationStatusSubtitle => _l10n.adminReservationStatusSubtitle;
+  String get pendingActionsTitle => _l10n.adminPendingActionsTitle;
+  String get pendingActionsSubtitle => _l10n.adminPendingActionsSubtitle;
+  String get recentInvitationsTitle => _l10n.adminRecentInvitationsTitle;
+  String get recentActivityTitle => _l10n.adminRecentActivityTitle;
+  String get recentActivitySubtitle => _l10n.adminRecentActivitySubtitle;
+  String get recentActivityEmptySubtitle => _l10n.adminRecentActivityEmptySubtitle;
+  String get viewAllAuditLogs => _l10n.adminViewAllAuditLogs;
+  String get supplierVerificationQueueTitle => _l10n.adminSupplierVerificationQueueTitle;
+  String get reviewQueuesTitle => _l10n.adminReviewQueuesTitle;
+  String get reviewQueuesSubtitle => _l10n.adminReviewQueuesSubtitle;
+  String get supplierVerificationFutureNote => _l10n.adminSupplierVerificationFutureNote;
+  String get impactSnapshotTitle => _l10n.adminImpactSnapshotTitle;
+  String get impactSnapshotSubtitle => _l10n.adminImpactSnapshotSubtitle;
+  String get impactReusedMaterials => _l10n.adminImpactReusedMaterials;
+  String get impactCompletedReservations => _l10n.adminImpactCompletedReservations;
+  String get impactLearnersBenefited => _l10n.adminImpactLearnersBenefited;
+  String get impactSuppliersContributed => _l10n.adminImpactSuppliersContributed;
+  String get impactTopCategory => _l10n.adminImpactTopCategory;
+  String get impactTopCategoryEmpty => _l10n.adminImpactTopCategoryEmpty;
+  String get impactEnvironmentalNote => _l10n.adminImpactEnvironmentalNote;
+  String get emptyNoDataYet => _l10n.adminEmptyNoDataYet;
+  String get emptyNoInvitations => _l10n.adminEmptyNoInvitations;
+  String get emptyNoInvitationsTitle => _l10n.adminEmptyNoInvitationsTitle;
+  String get emptyNoInvitationsHint => _l10n.adminEmptyNoInvitationsHint;
+  String get emptyNoActivity => _l10n.adminEmptyNoActivity;
+  String get emptyNoActivityHint => _l10n.adminEmptyNoActivityHint;
+  String get emptyNoSupplierVerifications => _l10n.adminEmptyNoSupplierVerifications;
+  String get emptyAllClearTitle => _l10n.adminEmptyAllClearTitle;
+  String get emptyNoPendingApprovals => _l10n.adminEmptyNoPendingApprovals;
+  String get pendingSupplierVerifications => _l10n.adminPendingSupplierVerifications;
+  String get pendingCategoryRequests => _l10n.adminPendingCategoryRequests;
+  String get pendingPriceRequests => _l10n.adminPendingPriceRequests;
+  String get pendingReports => _l10n.adminPendingReports;
+  String get opUsersDesc => _l10n.adminOpUsersDesc;
+  String get opSuppliersDesc => _l10n.adminOpSuppliersDesc;
+  String get opSupplierVerificationDesc => _l10n.adminOpSupplierVerificationDesc;
+  String get opMaterialsDesc => _l10n.adminOpMaterialsDesc;
+  String get opApprovalsDesc => _l10n.adminOpApprovalsDesc;
+  String get opInvitationsDesc => _l10n.adminOpInvitationsDesc;
+  String get opImpactDesc => _l10n.adminOpImpactDesc;
+  String get opAuditLogsDesc => _l10n.adminOpAuditLogsDesc;
+  String get categoryRequest => _l10n.adminCategoryRequest;
+  String get resolveCategoryRequest => _l10n.adminResolveCategoryRequest;
+  String get useExistingCategory => _l10n.adminUseExistingCategory;
+  String get createNewCategory => _l10n.adminCreateNewCategory;
+  String get useExistingGuidance => _l10n.adminUseExistingGuidance;
+  String get createNewGuidance => _l10n.adminCreateNewGuidance;
+  String get suggestedExistingCategory => _l10n.adminSuggestedExistingCategory;
+  String get searchOtherCategories => _l10n.adminSearchOtherCategories;
+  String get searchCategories => _l10n.adminSearchCategories;
+  String get chooseExistingCategory => _l10n.adminChooseExistingCategory;
+  String get existingCategory => _l10n.adminExistingCategory;
+  String get existingCategoryRequired => _l10n.adminExistingCategoryRequired;
+  String get loadingCategories => _l10n.adminLoadingCategories;
+  String get failedCategories => _l10n.adminFailedCategories;
+  String get noCategoriesAvailable => _l10n.adminNoCategoriesAvailable;
+  String get useThisCategory => _l10n.adminUseThisCategory;
+  String get exactNameMatch => _l10n.adminExactNameMatch;
+  String get possibleNameMatch => _l10n.adminPossibleNameMatch;
+  String get approveWithExisting => _l10n.adminApproveWithExisting;
+  String get createAndApprove => _l10n.adminCreateAndApprove;
+  String get createJustification => _l10n.adminCreateJustification;
+  String get createJustificationHelper => _l10n.adminCreateJustificationHelper;
+  String get createJustificationRequired => _l10n.adminCreateJustificationRequired;
+  String get existingNameConflict => _l10n.adminExistingNameConflict;
+  String get requestDetails => _l10n.adminRequestDetails;
+  String get categoryMatching => _l10n.adminCategoryMatching;
+  String get similarCategories => _l10n.adminSimilarCategories;
+  String get noSimilarCategories => _l10n.adminNoSimilarCategories;
+  String get approvalConfiguration => _l10n.adminApprovalConfiguration;
+  String get requestedCategoryName => _l10n.adminRequestedCategoryName;
+  String get finalCategoryNameEn => _l10n.adminFinalCategoryNameEn;
+  String get finalCategoryNameAr => _l10n.adminFinalCategoryNameAr;
+  String get bilingualNamesHelper => _l10n.adminBilingualNamesHelper;
+  String get namingGuidance => _l10n.adminNamingGuidance;
+  String get englishNameRequired => _l10n.adminEnglishNameRequired;
+  String get arabicNameRequired => _l10n.adminArabicNameRequired;
+  String get englishNameWrongScript => _l10n.adminEnglishNameWrongScript;
+  String get arabicNameWrongScript => _l10n.adminArabicNameWrongScript;
+  String get nameControlCharacters => _l10n.adminNameControlCharacters;
+  String get namePunctuationBoundary => _l10n.adminNamePunctuationBoundary;
+  String get nameRepeatedWords => _l10n.adminNameRepeatedWords;
+  String get nameDescriptionLike => _l10n.adminNameDescriptionLike;
+  String get namesAppearIdentical => _l10n.adminNamesAppearIdentical;
+  String get confirmSharedTechnicalTerm => _l10n.adminConfirmSharedTechnicalTerm;
+  String get sharedNameAcknowledgementRequired => _l10n.adminSharedNameAcknowledgementRequired;
+  String get nameUnusuallyLong => _l10n.adminNameUnusuallyLong;
+  String get englishNameCasingWarning => _l10n.adminEnglishNameCasingWarning;
+  String get repeatedWhitespaceWarning => _l10n.adminRepeatedWhitespaceWarning;
+  String get materialTitleWarning => _l10n.adminMaterialTitleWarning;
+  String get similarWordingWarning => _l10n.adminSimilarWordingWarning;
+  String get assignMaterialFamily => _l10n.adminAssignMaterialFamily;
+  String get required => _l10n.adminRequired;
+  String get chooseMaterialFamily => _l10n.adminChooseMaterialFamily;
+  String get searchMaterialFamilies => _l10n.adminSearchMaterialFamilies;
+  String get loadingMaterialFamilies => _l10n.adminLoadingMaterialFamilies;
+  String get failedMaterialFamilies => _l10n.adminFailedMaterialFamilies;
+  String get noMaterialFamilies => _l10n.adminNoMaterialFamilies;
+  String get materialFamily => _l10n.adminMaterialFamily;
+  String get materialFamilyRequired => _l10n.adminMaterialFamilyRequired;
+  String get materialFamilyInactive => _l10n.adminMaterialFamilyInactive;
+  String get taxonomyConceptWrongType => _l10n.adminTaxonomyConceptWrongType;
+  String get materialFamilyNotFound => _l10n.adminMaterialFamilyNotFound;
+  String get ownershipHelper => _l10n.adminOwnershipHelper;
+  String get ownershipExplanation => _l10n.adminOwnershipExplanation;
+  String get activeMapping => _l10n.adminActiveMapping;
+  String get requestSummary => _l10n.adminRequestSummary;
+  String get adminGuidance => _l10n.adminAdminGuidance;
+  String get ownershipGuidance => _l10n.adminOwnershipGuidance;
+  String get submitted => _l10n.adminSubmitted;
+  String get requestedBy => _l10n.adminRequestedBy;
+  String get status => _l10n.adminStatus;
+  String get supplier => _l10n.adminSupplier;
+  String get material => _l10n.adminMaterial;
+  String get description => _l10n.adminDescription;
+  String get quantity => _l10n.adminQuantity;
+  String get condition => _l10n.adminCondition;
+  String get location => _l10n.adminLocation;
+  String get reason => _l10n.adminReason;
+  String get approve => _l10n.adminApprove;
+  String get reject => _l10n.adminReject;
+  String get close => _l10n.adminClose;
+  String get retry => _l10n.adminRetry;
+  String get approvalSucceeded => _l10n.adminApprovalSucceeded;
 
-  String get accessDeniedTitle => t('Access denied', 'تم رفض الوصول');
-  String get accessDeniedBody => t(
-    'You do not have permission to access the Admin Portal.',
-    'ليس لديك صلاحية للوصول إلى بوابة الإدارة.',
-  );
 
-  String get overviewPageTitle => t('Admin Overview', 'نظرة عامة للإدارة');
-  String get overviewPageSubtitle =>
-      t('Platform control dashboard', 'لوحة تحكم المنصة');
-
-  String welcomeTitle(String name) =>
-      t('Welcome back, $name', 'مرحباً بعودتك، $name');
-  String get welcomeSubtitle => t(
-    'Here is today\'s platform activity, approvals, reuse impact, and operational health.',
-    'إليك نشاط المنصة اليوم والموافقات وأثر إعادة الاستخدام والصحة التشغيلية.',
-  );
-  String get bannerOverviewLabel =>
-      t('Platform overview', 'نظرة عامة على المنصة');
-
-  String get platformDistributionTitle =>
-      t('Platform account distribution', 'توزيع حسابات المنصة');
-  String get platformDistributionSubtitle => t(
-    'Users, suppliers, and active drivers on ImpactLoop',
-    'المستخدمون والموردون والسائقون النشطون على ImpactLoop',
-  );
-
-  String get impactSectionTitle => t('Reuse Impact', 'أثر إعادة الاستخدام');
-  String get co2RingCenterLabel =>
-      t('Listed materials reused', 'المواد المدرجة المعاد استخدامها');
-  String get estimatedAvoidedSuffix => t('estimated avoided', 'تقدير تجنب');
-
-  String get controlCenterTitle =>
-      t('Platform Control Center', 'مركز التحكم بالمنصة');
-  String get controlCenterSubtitle => t(
-    'Monitor platform activity, approvals, invitations, supplier verification, and reuse impact from one place.',
-    'راقب نشاط المنصة والموافقات والدعوات والتحقق من الموردين وأثر إعادة الاستخدام من مكان واحد.',
-  );
-
-  String get chartsAnalyticsTitle =>
-      t('Charts & analytics', 'الرسوم البيانية والتحليلات');
-  String get chartsAnalyticsSubtitle => t(
-    'Reuse trends, category distribution, reservations, and approval queues.',
-    'اتجاهات إعادة الاستخدام وتوزيع الفئات والحجوزات وقوائم الموافقات.',
-  );
-
-  String get platformMetricsTitle => t('Platform metrics', 'مقاييس المنصة');
-  String get platformMetricsSubtitle => t(
-    'Live counts across users, listings, approvals, and operations.',
-    'أعداد مباشرة للمستخدمين والقوائم والموافقات والعمليات.',
-  );
-
-  String get adminOperationsTitle => t('Admin operations', 'عمليات الإدارة');
-  String get adminOperationsSubtitle => t(
-    'Jump into each admin module from the control dashboard.',
-    'انتقل إلى كل وحدة إدارية من لوحة التحكم.',
-  );
-  String get openModuleCta => t('Open', 'فتح');
-
-  String get statUsers => t('Users', 'المستخدمون');
-  String get statSuppliers => t('Suppliers', 'الموردون');
-  String get statMaterials => t('Materials', 'المواد');
-  String get statAvailableMaterials =>
-      t('Available materials', 'المواد المتاحة');
-  String get statPendingApprovals =>
-      t('Pending approvals', 'الموافقات المعلّقة');
-  String get statActiveInvitations => t('Active invitations', 'الدعوات النشطة');
-  String get statCompletedReuse =>
-      t('Completed reuse', 'عمليات إعادة الاستخدام المكتملة');
-  String get statActiveDrivers => t('Active drivers', 'السائقون النشطون');
-
-  String get estimatedCo2Avoided =>
-      t('Estimated CO₂ avoided', 'تقدير تجنب CO₂');
-  String get estimatedBadge => t('Estimated', 'تقديري');
-  String get estimatedCo2Helper => t(
-    'Estimated from reused materials and category-based reuse factors.',
-    'تقدير من المواد المعاد استخدامها وعوامل إعادة الاستخدام حسب الفئة.',
-  );
-  String get estimatedCo2ShortHelper =>
-      t('Estimated from reused materials', 'تقدير من المواد المعاد استخدامها');
-  String get reuseCompletionRateLabel =>
-      t('Reuse completion rate', 'معدل إكمال إعادة الاستخدام');
-
-  String get hintUsers =>
-      t('Registered accounts on ImpactLoop', 'الحسابات المسجلة على ImpactLoop');
-  String get hintSuppliers =>
-      t('Suppliers with portal access', 'الموردون الذين لديهم وصول للبوابة');
-  String get hintMaterials => t(
-    'All listed materials on the platform',
-    'جميع المواد المدرجة على المنصة',
-  );
-  String get hintAvailableMaterials => t(
-    'Materials currently open for reservation',
-    'المواد المتاحة للحجز حالياً',
-  );
-  String get hintPendingApprovals => t(
-    'Supplier, category, and price requests waiting',
-    'طلبات الموردين والفئات والأسعار المعلّقة',
-  );
-  String get hintActiveInvitations => t(
-    'Open driver, moderator, and admin invites',
-    'دعوات السائق والمشرف والإدارة المفتوحة',
-  );
-  String get hintCompletedReuse =>
-      t('Materials marked as reused', 'المواد المعلّمة كمعاد استخدامها');
-  String get hintActiveDrivers =>
-      t('Users with driver role assigned', 'المستخدمون الذين لديهم دور سائق');
-
-  String get reuseActivityTitle =>
-      t('Reuse activity over time', 'نشاط إعادة الاستخدام عبر الزمن');
-  String get reuseActivitySubtitle => t(
-    'Monthly completed reuse across the platform',
-    'إعادة الاستخدام المكتملة شهرياً عبر المنصة',
-  );
-  String get materialsByCategoryTitle =>
-      t('Materials by category', 'المواد حسب الفئة');
-  String get materialsByCategorySubtitle => t(
-    'Distribution of listed materials across categories',
-    'توزيع المواد المدرجة عبر الفئات',
-  );
-  String get reservationStatusTitle =>
-      t('Reservation status overview', 'نظرة عامة على حالات الحجز');
-  String get reservationStatusSubtitle => t(
-    'Current reservation pipeline by status',
-    'مسار الحجوزات الحالي حسب الحالة',
-  );
-  String get pendingActionsTitle =>
-      t('Approval queue breakdown', 'تفصيل قائمة الموافقات');
-  String get pendingActionsSubtitle => t(
-    'Pending supplier, category, price, and report reviews',
-    'مراجعات الموردين والفئات والأسعار والبلاغات المعلّقة',
-  );
-
-  String get recentInvitationsTitle =>
-      t('Recent invitations', 'الدعوات الأخيرة');
-  String get recentActivityTitle =>
-      t('Recent admin activity', 'النشاط الإداري الأخير');
-  String get recentActivitySubtitle => t(
-    'Latest administrative events when available',
-    'أحدث الأحداث الإدارية عند توفرها',
-  );
-  String get recentActivityEmptySubtitle =>
-      t('No admin activity yet', 'لا يوجد نشاط إداري بعد');
-  String get viewAllAuditLogs => t('View all logs', 'عرض كل السجلات');
-  String get supplierVerificationQueueTitle =>
-      t('Supplier verification queue', 'قائمة التحقق من الموردين');
-  String get reviewQueuesTitle => t('Review queues', 'قوائم المراجعة');
-  String get reviewQueuesSubtitle => t(
-    'Supplier verification, invitations, and admin activity',
-    'التحقق من الموردين والدعوات والنشاط الإداري',
-  );
-  String get supplierVerificationFutureNote => t(
-    'Supplier verification workflow will appear after organization verification documents are enabled.',
-    'ستظهر عملية التحقق من الموردين بعد تفعيل مستندات التحقق للمؤسسات.',
-  );
-
-  String get impactSnapshotTitle =>
-      t('Reuse Impact Snapshot', 'لقطة أثر إعادة الاستخدام');
-  String get impactSnapshotSubtitle => t(
-    'Platform reuse outcomes from completed reservations and materials',
-    'نتائج إعادة الاستخدام من الحجوزات والمواد المكتملة',
-  );
-  String get impactReusedMaterials =>
-      t('Reused materials', 'مواد أُعيد استخدامها');
-  String get impactCompletedReservations =>
-      t('Completed reservations', 'الحجوزات المكتملة');
-  String get impactLearnersBenefited =>
-      t('Learners benefited', 'المتعلمون المستفيدون');
-  String get impactSuppliersContributed =>
-      t('Suppliers contributed', 'الموردون المساهمون');
-  String get impactTopCategory =>
-      t('Top reused category', 'أعلى فئة معاد استخدامها');
-  String get impactTopCategoryEmpty =>
-      t('Top reused category: —', 'أعلى فئة معاد استخدامها: —');
-  String get impactEnvironmentalNote => t(
-    'Estimated environmental impact is calculated using category-based reuse factors and available material quantities. Values are approximate.',
-    'يتم حساب الأثر البيئي التقديري باستخدام عوامل إعادة الاستخدام حسب الفئة والكميات المتاحة. القيم تقريبية.',
-  );
-
-  String get emptyNoDataYet => t('No data yet', 'لا توجد بيانات بعد');
-  String get emptyNoInvitations => t(
-    'Create role invitations from the Invitations page once enabled.',
-    'أنشئ دعوات الأدوار من صفحة الدعوات عند تفعيلها.',
-  );
-  String get emptyNoInvitationsTitle =>
-      t('No active invitations', 'لا توجد دعوات نشطة');
-  String get emptyNoInvitationsHint => t(
-    'Open the Invitations module to create driver, moderator, or admin invites.',
-    'افتح وحدة الدعوات لإنشاء دعوات سائق أو مشرف أو إدارة.',
-  );
-  String get emptyNoActivity =>
-      t('No admin activity yet', 'لا يوجد نشاط إداري بعد');
-  String get emptyNoActivityHint => t(
-    'Audit events will appear after admin actions are enabled.',
-    'ستظهر أحداث التدقيق بعد تفعيل إجراءات الإدارة.',
-  );
-  String get emptyNoSupplierVerifications => t(
-    'No supplier verification requests waiting.',
-    'لا توجد طلبات تحقق من الموردين حالياً.',
-  );
-  String get emptyAllClearTitle => t('All clear', 'كل شيء واضح');
-  String get emptyNoPendingApprovals => t(
-    'No supplier, category, price, or report reviews waiting.',
-    'لا توجد مراجعات موردين أو فئات أو أسعار أو بلاغات معلّقة.',
-  );
-
-  String get pendingSupplierVerifications =>
-      t('Supplier verification', 'تحقق المورد');
-  String get pendingCategoryRequests => t('Category requests', 'طلبات الفئات');
-  String get pendingPriceRequests => t('Price requests', 'طلبات الأسعار');
-  String get pendingReports => t('Reports', 'البلاغات');
-
-  String get opUsersDesc =>
-      t('Manage platform user accounts', 'إدارة حسابات مستخدمي المنصة');
-  String get opSuppliersDesc => t(
-    'Review supplier accounts and profiles',
-    'مراجعة حسابات وملفات الموردين',
-  );
-  String get opSupplierVerificationDesc => t(
-    'Process supplier verification requests',
-    'معالجة طلبات التحقق من الموردين',
-  );
-  String get opMaterialsDesc =>
-      t('Moderate and review material listings', 'مراجعة وإدارة قوائم المواد');
-  String get opApprovalsDesc => t(
-    'Category, price, and listing approvals',
-    'موافقات الفئات والأسعار والقوائم',
-  );
-  String get opInvitationsDesc =>
-      t('Create and track role invitations', 'إنشاء وتتبع دعوات الأدوار');
-  String get opImpactDesc => t(
-    'Explore reuse and impact analytics',
-    'استكشاف تحليلات إعادة الاستخدام والأثر',
-  );
-  String get opAuditLogsDesc =>
-      t('Review administrative audit history', 'مراجعة سجل التدقيق الإداري');
-
-  String get categoryRequest => t('Category request', 'طلب فئة');
-  String get resolveCategoryRequest =>
-      t('Resolve category request', 'معالجة طلب الفئة');
-  String get useExistingCategory =>
-      t('Use existing category', 'استخدام فئة حالية');
-  String get createNewCategory => t('Create new category', 'إنشاء فئة جديدة');
-  String get useExistingGuidance => t(
-    'Recommended when an existing category already covers this material.',
-    'يوصى به عندما تغطي فئة حالية هذه المادة بالفعل.',
-  );
-  String get createNewGuidance => t(
-    'Create only when existing categories do not accurately represent this request.',
-    'أنشئ فئة جديدة فقط عندما لا تمثل الفئات الحالية هذا الطلب بدقة.',
-  );
-  String get suggestedExistingCategory =>
-      t('Suggested existing category', 'الفئة الحالية المقترحة');
-  String get searchOtherCategories => t(
-    'Search or select another active category',
-    'ابحث أو اختر فئة نشطة أخرى',
-  );
-  String get searchCategories =>
-      t('Search existing categories…', 'ابحث في الفئات الحالية…');
-  String get chooseExistingCategory =>
-      t('Choose an existing category', 'اختر فئة حالية');
-  String get existingCategory => t('Existing category', 'الفئة الحالية');
-  String get existingCategoryRequired =>
-      t('Choose an active existing category.', 'اختر فئة حالية نشطة.');
-  String get loadingCategories =>
-      t('Loading existing categories…', 'جارٍ تحميل الفئات الحالية…');
-  String get failedCategories =>
-      t('Failed to load existing categories.', 'تعذر تحميل الفئات الحالية.');
-  String get noCategoriesAvailable => t(
-    'No active owned material categories are available.',
-    'لا توجد فئات مواد نشطة ومحددة الملكية متاحة.',
-  );
-  String get useThisCategory => t('Use this category', 'استخدم هذه الفئة');
-  String get exactNameMatch => t('Exact match', 'مطابقة تامة');
-  String get possibleNameMatch => t('Possible match', 'مطابقة محتملة');
-  String get approveWithExisting =>
-      t('Approve with existing category', 'الموافقة باستخدام فئة حالية');
-  String get createAndApprove =>
-      t('Create and approve', 'إنشاء الفئة والموافقة');
-  String get createJustification =>
-      t('Why is a separate category needed?', 'لماذا يلزم إنشاء فئة منفصلة؟');
-  String get createJustificationHelper => t(
-    'Explain briefly why the suggested category does not fit.',
-    'اشرح بإيجاز لماذا لا تناسب الفئة المقترحة هذا الطلب.',
-  );
-  String get createJustificationRequired => t(
-    'Enter at least 10 characters explaining why a new category is needed.',
-    'أدخل 10 أحرف على الأقل لتوضيح سبب الحاجة إلى فئة جديدة.',
-  );
-  String get existingNameConflict =>
-      t('This category already exists', 'هذه الفئة موجودة بالفعل');
   String materialUsageCount(int count) => t(
-    '$count marketplace material${count == 1 ? '' : 's'}',
-    '$count مادة في المنصة',
-  );
-  String get requestDetails => t('Request details', 'تفاصيل الطلب');
-  String get categoryMatching => t('Category matching', 'مطابقة الفئة');
-  String get similarCategories => t('Similar categories', 'فئات مشابهة');
-  String get noSimilarCategories =>
-      t('No suggested existing category', 'لا توجد فئة حالية مقترحة');
-  String get approvalConfiguration =>
-      t('Approval configuration', 'إعداد الموافقة');
-  String get requestedCategoryName =>
-      t('Requested name', 'الاسم المقترح من المورد');
-  String get finalCategoryNameEn =>
-      t('Final category name in English', 'اسم الفئة النهائي بالإنجليزية');
-  String get finalCategoryNameAr =>
-      t('Final category name in Arabic', 'اسم الفئة النهائي بالعربية');
-  String get bilingualNamesHelper => t(
-    'Review both final marketplace names. Users see the name matching their app language. Automated checks only catch obvious structure and language-placement problems; they do not verify grammar or translation.',
-    'راجع اسمي المتجر النهائيين. سيظهر للمستخدم الاسم الموافق للغة التطبيق. تكشف الفحوصات الآلية المشكلات الواضحة في البنية وموضع اللغة فقط، ولا تتحقق من القواعد أو الترجمة.',
-  );
-  String get namingGuidance => t(
-    'Use a short, clear marketplace category name. Avoid material titles, full descriptions, and vague wording.',
-    'استخدم اسم فئة مختصرًا وواضحًا للمتجر، وتجنب أسماء المواد المحددة والوصف الطويل والعبارات العامة.',
-  );
-  String get englishNameRequired => t(
-    'Enter an English category name between 2 and 120 characters.',
-    'أدخل اسم الفئة بالإنجليزية بين حرفين و120 حرفًا.',
-  );
-  String get arabicNameRequired => t(
-    'Enter an Arabic category name between 2 and 120 characters.',
-    'أدخل اسم الفئة بالعربية بين حرفين و120 حرفًا.',
-  );
-  String get englishNameWrongScript => t(
-    'The English name appears to contain Arabic text.',
-    'يبدو أن اسم الفئة الإنجليزي يحتوي على نص عربي.',
-  );
-  String get arabicNameWrongScript => t(
-    'The Arabic name appears to contain English-only text.',
-    'يبدو أن اسم الفئة العربي يحتوي على نص إنجليزي فقط.',
-  );
-  String get nameControlCharacters => t(
-    'Category names cannot contain control characters.',
-    'لا يمكن أن تحتوي أسماء الفئات على محارف تحكم.',
-  );
-  String get namePunctuationBoundary => t(
-    'Category names cannot begin or end with punctuation.',
-    'لا يمكن أن يبدأ اسم الفئة أو ينتهي بعلامة ترقيم.',
-  );
-  String get nameRepeatedWords => t(
-    'Avoid repeating the same word consecutively.',
-    'تجنب تكرار الكلمة نفسها بشكل متتالٍ.',
-  );
-  String get nameDescriptionLike => t(
-    'This looks like a full description rather than a concise category name.',
-    'يبدو هذا وصفًا كاملاً وليس اسم فئة مختصرًا.',
-  );
-  String get namesAppearIdentical => t(
-    'Both marketplace names are identical. Confirm that this term is intentionally used in both languages.',
-    'الاسمان متطابقان. تأكد أن هذا المصطلح يُستخدم بالشكل نفسه في اللغتين.',
-  );
-  String get confirmSharedTechnicalTerm => t(
-    'I confirm this shared technical term is intentional.',
-    'أؤكد أن استخدام هذا المصطلح التقني نفسه في اللغتين مقصود.',
-  );
-  String get sharedNameAcknowledgementRequired => t(
-    'Confirm that this shared technical term is intentionally used in both languages.',
-    'أكد أن هذا المصطلح التقني يُستخدم عن قصد بالشكل نفسه في اللغتين.',
-  );
-  String get nameUnusuallyLong => t(
-    'This name is unusually long for a category.',
-    'هذا الاسم طويل بشكل غير معتاد لفئة.',
-  );
-  String get englishNameCasingWarning => t(
-    'Review English capitalization; marketplace categories normally use title-style names.',
-    'راجع كتابة الأحرف الكبيرة في الاسم الإنجليزي؛ تستخدم فئات المتجر عادةً نمط العناوين.',
-  );
-  String get repeatedWhitespaceWarning => t(
-    'Repeated whitespace will be saved as one ordinary space.',
-    'سيتم حفظ المسافات المتكررة كمسافة عادية واحدة.',
-  );
-  String get materialTitleWarning => t(
-    'This looks like a material title rather than a reusable category name.',
-    'يبدو هذا اسم مادة محددة وليس اسم فئة قابلة لإعادة الاستخدام.',
-  );
-  String get similarWordingWarning => t(
-    'This wording is very similar to an existing category.',
-    'هذه الصياغة مشابهة جدًا لفئة موجودة.',
-  );
-  String get assignMaterialFamily =>
-      t('Assign material family', 'تعيين عائلة المادة');
-  String get required => t('Required', 'مطلوب');
-  String get chooseMaterialFamily =>
-      t('Choose a material family', 'اختر عائلة مادة');
-  String get searchMaterialFamilies =>
-      t('Search material families', 'ابحث في عائلات المواد');
-  String get loadingMaterialFamilies =>
-      t('Loading material families…', 'جارٍ تحميل عائلات المواد…');
-  String get failedMaterialFamilies =>
-      t('Failed to load material families.', 'تعذر تحميل عائلات المواد.');
-  String get noMaterialFamilies => t(
-    'No active material families are available.',
-    'لا توجد عائلات مواد نشطة متاحة.',
-  );
-  String get materialFamily => t('Material family', 'عائلة المادة');
-  String get materialFamilyRequired =>
-      t('Material family is required.', 'عائلة المادة مطلوبة.');
-  String get materialFamilyInactive => t(
-    'Selected material family is inactive.',
-    'عائلة المادة المحددة غير نشطة.',
-  );
-  String get taxonomyConceptWrongType => t(
-    'Selected taxonomy concept is not a material family.',
-    'مفهوم التصنيف المحدد ليس عائلة مادة.',
-  );
-  String get materialFamilyNotFound => t(
-    'Selected material family is no longer available.',
-    'عائلة المادة المحددة لم تعد متاحة.',
-  );
-  String get ownershipHelper => t(
-    'Select the canonical material family that best represents this new category.',
-    'اختر عائلة المادة المرجعية التي تمثل هذه الفئة الجديدة بأفضل شكل.',
-  );
-  String get ownershipExplanation => t(
-    'This mapping connects the category to the taxonomy and recommendation system.',
-    'يربط هذا التعيين الفئة بنظام التصنيف والتوصيات.',
-  );
-  String get activeMapping => t('Active mapping', 'تعيين نشط');
-  String get requestSummary => t('Request summary', 'ملخص الطلب');
-  String get adminGuidance => t('Admin guidance', 'إرشادات الإدارة');
-  String get ownershipGuidance => t(
-    'Review similar categories, then select the appropriate material family before approving.',
-    'راجع الفئات المشابهة ثم اختر عائلة المادة المناسبة قبل الموافقة.',
-  );
-  String get submitted => t('Submitted', 'تاريخ التقديم');
-  String get requestedBy => t('Requested by', 'مقدم الطلب');
-  String get status => t('Status', 'الحالة');
-  String get supplier => t('Supplier', 'المورد');
-  String get material => t('Material', 'المادة');
-  String get description => t('Description', 'الوصف');
-  String get quantity => t('Quantity', 'الكمية');
-  String get condition => t('Condition', 'الحالة');
-  String get location => t('Location', 'الموقع');
-  String get reason => t('Reason', 'السبب');
-  String get approve => t('Approve', 'موافقة');
-  String get reject => t('Reject', 'رفض');
-  String get close => t('Close', 'إغلاق');
-  String get retry => t('Retry', 'إعادة المحاولة');
-  String get approvalSucceeded =>
-      t('Category request approved.', 'تمت الموافقة على طلب الفئة.');
+        '$count marketplace material${count == 1 ? '' : 's'}',
+        '$count مادة في المنصة',
+      );
+
+  String get cancel => _l10n.adminCancel;
+  String get confirm => _l10n.adminConfirm;
+  String get done => _l10n.adminDone;
+  String get exportAction => _l10n.adminExport;
+  String get format => _l10n.adminFormat;
+  String get excel => _l10n.adminExcel;
+  String get csv => _l10n.adminCsv;
+  String get pdf => _l10n.adminPdf;
+  String get previous => _l10n.adminPrevious;
+  String get next => _l10n.adminNext;
+  String get search => _l10n.adminSearch;
+  String get reset => _l10n.adminReset;
+  String get resetFilters => _l10n.adminResetFilters;
+  String get actions => _l10n.adminActions;
+  String get view => _l10n.adminView;
+  String get viewDetails => _l10n.adminViewDetails;
+  String get inviteUser => _l10n.adminInviteUser;
+  String get suspendAccount => _l10n.adminSuspendAccount;
+  String get reactivateAccount => _l10n.adminReactivateAccount;
+  String suspendAccountQuestion(String name) =>
+      _l10n.adminSuspendAccountQuestion(name);
+  String get suspendAccountBody => _l10n.adminSuspendAccountBody;
+  String get reasonRequired => _l10n.adminReasonRequired;
+  String get suspensionReasonMinLength => _l10n.adminSuspensionReasonMinLength;
+  String get accountSuspended => _l10n.adminAccountSuspended;
+  String reactivateAccountBody(String name) =>
+      _l10n.adminReactivateAccountBody(name);
+  String get accountReactivated => _l10n.adminAccountReactivated;
+  String get exportWebOnly => _l10n.adminExportWebOnly;
+  String get noUsersMatchFilters => _l10n.adminNoUsersMatchFilters;
+  String get exportUsers => _l10n.adminExportUsers;
+  String get noProjectBuildsWithLearningData =>
+      _l10n.adminNoProjectBuildsWithLearningData;
+  String get exportReservations => _l10n.adminExportReservations;
+  String get noReservationsMatchFilters => _l10n.adminNoReservationsMatchFilters;
+  String get reservationDetails => _l10n.adminReservationDetails;
+  String get openReport => _l10n.adminOpenReport;
+  String get openDelivery => _l10n.adminOpenDelivery;
+  String get exportIncidentReports => _l10n.adminExportIncidentReports;
+  String get noIncidentReportsMatchFilters =>
+      _l10n.adminNoIncidentReportsMatchFilters;
+  String get couldNotLoadIncidentReports =>
+      _l10n.adminCouldNotLoadIncidentReports;
+  String get exportMaterials => _l10n.adminExportMaterials;
+  String get noMaterialsMatchFilters => _l10n.adminNoMaterialsMatchFilters;
+  String get exportMaterialReports => _l10n.adminExportMaterialReports;
+  String get noMaterialReportsMatchFilters =>
+      _l10n.adminNoMaterialReportsMatchFilters;
+  String get supplierVerificationDetails =>
+      _l10n.adminSupplierVerificationDetails;
+  String get approveSupplierVerificationQuestion =>
+      _l10n.adminApproveSupplierVerificationQuestion;
+  String get requestChanges => _l10n.adminRequestChanges;
+  String get approveSupplierVerification =>
+      _l10n.adminApproveSupplierVerification;
 }

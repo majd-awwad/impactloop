@@ -8769,4 +8769,923 @@ class AppLocalizationsAr extends AppLocalizations {
   String notificationDeliveryDriverAssignedBody(String materialTitle) {
     return 'عُيّنت لتوصيل $materialTitle.';
   }
+
+  @override
+  String get adminNavOverview => 'نظرة عامة';
+
+  @override
+  String get adminNavUsers => 'المستخدمون';
+
+  @override
+  String get adminNavSuppliers => 'الموردون';
+
+  @override
+  String get adminNavMaterials => 'المواد';
+
+  @override
+  String get adminNavApprovals => 'الموافقات';
+
+  @override
+  String get adminNavInvitations => 'الدعوات';
+
+  @override
+  String get adminNavImpactAnalytics => 'تحليلات الأثر';
+
+  @override
+  String get adminNavAuditLogs => 'سجلات التدقيق';
+
+  @override
+  String get adminNavReservations => 'الحجوزات';
+
+  @override
+  String get adminNavDeliveries => 'التوصيل';
+
+  @override
+  String get adminNavLearningProjects => 'مشاريع التعلم';
+
+  @override
+  String get adminNavExportCenter => 'مركز التصدير';
+
+  @override
+  String get adminAccessDeniedTitle => 'تم رفض الوصول';
+
+  @override
+  String get adminOverviewPageTitle => 'نظرة عامة للإدارة';
+
+  @override
+  String get adminImpactSectionTitle => 'أثر إعادة الاستخدام';
+
+  @override
+  String get adminEstimatedAvoidedSuffix => 'تقدير تجنب';
+
+  @override
+  String get adminPlatformMetricsTitle => 'مقاييس المنصة';
+
+  @override
+  String get adminAdminOperationsTitle => 'عمليات الإدارة';
+
+  @override
+  String get adminOpenModuleCta => 'فتح';
+
+  @override
+  String get adminStatUsers => 'المستخدمون';
+
+  @override
+  String get adminStatSuppliers => 'الموردون';
+
+  @override
+  String get adminStatMaterials => 'المواد';
+
+  @override
+  String get adminStatActiveInvitations => 'الدعوات النشطة';
+
+  @override
+  String get adminStatActiveDrivers => 'السائقون النشطون';
+
+  @override
+  String get adminEstimatedBadge => 'تقديري';
+
+  @override
+  String get adminViewAllAuditLogs => 'عرض كل السجلات';
+
+  @override
+  String get adminReviewQueuesTitle => 'قوائم المراجعة';
+
+  @override
+  String get adminEmptyNoDataYet => 'لا توجد بيانات بعد';
+
+  @override
+  String get adminEmptyAllClearTitle => 'كل شيء واضح';
+
+  @override
+  String get adminPendingCategoryRequests => 'طلبات الفئات';
+
+  @override
+  String get adminPendingPriceRequests => 'طلبات الأسعار';
+
+  @override
+  String get adminPendingReports => 'البلاغات';
+
+  @override
+  String get adminCategoryRequest => 'طلب فئة';
+
+  @override
+  String get adminCreateNewCategory => 'إنشاء فئة جديدة';
+
+  @override
+  String get adminExistingCategory => 'الفئة الحالية';
+
+  @override
+  String get adminUseThisCategory => 'استخدم هذه الفئة';
+
+  @override
+  String get adminExactNameMatch => 'مطابقة تامة';
+
+  @override
+  String get adminPossibleNameMatch => 'مطابقة محتملة';
+
+  @override
+  String get adminRequestDetails => 'تفاصيل الطلب';
+
+  @override
+  String get adminCategoryMatching => 'مطابقة الفئة';
+
+  @override
+  String get adminSimilarCategories => 'فئات مشابهة';
+
+  @override
+  String get adminRequired => 'مطلوب';
+
+  @override
+  String get adminMaterialFamily => 'عائلة المادة';
+
+  @override
+  String get adminActiveMapping => 'تعيين نشط';
+
+  @override
+  String get adminRequestSummary => 'ملخص الطلب';
+
+  @override
+  String get adminAdminGuidance => 'إرشادات الإدارة';
+
+  @override
+  String get adminSubmitted => 'تاريخ التقديم';
+
+  @override
+  String get adminRequestedBy => 'مقدم الطلب';
+
+  @override
+  String get adminStatus => 'الحالة';
+
+  @override
+  String get adminSupplier => 'المورد';
+
+  @override
+  String get adminMaterial => 'المادة';
+
+  @override
+  String get adminDescription => 'الوصف';
+
+  @override
+  String get adminQuantity => 'الكمية';
+
+  @override
+  String get adminCondition => 'الحالة';
+
+  @override
+  String get adminLocation => 'الموقع';
+
+  @override
+  String get adminReason => 'السبب';
+
+  @override
+  String get adminApprove => 'موافقة';
+
+  @override
+  String get adminReject => 'رفض';
+
+  @override
+  String get adminClose => 'إغلاق';
+
+  @override
+  String get adminRetry => 'إعادة المحاولة';
+
+  @override
+  String get adminNavSupplierVerification => 'التحقق من المورد';
+
+  @override
+  String get adminAccessDeniedBody =>
+      'ليس لديك صلاحية للوصول إلى بوابة الإدارة.';
+
+  @override
+  String get adminOverviewPageSubtitle => 'لوحة تحكم المنصة';
+
+  @override
+  String adminWelcomeTitle(String name) {
+    return 'مرحباً بعودتك، $name';
+  }
+
+  @override
+  String get adminWelcomeSubtitle =>
+      'إليك نشاط المنصة اليوم والموافقات وأثر إعادة الاستخدام والصحة التشغيلية.';
+
+  @override
+  String get adminBannerOverviewLabel => 'نظرة عامة على المنصة';
+
+  @override
+  String get adminPlatformDistributionTitle => 'توزيع حسابات المنصة';
+
+  @override
+  String get adminPlatformDistributionSubtitle =>
+      'المستخدمون والموردون والسائقون النشطون على ImpactLoop';
+
+  @override
+  String get adminCo2RingCenterLabel => 'المواد المدرجة المعاد استخدامها';
+
+  @override
+  String get adminControlCenterTitle => 'مركز التحكم بالمنصة';
+
+  @override
+  String get adminControlCenterSubtitle =>
+      'راقب نشاط المنصة والموافقات والدعوات والتحقق من الموردين وأثر إعادة الاستخدام من مكان واحد.';
+
+  @override
+  String get adminChartsAnalyticsTitle => 'الرسوم البيانية والتحليلات';
+
+  @override
+  String get adminChartsAnalyticsSubtitle =>
+      'اتجاهات إعادة الاستخدام وتوزيع الفئات والحجوزات وقوائم الموافقات.';
+
+  @override
+  String get adminPlatformMetricsSubtitle =>
+      'أعداد مباشرة للمستخدمين والقوائم والموافقات والعمليات.';
+
+  @override
+  String get adminAdminOperationsSubtitle =>
+      'انتقل إلى كل وحدة إدارية من لوحة التحكم.';
+
+  @override
+  String get adminStatAvailableMaterials => 'المواد المتاحة';
+
+  @override
+  String get adminStatPendingApprovals => 'الموافقات المعلّقة';
+
+  @override
+  String get adminStatCompletedReuse => 'عمليات إعادة الاستخدام المكتملة';
+
+  @override
+  String get adminEstimatedCo2Avoided => 'تقدير تجنب CO₂';
+
+  @override
+  String get adminEstimatedCo2Helper =>
+      'تقدير من المواد المعاد استخدامها وعوامل إعادة الاستخدام حسب الفئة.';
+
+  @override
+  String get adminEstimatedCo2ShortHelper => 'تقدير من المواد المعاد استخدامها';
+
+  @override
+  String get adminReuseCompletionRateLabel => 'معدل إكمال إعادة الاستخدام';
+
+  @override
+  String get adminHintUsers => 'الحسابات المسجلة على ImpactLoop';
+
+  @override
+  String get adminHintSuppliers => 'الموردون الذين لديهم وصول للبوابة';
+
+  @override
+  String get adminHintMaterials => 'جميع المواد المدرجة على المنصة';
+
+  @override
+  String get adminHintAvailableMaterials => 'المواد المتاحة للحجز حالياً';
+
+  @override
+  String get adminHintPendingApprovals =>
+      'طلبات الموردين والفئات والأسعار المعلّقة';
+
+  @override
+  String get adminHintActiveInvitations =>
+      'دعوات السائق والمشرف والإدارة المفتوحة';
+
+  @override
+  String get adminHintCompletedReuse => 'المواد المعلّمة كمعاد استخدامها';
+
+  @override
+  String get adminHintActiveDrivers => 'المستخدمون الذين لديهم دور سائق';
+
+  @override
+  String get adminReuseActivityTitle => 'نشاط إعادة الاستخدام عبر الزمن';
+
+  @override
+  String get adminReuseActivitySubtitle =>
+      'إعادة الاستخدام المكتملة شهرياً عبر المنصة';
+
+  @override
+  String get adminMaterialsByCategoryTitle => 'المواد حسب الفئة';
+
+  @override
+  String get adminMaterialsByCategorySubtitle =>
+      'توزيع المواد المدرجة عبر الفئات';
+
+  @override
+  String get adminReservationStatusTitle => 'نظرة عامة على حالات الحجز';
+
+  @override
+  String get adminReservationStatusSubtitle =>
+      'مسار الحجوزات الحالي حسب الحالة';
+
+  @override
+  String get adminPendingActionsTitle => 'تفصيل قائمة الموافقات';
+
+  @override
+  String get adminPendingActionsSubtitle =>
+      'مراجعات الموردين والفئات والأسعار والبلاغات المعلّقة';
+
+  @override
+  String get adminRecentInvitationsTitle => 'الدعوات الأخيرة';
+
+  @override
+  String get adminRecentActivityTitle => 'النشاط الإداري الأخير';
+
+  @override
+  String get adminRecentActivitySubtitle => 'أحدث الأحداث الإدارية عند توفرها';
+
+  @override
+  String get adminRecentActivityEmptySubtitle => 'لا يوجد نشاط إداري بعد';
+
+  @override
+  String get adminSupplierVerificationQueueTitle => 'قائمة التحقق من الموردين';
+
+  @override
+  String get adminReviewQueuesSubtitle =>
+      'التحقق من الموردين والدعوات والنشاط الإداري';
+
+  @override
+  String get adminSupplierVerificationFutureNote =>
+      'ستظهر عملية التحقق من الموردين بعد تفعيل مستندات التحقق للمؤسسات.';
+
+  @override
+  String get adminImpactSnapshotTitle => 'لقطة أثر إعادة الاستخدام';
+
+  @override
+  String get adminImpactSnapshotSubtitle =>
+      'نتائج إعادة الاستخدام من الحجوزات والمواد المكتملة';
+
+  @override
+  String get adminImpactReusedMaterials => 'مواد أُعيد استخدامها';
+
+  @override
+  String get adminImpactCompletedReservations => 'الحجوزات المكتملة';
+
+  @override
+  String get adminImpactLearnersBenefited => 'المتعلمون المستفيدون';
+
+  @override
+  String get adminImpactSuppliersContributed => 'الموردون المساهمون';
+
+  @override
+  String get adminImpactTopCategory => 'أعلى فئة معاد استخدامها';
+
+  @override
+  String get adminImpactTopCategoryEmpty => 'أعلى فئة معاد استخدامها: —';
+
+  @override
+  String get adminImpactEnvironmentalNote =>
+      'يتم حساب الأثر البيئي التقديري باستخدام عوامل إعادة الاستخدام حسب الفئة والكميات المتاحة. القيم تقريبية.';
+
+  @override
+  String get adminEmptyNoInvitations =>
+      'أنشئ دعوات الأدوار من صفحة الدعوات عند تفعيلها.';
+
+  @override
+  String get adminEmptyNoInvitationsTitle => 'لا توجد دعوات نشطة';
+
+  @override
+  String get adminEmptyNoInvitationsHint =>
+      'افتح وحدة الدعوات لإنشاء دعوات سائق أو مشرف أو إدارة.';
+
+  @override
+  String get adminEmptyNoActivity => 'لا يوجد نشاط إداري بعد';
+
+  @override
+  String get adminEmptyNoActivityHint =>
+      'ستظهر أحداث التدقيق بعد تفعيل إجراءات الإدارة.';
+
+  @override
+  String get adminEmptyNoSupplierVerifications =>
+      'لا توجد طلبات تحقق من الموردين حالياً.';
+
+  @override
+  String get adminEmptyNoPendingApprovals =>
+      'لا توجد مراجعات موردين أو فئات أو أسعار أو بلاغات معلّقة.';
+
+  @override
+  String get adminPendingSupplierVerifications => 'تحقق المورد';
+
+  @override
+  String get adminOpUsersDesc => 'إدارة حسابات مستخدمي المنصة';
+
+  @override
+  String get adminOpSuppliersDesc => 'مراجعة حسابات وملفات الموردين';
+
+  @override
+  String get adminOpSupplierVerificationDesc =>
+      'معالجة طلبات التحقق من الموردين';
+
+  @override
+  String get adminOpMaterialsDesc => 'مراجعة وإدارة قوائم المواد';
+
+  @override
+  String get adminOpApprovalsDesc => 'موافقات الفئات والأسعار والقوائم';
+
+  @override
+  String get adminOpInvitationsDesc => 'إنشاء وتتبع دعوات الأدوار';
+
+  @override
+  String get adminOpImpactDesc => 'استكشاف تحليلات إعادة الاستخدام والأثر';
+
+  @override
+  String get adminOpAuditLogsDesc => 'مراجعة سجل التدقيق الإداري';
+
+  @override
+  String get adminResolveCategoryRequest => 'معالجة طلب الفئة';
+
+  @override
+  String get adminUseExistingCategory => 'استخدام فئة حالية';
+
+  @override
+  String get adminUseExistingGuidance =>
+      'يوصى به عندما تغطي فئة حالية هذه المادة بالفعل.';
+
+  @override
+  String get adminCreateNewGuidance =>
+      'أنشئ فئة جديدة فقط عندما لا تمثل الفئات الحالية هذا الطلب بدقة.';
+
+  @override
+  String get adminSuggestedExistingCategory => 'الفئة الحالية المقترحة';
+
+  @override
+  String get adminSearchOtherCategories => 'ابحث أو اختر فئة نشطة أخرى';
+
+  @override
+  String get adminSearchCategories => 'ابحث في الفئات الحالية…';
+
+  @override
+  String get adminChooseExistingCategory => 'اختر فئة حالية';
+
+  @override
+  String get adminExistingCategoryRequired => 'اختر فئة حالية نشطة.';
+
+  @override
+  String get adminLoadingCategories => 'جارٍ تحميل الفئات الحالية…';
+
+  @override
+  String get adminFailedCategories => 'تعذر تحميل الفئات الحالية.';
+
+  @override
+  String get adminNoCategoriesAvailable =>
+      'لا توجد فئات مواد نشطة ومحددة الملكية متاحة.';
+
+  @override
+  String get adminApproveWithExisting => 'الموافقة باستخدام فئة حالية';
+
+  @override
+  String get adminCreateAndApprove => 'إنشاء الفئة والموافقة';
+
+  @override
+  String get adminCreateJustification => 'لماذا يلزم إنشاء فئة منفصلة؟';
+
+  @override
+  String get adminCreateJustificationHelper =>
+      'اشرح بإيجاز لماذا لا تناسب الفئة المقترحة هذا الطلب.';
+
+  @override
+  String get adminCreateJustificationRequired =>
+      'أدخل 10 أحرف على الأقل لتوضيح سبب الحاجة إلى فئة جديدة.';
+
+  @override
+  String get adminExistingNameConflict => 'هذه الفئة موجودة بالفعل';
+
+  @override
+  String get adminNoSimilarCategories => 'لا توجد فئة حالية مقترحة';
+
+  @override
+  String get adminApprovalConfiguration => 'إعداد الموافقة';
+
+  @override
+  String get adminRequestedCategoryName => 'الاسم المقترح من المورد';
+
+  @override
+  String get adminFinalCategoryNameEn => 'اسم الفئة النهائي بالإنجليزية';
+
+  @override
+  String get adminFinalCategoryNameAr => 'اسم الفئة النهائي بالعربية';
+
+  @override
+  String get adminBilingualNamesHelper =>
+      'راجع اسمي المتجر النهائيين. سيظهر للمستخدم الاسم الموافق للغة التطبيق. تكشف الفحوصات الآلية المشكلات الواضحة في البنية وموضع اللغة فقط، ولا تتحقق من القواعد أو الترجمة.';
+
+  @override
+  String get adminNamingGuidance =>
+      'استخدم اسم فئة مختصرًا وواضحًا للمتجر، وتجنب أسماء المواد المحددة والوصف الطويل والعبارات العامة.';
+
+  @override
+  String get adminEnglishNameRequired =>
+      'أدخل اسم الفئة بالإنجليزية بين حرفين و120 حرفًا.';
+
+  @override
+  String get adminArabicNameRequired =>
+      'أدخل اسم الفئة بالعربية بين حرفين و120 حرفًا.';
+
+  @override
+  String get adminEnglishNameWrongScript =>
+      'يبدو أن اسم الفئة الإنجليزي يحتوي على نص عربي.';
+
+  @override
+  String get adminArabicNameWrongScript =>
+      'يبدو أن اسم الفئة العربي يحتوي على نص إنجليزي فقط.';
+
+  @override
+  String get adminNameControlCharacters =>
+      'لا يمكن أن تحتوي أسماء الفئات على محارف تحكم.';
+
+  @override
+  String get adminNamePunctuationBoundary =>
+      'لا يمكن أن يبدأ اسم الفئة أو ينتهي بعلامة ترقيم.';
+
+  @override
+  String get adminNameRepeatedWords => 'تجنب تكرار الكلمة نفسها بشكل متتالٍ.';
+
+  @override
+  String get adminNameDescriptionLike =>
+      'يبدو هذا وصفًا كاملاً وليس اسم فئة مختصرًا.';
+
+  @override
+  String get adminNamesAppearIdentical =>
+      'الاسمان متطابقان. تأكد أن هذا المصطلح يُستخدم بالشكل نفسه في اللغتين.';
+
+  @override
+  String get adminConfirmSharedTechnicalTerm =>
+      'أؤكد أن استخدام هذا المصطلح التقني نفسه في اللغتين مقصود.';
+
+  @override
+  String get adminSharedNameAcknowledgementRequired =>
+      'أكد أن هذا المصطلح التقني يُستخدم عن قصد بالشكل نفسه في اللغتين.';
+
+  @override
+  String get adminNameUnusuallyLong => 'هذا الاسم طويل بشكل غير معتاد لفئة.';
+
+  @override
+  String get adminEnglishNameCasingWarning =>
+      'راجع كتابة الأحرف الكبيرة في الاسم الإنجليزي؛ تستخدم فئات المتجر عادةً نمط العناوين.';
+
+  @override
+  String get adminRepeatedWhitespaceWarning =>
+      'سيتم حفظ المسافات المتكررة كمسافة عادية واحدة.';
+
+  @override
+  String get adminMaterialTitleWarning =>
+      'يبدو هذا اسم مادة محددة وليس اسم فئة قابلة لإعادة الاستخدام.';
+
+  @override
+  String get adminSimilarWordingWarning =>
+      'هذه الصياغة مشابهة جدًا لفئة موجودة.';
+
+  @override
+  String get adminAssignMaterialFamily => 'تعيين عائلة المادة';
+
+  @override
+  String get adminChooseMaterialFamily => 'اختر عائلة مادة';
+
+  @override
+  String get adminSearchMaterialFamilies => 'ابحث في عائلات المواد';
+
+  @override
+  String get adminLoadingMaterialFamilies => 'جارٍ تحميل عائلات المواد…';
+
+  @override
+  String get adminFailedMaterialFamilies => 'تعذر تحميل عائلات المواد.';
+
+  @override
+  String get adminNoMaterialFamilies => 'لا توجد عائلات مواد نشطة متاحة.';
+
+  @override
+  String get adminMaterialFamilyRequired => 'عائلة المادة مطلوبة.';
+
+  @override
+  String get adminMaterialFamilyInactive => 'عائلة المادة المحددة غير نشطة.';
+
+  @override
+  String get adminTaxonomyConceptWrongType =>
+      'مفهوم التصنيف المحدد ليس عائلة مادة.';
+
+  @override
+  String get adminMaterialFamilyNotFound =>
+      'عائلة المادة المحددة لم تعد متاحة.';
+
+  @override
+  String get adminOwnershipHelper =>
+      'اختر عائلة المادة المرجعية التي تمثل هذه الفئة الجديدة بأفضل شكل.';
+
+  @override
+  String get adminOwnershipExplanation =>
+      'يربط هذا التعيين الفئة بنظام التصنيف والتوصيات.';
+
+  @override
+  String get adminOwnershipGuidance =>
+      'راجع الفئات المشابهة ثم اختر عائلة المادة المناسبة قبل الموافقة.';
+
+  @override
+  String get adminApprovalSucceeded => 'تمت الموافقة على طلب الفئة.';
+
+  @override
+  String get adminCancel => 'إلغاء';
+
+  @override
+  String get adminConfirm => 'تأكيد';
+
+  @override
+  String get adminDone => 'تم';
+
+  @override
+  String get adminExport => 'تصدير';
+
+  @override
+  String get adminFormat => 'التنسيق';
+
+  @override
+  String get adminExcel => 'Excel';
+
+  @override
+  String get adminCsv => 'CSV';
+
+  @override
+  String get adminPdf => 'PDF';
+
+  @override
+  String get adminPrevious => 'السابق';
+
+  @override
+  String get adminNext => 'التالي';
+
+  @override
+  String get adminSearch => 'بحث';
+
+  @override
+  String get adminReset => 'إعادة تعيين';
+
+  @override
+  String get adminResetFilters => 'إعادة تعيين الفلاتر';
+
+  @override
+  String get adminActions => 'الإجراءات';
+
+  @override
+  String get adminView => 'عرض';
+
+  @override
+  String get adminViewDetails => 'عرض التفاصيل';
+
+  @override
+  String get adminInviteUser => 'دعوة مستخدم';
+
+  @override
+  String get adminSuspendAccount => 'تعليق الحساب';
+
+  @override
+  String get adminReactivateAccount => 'إعادة تفعيل الحساب';
+
+  @override
+  String adminSuspendAccountQuestion(String name) {
+    return 'تعليق $name؟';
+  }
+
+  @override
+  String get adminSuspendAccountBody =>
+      'سيمنع ذلك المستخدم من تنفيذ الإجراءات المهمة، لكن بياناته وسجله سيبقيان محفوظين.';
+
+  @override
+  String get adminReasonRequired => 'السبب (مطلوب)';
+
+  @override
+  String get adminSuspensionReasonMinLength =>
+      'يلزم سبب تعليق لا يقل عن 3 أحرف.';
+
+  @override
+  String get adminAccountSuspended => 'تم تعليق الحساب.';
+
+  @override
+  String adminReactivateAccountBody(String name) {
+    return 'استعادة الوصول لـ $name؟ بياناته وسجله بقيا محفوظين أثناء التعليق.';
+  }
+
+  @override
+  String get adminAccountReactivated => 'تمت إعادة تفعيل الحساب.';
+
+  @override
+  String get adminExportWebOnly => 'التصدير متاح على واجهة الإدارة للويب فقط.';
+
+  @override
+  String get adminNoUsersMatchFilters =>
+      'لا يوجد مستخدمون يطابقون الفلاتر الحالية.';
+
+  @override
+  String get adminExportUsers => 'تصدير المستخدمين';
+
+  @override
+  String get adminNoProjectBuildsWithLearningData =>
+      'لا توجد مشاريع بناء مع بيانات تعلم.';
+
+  @override
+  String get adminExportReservations => 'تصدير الحجوزات';
+
+  @override
+  String get adminNoReservationsMatchFilters =>
+      'لا توجد حجوزات تطابق الفلاتر الحالية.';
+
+  @override
+  String get adminReservationDetails => 'تفاصيل الحجز';
+
+  @override
+  String get adminOpenReport => 'فتح البلاغ';
+
+  @override
+  String get adminOpenDelivery => 'فتح التوصيل';
+
+  @override
+  String get adminExportIncidentReports => 'تصدير بلاغات الحوادث';
+
+  @override
+  String get adminNoIncidentReportsMatchFilters =>
+      'لا توجد بلاغات حوادث تطابق الفلاتر الحالية.';
+
+  @override
+  String get adminCouldNotLoadIncidentReports => 'تعذر تحميل بلاغات الحوادث.';
+
+  @override
+  String get adminExportMaterials => 'تصدير المواد';
+
+  @override
+  String get adminNoMaterialsMatchFilters =>
+      'لا توجد مواد تطابق الفلاتر الحالية.';
+
+  @override
+  String get adminExportMaterialReports => 'تصدير بلاغات المواد';
+
+  @override
+  String get adminNoMaterialReportsMatchFilters =>
+      'لا توجد بلاغات مواد تطابق الفلاتر الحالية.';
+
+  @override
+  String get adminSupplierVerificationDetails => 'تفاصيل التحقق من المورد';
+
+  @override
+  String get adminApproveSupplierVerificationQuestion =>
+      'الموافقة على التحقق من المورد؟';
+
+  @override
+  String get adminRequestChanges => 'طلب تعديلات';
+
+  @override
+  String get adminApproveSupplierVerification =>
+      'الموافقة على التحقق من المورد';
+
+  @override
+  String get sectionLearningSpotlightTitle => 'أضواء التعلم';
+
+  @override
+  String get sectionLearningSpotlightSubtitle =>
+      'ابدأ بأدلة مشاريع مبنية من مواد قابلة لإعادة الاستخدام.';
+
+  @override
+  String get sectionLearningSpotlightEmpty => 'لا توجد مشاريع تعلم منشورة بعد';
+
+  @override
+  String get sectionLearningSpotlightEmptyDescription =>
+      'عند نشر مشاريع التعلم، ستظهر الأدلة المميزة هنا.';
+
+  @override
+  String get sectionHomeSuggestedMaterialsTitle => 'مواد مقترحة';
+
+  @override
+  String get sectionHomeSuggestedMaterialsSubtitle =>
+      'بعض المواد المدرجة حالياً لمساعدتك على البدء.';
+
+  @override
+  String get sectionHomeSuggestedMaterialsEmpty => 'لا توجد مواد متاحة بعد';
+
+  @override
+  String get sectionHomeSuggestedMaterialsEmptyDescription =>
+      'عندما يدرج الموردون مواداً قابلة لإعادة الاستخدام، ستظهر مجموعة صغيرة هنا.';
+
+  @override
+  String get completeLearnerProfileTitle => 'أكمل ملف المتعلم';
+
+  @override
+  String get completeLearnerProfileSubtitle =>
+      'ساعدنا في تخصيص المشاريع وتوصيات المواد.';
+
+  @override
+  String get registerLearnerProfileTitle => 'ملف المتعلم';
+
+  @override
+  String get registerSupplierProfileTitle => 'ملف المورد';
+
+  @override
+  String get registerBothProfilesHint =>
+      'ستكمل تفاصيل المتعلم والمورد في الخطوات التالية.';
+
+  @override
+  String get registerFullNameLabel => 'الاسم الكامل';
+
+  @override
+  String get registerYourNameHint => 'اسمك';
+
+  @override
+  String get registerFullNameRequired => 'الاسم الكامل مطلوب';
+
+  @override
+  String get registerEmailAddressLabel => 'عنوان البريد الإلكتروني';
+
+  @override
+  String get registerPhoneOptionalLabel => 'رقم الهاتف (اختياري)';
+
+  @override
+  String get registerConfirmPasswordRequired => 'تأكيد كلمة المرور مطلوب';
+
+  @override
+  String get registerLearnerTypeTitle => 'نوع المتعلم';
+
+  @override
+  String get registerSkillLevelTitle => 'مستوى المهارة';
+
+  @override
+  String get registerReviewAccount => 'الحساب';
+
+  @override
+  String get registerReviewIntent => 'الهدف';
+
+  @override
+  String get registerReviewName => 'الاسم';
+
+  @override
+  String get registerReviewInterests => 'الاهتمامات';
+
+  @override
+  String get registerReviewGoals => 'الأهداف';
+
+  @override
+  String get registerReviewLocation => 'الموقع';
+
+  @override
+  String get registerReviewLearnerType => 'نوع المتعلم';
+
+  @override
+  String get registerReviewSkillLevel => 'مستوى المهارة';
+
+  @override
+  String get registerInterestsOptionalLabel => 'الاهتمامات (اختياري)';
+
+  @override
+  String get registerBioOptionalLabel => 'نبذة (اختياري)';
+
+  @override
+  String get registerSkillLevelHelper => 'ما مدى راحتك في بناء مشاريع التعلم؟';
+
+  @override
+  String get registerLearnerTypeRequired => 'نوع المتعلم مطلوب';
+
+  @override
+  String get registerSkillLevelRequired => 'مستوى المهارة مطلوب';
+
+  @override
+  String get registerSelectLearnerType => 'اختر نوع المتعلم';
+
+  @override
+  String get registerSelectSkillLevel => 'اختر مستوى المهارة';
+
+  @override
+  String get registerBioHint => 'أخبر الآخرين قليلاً عن أهدافك التعليمية';
+
+  @override
+  String get registerSupplierNextHint =>
+      'بعد ذلك، سنساعدك في إعداد ملف المورد أيضاً.';
+
+  @override
+  String get authLearnLabel => 'تعلّم';
+
+  @override
+  String get authReuseLabel => 'أعد الاستخدام';
+
+  @override
+  String get authBuildLabel => 'ابنِ';
+
+  @override
+  String get authMaterialsReusedLabel => 'مواد أُعيد استخدامها';
+
+  @override
+  String get authProjectsLaunchedLabel => 'مشاريع أُطلقت';
+
+  @override
+  String get authRegistrationMovedTitle => 'تم نقل التسجيل';
+
+  @override
+  String get authRegistrationMovedSubtitle =>
+      'يكمل ImpactLoop التسجيل الآن في مكان واحد. جارٍ توجيهك إلى معالج التسجيل…';
+
+  @override
+  String get authBrandTitle => 'ImpactLoop';
+
+  @override
+  String get homeSuggestedMaterialsLoadError => 'تعذر تحميل المواد المقترحة';
+
+  @override
+  String get homeSuggestedMaterialsLoadErrorSubtitle =>
+      'الصفحة الرئيسية ما زالت متاحة. أعد المحاولة عندما يعمل واجهة برمجة المواد.';
+
+  @override
+  String get homeLearningSpotlightLoadError => 'تعذر تحميل مشاريع التعلم';
+
+  @override
+  String get homeLearningSpotlightLoadErrorSubtitle =>
+      'الصفحة الرئيسية ما زالت متاحة. أعد المحاولة عندما يعمل واجهة برمجة مركز التعلم.';
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/l10n.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
@@ -418,11 +419,11 @@ class _LoopVisual extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const _VisualNode(icon: Icons.school_outlined, label: 'Learn'),
+          _VisualNode(icon: Icons.school_outlined, label: context.l10n.authLearnLabel),
           Expanded(child: Divider(color: colors.borderStrong)),
-          const _VisualNode(icon: Icons.loop_rounded, label: 'Reuse'),
+          _VisualNode(icon: Icons.loop_rounded, label: context.l10n.authReuseLabel),
           Expanded(child: Divider(color: colors.borderStrong)),
-          const _VisualNode(icon: Icons.build_circle_outlined, label: 'Build'),
+          _VisualNode(icon: Icons.build_circle_outlined, label: context.l10n.authBuildLabel),
         ],
       ),
     );

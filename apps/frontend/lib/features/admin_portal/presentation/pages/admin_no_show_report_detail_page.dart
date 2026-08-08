@@ -10,6 +10,7 @@ import '../../../../shared/widgets/app_section_card.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/incident_report_status_presentation.dart';
 import '../../data/admin_no_show_reports_api.dart';
+import '../l10n/admin_l10n.dart';
 import '../widgets/admin_monitoring_utils.dart';
 
 final adminNoShowReportDetailProvider = FutureProvider.autoDispose
@@ -1008,7 +1009,10 @@ class _DetailFailure extends StatelessWidget {
               spacing: AppSpacing.sm,
               children: [
                 if (!notFound)
-                  FilledButton(onPressed: onRetry, child: const Text('Retry')),
+                  FilledButton(
+                    onPressed: onRetry,
+                    child: Text(AdminL10n.of(context).retry),
+                  ),
                 OutlinedButton(
                   onPressed: onBack,
                   child: const Text('Back to Incident Reports'),
@@ -1056,7 +1060,7 @@ Future<bool?> _confirmAction(
       footer: AppDialogFooter.decision(
         secondaryAction: TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text('Cancel'),
+          child: Text(AdminL10n.of(context).cancel),
         ),
         primaryAction: FilledButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),

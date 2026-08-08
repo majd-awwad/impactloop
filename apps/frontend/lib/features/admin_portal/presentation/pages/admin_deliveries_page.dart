@@ -11,6 +11,7 @@ import '../../data/admin_deliveries_api.dart';
 import '../../data/admin_reservations_api.dart' show AdminExportFormatEligibility;
 import '../../data/models/admin_deliveries_models.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
+import '../l10n/admin_l10n.dart';
 import '../theme/admin_decoration_set.dart';
 import '../theme/admin_palette.dart';
 import '../widgets/admin_empty_state.dart';
@@ -259,9 +260,7 @@ class _AdminDeliveriesPageState extends ConsumerState<AdminDeliveriesPage> {
     if (!kIsWeb) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Export is available on Admin Web only.'),
-        ),
+        SnackBar(content: Text(AdminL10n.of(context).exportWebOnly)),
       );
       return;
     }
@@ -746,7 +745,7 @@ class _FiltersPanelState extends State<_FiltersPanel> {
     );
 
     final statusFilter = AdminCompactFilterDropdown(
-      label: 'Status',
+      label: AdminL10n.of(context).status,
       value: statusValue,
       width: controlWidth,
       enabled: widget.statuses.isNotEmpty,
@@ -798,7 +797,7 @@ class _FiltersPanelState extends State<_FiltersPanel> {
       onPressed: widget.filters.hasActiveFilters ? widget.onReset : null,
       style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
       icon: const Icon(Icons.filter_alt_off, size: 19),
-      tooltip: 'Reset filters',
+      tooltip: AdminL10n.of(context).resetFilters,
     );
     final exportButton = widget.onExport == null
         ? null
@@ -812,7 +811,7 @@ class _FiltersPanelState extends State<_FiltersPanel> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.download_outlined, size: 18),
-            label: Text(widget.exportLoading ? 'Preparing…' : 'Export'),
+            label: Text(widget.exportLoading ? 'Preparing…' : AdminL10n.of(context).exportAction),
           );
     final secondaryCount = [
       widget.filters.scope != 'ALL',
@@ -1563,7 +1562,7 @@ class _DeliveryDetailDialogState extends ConsumerState<_DeliveryDetailDialog> {
           secondaryAction: TextButton(
             onPressed: () => Navigator.pop(context, false),
             style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
-            child: const Text('Cancel'),
+            child: Text(AdminL10n.of(context).cancel),
           ),
           primaryAction: FilledButton(
             onPressed: () => Navigator.pop(context, true),
@@ -1623,7 +1622,7 @@ class _DeliveryDetailDialogState extends ConsumerState<_DeliveryDetailDialog> {
               title: 'Delivery summary',
               children: [
                 AdminDetailRow(
-                  label: 'Status',
+                  label: AdminL10n.of(context).status,
                   value: humanizeEnum(detail.status),
                 ),
                 AdminDetailRow(
@@ -2105,6 +2104,7 @@ class _AdminDeliveriesExportDialogState
 
   @override
   Widget build(BuildContext context) {
+    final adminL10n = AdminL10n.of(context);
     final limitMessage = (_selectedEligibility?.exceedsLimit ?? false)
         ? 'This export matches ${widget.count} deliveries, which exceeds the '
               'limit of ${_selectedEligibility?.maxAllowed ?? 0}. Narrow your '
@@ -2127,12 +2127,12 @@ class _AdminDeliveriesExportDialogState
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 16),
-          const Text('Format'),
+          Text(adminL10n.format),
           const SizedBox(height: 8),
           SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'xlsx', label: Text('Excel')),
-              ButtonSegment(value: 'csv', label: Text('CSV')),
+            segments: [
+              ButtonSegment(value: 'xlsx', label: Text(adminL10n.excel)),
+              ButtonSegment(value: 'csv', label: Text(adminL10n.csv)),
             ],
             selected: {_selectedFormat},
             onSelectionChanged: _isDownloading
@@ -2168,7 +2168,7 @@ class _AdminDeliveriesExportDialogState
           onPressed: _isDownloading
               ? null
               : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(adminL10n.cancel),
         ),
         primaryAction: FilledButton(
           onPressed: _canExport ? _confirm : null,
@@ -2178,7 +2178,7 @@ class _AdminDeliveriesExportDialogState
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Export'),
+              : Text(adminL10n.exportAction),
         ),
       ),
     );

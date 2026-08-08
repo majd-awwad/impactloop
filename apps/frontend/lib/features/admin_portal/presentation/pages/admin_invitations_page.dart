@@ -2265,7 +2265,7 @@ class _CreateInvitationDialogState
             ),
             action: existing != null && widget.onDuplicate != null
                 ? SnackBarAction(
-                    label: 'View',
+                    label: AdminL10n.of(context).view,
                     onPressed: () {
                       Navigator.of(context).pop();
                       widget.onDuplicate!(existing);

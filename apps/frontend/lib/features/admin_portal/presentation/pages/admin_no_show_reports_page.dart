@@ -12,6 +12,7 @@ import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/incident_report_status_presentation.dart';
 import '../../data/admin_no_show_reports_api.dart';
 import '../../data/admin_reservations_api.dart' show AdminExportFormatEligibility;
+import '../l10n/admin_l10n.dart';
 import '../theme/admin_decoration_set.dart';
 import '../widgets/admin_empty_state.dart';
 import '../widgets/admin_kpi_card.dart';
@@ -293,9 +294,7 @@ class _AdminNoShowReportsPageState
     if (!kIsWeb) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Export is available on Admin Web only.'),
-        ),
+        SnackBar(content: Text(AdminL10n.of(context).exportWebOnly)),
       );
       return;
     }
@@ -320,8 +319,8 @@ class _AdminNoShowReportsPageState
 
       if (preflight.count == 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No incident reports match the current filters.'),
+          SnackBar(
+            content: Text(AdminL10n.of(context).noIncidentReportsMatchFilters),
           ),
         );
         return;
@@ -384,6 +383,7 @@ class _AdminNoShowReportsPageState
 
   @override
   Widget build(BuildContext context) {
+    final adminL10n = AdminL10n.of(context);
     final isShellCompact = MediaQuery.sizeOf(context).width < 920;
     final reportsAsync = ref.watch(_incidentReportsProvider(_query));
     final summaryAsync = ref.watch(_incidentSummaryProvider(_summaryStatus));
@@ -423,7 +423,7 @@ class _AdminNoShowReportsPageState
                           )
                         : const Icon(Icons.download_outlined, size: 18),
                     label: Text(
-                      _isPreflightLoading ? 'Preparing…' : 'Export',
+                      _isPreflightLoading ? 'Preparing…' : adminL10n.exportAction,
                     ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: palette.textPrimary,
@@ -670,6 +670,7 @@ class _IncidentFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final adminL10n = AdminL10n.of(context);
     final search = _SearchField(
       controller: searchController,
       onChanged: onSearchChanged,
@@ -686,7 +687,7 @@ class _IncidentFilters extends StatelessWidget {
       onChanged: onWorkflowChanged,
     );
     final statusField = _FilterDropdown(
-      label: 'Status',
+      label: adminL10n.status,
       value: status,
       entries: const {
         'ALL': 'All statuses',
@@ -727,7 +728,7 @@ class _IncidentFilters extends StatelessWidget {
     final reset = OutlinedButton.icon(
       onPressed: resetEnabled ? onReset : null,
       icon: const Icon(Icons.restart_alt, size: 17),
-      label: const Text('Reset'),
+      label: Text(adminL10n.reset),
     );
 
     Widget body;
@@ -970,13 +971,14 @@ class _TableHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
-    const labels = [
+    final adminL10n = AdminL10n.of(context);
+    final labels = <String>[
       'Incident',
       'Target',
       'Workflow',
-      'Status',
+      adminL10n.status,
       'Created',
-      'Actions',
+      adminL10n.actions,
     ];
     return Container(
       height: 46,
@@ -1046,7 +1048,9 @@ class _IncidentCard extends StatelessWidget {
   final ValueChanged<String> onView;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final adminL10n = AdminL10n.of(context);
+    return Container(
     padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
       border: Border.all(color: context.adminPalette.cardBorder),
@@ -1064,7 +1068,7 @@ class _IncidentCard extends StatelessWidget {
           child: _TargetCell(report: report),
         ),
         _CardLine(
-          label: 'Status',
+          label: adminL10n.status,
           child: _StatusCell(status: report.status),
         ),
         _CardLine(
@@ -1081,7 +1085,8 @@ class _IncidentCard extends StatelessWidget {
         ),
       ],
     ),
-  );
+    );
+  }
 }
 
 class _IncidentIdentity extends StatelessWidget {
@@ -1399,7 +1404,9 @@ class _IncidentEmptyState extends StatelessWidget {
   final bool hasFilters;
   final VoidCallback onReset;
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final adminL10n = AdminL10n.of(context);
+    return Container(
     padding: const EdgeInsets.all(32),
     decoration: BoxDecoration(
       border: Border.all(color: context.adminPalette.cardBorder),
@@ -1414,17 +1421,23 @@ class _IncidentEmptyState extends StatelessWidget {
               'Try adjusting the current filters or review incidents again later.',
         ),
         if (hasFilters)
-          TextButton(onPressed: onReset, child: const Text('Reset filters')),
+          TextButton(
+            onPressed: onReset,
+            child: Text(adminL10n.resetFilters),
+          ),
       ],
     ),
-  );
+    );
+  }
 }
 
 class _ErrorPanel extends StatelessWidget {
   const _ErrorPanel({required this.onRetry});
   final VoidCallback onRetry;
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final adminL10n = AdminL10n.of(context);
+    return Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
       border: Border.all(color: Theme.of(context).colorScheme.error),
@@ -1434,11 +1447,12 @@ class _ErrorPanel extends StatelessWidget {
       children: [
         const Icon(Icons.error_outline),
         const SizedBox(width: 10),
-        const Expanded(child: Text('Could not load incident reports.')),
-        TextButton(onPressed: onRetry, child: const Text('Retry')),
+        Expanded(child: Text(adminL10n.couldNotLoadIncidentReports)),
+        TextButton(onPressed: onRetry, child: Text(adminL10n.retry)),
       ],
     ),
-  );
+    );
+  }
 }
 
 String shortIdentifier(String id) {
@@ -1517,6 +1531,7 @@ class _AdminIncidentReportsExportDialogState
 
   @override
   Widget build(BuildContext context) {
+    final adminL10n = AdminL10n.of(context);
     final limitMessage = (_selectedEligibility?.exceedsLimit ?? false)
         ? 'This export matches ${widget.count} incident reports, which exceeds '
               'the limit of ${_selectedEligibility?.maxAllowed ?? 0}. Narrow '
@@ -1524,7 +1539,7 @@ class _AdminIncidentReportsExportDialogState
         : null;
 
     return AppDialogShell(
-      title: const Text('Export incident reports'),
+      title: Text(adminL10n.exportIncidentReports),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1539,12 +1554,12 @@ class _AdminIncidentReportsExportDialogState
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 16),
-          const Text('Format'),
+          Text(adminL10n.format),
           const SizedBox(height: 8),
           SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'xlsx', label: Text('Excel')),
-              ButtonSegment(value: 'csv', label: Text('CSV')),
+            segments: [
+              ButtonSegment(value: 'xlsx', label: Text(adminL10n.excel)),
+              ButtonSegment(value: 'csv', label: Text(adminL10n.csv)),
             ],
             selected: {_selectedFormat},
             onSelectionChanged: _isDownloading
@@ -1580,7 +1595,7 @@ class _AdminIncidentReportsExportDialogState
           onPressed: _isDownloading
               ? null
               : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(adminL10n.cancel),
         ),
         primaryAction: FilledButton(
           onPressed: _canExport ? _confirm : null,
@@ -1590,7 +1605,7 @@ class _AdminIncidentReportsExportDialogState
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Export'),
+              : Text(adminL10n.exportAction),
         ),
       ),
     );

@@ -7,6 +7,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../data/admin_export_center_models.dart';
 import '../../data/admin_export_center_service.dart';
 import '../../data/admin_reservations_api.dart' show AdminExportFormatEligibility;
+import '../l10n/admin_l10n.dart';
 import '../controllers/admin_export_center_controller.dart';
 import '../theme/admin_decoration_set.dart';
 import '../widgets/admin_kpi_card.dart' show AdminTypography;
@@ -241,7 +242,7 @@ class _DomainTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Formats: ${domain.supportedFormats.map(_formatLabel).join(', ')}',
+                    'Formats: ${domain.supportedFormats.map((f) => _formatLabel(AdminL10n.of(context), f)).join(', ')}',
                     style: AdminTypography.kpiHelper(palette).copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -286,7 +287,7 @@ class _FilterPanel extends StatelessWidget {
                 onPressed: controller.isExporting
                     ? null
                     : controller.resetCurrentFilters,
-                child: const Text('Reset filters'),
+                child: Text(AdminL10n.of(context).resetFilters),
               ),
             ],
           ),
@@ -329,6 +330,7 @@ class _SummaryPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final adminL10n = AdminL10n.of(context);
     final preflight = controller.preflight;
     final eligibility = preflight?.eligibilityFor(controller.format);
 
@@ -351,14 +353,14 @@ class _SummaryPanel extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: AppSpacing.md),
-          Text('Format', style: AdminTypography.kpiLabel(palette)),
+          Text(AdminL10n.of(context).format, style: AdminTypography.kpiLabel(palette)),
           const SizedBox(height: AppSpacing.sm),
           SegmentedButton<String>(
             segments: [
               for (final format in controller.domain.supportedFormats)
                 ButtonSegment(
                   value: format,
-                  label: Text(_formatLabel(format)),
+                  label: Text(_formatLabel(adminL10n, format)),
                   enabled: !controller.isExporting,
                 ),
             ],
@@ -395,7 +397,7 @@ class _SummaryPanel extends StatelessWidget {
             if (eligibility != null) ...[
               const SizedBox(height: 4),
               Text(
-                'Limit for ${_formatLabel(controller.format)}: '
+                'Limit for ${_formatLabel(adminL10n, controller.format)}: '
                 '${eligibility.maxAllowed}',
               ),
               if (eligibility.exceedsLimit)
@@ -403,6 +405,7 @@ class _SummaryPanel extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     _limitMessage(
+                      l10n: adminL10n,
                       domain: controller.domain,
                       format: controller.format,
                       count: preflight.count,
@@ -445,7 +448,7 @@ class _SummaryPanel extends StatelessWidget {
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Export'),
+                    : Text(AdminL10n.of(context).exportAction),
               ),
             ],
           ),
@@ -455,10 +458,10 @@ class _SummaryPanel extends StatelessWidget {
   }
 }
 
-String _formatLabel(String format) => switch (format) {
-  'xlsx' => 'Excel',
-  'pdf' => 'PDF',
-  'csv' => 'CSV',
+String _formatLabel(AdminL10n l10n, String format) => switch (format) {
+  'xlsx' => l10n.excel,
+  'pdf' => l10n.pdf,
+  'csv' => l10n.csv,
   _ => format.toUpperCase(),
 };
 
@@ -469,6 +472,7 @@ String _formatDescription(String format) => switch (format) {
 };
 
 String _limitMessage({
+  required AdminL10n l10n,
   required AdminExportDomainKey domain,
   required String format,
   required int count,
@@ -479,7 +483,7 @@ String _limitMessage({
         'Narrow the filters or select Excel/CSV.';
   }
   return 'This export matches $count records, which exceeds the '
-      '${_formatLabel(format)} limit of ${eligibility.maxAllowed}. '
+      '${_formatLabel(l10n, format)} limit of ${eligibility.maxAllowed}. '
       'Narrow your filters and try again.';
 }
 
@@ -500,9 +504,9 @@ class _SearchField extends StatelessWidget {
       key: ValueKey('search-$value'),
       initialValue: value,
       enabled: enabled,
-      decoration: const InputDecoration(
-        labelText: 'Search',
-        border: OutlineInputBorder(),
+      decoration: InputDecoration(
+        labelText: AdminL10n.of(context).search,
+        border: const OutlineInputBorder(),
         isDense: true,
       ),
       onChanged: onChanged,
@@ -575,7 +579,7 @@ class _ReservationsFilters extends StatelessWidget {
                 controller.updateReservations(f.copyWith(search: value)),
           ),
           _DropdownField(
-            label: 'Status',
+            label: AdminL10n.of(context).status,
             value: f.status,
             enabled: enabled,
             entries: [
@@ -650,7 +654,7 @@ class _MaterialsFilters extends StatelessWidget {
             controller.updateMaterials(f.copyWith(search: value)),
       ),
       _DropdownField(
-        label: 'Status',
+        label: AdminL10n.of(context).status,
         value: f.status,
         enabled: enabled,
         entries: [
@@ -707,7 +711,7 @@ class _MaterialReportsFilters extends StatelessWidget {
             controller.updateMaterialReports(f.copyWith(search: value)),
       ),
       _DropdownField(
-        label: 'Status',
+        label: AdminL10n.of(context).status,
         value: f.status,
         enabled: enabled,
         entries: [
@@ -755,7 +759,7 @@ class _DeliveriesFilters extends StatelessWidget {
                 controller.updateDeliveries(f.copyWith(search: value)),
           ),
           _DropdownField(
-            label: 'Status',
+            label: AdminL10n.of(context).status,
             value: f.status,
             enabled: enabled,
             entries: [
@@ -899,7 +903,7 @@ class _IncidentFilters extends StatelessWidget {
                 controller.updateIncidents(f.copyWith(search: value)),
           ),
           _DropdownField(
-            label: 'Status',
+            label: AdminL10n.of(context).status,
             value: f.status,
             enabled: enabled,
             entries: [

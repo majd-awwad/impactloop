@@ -8799,4 +8799,938 @@ class AppLocalizationsEn extends AppLocalizations {
   String notificationDeliveryDriverAssignedBody(String materialTitle) {
     return 'You were assigned to deliver $materialTitle.';
   }
+
+  @override
+  String get adminNavOverview => 'Overview';
+
+  @override
+  String get adminNavUsers => 'Users';
+
+  @override
+  String get adminNavSuppliers => 'Suppliers';
+
+  @override
+  String get adminNavMaterials => 'Materials';
+
+  @override
+  String get adminNavApprovals => 'Approvals';
+
+  @override
+  String get adminNavInvitations => 'Invitations';
+
+  @override
+  String get adminNavImpactAnalytics => 'Impact Analytics';
+
+  @override
+  String get adminNavAuditLogs => 'Audit Logs';
+
+  @override
+  String get adminNavReservations => 'Reservations';
+
+  @override
+  String get adminNavDeliveries => 'Deliveries';
+
+  @override
+  String get adminNavLearningProjects => 'Learning Projects';
+
+  @override
+  String get adminNavExportCenter => 'Export Center';
+
+  @override
+  String get adminAccessDeniedTitle => 'Access denied';
+
+  @override
+  String get adminOverviewPageTitle => 'Admin Overview';
+
+  @override
+  String get adminImpactSectionTitle => 'Reuse Impact';
+
+  @override
+  String get adminEstimatedAvoidedSuffix => 'estimated avoided';
+
+  @override
+  String get adminPlatformMetricsTitle => 'Platform metrics';
+
+  @override
+  String get adminAdminOperationsTitle => 'Admin operations';
+
+  @override
+  String get adminOpenModuleCta => 'Open';
+
+  @override
+  String get adminStatUsers => 'Users';
+
+  @override
+  String get adminStatSuppliers => 'Suppliers';
+
+  @override
+  String get adminStatMaterials => 'Materials';
+
+  @override
+  String get adminStatActiveInvitations => 'Active invitations';
+
+  @override
+  String get adminStatActiveDrivers => 'Active drivers';
+
+  @override
+  String get adminEstimatedBadge => 'Estimated';
+
+  @override
+  String get adminViewAllAuditLogs => 'View all logs';
+
+  @override
+  String get adminReviewQueuesTitle => 'Review queues';
+
+  @override
+  String get adminEmptyNoDataYet => 'No data yet';
+
+  @override
+  String get adminEmptyAllClearTitle => 'All clear';
+
+  @override
+  String get adminPendingCategoryRequests => 'Category requests';
+
+  @override
+  String get adminPendingPriceRequests => 'Price requests';
+
+  @override
+  String get adminPendingReports => 'Reports';
+
+  @override
+  String get adminCategoryRequest => 'Category request';
+
+  @override
+  String get adminCreateNewCategory => 'Create new category';
+
+  @override
+  String get adminExistingCategory => 'Existing category';
+
+  @override
+  String get adminUseThisCategory => 'Use this category';
+
+  @override
+  String get adminExactNameMatch => 'Exact match';
+
+  @override
+  String get adminPossibleNameMatch => 'Possible match';
+
+  @override
+  String get adminRequestDetails => 'Request details';
+
+  @override
+  String get adminCategoryMatching => 'Category matching';
+
+  @override
+  String get adminSimilarCategories => 'Similar categories';
+
+  @override
+  String get adminRequired => 'Required';
+
+  @override
+  String get adminMaterialFamily => 'Material family';
+
+  @override
+  String get adminActiveMapping => 'Active mapping';
+
+  @override
+  String get adminRequestSummary => 'Request summary';
+
+  @override
+  String get adminAdminGuidance => 'Admin guidance';
+
+  @override
+  String get adminSubmitted => 'Submitted';
+
+  @override
+  String get adminRequestedBy => 'Requested by';
+
+  @override
+  String get adminStatus => 'Status';
+
+  @override
+  String get adminSupplier => 'Supplier';
+
+  @override
+  String get adminMaterial => 'Material';
+
+  @override
+  String get adminDescription => 'Description';
+
+  @override
+  String get adminQuantity => 'Quantity';
+
+  @override
+  String get adminCondition => 'Condition';
+
+  @override
+  String get adminLocation => 'Location';
+
+  @override
+  String get adminReason => 'Reason';
+
+  @override
+  String get adminApprove => 'Approve';
+
+  @override
+  String get adminReject => 'Reject';
+
+  @override
+  String get adminClose => 'Close';
+
+  @override
+  String get adminRetry => 'Retry';
+
+  @override
+  String get adminNavSupplierVerification => 'Supplier Verification';
+
+  @override
+  String get adminAccessDeniedBody =>
+      'You do not have permission to access the Admin Portal.';
+
+  @override
+  String get adminOverviewPageSubtitle => 'Platform control dashboard';
+
+  @override
+  String adminWelcomeTitle(String name) {
+    return 'Welcome back, $name';
+  }
+
+  @override
+  String get adminWelcomeSubtitle =>
+      'Here is today\'s platform activity, approvals, reuse impact, and operational health.';
+
+  @override
+  String get adminBannerOverviewLabel => 'Platform overview';
+
+  @override
+  String get adminPlatformDistributionTitle => 'Platform account distribution';
+
+  @override
+  String get adminPlatformDistributionSubtitle =>
+      'Users, suppliers, and active drivers on ImpactLoop';
+
+  @override
+  String get adminCo2RingCenterLabel => 'Listed materials reused';
+
+  @override
+  String get adminControlCenterTitle => 'Platform Control Center';
+
+  @override
+  String get adminControlCenterSubtitle =>
+      'Monitor platform activity, approvals, invitations, supplier verification, and reuse impact from one place.';
+
+  @override
+  String get adminChartsAnalyticsTitle => 'Charts & analytics';
+
+  @override
+  String get adminChartsAnalyticsSubtitle =>
+      'Reuse trends, category distribution, reservations, and approval queues.';
+
+  @override
+  String get adminPlatformMetricsSubtitle =>
+      'Live counts across users, listings, approvals, and operations.';
+
+  @override
+  String get adminAdminOperationsSubtitle =>
+      'Jump into each admin module from the control dashboard.';
+
+  @override
+  String get adminStatAvailableMaterials => 'Available materials';
+
+  @override
+  String get adminStatPendingApprovals => 'Pending approvals';
+
+  @override
+  String get adminStatCompletedReuse => 'Completed reuse';
+
+  @override
+  String get adminEstimatedCo2Avoided => 'Estimated CO₂ avoided';
+
+  @override
+  String get adminEstimatedCo2Helper =>
+      'Estimated from reused materials and category-based reuse factors.';
+
+  @override
+  String get adminEstimatedCo2ShortHelper => 'Estimated from reused materials';
+
+  @override
+  String get adminReuseCompletionRateLabel => 'Reuse completion rate';
+
+  @override
+  String get adminHintUsers => 'Registered accounts on ImpactLoop';
+
+  @override
+  String get adminHintSuppliers => 'Suppliers with portal access';
+
+  @override
+  String get adminHintMaterials => 'All listed materials on the platform';
+
+  @override
+  String get adminHintAvailableMaterials =>
+      'Materials currently open for reservation';
+
+  @override
+  String get adminHintPendingApprovals =>
+      'Supplier, category, and price requests waiting';
+
+  @override
+  String get adminHintActiveInvitations =>
+      'Open driver, moderator, and admin invites';
+
+  @override
+  String get adminHintCompletedReuse => 'Materials marked as reused';
+
+  @override
+  String get adminHintActiveDrivers => 'Users with driver role assigned';
+
+  @override
+  String get adminReuseActivityTitle => 'Reuse activity over time';
+
+  @override
+  String get adminReuseActivitySubtitle =>
+      'Monthly completed reuse across the platform';
+
+  @override
+  String get adminMaterialsByCategoryTitle => 'Materials by category';
+
+  @override
+  String get adminMaterialsByCategorySubtitle =>
+      'Distribution of listed materials across categories';
+
+  @override
+  String get adminReservationStatusTitle => 'Reservation status overview';
+
+  @override
+  String get adminReservationStatusSubtitle =>
+      'Current reservation pipeline by status';
+
+  @override
+  String get adminPendingActionsTitle => 'Approval queue breakdown';
+
+  @override
+  String get adminPendingActionsSubtitle =>
+      'Pending supplier, category, price, and report reviews';
+
+  @override
+  String get adminRecentInvitationsTitle => 'Recent invitations';
+
+  @override
+  String get adminRecentActivityTitle => 'Recent admin activity';
+
+  @override
+  String get adminRecentActivitySubtitle =>
+      'Latest administrative events when available';
+
+  @override
+  String get adminRecentActivityEmptySubtitle => 'No admin activity yet';
+
+  @override
+  String get adminSupplierVerificationQueueTitle =>
+      'Supplier verification queue';
+
+  @override
+  String get adminReviewQueuesSubtitle =>
+      'Supplier verification, invitations, and admin activity';
+
+  @override
+  String get adminSupplierVerificationFutureNote =>
+      'Supplier verification workflow will appear after organization verification documents are enabled.';
+
+  @override
+  String get adminImpactSnapshotTitle => 'Reuse Impact Snapshot';
+
+  @override
+  String get adminImpactSnapshotSubtitle =>
+      'Platform reuse outcomes from completed reservations and materials';
+
+  @override
+  String get adminImpactReusedMaterials => 'Reused materials';
+
+  @override
+  String get adminImpactCompletedReservations => 'Completed reservations';
+
+  @override
+  String get adminImpactLearnersBenefited => 'Learners benefited';
+
+  @override
+  String get adminImpactSuppliersContributed => 'Suppliers contributed';
+
+  @override
+  String get adminImpactTopCategory => 'Top reused category';
+
+  @override
+  String get adminImpactTopCategoryEmpty => 'Top reused category: —';
+
+  @override
+  String get adminImpactEnvironmentalNote =>
+      'Estimated environmental impact is calculated using category-based reuse factors and available material quantities. Values are approximate.';
+
+  @override
+  String get adminEmptyNoInvitations =>
+      'Create role invitations from the Invitations page once enabled.';
+
+  @override
+  String get adminEmptyNoInvitationsTitle => 'No active invitations';
+
+  @override
+  String get adminEmptyNoInvitationsHint =>
+      'Open the Invitations module to create driver, moderator, or admin invites.';
+
+  @override
+  String get adminEmptyNoActivity => 'No admin activity yet';
+
+  @override
+  String get adminEmptyNoActivityHint =>
+      'Audit events will appear after admin actions are enabled.';
+
+  @override
+  String get adminEmptyNoSupplierVerifications =>
+      'No supplier verification requests waiting.';
+
+  @override
+  String get adminEmptyNoPendingApprovals =>
+      'No supplier, category, price, or report reviews waiting.';
+
+  @override
+  String get adminPendingSupplierVerifications => 'Supplier verification';
+
+  @override
+  String get adminOpUsersDesc => 'Manage platform user accounts';
+
+  @override
+  String get adminOpSuppliersDesc => 'Review supplier accounts and profiles';
+
+  @override
+  String get adminOpSupplierVerificationDesc =>
+      'Process supplier verification requests';
+
+  @override
+  String get adminOpMaterialsDesc => 'Moderate and review material listings';
+
+  @override
+  String get adminOpApprovalsDesc => 'Category, price, and listing approvals';
+
+  @override
+  String get adminOpInvitationsDesc => 'Create and track role invitations';
+
+  @override
+  String get adminOpImpactDesc => 'Explore reuse and impact analytics';
+
+  @override
+  String get adminOpAuditLogsDesc => 'Review administrative audit history';
+
+  @override
+  String get adminResolveCategoryRequest => 'Resolve category request';
+
+  @override
+  String get adminUseExistingCategory => 'Use existing category';
+
+  @override
+  String get adminUseExistingGuidance =>
+      'Recommended when an existing category already covers this material.';
+
+  @override
+  String get adminCreateNewGuidance =>
+      'Create only when existing categories do not accurately represent this request.';
+
+  @override
+  String get adminSuggestedExistingCategory => 'Suggested existing category';
+
+  @override
+  String get adminSearchOtherCategories =>
+      'Search or select another active category';
+
+  @override
+  String get adminSearchCategories => 'Search existing categories…';
+
+  @override
+  String get adminChooseExistingCategory => 'Choose an existing category';
+
+  @override
+  String get adminExistingCategoryRequired =>
+      'Choose an active existing category.';
+
+  @override
+  String get adminLoadingCategories => 'Loading existing categories…';
+
+  @override
+  String get adminFailedCategories => 'Failed to load existing categories.';
+
+  @override
+  String get adminNoCategoriesAvailable =>
+      'No active owned material categories are available.';
+
+  @override
+  String get adminApproveWithExisting => 'Approve with existing category';
+
+  @override
+  String get adminCreateAndApprove => 'Create and approve';
+
+  @override
+  String get adminCreateJustification => 'Why is a separate category needed?';
+
+  @override
+  String get adminCreateJustificationHelper =>
+      'Explain briefly why the suggested category does not fit.';
+
+  @override
+  String get adminCreateJustificationRequired =>
+      'Enter at least 10 characters explaining why a new category is needed.';
+
+  @override
+  String get adminExistingNameConflict => 'This category already exists';
+
+  @override
+  String get adminNoSimilarCategories => 'No suggested existing category';
+
+  @override
+  String get adminApprovalConfiguration => 'Approval configuration';
+
+  @override
+  String get adminRequestedCategoryName => 'Requested name';
+
+  @override
+  String get adminFinalCategoryNameEn => 'Final category name in English';
+
+  @override
+  String get adminFinalCategoryNameAr => 'Final category name in Arabic';
+
+  @override
+  String get adminBilingualNamesHelper =>
+      'Review both final marketplace names. Users see the name matching their app language. Automated checks only catch obvious structure and language-placement problems; they do not verify grammar or translation.';
+
+  @override
+  String get adminNamingGuidance =>
+      'Use a short, clear marketplace category name. Avoid material titles, full descriptions, and vague wording.';
+
+  @override
+  String get adminEnglishNameRequired =>
+      'Enter an English category name between 2 and 120 characters.';
+
+  @override
+  String get adminArabicNameRequired =>
+      'Enter an Arabic category name between 2 and 120 characters.';
+
+  @override
+  String get adminEnglishNameWrongScript =>
+      'The English name appears to contain Arabic text.';
+
+  @override
+  String get adminArabicNameWrongScript =>
+      'The Arabic name appears to contain English-only text.';
+
+  @override
+  String get adminNameControlCharacters =>
+      'Category names cannot contain control characters.';
+
+  @override
+  String get adminNamePunctuationBoundary =>
+      'Category names cannot begin or end with punctuation.';
+
+  @override
+  String get adminNameRepeatedWords =>
+      'Avoid repeating the same word consecutively.';
+
+  @override
+  String get adminNameDescriptionLike =>
+      'This looks like a full description rather than a concise category name.';
+
+  @override
+  String get adminNamesAppearIdentical =>
+      'Both marketplace names are identical. Confirm that this term is intentionally used in both languages.';
+
+  @override
+  String get adminConfirmSharedTechnicalTerm =>
+      'I confirm this shared technical term is intentional.';
+
+  @override
+  String get adminSharedNameAcknowledgementRequired =>
+      'Confirm that this shared technical term is intentionally used in both languages.';
+
+  @override
+  String get adminNameUnusuallyLong =>
+      'This name is unusually long for a category.';
+
+  @override
+  String get adminEnglishNameCasingWarning =>
+      'Review English capitalization; marketplace categories normally use title-style names.';
+
+  @override
+  String get adminRepeatedWhitespaceWarning =>
+      'Repeated whitespace will be saved as one ordinary space.';
+
+  @override
+  String get adminMaterialTitleWarning =>
+      'This looks like a material title rather than a reusable category name.';
+
+  @override
+  String get adminSimilarWordingWarning =>
+      'This wording is very similar to an existing category.';
+
+  @override
+  String get adminAssignMaterialFamily => 'Assign material family';
+
+  @override
+  String get adminChooseMaterialFamily => 'Choose a material family';
+
+  @override
+  String get adminSearchMaterialFamilies => 'Search material families';
+
+  @override
+  String get adminLoadingMaterialFamilies => 'Loading material families…';
+
+  @override
+  String get adminFailedMaterialFamilies => 'Failed to load material families.';
+
+  @override
+  String get adminNoMaterialFamilies =>
+      'No active material families are available.';
+
+  @override
+  String get adminMaterialFamilyRequired => 'Material family is required.';
+
+  @override
+  String get adminMaterialFamilyInactive =>
+      'Selected material family is inactive.';
+
+  @override
+  String get adminTaxonomyConceptWrongType =>
+      'Selected taxonomy concept is not a material family.';
+
+  @override
+  String get adminMaterialFamilyNotFound =>
+      'Selected material family is no longer available.';
+
+  @override
+  String get adminOwnershipHelper =>
+      'Select the canonical material family that best represents this new category.';
+
+  @override
+  String get adminOwnershipExplanation =>
+      'This mapping connects the category to the taxonomy and recommendation system.';
+
+  @override
+  String get adminOwnershipGuidance =>
+      'Review similar categories, then select the appropriate material family before approving.';
+
+  @override
+  String get adminApprovalSucceeded => 'Category request approved.';
+
+  @override
+  String get adminCancel => 'Cancel';
+
+  @override
+  String get adminConfirm => 'Confirm';
+
+  @override
+  String get adminDone => 'Done';
+
+  @override
+  String get adminExport => 'Export';
+
+  @override
+  String get adminFormat => 'Format';
+
+  @override
+  String get adminExcel => 'Excel';
+
+  @override
+  String get adminCsv => 'CSV';
+
+  @override
+  String get adminPdf => 'PDF';
+
+  @override
+  String get adminPrevious => 'Previous';
+
+  @override
+  String get adminNext => 'Next';
+
+  @override
+  String get adminSearch => 'Search';
+
+  @override
+  String get adminReset => 'Reset';
+
+  @override
+  String get adminResetFilters => 'Reset filters';
+
+  @override
+  String get adminActions => 'ACTIONS';
+
+  @override
+  String get adminView => 'View';
+
+  @override
+  String get adminViewDetails => 'View details';
+
+  @override
+  String get adminInviteUser => 'Invite user';
+
+  @override
+  String get adminSuspendAccount => 'Suspend account';
+
+  @override
+  String get adminReactivateAccount => 'Reactivate account';
+
+  @override
+  String adminSuspendAccountQuestion(String name) {
+    return 'Suspend $name?';
+  }
+
+  @override
+  String get adminSuspendAccountBody =>
+      'This will prevent the user from performing important actions, but their existing data and history will remain.';
+
+  @override
+  String get adminReasonRequired => 'Reason (required)';
+
+  @override
+  String get adminSuspensionReasonMinLength =>
+      'A suspension reason of at least 3 characters is required.';
+
+  @override
+  String get adminAccountSuspended => 'Account suspended.';
+
+  @override
+  String adminReactivateAccountBody(String name) {
+    return 'Restore access for $name? Their existing data and history were kept while suspended.';
+  }
+
+  @override
+  String get adminAccountReactivated => 'Account reactivated.';
+
+  @override
+  String get adminExportWebOnly => 'Export is available on Admin Web only.';
+
+  @override
+  String get adminNoUsersMatchFilters => 'No users match the current filters.';
+
+  @override
+  String get adminExportUsers => 'Export users';
+
+  @override
+  String get adminNoProjectBuildsWithLearningData =>
+      'No project builds with learning data.';
+
+  @override
+  String get adminExportReservations => 'Export reservations';
+
+  @override
+  String get adminNoReservationsMatchFilters =>
+      'No reservations match the current filters.';
+
+  @override
+  String get adminReservationDetails => 'Reservation details';
+
+  @override
+  String get adminOpenReport => 'Open report';
+
+  @override
+  String get adminOpenDelivery => 'Open delivery';
+
+  @override
+  String get adminExportIncidentReports => 'Export incident reports';
+
+  @override
+  String get adminNoIncidentReportsMatchFilters =>
+      'No incident reports match the current filters.';
+
+  @override
+  String get adminCouldNotLoadIncidentReports =>
+      'Could not load incident reports.';
+
+  @override
+  String get adminExportMaterials => 'Export materials';
+
+  @override
+  String get adminNoMaterialsMatchFilters =>
+      'No materials match the current filters.';
+
+  @override
+  String get adminExportMaterialReports => 'Export material reports';
+
+  @override
+  String get adminNoMaterialReportsMatchFilters =>
+      'No material reports match the current filters.';
+
+  @override
+  String get adminSupplierVerificationDetails =>
+      'Supplier verification details';
+
+  @override
+  String get adminApproveSupplierVerificationQuestion =>
+      'Approve supplier verification?';
+
+  @override
+  String get adminRequestChanges => 'Request changes';
+
+  @override
+  String get adminApproveSupplierVerification =>
+      'Approve supplier verification';
+
+  @override
+  String get sectionLearningSpotlightTitle => 'Learning spotlight';
+
+  @override
+  String get sectionLearningSpotlightSubtitle =>
+      'Start with project guides built from real reusable materials.';
+
+  @override
+  String get sectionLearningSpotlightEmpty =>
+      'No learning projects published yet';
+
+  @override
+  String get sectionLearningSpotlightEmptyDescription =>
+      'When learning projects are published, featured guides will appear here.';
+
+  @override
+  String get sectionHomeSuggestedMaterialsTitle => 'Suggested materials';
+
+  @override
+  String get sectionHomeSuggestedMaterialsSubtitle =>
+      'A few currently listed materials to help you start.';
+
+  @override
+  String get sectionHomeSuggestedMaterialsEmpty => 'No materials available yet';
+
+  @override
+  String get sectionHomeSuggestedMaterialsEmptyDescription =>
+      'When suppliers list reusable materials, a small set will appear here.';
+
+  @override
+  String get completeLearnerProfileTitle => 'Complete your learner profile';
+
+  @override
+  String get completeLearnerProfileSubtitle =>
+      'Help us personalize projects and material recommendations.';
+
+  @override
+  String get registerLearnerProfileTitle => 'Learner profile';
+
+  @override
+  String get registerSupplierProfileTitle => 'Supplier profile';
+
+  @override
+  String get registerBothProfilesHint =>
+      'You will complete learner and supplier details in the next steps.';
+
+  @override
+  String get registerFullNameLabel => 'Full name';
+
+  @override
+  String get registerYourNameHint => 'Your name';
+
+  @override
+  String get registerFullNameRequired => 'Full name is required';
+
+  @override
+  String get registerEmailAddressLabel => 'Email address';
+
+  @override
+  String get registerPhoneOptionalLabel => 'Phone number (optional)';
+
+  @override
+  String get registerConfirmPasswordRequired => 'Confirm password is required';
+
+  @override
+  String get registerLearnerTypeTitle => 'Learner type';
+
+  @override
+  String get registerSkillLevelTitle => 'Skill level';
+
+  @override
+  String get registerReviewAccount => 'Account';
+
+  @override
+  String get registerReviewIntent => 'Intent';
+
+  @override
+  String get registerReviewName => 'Name';
+
+  @override
+  String get registerReviewInterests => 'Interests';
+
+  @override
+  String get registerReviewGoals => 'Goals';
+
+  @override
+  String get registerReviewLocation => 'Location';
+
+  @override
+  String get registerReviewLearnerType => 'Learner type';
+
+  @override
+  String get registerReviewSkillLevel => 'Skill level';
+
+  @override
+  String get registerInterestsOptionalLabel => 'Interests (optional)';
+
+  @override
+  String get registerBioOptionalLabel => 'Bio (optional)';
+
+  @override
+  String get registerSkillLevelHelper =>
+      'How comfortable are you with building learning projects?';
+
+  @override
+  String get registerLearnerTypeRequired => 'Learner type is required';
+
+  @override
+  String get registerSkillLevelRequired => 'Skill level is required';
+
+  @override
+  String get registerSelectLearnerType => 'Select your learner type';
+
+  @override
+  String get registerSelectSkillLevel => 'Select your skill level';
+
+  @override
+  String get registerBioHint =>
+      'Tell others a little about your learning goals';
+
+  @override
+  String get registerSupplierNextHint =>
+      'Next, we\'ll help you set up your supplier profile too.';
+
+  @override
+  String get authLearnLabel => 'Learn';
+
+  @override
+  String get authReuseLabel => 'Reuse';
+
+  @override
+  String get authBuildLabel => 'Build';
+
+  @override
+  String get authMaterialsReusedLabel => 'Materials reused';
+
+  @override
+  String get authProjectsLaunchedLabel => 'Projects launched';
+
+  @override
+  String get authRegistrationMovedTitle => 'Registration has moved';
+
+  @override
+  String get authRegistrationMovedSubtitle =>
+      'ImpactLoop now completes sign-up in one place. Redirecting you to the registration wizard…';
+
+  @override
+  String get authBrandTitle => 'ImpactLoop';
+
+  @override
+  String get homeSuggestedMaterialsLoadError =>
+      'Unable to load suggested materials';
+
+  @override
+  String get homeSuggestedMaterialsLoadErrorSubtitle =>
+      'The home page is still available. Try again when the materials API is running.';
+
+  @override
+  String get homeLearningSpotlightLoadError =>
+      'Unable to load learning projects';
+
+  @override
+  String get homeLearningSpotlightLoadErrorSubtitle =>
+      'The home page is still available. Try again when the Learning Hub API is running.';
 }

@@ -45,7 +45,7 @@ class AdminSupplierVerificationPage extends ConsumerWidget {
             FilledButton(
               onPressed: () =>
                   ref.invalidate(adminSupplierVerificationsProvider),
-              child: Text(l.t('Retry', 'إعادة المحاولة')),
+              child: Text(l.retry),
             ),
           ],
         ),
@@ -416,7 +416,7 @@ class _FiltersBar extends StatelessWidget {
   Widget _resetButton(AdminL10n l) => OutlinedButton.icon(
     onPressed: onReset,
     icon: const Icon(Icons.restart_alt_outlined, size: 18),
-    label: Text(l.t('Reset', 'إعادة تعيين')),
+    label: Text(l.reset),
   );
 }
 
@@ -1169,12 +1169,13 @@ class _SupplierActionArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AdminL10n.of(context);
     final normalized = status.toUpperCase();
 
     final detailsButton = OutlinedButton.icon(
       onPressed: onViewDetails,
       icon: const Icon(Icons.visibility_outlined, size: 16),
-      label: const Text('View details'),
+      label: Text(l.viewDetails),
       style: AppStatusButtonStyle.outlined(context, AppStatusTone.primary)
           .merge(
             OutlinedButton.styleFrom(
@@ -1194,27 +1195,27 @@ class _SupplierActionArea extends StatelessWidget {
       if (normalized != 'APPROVED')
         PopupMenuItem<VoidCallback>(
           value: onApprove,
-          child: const _OverflowMenuLabel(
+          child: _OverflowMenuLabel(
             icon: Icons.check_circle_outline,
-            label: 'Approve',
+            label: l.approve,
             tone: AppStatusTone.success,
           ),
         ),
       if (normalized != 'CHANGES_REQUESTED')
         PopupMenuItem<VoidCallback>(
           value: onRequestChanges,
-          child: const _OverflowMenuLabel(
+          child: _OverflowMenuLabel(
             icon: Icons.edit_note_outlined,
-            label: 'Request changes',
+            label: l.requestChanges,
             tone: AppStatusTone.warning,
           ),
         ),
       if (normalized != 'REJECTED')
         PopupMenuItem<VoidCallback>(
           value: onReject,
-          child: const _OverflowMenuLabel(
+          child: _OverflowMenuLabel(
             icon: Icons.cancel_outlined,
-            label: 'Reject',
+            label: l.reject,
             tone: AppStatusTone.danger,
           ),
         ),
@@ -1416,6 +1417,7 @@ class _VerificationDetailsDialogState
 
   @override
   Widget build(BuildContext context) {
+    final l = AdminL10n.of(context);
     final dateFormat = DateFormat.yMMMd().add_jm();
 
     return AppDialogShell(
@@ -1423,7 +1425,7 @@ class _VerificationDetailsDialogState
         future: _detailFuture,
         builder: (context, snapshot) => snapshot.hasData
             ? _VerificationHeader(detail: snapshot.data!)
-            : const Text('Supplier verification details'),
+            : Text(l.supplierVerificationDetails),
       ),
       maxWidth: 880,
       maxHeightFactor: 0.9,
@@ -1448,7 +1450,7 @@ class _VerificationDetailsDialogState
                   const SizedBox(height: 12),
                   FilledButton(
                     onPressed: () => setState(_loadDetail),
-                    child: const Text('Retry'),
+                    child: Text(l.retry),
                   ),
                 ],
               );
@@ -1596,12 +1598,12 @@ class _VerificationDetailsDialogState
               context,
               AppStatusTone.warning,
             ),
-            child: const Text('Request changes'),
+            child: Text(l.requestChanges),
           ),
           OutlinedButton(
             onPressed: _isSubmitting ? null : _reject,
             style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
-            child: const Text('Reject'),
+            child: Text(l.reject),
           ),
           FilledButton(
             onPressed: _isSubmitting ? null : _approve,
@@ -1612,7 +1614,7 @@ class _VerificationDetailsDialogState
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Approve'),
+                : Text(l.approve),
           ),
         ],
       ),
@@ -1792,23 +1794,27 @@ class _VerificationHistory extends StatelessWidget {
 Future<bool> _confirmApprove(BuildContext context) async {
   final result = await showDialog<bool>(
     context: context,
-    builder: (context) => AppDialogShell(
-      title: const Text('Approve supplier verification?'),
-      content: const Text(
-        'This will mark the organization as verified and notify the supplier owner.',
-      ),
-      footer: AppDialogFooter.decision(
-        secondaryAction: TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+    builder: (dialogContext) {
+      final l = AdminL10n.of(dialogContext);
+      return AppDialogShell(
+        title: Text(l.approveSupplierVerificationQuestion),
+        content: Text(l.approveSupplierVerification),
+        footer: AppDialogFooter.decision(
+          secondaryAction: TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l.cancel),
+          ),
+          primaryAction: FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: AppStatusButtonStyle.filled(
+              dialogContext,
+              AppStatusTone.success,
+            ),
+            child: Text(l.approve),
+          ),
         ),
-        primaryAction: FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
-          child: const Text('Approve'),
-        ),
-      ),
-    ),
+      );
+    },
   );
 
   return result ?? false;
@@ -1866,6 +1872,7 @@ class _AdminNoteDialogState extends State<_AdminNoteDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final adminL10n = AdminL10n.of(context);
     return AppDialogShell(
       title: Text(widget.title),
       content: Column(
@@ -1878,7 +1885,7 @@ class _AdminNoteDialogState extends State<_AdminNoteDialog> {
             autofocus: true,
             decoration: InputDecoration(
               labelText: widget.required
-                  ? 'Reason (required)'
+                  ? adminL10n.reasonRequired
                   : 'Note (optional)',
               border: const OutlineInputBorder(),
               errorText: _errorText,
@@ -1895,7 +1902,7 @@ class _AdminNoteDialogState extends State<_AdminNoteDialog> {
         primaryAction: FilledButton(
           onPressed: _submit,
           style: AppStatusButtonStyle.filled(context, widget.tone),
-          child: const Text('Confirm'),
+          child: Text(adminL10n.confirm),
         ),
       ),
     );

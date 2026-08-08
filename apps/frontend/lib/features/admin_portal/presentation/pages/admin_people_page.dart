@@ -15,6 +15,7 @@ import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/supplier_verification_status_presentation.dart';
 import '../../data/admin_people_api.dart';
 import '../../data/admin_reservations_api.dart' show AdminExportFormatEligibility;
+import '../l10n/admin_l10n.dart';
 import '../theme/admin_decoration_set.dart';
 import '../widgets/admin_empty_state.dart';
 import '../widgets/admin_kpi_card.dart' show AdminKpiCard, AdminTypography;
@@ -329,43 +330,44 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
     final reasonController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AppDialogShell(
-        title: const Text('Suspend account'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Suspend ${item.displayName}?'),
-            const SizedBox(height: AppSpacing.sm),
-            const Text(
-              'This will prevent the user from performing important actions, but their existing data and history will remain.',
-            ),
-            const SizedBox(height: AppSpacing.md - AppSpacing.xs),
-            TextField(
-              controller: reasonController,
-              decoration: const InputDecoration(
-                labelText: 'Reason (required)',
-                border: OutlineInputBorder(),
+      builder: (dialogContext) {
+        final adminL10n = AdminL10n.of(dialogContext);
+        return AppDialogShell(
+          title: Text(adminL10n.suspendAccount),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(adminL10n.suspendAccountQuestion(item.displayName)),
+              const SizedBox(height: AppSpacing.sm),
+              Text(adminL10n.suspendAccountBody),
+              const SizedBox(height: AppSpacing.md - AppSpacing.xs),
+              TextField(
+                controller: reasonController,
+                decoration: InputDecoration(
+                  labelText: adminL10n.reasonRequired,
+                  border: const OutlineInputBorder(),
+                ),
+                maxLines: 3,
               ),
-              maxLines: 3,
-            ),
-          ],
-        ),
-        footer: AppDialogFooter.decision(
-          secondaryAction: TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            ],
           ),
-          primaryAction: FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            style: AppStatusButtonStyle.filled(
-              dialogContext,
-              AppStatusTone.warning,
+          footer: AppDialogFooter.decision(
+            secondaryAction: TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(adminL10n.cancel),
             ),
-            child: const Text('Suspend account'),
+            primaryAction: FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              style: AppStatusButtonStyle.filled(
+                dialogContext,
+                AppStatusTone.warning,
+              ),
+              child: Text(adminL10n.suspendAccount),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
 
     if (confirmed != true) {
@@ -377,12 +379,9 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
     reasonController.dispose();
     if (reason.length < 3) {
       if (!mounted) return;
+      final adminL10n = AdminL10n.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'A suspension reason of at least 3 characters is required.',
-          ),
-        ),
+        SnackBar(content: Text(adminL10n.suspensionReasonMinLength)),
       );
       return;
     }
@@ -391,33 +390,34 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
       () => ref
           .read(adminPeopleApiProvider)
           .suspendPerson(userId: item.userId, reason: reason),
-      successMessage: 'Account suspended.',
+      successMessage: AdminL10n.of(context).accountSuspended,
     );
   }
 
   Future<void> _confirmReactivate(AdminPeopleListItem item) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AppDialogShell(
-        title: const Text('Reactivate account'),
-        content: Text(
-          'Restore access for ${item.displayName}? Their existing data and history were kept while suspended.',
-        ),
-        footer: AppDialogFooter.decision(
-          secondaryAction: TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          primaryAction: FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            style: AppStatusButtonStyle.filled(
-              dialogContext,
-              AppStatusTone.primary,
+      builder: (dialogContext) {
+        final adminL10n = AdminL10n.of(dialogContext);
+        return AppDialogShell(
+          title: Text(adminL10n.reactivateAccount),
+          content: Text(adminL10n.reactivateAccountBody(item.displayName)),
+          footer: AppDialogFooter.decision(
+            secondaryAction: TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(adminL10n.cancel),
             ),
-            child: const Text('Reactivate account'),
+            primaryAction: FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              style: AppStatusButtonStyle.filled(
+                dialogContext,
+                AppStatusTone.primary,
+              ),
+              child: Text(adminL10n.reactivateAccount),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
 
     if (confirmed != true) return;
@@ -426,7 +426,7 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
       () => ref
           .read(adminPeopleApiProvider)
           .reactivatePerson(userId: item.userId),
-      successMessage: 'Account reactivated.',
+      successMessage: AdminL10n.of(context).accountReactivated,
     );
   }
 
@@ -460,9 +460,7 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
     if (!kIsWeb) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Export is available on Admin Web only.'),
-        ),
+        SnackBar(content: Text(AdminL10n.of(context).exportWebOnly)),
       );
       return;
     }
@@ -483,8 +481,8 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
 
       if (preflight.count == 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No users match the current filters.'),
+          SnackBar(
+            content: Text(AdminL10n.of(context).noUsersMatchFilters),
           ),
         );
         return;
@@ -666,6 +664,7 @@ class _UsersPageHeader extends StatelessWidget {
     final palette = context.adminPalette;
     final width = MediaQuery.sizeOf(context).width;
     final compact = width < 720;
+    final adminL10n = AdminL10n.of(context);
 
     final titleBlock = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -700,7 +699,7 @@ class _UsersPageHeader extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.download_outlined, size: 18),
-            label: Text(exportLoading ? 'Preparing…' : 'Export'),
+            label: Text(exportLoading ? 'Preparing…' : adminL10n.exportAction),
             style: OutlinedButton.styleFrom(
               foregroundColor: palette.textPrimary,
               side: BorderSide(color: palette.cardBorder),
@@ -715,7 +714,7 @@ class _UsersPageHeader extends StatelessWidget {
     final inviteButton = FilledButton.icon(
       onPressed: onInvite,
       icon: const Icon(Icons.person_add_outlined, size: 18),
-      label: const Text('Invite user'),
+      label: Text(adminL10n.inviteUser),
       style: AppStatusButtonStyle.filled(
         context,
         AppStatusTone.primary,
@@ -979,6 +978,7 @@ class _UsersFilterPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final palette = context.adminPalette;
+    final adminL10n = AdminL10n.of(context);
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -1036,7 +1036,7 @@ class _UsersFilterPanel extends StatelessWidget {
             width: compact ? double.infinity : 200,
             child: DropdownMenu<String>(
               key: ValueKey('status-$statusFilter'),
-              label: const Text('Status'),
+              label: Text(adminL10n.status),
               initialSelection: statusFilter,
               expandedInsets: EdgeInsets.zero,
               dropdownMenuEntries: const [
@@ -1058,7 +1058,7 @@ class _UsersFilterPanel extends StatelessWidget {
           final searchButton = FilledButton.icon(
             onPressed: onSearch,
             icon: const Icon(Icons.search, size: 18),
-            label: const Text('Search'),
+            label: Text(adminL10n.search),
             style: AppStatusButtonStyle.filled(
               context,
               AppStatusTone.primary,
@@ -1073,7 +1073,7 @@ class _UsersFilterPanel extends StatelessWidget {
           final resetButton = OutlinedButton.icon(
             onPressed: onReset,
             icon: const Icon(Icons.refresh, size: 18),
-            label: const Text('Reset'),
+            label: Text(adminL10n.reset),
           );
 
           if (compact) {
@@ -1132,6 +1132,7 @@ class _UsersList extends StatelessWidget {
     final colors = AppThemeColors.of(context);
     final palette = context.adminPalette;
     final compact = MediaQuery.sizeOf(context).width < 900;
+    final adminL10n = AdminL10n.of(context);
     final totalLabel =
         '${pagination.total} user${pagination.total == 1 ? '' : 's'}';
     final rangeLabel = pagination.total == 0
@@ -1164,13 +1165,13 @@ class _UsersList extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           _PaginationArrow(
             icon: Icons.chevron_left,
-            tooltip: 'Previous page',
+            tooltip: adminL10n.previous,
             onPressed: onPreviousPage,
           ),
           const SizedBox(width: AppSpacing.xs),
           _PaginationArrow(
             icon: Icons.chevron_right,
-            tooltip: 'Next page',
+            tooltip: adminL10n.next,
             onPressed: onNextPage,
           ),
         ],
@@ -1300,6 +1301,7 @@ class _UsersColumnHeaderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final adminL10n = AdminL10n.of(context);
     final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
       color: colors.textMuted,
       fontWeight: FontWeight.w700,
@@ -1326,7 +1328,11 @@ class _UsersColumnHeaderRow extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           SizedBox(
             width: _actionsColumnWidth,
-            child: Text('ACTIONS', textAlign: TextAlign.end, style: labelStyle),
+            child: Text(
+              adminL10n.actions.toUpperCase(),
+              textAlign: TextAlign.end,
+              style: labelStyle,
+            ),
           ),
         ],
       ),
@@ -1867,11 +1873,12 @@ class _UserActionArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasOverflow = onSuspend != null || onReactivate != null;
+    final adminL10n = AdminL10n.of(context);
 
     final detailsButton = OutlinedButton.icon(
       onPressed: onDetails,
       icon: const Icon(Icons.visibility_outlined, size: 16),
-      label: const Text('View details'),
+      label: Text(adminL10n.viewDetails),
       style: AppStatusButtonStyle.outlined(context, AppStatusTone.primary)
           .merge(
             OutlinedButton.styleFrom(
@@ -1903,7 +1910,7 @@ class _UserActionArea extends StatelessWidget {
                   value: onSuspend,
                   child: _OverflowMenuLabel(
                     icon: Icons.pause_circle_outline,
-                    label: 'Suspend account',
+                    label: adminL10n.suspendAccount,
                     tone: AppStatusTone.warning,
                   ),
                 ),
@@ -1912,7 +1919,7 @@ class _UserActionArea extends StatelessWidget {
                   value: onReactivate,
                   child: _OverflowMenuLabel(
                     icon: Icons.play_circle_outline,
-                    label: 'Reactivate account',
+                    label: adminL10n.reactivateAccount,
                     tone: AppStatusTone.success,
                   ),
                 ),
@@ -2229,6 +2236,7 @@ class _AdminLearningActivitySectionState
 
   @override
   Widget build(BuildContext context) {
+    final adminL10n = AdminL10n.of(context);
     return AppDialogSection(
       title: 'Learning activity',
       icon: Icons.school_outlined,
@@ -2243,7 +2251,7 @@ class _AdminLearningActivitySectionState
           else if (_error != null)
             Text(_error!)
           else if (_builds.isEmpty)
-            const Text('No project builds with learning data.')
+            Text(adminL10n.noProjectBuildsWithLearningData)
           else ...[
             ..._builds.take(5).map((build) {
               final title = build['projectTitle']?.toString() ?? 'Project';
@@ -2265,7 +2273,7 @@ class _AdminLearningActivitySectionState
                       onPressed: buildId.isEmpty
                           ? null
                           : () => _openLearning(buildId),
-                      child: const Text('View'),
+                      child: Text(adminL10n.view),
                     ),
                   ],
                 ),
@@ -2466,6 +2474,7 @@ class _AdminPeopleExportDialogState extends State<AdminPeopleExportDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final adminL10n = AdminL10n.of(context);
     final limitMessage = (_selectedEligibility?.exceedsLimit ?? false)
         ? 'This export matches ${widget.count} users, which exceeds the '
               'limit of ${_selectedEligibility?.maxAllowed ?? 0}. Narrow your '
@@ -2473,7 +2482,7 @@ class _AdminPeopleExportDialogState extends State<AdminPeopleExportDialog> {
         : null;
 
     return AppDialogShell(
-      title: const Text('Export users'),
+      title: Text(adminL10n.exportUsers),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2488,12 +2497,12 @@ class _AdminPeopleExportDialogState extends State<AdminPeopleExportDialog> {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 16),
-          const Text('Format'),
+          Text(adminL10n.format),
           const SizedBox(height: 8),
           SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'xlsx', label: Text('Excel')),
-              ButtonSegment(value: 'csv', label: Text('CSV')),
+            segments: [
+              ButtonSegment(value: 'xlsx', label: Text(adminL10n.excel)),
+              ButtonSegment(value: 'csv', label: Text(adminL10n.csv)),
             ],
             selected: {_selectedFormat},
             onSelectionChanged: _isDownloading
@@ -2529,7 +2538,7 @@ class _AdminPeopleExportDialogState extends State<AdminPeopleExportDialog> {
           onPressed: _isDownloading
               ? null
               : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(adminL10n.cancel),
         ),
         primaryAction: FilledButton(
           onPressed: _canExport ? _confirm : null,
@@ -2539,7 +2548,7 @@ class _AdminPeopleExportDialogState extends State<AdminPeopleExportDialog> {
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Export'),
+              : Text(adminL10n.exportAction),
         ),
       ),
     );

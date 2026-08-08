@@ -222,7 +222,7 @@ class _ApprovalsSummaryStrip extends ConsumerWidget {
             const SizedBox(width: 10),
             FilledButton(
               onPressed: () => ref.invalidate(adminApprovalsSummaryProvider),
-              child: const Text('Retry'),
+              child: Text(AdminL10n.of(context).retry),
             ),
           ],
         ),
@@ -650,7 +650,7 @@ class _CategoryRequestsPanel extends ConsumerWidget {
             child: OutlinedButton(
               onPressed: () =>
                   ref.invalidate(adminApprovalsCategoryRequestsProvider),
-              child: const Text('Retry'),
+              child: Text(AdminL10n.of(context).retry),
             ),
           ),
         ],
@@ -714,7 +714,7 @@ class _PriceRequestsPanel extends ConsumerWidget {
             child: OutlinedButton(
               onPressed: () =>
                   ref.invalidate(adminApprovalsPriceRequestsProvider),
-              child: const Text('Retry'),
+              child: Text(AdminL10n.of(context).retry),
             ),
           ),
         ],
@@ -1352,7 +1352,9 @@ Future<void> _quickRejectCategory(
 
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (context) => AppDialogShell(
+    builder: (dialogContext) {
+      final l = AdminL10n.of(dialogContext);
+      return AppDialogShell(
       title: const Text('Reject category'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1382,16 +1384,17 @@ Future<void> _quickRejectCategory(
       ),
       footer: AppDialogFooter.decision(
         secondaryAction: TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: Text(l.cancel),
         ),
         primaryAction: FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
-          child: const Text('Reject'),
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          style: AppStatusButtonStyle.filled(dialogContext, AppStatusTone.danger),
+          child: Text(l.reject),
         ),
       ),
-    ),
+    );
+    },
   );
 
   final reason = reasonController.text.trim();
@@ -1493,12 +1496,12 @@ Future<void> _quickApprovePrice(
       footer: AppDialogFooter.decision(
         secondaryAction: TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+          child: Text(AdminL10n.of(context).cancel),
         ),
         primaryAction: FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
           style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
-          child: const Text('Approve'),
+          child: Text(AdminL10n.of(context).approve),
         ),
       ),
     ),
@@ -1580,12 +1583,12 @@ Future<void> _quickRejectPrice(
       footer: AppDialogFooter.decision(
         secondaryAction: TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+          child: Text(AdminL10n.of(context).cancel),
         ),
         primaryAction: FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
           style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
-          child: const Text('Reject'),
+          child: Text(AdminL10n.of(context).reject),
         ),
       ),
     ),
@@ -1978,12 +1981,12 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
         footer: AppDialogFooter.decision(
           secondaryAction: TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(AdminL10n.of(context).cancel),
           ),
           primaryAction: FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
-            child: const Text('Reject'),
+            child: Text(AdminL10n.of(context).reject),
           ),
         ),
       ),
@@ -2187,6 +2190,7 @@ class _PriceMetadataStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final l = AdminL10n.of(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -2210,7 +2214,7 @@ class _PriceMetadataStrip extends StatelessWidget {
               _MetadataItem(
                 icon: Icons.access_time_rounded,
                 tone: AppStatusTone.warning,
-                label: 'Status',
+                label: l.status,
                 valueWidget: AppStatusBadge(
                   label: _formatApprovalStatus(item.status),
                   tone: reviewStatusTone(item.status),
@@ -2843,6 +2847,7 @@ class _PriceDialogFooter extends StatelessWidget {
       AppStatusTone.danger,
     ).foreground;
 
+    final l = AdminL10n.of(context);
     final closeButton = SizedBox(
       height: 46,
       child: OutlinedButton(
@@ -2855,7 +2860,7 @@ class _PriceDialogFooter extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
           ),
         ),
-        child: const Text('Close'),
+        child: Text(l.close),
       ),
     );
 

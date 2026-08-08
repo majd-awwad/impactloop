@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/l10n.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../widgets/auth_form_card.dart';
 import '../widgets/auth_header.dart';
@@ -21,10 +22,9 @@ class CompleteLearnerProfileMobileView extends StatelessWidget {
       formContent: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const AuthHeader(
-            title: 'Complete your learner profile',
-            subtitle:
-                'Help us personalize projects and material recommendations.',
+          AuthHeader(
+            title: context.l10n.completeLearnerProfileTitle,
+            subtitle: context.l10n.completeLearnerProfileSubtitle,
           ),
           const SizedBox(height: AppSpacing.lg),
           AuthFormCard(

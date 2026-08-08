@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../l10n/l10n.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../widgets/auth_entry_branding_panel.dart';
 import '../widgets/auth_form_card.dart';
@@ -38,10 +39,9 @@ class _DeprecatedOnboardingPageState extends State<DeprecatedOnboardingPage> {
       formContent: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const AuthHeader(
-            title: 'Registration has moved',
-            subtitle:
-                'ImpactLoop now completes sign-up in one place. Redirecting you to the registration wizard…',
+          AuthHeader(
+            title: context.l10n.authRegistrationMovedTitle,
+            subtitle: context.l10n.authRegistrationMovedSubtitle,
           ),
           const SizedBox(height: AppSpacing.lg),
           const AuthFormCard(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../l10n/l10n.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -23,6 +24,7 @@ class LearningSpotlightSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final spotlightState = ref.watch(
       learningProjectsProvider(_homeSpotlightQuery),
     );
@@ -31,13 +33,12 @@ class LearningSpotlightSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         HomeSectionHeader(
-          title: 'Learning spotlight',
-          subtitle:
-              'Start with project guides built from real reusable materials.',
+          title: l10n.sectionLearningSpotlightTitle,
+          subtitle: l10n.sectionLearningSpotlightSubtitle,
           action: HomeSectionActionButton(
             onPressed: () => context.go('/learning'),
             icon: const Icon(Icons.arrow_forward_rounded),
-            label: 'Browse all',
+            label: l10n.browseAll,
           ),
         ),
         const SizedBox(height: AppSpacing.md),
@@ -53,10 +54,9 @@ class LearningSpotlightSection extends ConsumerWidget {
             if (projects.isEmpty) {
               return EmptyActivityCard(
                 icon: Icons.school_outlined,
-                title: 'No learning projects published yet',
-                description:
-                    'When learning projects are published, featured guides will appear here.',
-                actionLabel: 'Open Learning Hub',
+                title: l10n.sectionLearningSpotlightEmpty,
+                description: l10n.sectionLearningSpotlightEmptyDescription,
+                actionLabel: l10n.openLearningHub,
                 onAction: () => context.go('/learning'),
               );
             }
@@ -114,6 +114,7 @@ class _LearningSpotlightError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final palette = MaterialsUiPalette.of(context);
 
     return Container(
@@ -133,14 +134,14 @@ class _LearningSpotlightError extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Unable to load learning projects',
+                  l10n.homeLearningSpotlightLoadError,
                   style: AppTextStyles.title(
                     context,
                   ).copyWith(color: palette.textPrimary, letterSpacing: 0),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'The home page is still available. Try again when the Learning Hub API is running.',
+                  l10n.homeLearningSpotlightLoadErrorSubtitle,
                   style: AppTextStyles.body(context).copyWith(
                     color: palette.textSecondary,
                     height: 1.45,
@@ -154,7 +155,7 @@ class _LearningSpotlightError extends StatelessWidget {
                     context,
                     AppStatusTone.primary,
                   ),
-                  child: const Text('Retry'),
+                  child: Text(l10n.retry),
                 ),
               ],
             ),

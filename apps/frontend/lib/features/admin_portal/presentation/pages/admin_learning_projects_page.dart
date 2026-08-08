@@ -506,6 +506,7 @@ class _FiltersPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final l = AdminL10n.of(context);
     final statusValue = safeDropdownValue(filters.status, [
       'ALL',
       ...filterOptions.statuses,
@@ -550,7 +551,7 @@ class _FiltersPanel extends StatelessWidget {
                 ),
               ),
               AdminCompactFilterDropdown(
-                label: 'Status',
+                label: l.status,
                 value: statusValue,
                 entries: [
                   const DropdownMenuEntry(value: 'ALL', label: 'All statuses'),
@@ -616,12 +617,12 @@ class _FiltersPanel extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: onSearch,
                 icon: const Icon(Icons.search, size: 18),
-                label: const Text('Search'),
+                label: Text(l.search),
               ),
               OutlinedButton.icon(
                 onPressed: onReset,
                 icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
-                label: const Text('Reset'),
+                label: Text(l.reset),
               ),
               OutlinedButton.icon(
                 onPressed: onRefresh,
@@ -896,6 +897,7 @@ class _PaginationRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final l = AdminL10n.of(context);
     return Wrap(
       alignment: WrapAlignment.spaceBetween,
       crossAxisAlignment: WrapCrossAlignment.center,
@@ -911,9 +913,9 @@ class _PaginationRow extends StatelessWidget {
           children: [
             OutlinedButton(
               onPressed: onPrevious,
-              child: const Text('Previous'),
+              child: Text(l.previous),
             ),
-            OutlinedButton(onPressed: onNext, child: const Text('Next')),
+            OutlinedButton(onPressed: onNext, child: Text(l.next)),
           ],
         ),
       ],
@@ -1287,7 +1289,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
               onPressed: _aiLoading
                   ? null
                   : () => _loadSavedAiReview(force: true),
-              child: Text(l.t('Retry', 'إعادة المحاولة')),
+              child: Text(l.retry),
             ),
           ),
         ],
@@ -1346,7 +1348,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                     child: OutlinedButton(
                       key: const Key('admin-ai-review-retry'),
                       onPressed: _aiLoading ? null : () => _runAiReview(detail),
-                      child: Text(l.t('Retry', 'إعادة المحاولة')),
+                      child: Text(l.retry),
                     ),
                   ),
                 ],
@@ -1402,6 +1404,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
     AppStatusTone tone, {
     bool keepCancel = false,
   }) async {
+    final l = AdminL10n.of(context);
     final controller = TextEditingController();
     final result = await showDialog<String>(
       context: context,
@@ -1419,7 +1422,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
             ? AppDialogFooter.decision(
                 secondaryAction: TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
+                  child: Text(l.cancel),
                 ),
                 primaryAction: FilledButton(
                   onPressed: () {
@@ -1428,7 +1431,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                     Navigator.of(context).pop(value);
                   },
                   style: AppStatusButtonStyle.filled(context, tone),
-                  child: const Text('Confirm'),
+                  child: Text(l.confirm),
                 ),
               )
             : AppDialogFooter.form(
@@ -1439,7 +1442,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                     Navigator.of(context).pop(value);
                   },
                   style: AppStatusButtonStyle.filled(context, tone),
-                  child: const Text('Confirm'),
+                  child: Text(l.confirm),
                 ),
               ),
       ),
@@ -1465,6 +1468,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
     String action,
     AdminLearningProjectDetail detail,
   ) async {
+    final l = AdminL10n.of(context);
     final api = ref.read(adminLearningProjectsApiProvider);
     try {
       switch (action) {
@@ -1507,7 +1511,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                 footer: AppDialogFooter.decision(
                   secondaryAction: TextButton(
                     onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Cancel'),
+                    child: Text(l.cancel),
                   ),
                   primaryAction: FilledButton(
                     onPressed: () => Navigator.of(context).pop(true),
@@ -1530,7 +1534,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                 footer: AppDialogFooter.decision(
                   secondaryAction: TextButton(
                     onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Cancel'),
+                    child: Text(l.cancel),
                   ),
                   primaryAction: FilledButton(
                     onPressed: () => Navigator.of(context).pop(true),
@@ -1538,7 +1542,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                       context,
                       AppStatusTone.success,
                     ),
-                    child: const Text('Approve'),
+                    child: Text(l.approve),
                   ),
                 ),
               ),
@@ -1571,7 +1575,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
           break;
         case 'request-changes':
           final reason = await _promptReason(
-            'Request changes',
+            l.requestChanges,
             AppStatusTone.warning,
           );
           if (reason == null || !mounted) return;
@@ -1620,6 +1624,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
 
   Widget _buildLegacy(BuildContext context) {
     final palette = context.adminPalette;
+    final l = AdminL10n.of(context);
     ButtonStyle moderationActionStyle(
       AppStatusTone tone, {
       bool filled = false,
@@ -1665,7 +1670,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                     const SizedBox(height: 12),
                     FilledButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Close'),
+                      child: Text(l.close),
                     ),
                   ],
                 ),
@@ -2055,20 +2060,20 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                             AppStatusTone.success,
                             filled: true,
                           ),
-                          child: const Text('Approve'),
+                          child: Text(l.approve),
                         ),
                       if (actions.canRequestChanges)
                         OutlinedButton(
                           onPressed: () =>
                               _runAction('request-changes', detail),
                           style: moderationActionStyle(AppStatusTone.warning),
-                          child: const Text('Request changes'),
+                          child: Text(l.requestChanges),
                         ),
                       if (actions.canReject)
                         OutlinedButton(
                           onPressed: () => _runAction('reject', detail),
                           style: moderationActionStyle(AppStatusTone.danger),
-                          child: const Text('Reject'),
+                          child: Text(l.reject),
                         ),
                       if (actions.canHide)
                         OutlinedButton(
