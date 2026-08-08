@@ -72,7 +72,9 @@ const EXCLUDED = [
   'src/modules/recommendations/recommendation-feature-readiness.test.ts',
   'scripts/evaluate-slice-4j-a-ephemeral-fixtures.integration.test.ts',
   'scripts/evaluate-slice-4j-a.test.ts',
+  'scripts/export-local-ml-training-snapshot.recommendation-db.test.ts',
   'scripts/recommendations-demo-preflight.test.ts',
+  'scripts/recommendations-ml-smoke-local.recommendation-db.test.ts',
 ];
 
 const MODULE_WATCH_DIRS = [

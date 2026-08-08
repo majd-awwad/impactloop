@@ -158,6 +158,9 @@ jobs:
       - name: Apply Prisma migrations
         run: npm exec -w apps/backend -- prisma migrate deploy
 
+      - name: Seed CI database fixtures
+        run: npm run seed:ci -w apps/backend
+
       - name: Portable recommendation database tests
         run: npm run test:recommendations:ci:db -w apps/backend
 

@@ -24,6 +24,7 @@
     "test:baseline:ci:pure": "node scripts/ci/run-baseline-ci-tests.mjs pure",
     "test:baseline:ci:db": "node scripts/ci/recommendation-ci-guard.mjs database && node scripts/ci/run-baseline-ci-tests.mjs db",
     "guard:baseline:ci:database": "node scripts/ci/recommendation-ci-guard.mjs database",
+    "seed:ci": "node scripts/ci/recommendation-ci-guard.mjs database && tsx scripts/ci/seed-ci-database.ts",
     "evaluate:ranking-delta": "tsx scripts/evaluate-ranking-delta.ts",
     "evaluate:4j-a": "tsx scripts/evaluate-slice-4j-a.ts",
     "recommendations:demo:preflight": "tsx scripts/recommendations-demo-preflight.ts",

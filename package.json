@@ -18,6 +18,7 @@
     "ci:baseline:db": "npm run test:baseline:ci:db -w apps/backend",
     "ci:baseline:build": "npm run backend:build",
     "ci:baseline:database-guard": "npm run guard:baseline:ci:database -w apps/backend",
+    "ci:baseline:seed": "npm run seed:ci -w apps/backend",
     "recommendations:ml:train:local": "npm run recommendations:ml:train:local -w apps/backend --",
     "recommendations:ml:smoke:local": "npm run recommendations:ml:smoke:local -w apps/backend --"
   },

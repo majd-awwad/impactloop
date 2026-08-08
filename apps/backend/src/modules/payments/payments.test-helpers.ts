@@ -2,7 +2,7 @@ import { prisma } from '../../database/prisma.js';
 import { hashPassword } from '../../utils/password.js';
 import { Prisma } from '../../generated/prisma/client.js';
 
-export const PAY_TEST_MARKER = '[pay01-test]';
+export const PAY_TEST_MARKER = '[pay01-fixture]';
 
 export type PayTestIds = {
   users: string[];

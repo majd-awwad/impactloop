@@ -20,7 +20,6 @@ const PURE = [
   'src/modules/ai/safety/ai-hazard-taxonomy.test.ts',
   'src/modules/health/health.ready.test.ts',
   'src/modules/health/database-health.probe.test.ts',
-  'src/modules/handover-codes/handover-codes.test.ts',
   'src/modules/payments/payments.env.test.ts',
 ];
 
@@ -39,8 +38,8 @@ const DB = [
   'src/modules/payments/payments.pay06-e2e.test.ts',
   'src/modules/payments/payments.pay06-http-auth.test.ts',
   'src/modules/deliveries/deliveries.service.test.ts',
+  'src/modules/handover-codes/handover-codes.test.ts',
   'src/modules/ai/ai.test.ts',
-  'src/modules/ai/ai.http-closure.test.ts',
 ];
 
 const fail = (message) => {
