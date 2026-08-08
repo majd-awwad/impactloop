@@ -1,4 +1,5 @@
 import { prisma } from '../../database/prisma.js';
+import type { Prisma } from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
 import { normalizeSearchText } from '../../utils/normalize-search-text.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
@@ -58,9 +59,10 @@ const resolveLocationSnapshot = async (
     locationCity?: string;
     locationArea?: string | null;
   },
+  client: Prisma.TransactionClient | typeof prisma = prisma,
 ) => {
   if (input.sourceSavedLocationId) {
-    const saved = await prisma.userSavedLocation.findFirst({
+    const saved = await client.userSavedLocation.findFirst({
       where: { id: input.sourceSavedLocationId, userId: learnerId },
       include: { location: true },
     });
@@ -90,6 +92,7 @@ const resolveProjectOrigin = async (
     projectBuildId?: string | null;
     projectBuildItemId?: string | null;
   },
+  client: Prisma.TransactionClient | typeof prisma = prisma,
 ) => {
   if (
     !input.projectId &&
@@ -104,7 +107,7 @@ const resolveProjectOrigin = async (
   }
 
   if (input.projectBuildItemId) {
-    const item = await prisma.projectBuildItem.findUnique({
+    const item = await client.projectBuildItem.findUnique({
       where: { id: input.projectBuildItemId },
       include: {
         build: true,
@@ -132,7 +135,7 @@ const resolveProjectOrigin = async (
   }
 
   if (input.projectBuildId) {
-    const build = await prisma.projectBuild.findFirst({
+    const build = await client.projectBuild.findFirst({
       where: { id: input.projectBuildId, learnerId },
     });
     if (!build) {
@@ -148,7 +151,7 @@ const resolveProjectOrigin = async (
     };
   }
 
-  const project = await prisma.learningProject.findUnique({
+  const project = await client.learningProject.findUnique({
     where: { id: input.projectId! },
     select: { id: true },
   });
@@ -162,8 +165,11 @@ const resolveProjectOrigin = async (
   };
 };
 
-const assertSelectableCategory = async (categoryId: string) => {
-  const category = await prisma.category.findUnique({
+const assertSelectableCategory = async (
+  categoryId: string,
+  client: Prisma.TransactionClient | typeof prisma = prisma,
+) => {
+  const category = await client.category.findUnique({
     where: { id: categoryId },
     select: { id: true, isActive: true, categoryType: true },
   });
@@ -180,70 +186,88 @@ const assertSelectableCategory = async (categoryId: string) => {
 export const createLearnerMaterialRequest = async (
   learnerId: string,
   input: CreateLearnerMaterialRequestInput,
+  tx?: Prisma.TransactionClient,
 ) => {
-  await assertSelectableCategory(input.categoryId);
-  const openCount = await repository.countOpenRequestsForLearner(learnerId);
-  if (openCount >= MAX_OPEN_LEARNER_MATERIAL_REQUESTS) {
-    throw new AppError(
-      'Too many open material requests',
-      409,
-      'ACTIVE_REQUEST_LIMIT',
+  const persist = async (client: Prisma.TransactionClient | typeof prisma) => {
+    await assertSelectableCategory(input.categoryId, client);
+    const openCount = await repository.countOpenRequestsForLearner(
+      learnerId,
+      client,
     );
+    if (openCount >= MAX_OPEN_LEARNER_MATERIAL_REQUESTS) {
+      throw new AppError(
+        'Too many open material requests',
+        409,
+        'ACTIVE_REQUEST_LIMIT',
+      );
+    }
+
+    const normalized = normalizeSearchText(input.requestedItemName);
+    const duplicate = await repository.findDuplicateOpenRequest(
+      {
+        learnerId,
+        categoryId: input.categoryId,
+        normalizedRequestedItemName: normalized,
+      },
+      client,
+    );
+    if (duplicate) {
+      throw new AppError(
+        'An open request already exists for this item and category',
+        409,
+        'DUPLICATE_OPEN_REQUEST',
+      );
+    }
+
+    const location = await resolveLocationSnapshot(learnerId, input, client);
+    const origin = await resolveProjectOrigin(learnerId, input, client);
+    const createdAt = new Date();
+    const expiresAt = computeExpiresAt(createdAt, input.neededBy ?? null);
+
+    const created = await repository.createRequest(
+      {
+        learner: { connect: { id: learnerId } },
+        category: { connect: { id: input.categoryId } },
+        requestedItemName: input.requestedItemName.trim(),
+        normalizedRequestedItemName: normalized,
+        description: input.description ?? null,
+        quantity: input.quantity,
+        unit: input.unit.trim(),
+        alternativesAllowed: input.alternativesAllowed,
+        locationCountry: location.locationCountry,
+        locationCity: location.locationCity,
+        locationArea: location.locationArea,
+        ...(location.sourceSavedLocationId
+          ? {
+              sourceSavedLocation: {
+                connect: { id: location.sourceSavedLocationId },
+              },
+            }
+          : {}),
+        ...(origin.projectId
+          ? { project: { connect: { id: origin.projectId } } }
+          : {}),
+        ...(origin.projectBuildId
+          ? { projectBuild: { connect: { id: origin.projectBuildId } } }
+          : {}),
+        ...(origin.projectBuildItemId
+          ? { projectBuildItem: { connect: { id: origin.projectBuildItemId } } }
+          : {}),
+        status: 'OPEN',
+        neededBy: input.neededBy ?? null,
+        expiresAt,
+      },
+      client,
+    );
+
+    return mapLearnerRequest(created);
+  };
+
+  if (tx) {
+    return persist(tx);
   }
 
-  const normalized = normalizeSearchText(input.requestedItemName);
-  const duplicate = await repository.findDuplicateOpenRequest({
-    learnerId,
-    categoryId: input.categoryId,
-    normalizedRequestedItemName: normalized,
-  });
-  if (duplicate) {
-    throw new AppError(
-      'An open request already exists for this item and category',
-      409,
-      'DUPLICATE_OPEN_REQUEST',
-    );
-  }
-
-  const location = await resolveLocationSnapshot(learnerId, input);
-  const origin = await resolveProjectOrigin(learnerId, input);
-  const createdAt = new Date();
-  const expiresAt = computeExpiresAt(createdAt, input.neededBy ?? null);
-
-  const created = await repository.createRequest({
-    learner: { connect: { id: learnerId } },
-    category: { connect: { id: input.categoryId } },
-    requestedItemName: input.requestedItemName.trim(),
-    normalizedRequestedItemName: normalized,
-    description: input.description ?? null,
-    quantity: input.quantity,
-    unit: input.unit.trim(),
-    alternativesAllowed: input.alternativesAllowed,
-    locationCountry: location.locationCountry,
-    locationCity: location.locationCity,
-    locationArea: location.locationArea,
-    ...(location.sourceSavedLocationId
-      ? {
-          sourceSavedLocation: {
-            connect: { id: location.sourceSavedLocationId },
-          },
-        }
-      : {}),
-    ...(origin.projectId
-      ? { project: { connect: { id: origin.projectId } } }
-      : {}),
-    ...(origin.projectBuildId
-      ? { projectBuild: { connect: { id: origin.projectBuildId } } }
-      : {}),
-    ...(origin.projectBuildItemId
-      ? { projectBuildItem: { connect: { id: origin.projectBuildItemId } } }
-      : {}),
-    status: 'OPEN',
-    neededBy: input.neededBy ?? null,
-    expiresAt,
-  });
-
-  return mapLearnerRequest(created);
+  return persist(prisma);
 };
 
 export const createLearnerMaterialRequestIdempotent = async (
@@ -259,7 +283,7 @@ export const createLearnerMaterialRequestIdempotent = async (
     payload: input,
     resourceType: 'LearnerMaterialRequest',
     getResourceId: (result) => (result as { id: string }).id,
-    handler: async () => createLearnerMaterialRequest(learnerId, input),
+    handler: (tx) => createLearnerMaterialRequest(learnerId, input, tx),
   });
 };
 

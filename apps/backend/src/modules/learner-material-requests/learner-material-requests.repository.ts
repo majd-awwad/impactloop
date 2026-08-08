@@ -6,6 +6,8 @@ import type {
 
 import { prisma } from '../../database/prisma.js';
 
+type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
+
 export const requestInclude = {
   category: { select: { id: true, nameEn: true, nameAr: true } },
   project: { select: { id: true, title: true } },
@@ -73,17 +75,23 @@ export const findRequestByIdForLearner = (id: string, learnerId: string) =>
     include: requestInclude,
   });
 
-export const countOpenRequestsForLearner = (learnerId: string) =>
-  prisma.learnerMaterialRequest.count({
+export const countOpenRequestsForLearner = (
+  learnerId: string,
+  client: PrismaClientLike = prisma,
+) =>
+  client.learnerMaterialRequest.count({
     where: { learnerId, status: 'OPEN' },
   });
 
-export const findDuplicateOpenRequest = (input: {
-  learnerId: string;
-  categoryId: string;
-  normalizedRequestedItemName: string;
-}) =>
-  prisma.learnerMaterialRequest.findFirst({
+export const findDuplicateOpenRequest = (
+  input: {
+    learnerId: string;
+    categoryId: string;
+    normalizedRequestedItemName: string;
+  },
+  client: PrismaClientLike = prisma,
+) =>
+  client.learnerMaterialRequest.findFirst({
     where: {
       learnerId: input.learnerId,
       categoryId: input.categoryId,
@@ -95,8 +103,9 @@ export const findDuplicateOpenRequest = (input: {
 
 export const createRequest = (
   data: Prisma.LearnerMaterialRequestCreateInput,
+  client: PrismaClientLike = prisma,
 ) =>
-  prisma.learnerMaterialRequest.create({
+  client.learnerMaterialRequest.create({
     data,
     include: requestInclude,
   });
