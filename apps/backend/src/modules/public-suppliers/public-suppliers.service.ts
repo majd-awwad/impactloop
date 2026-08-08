@@ -3,7 +3,7 @@ import type { AccessTokenPayload } from '../../utils/jwt.js';
 import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
 import { mapFocusedMaterialCards } from '../materials/materials.service.js';
 import type { MaterialsQuery } from '../materials/materials.validation.js';
-import type { PublicSupplierMaterialsQuery } from './public-suppliers.routes.js';
+import type { PublicSupplierMaterialsQuery } from './public-suppliers.validation.js';
 
 import * as publicSuppliersRepository from './public-suppliers.repository.js';
 import { aggregateSupplierReviews } from '../supplier/supplier.repository.js';

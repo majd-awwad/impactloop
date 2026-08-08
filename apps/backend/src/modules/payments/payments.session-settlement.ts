@@ -7,7 +7,7 @@ import {
 } from './payments.lifecycle.js';
 import { moneyDecimalToMinorUnits } from './payments.money.js';
 import type { NormalizedProviderEvent } from './providers/payment-provider.js';
-import type { ProcessProviderEventResult } from './payments.event-processor.js';
+import type { ProcessProviderEventResult } from './payments.event-processor.types.js';
 
 type MarkFn = (
   tx: Prisma.TransactionClient,

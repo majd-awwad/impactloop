@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../shared/widgets/app_feedback.dart';
 import 'help_session_mutation_feedback.dart';
-import 'project_help_session_canonical_cache.dart';
+import 'project_help_session_mutation_sync.dart';
 import 'project_help_sessions_providers.dart';
 import '../data/models/project_help_session_models.dart';
 import '../presentation/l10n/project_help_sessions_l10n.dart';
@@ -25,76 +25,6 @@ Future<T?> runProjectHelpSessionMutation<T>(Future<T?> Function() mutate) async 
     return await mutate();
   } catch (error) {
     throw ProjectHelpSessionMutationFailure(error);
-  }
-}
-
-void applyCanonicalHelpSession(
-  WidgetRef ref,
-  ProjectHelpSession session, {
-  required bool authorView,
-}) {
-  ref
-      .read(projectHelpSessionCanonicalCacheProvider.notifier)
-      .put(session, authorView: authorView);
-  ref.read(activeHelpSessionByBuildCacheProvider.notifier).apply(session);
-}
-
-void applyCanonicalHelpSessionSettings(
-  WidgetRef ref,
-  ProjectHelpSessionSettings settings,
-) {
-  ref.read(projectHelpSessionSettingsCanonicalCacheProvider.notifier).put(settings);
-}
-
-void synchronizeLearnerHelpSessionMutation(
-  WidgetRef ref, {
-  required ProjectHelpSession session,
-}) {
-  applyCanonicalHelpSession(ref, session, authorView: false);
-  try {
-    invalidateLearnerHelpSessionMutationTargets(
-      ref,
-      buildId: session.build.id,
-      sessionId: session.id,
-    );
-  } catch (error, stackTrace) {
-    if (kDebugMode) {
-      debugPrint(
-        'help-session learner sync invalidation failed: $error\n$stackTrace',
-      );
-    }
-  }
-}
-
-void synchronizeAuthorHelpSessionMutation(
-  WidgetRef ref, {
-  required ProjectHelpSession session,
-}) {
-  applyCanonicalHelpSession(ref, session, authorView: true);
-  try {
-    invalidateAuthorHelpSessionMutationTargets(ref, sessionId: session.id);
-  } catch (error, stackTrace) {
-    if (kDebugMode) {
-      debugPrint(
-        'help-session author sync invalidation failed: $error\n$stackTrace',
-      );
-    }
-  }
-}
-
-void synchronizeHelpSessionSettingsMutation(
-  WidgetRef ref, {
-  required ProjectHelpSessionSettings settings,
-}) {
-  applyCanonicalHelpSessionSettings(ref, settings);
-  try {
-    invalidateProjectHelpSessionSettings(ref, settings.projectId);
-  } catch (error, stackTrace) {
-    if (kDebugMode) {
-      debugPrint(
-        'help-session settings sync invalidation failed: $error\n$stackTrace',
-      );
-    }
   }
 }
 

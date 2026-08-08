@@ -7,7 +7,7 @@ import {
 import type {
   LinkedMaterialRecord,
   LinkedReservationRecord,
-} from './learning-projects.build-material-linking.js';
+} from './learning-projects.build-material-linking.types.js';
 
 export type BuildItemAcquisitionState =
   | 'missing'
@@ -314,3 +314,27 @@ export const resolveBuildItemStepUnlockReadinessFromState = (input: {
 
   return { isReadyForStepUnlock: false };
 };
+
+export const resolveBuildItemReadiness = (input: {
+  status: string;
+  componentRole?: string;
+  requiredQuantity?: number;
+  requiredUnit?: string;
+  materialUnit?: string | null;
+  availableQuantity?: number | null;
+  peerClaimsOnMaterial?: number;
+  linkedReservation?: LinkedReservationRecord | null;
+  linkedMaterial?: LinkedMaterialRecord | null;
+  allocationWarning?: string | null;
+}) => resolveBuildItemReadinessFromState(input);
+
+export const resolveBuildItemStepUnlockReadiness = (input: {
+  status: string;
+  componentRole?: string;
+  requiredQuantity?: number;
+  requiredUnit?: string;
+  materialUnit?: string | null;
+  linkedReservation?: LinkedReservationRecord | null;
+  linkedMaterial?: LinkedMaterialRecord | null;
+  allocationWarning?: string | null;
+}) => resolveBuildItemStepUnlockReadinessFromState(input);

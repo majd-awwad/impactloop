@@ -6,7 +6,7 @@ import {
   toDecimal,
 } from '../reservations/reservations.quantity.js';
 
-import { ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES } from './learning-projects.build-reservation-linking.js';
+import { ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES } from './learning-projects.build-reservation.constants.js';
 
 const TERMINAL_FAILED_RESERVATION_STATUSES = new Set([
   'REJECTED',

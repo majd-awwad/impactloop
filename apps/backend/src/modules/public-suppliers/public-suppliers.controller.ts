@@ -5,7 +5,7 @@ import {
   readValidatedQuery,
 } from '../../middlewares/validate.middleware.js';
 import { successResponse } from '../../utils/api-response.js';
-import type { PublicSupplierMaterialsQuery } from './public-suppliers.routes.js';
+import type { PublicSupplierMaterialsQuery } from './public-suppliers.validation.js';
 
 import {
   followSupplierById,

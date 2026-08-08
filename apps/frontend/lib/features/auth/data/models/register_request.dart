@@ -1,4 +1,4 @@
-import '../../presentation/models/registration_intent.dart';
+import '../../domain/models/registration_intent.dart';
 import 'registration_draft.dart';
 
 class RegisterRequest {

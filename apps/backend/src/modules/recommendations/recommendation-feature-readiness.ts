@@ -2,9 +2,9 @@ import { createHash } from 'node:crypto';
 
 import type { LearnerInterestResolutionStatus } from '../taxonomy/learner-interest-resolver.js';
 import { TAXONOMY_CONCEPT_SEEDS } from '../taxonomy/taxonomy-foundation.data.js';
-import { asciiCompare } from './canonical-shadow-user-features.js';
+import { asciiCompare } from './recommendations.compare.js';
 import type { PortableModelArtifact } from './ml-model-artifact.js';
-import type { WeightedFeature } from './ml-lightfm-scorer.js';
+import type { WeightedFeature } from './recommendations.ml-feature.types.js';
 import type {
   RecommendationFeatureDomain,
   RecommendationFeatureSide,

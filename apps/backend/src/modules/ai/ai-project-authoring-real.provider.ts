@@ -25,7 +25,7 @@ import {
   computeAuthoringTopicState,
   parseAuthoringProviderPayload,
   recordAuthoringValidationDiagnostic,
-} from './ai-project-authoring-clarification.provider.js';
+} from './ai-project-authoring-clarification.shared.js';
 import { setOpenAiChatClientFactoryForTests } from './providers/openai-chat.provider.js';
 
 export const PROJECT_AUTHORING_TOPIC_KEYS = [

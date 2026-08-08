@@ -1,6 +1,6 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 
-import { ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES } from './learning-projects.build-reservation-linking.js';
+import { ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES } from './learning-projects.build-reservation.constants.js';
 import {
   isReservationLinkedToAnotherBuildItem,
   unitsAreCompatible,

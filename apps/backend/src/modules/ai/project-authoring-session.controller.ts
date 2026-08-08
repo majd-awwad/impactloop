@@ -10,7 +10,10 @@ import {
   sendPersistedAuthoringSessionMessage,
   startPersistedAuthoringSession,
 } from './project-authoring-session.service.js';
+import { PROJECT_AUTHORING_SESSION_POLICY_VERSION } from './project-authoring-session.constants.js';
 import type { AuthoringSessionResponse } from './project-authoring-session.state.js';
+
+export { PROJECT_AUTHORING_SESSION_POLICY_VERSION } from './project-authoring-session.constants.js';
 
 export const startAuthoringSessionSchema = z.object({
   conversationId: z.string().trim().min(1).max(80),
@@ -88,8 +91,6 @@ export const authoringSessionMessageSchema = z
       });
     }
   });
-
-export const PROJECT_AUTHORING_SESSION_POLICY_VERSION = 'project-authoring-sequential-v1';
 
 export const startAuthoringSessionHandler = async (req: Request, res: Response) => {
   const body = startAuthoringSessionSchema.parse(req.body);

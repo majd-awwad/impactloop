@@ -17,7 +17,7 @@ import { parseStoredContentBlocks } from './ai-context-builder.js';
 import {
   customizeActionConfirmationLabels,
   prepareAiPendingAction,
-} from './ai-action.service.js';
+} from './ai-action.pending.js';
 import type { VersionedActionPayload } from './ai-action.payloads.js';
 import {
   type AiContentBlock,
@@ -1892,57 +1892,4 @@ export const prepareApplyReviewedAuthoringProposalForUser = async (
 export const findLatestProposalForBasisForTests = findLatestProposalForBasis;
 export const findLatestReviewStateForTests = findLatestReviewStateForProposal;
 
-const APPLIED_COPY: Record<AiLocale, string> = {
-  en: 'Reviewed proposal applied to your draft.',
-  ar: 'تم تطبيق الاقتراح المراجع على مسودتك.',
-};
-
-export const persistAppliedReviewStateAfterConfirm = async (input: {
-  userId: string;
-  conversationId: string;
-  reviewStateId: string;
-  locale: AiLocale;
-}) => {
-  const ownedConversation = await findOwnedConversation({
-    conversationId: input.conversationId,
-    userId: input.userId,
-  });
-
-  if (!ownedConversation) {
-    return;
-  }
-
-  const messages = await loadRecentConversationMessages({
-    conversationId: input.conversationId,
-    limit: env.aiChatMaxHistoryMessages,
-  });
-
-  const reviewState = findReviewStateById(messages, input.reviewStateId);
-  if (!reviewState || reviewState.block.status === 'APPLIED') {
-    return;
-  }
-
-  const appliedBlock = aiProjectAuthoringReviewStateBlockSchema.parse(
-    markReviewStateApplied(reviewState.block),
-  );
-
-  await createAssistantMessage({
-    conversationId: input.conversationId,
-    inReplyToMessageId: reviewState.assistantMessage.id,
-    status: 'COMPLETED',
-    contentBlocks: [textBlock(APPLIED_COPY[input.locale]), appliedBlock],
-    scopeClassification: 'DOMAIN_KNOWLEDGE',
-    locale: input.locale,
-    provider: 'system',
-    model: null,
-    policyVersion: PROJECT_AUTHORING_REVIEW_POLICY_VERSION,
-    latencyMs: 0,
-    inputTokens: null,
-    outputTokens: null,
-  });
-
-  await touchConversationActivity({
-    conversationId: input.conversationId,
-    locale: input.locale,
-  });
-};
+export { persistAppliedReviewStateAfterConfirm } from './ai-project-authoring-review.persistence.js';

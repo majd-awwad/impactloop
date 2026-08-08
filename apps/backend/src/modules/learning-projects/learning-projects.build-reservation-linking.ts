@@ -1,9 +1,10 @@
-import type { Prisma, ReservationStatus } from '../../generated/prisma/client.js';
+import type { Prisma } from '../../generated/prisma/client.js';
 
 import {
   isReservationLinkedToAnotherBuildItem,
   validateReservationQuantityForBuildItem,
 } from './learning-projects.build-material-allocation.js';
+import { ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES } from './learning-projects.build-reservation.constants.js';
 
 /**
  * Future supplier/project impact can be derived without a dedicated table by joining:
@@ -20,13 +21,7 @@ const PUBLIC_PROJECT_WHERE: Prisma.LearningProjectWhereInput = {
   },
 };
 
-export const ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES = [
-  'PENDING',
-  'AWAITING_LEARNER_CONFIRMATION',
-  'AWAITING_SUPPLIER_CONFIRMATION',
-  'ACCEPTED',
-  'AWAITING_RESOLUTION',
-] as const satisfies readonly ReservationStatus[];
+export { ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES } from './learning-projects.build-reservation.constants.js';
 
 const isActiveLinkedReservationStatus = (status: string) =>
   ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES.includes(

@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../presentation/models/registration_intent.dart';
+import '../domain/models/registration_intent.dart';
 import '../data/models/become_learner_request.dart';
 import '../data/models/register_request.dart';
 import '../data/models/registration_draft.dart';

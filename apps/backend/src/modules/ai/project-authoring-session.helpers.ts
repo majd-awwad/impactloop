@@ -80,10 +80,9 @@ import {
   MIN_PROPOSAL_COMPONENTS,
 } from './ai-project-authoring-proposal.policy.js';
 import type { AiLocale, BoundedHistoryMessage } from './ai.types.js';
+import type { ProjectRecord } from './project-authoring-session.types.js';
 
-export type ProjectRecord = NonNullable<
-  Awaited<ReturnType<typeof learningProjectsRepository.findMyLearningProjectSubmissionById>>
->;
+export type { ProjectRecord } from './project-authoring-session.types.js';
 
 export const STAGE_ORDER: ProjectAuthoringSessionStage[] = [
   'OVERVIEW',

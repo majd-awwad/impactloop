@@ -7,7 +7,7 @@ import {
   evaluateMaterialLinkCapacity,
   unitsAreCompatible,
 } from './learning-projects.build-material-allocation.js';
-import { resolveBuildItemReadiness } from './learning-projects.build-material-linking.js';
+import { resolveBuildItemReadiness } from './learning-projects.build-item-state.js';
 import {
   parseJsonStringArray,
   scoreMaterialAgainstComponent,

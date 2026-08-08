@@ -7,7 +7,7 @@ import { resolveBuildItemState, resolveBuildItemStepUnlockReadinessFromState } f
 import type {
   LinkedMaterialRecord,
   LinkedReservationRecord,
-} from './learning-projects.build-material-linking.js';
+} from './learning-projects.build-material-linking.types.js';
 
 const completedReservation = {
   id: 'res-1',

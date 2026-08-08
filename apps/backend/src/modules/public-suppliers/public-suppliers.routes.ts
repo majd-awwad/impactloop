@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { z } from 'zod';
 
 import {
   authMiddleware,
@@ -9,8 +8,6 @@ import { requireRoles } from '../../middlewares/role.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { privateNoStoreMiddleware } from '../../middlewares/cache-control.middleware.js';
 import { asyncHandler } from '../../utils/async-handler.js';
-import { materialsQuerySchema } from '../materials/materials.validation.js';
-import { paginationQuerySchema } from '../../utils/zod-helpers.js';
 
 import {
   followSupplier,
@@ -19,20 +16,10 @@ import {
   listPublicSupplierMaterials,
   unfollowSupplier,
 } from './public-suppliers.controller.js';
-
-export const supplierProfileIdParamSchema = z.object({
-  supplierProfileId: z.string().trim().min(1),
-});
-
-export type SupplierProfileIdParams = z.infer<
-  typeof supplierProfileIdParamSchema
->;
-
-export const publicSupplierMaterialsQuerySchema = paginationQuerySchema;
-
-export type PublicSupplierMaterialsQuery = z.infer<
-  typeof publicSupplierMaterialsQuerySchema
->;
+import {
+  publicSupplierMaterialsQuerySchema,
+  supplierProfileIdParamSchema,
+} from './public-suppliers.validation.js';
 
 export const publicSuppliersRouter = Router();
 

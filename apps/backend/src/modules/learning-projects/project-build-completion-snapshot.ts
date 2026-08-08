@@ -3,9 +3,9 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 
 import { isPersonallyReadyBuildItem } from './learning-projects.material-coverage.js';
-import { resolveBuildItemReadiness } from './learning-projects.build-material-linking.js';
+import { resolveBuildItemReadiness } from './learning-projects.build-item-state.js';
 import { resolveBuildItemAllocationContext } from './learning-projects.build-material-allocation.js';
-import type { projectBuildInclude } from './learning-projects.repository.js';
+import type { projectBuildInclude } from './learning-projects.project-build.includes.js';
 
 type BuildForSnapshot = Prisma.ProjectBuildGetPayload<{
   include: typeof projectBuildInclude;

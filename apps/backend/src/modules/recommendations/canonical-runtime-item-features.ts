@@ -4,8 +4,8 @@ import type {
   TaxonomyConceptStatus,
   TaxonomyConceptType,
 } from '../../generated/prisma/client.js';
-import { asciiCompare } from './canonical-shadow-user-features.js';
-import type { WeightedFeature } from './ml-lightfm-scorer.js';
+import { asciiCompare } from './recommendations.compare.js';
+import type { WeightedFeature } from './recommendations.ml-feature.types.js';
 import {
   loadRecommendationFeatureTokenContract,
   validatePortableFeatureRow,

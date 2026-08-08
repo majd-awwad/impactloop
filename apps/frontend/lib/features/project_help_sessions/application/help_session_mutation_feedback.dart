@@ -7,7 +7,7 @@ import '../../../shared/widgets/app_feedback.dart';
 import '../data/models/project_help_session_models.dart';
 import '../presentation/l10n/project_help_sessions_l10n.dart';
 import 'project_help_session_canonical_cache.dart';
-import 'project_help_session_mutation.dart';
+import 'project_help_session_mutation_sync.dart';
 import 'project_help_sessions_providers.dart';
 
 bool isActiveHelpSessionAlreadyExistsError(Object error) {
@@ -38,22 +38,6 @@ void showHelpSessionMutationSuccess(
       debugPrint('help-session success feedback failed: $error\n$stackTrace');
     }
   }
-}
-
-void invalidateLearnerHelpSessionMutationTargets(
-  WidgetRef ref, {
-  required String buildId,
-  String? sessionId,
-}) {
-  invalidateBuildHelpSessionProviders(ref, buildId);
-  invalidateLearnerHelpSessionProviders(ref, sessionId: sessionId);
-}
-
-void invalidateAuthorHelpSessionMutationTargets(
-  WidgetRef ref, {
-  String? sessionId,
-}) {
-  invalidateAuthorHelpSessionProviders(ref, sessionId: sessionId);
 }
 
 void prepareHelpSessionDetailNavigation(

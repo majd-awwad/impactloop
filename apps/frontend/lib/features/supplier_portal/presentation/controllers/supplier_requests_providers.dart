@@ -1,9 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../home/application/home_suggested_materials_provider.dart';
+import '../../../reservations/application/learner_reservation_cache.dart';
+import '../../application/supplier_my_materials_providers.dart';
+import '../../application/supplier_portal_session.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../../data/supplier_requests_api_repository.dart';
-import '../../application/supplier_portal_session.dart';
-import '../../application/reservation_sync.dart';
+import 'supplier_dashboard_providers.dart';
+import 'supplier_notifications_providers.dart';
+import 'supplier_pickup_schedule_providers.dart';
 
 export '../../data/supplier_requests_api_repository.dart'
     show supplierRequestsRepositoryProvider;
@@ -281,4 +286,15 @@ Future<void> markDriverNoShowForDelivery(
       .read(supplierRequestsRepositoryProvider)
       .markDriverNoShow(deliveryId, note: note);
   _invalidateReservationFollowUp(ref);
+}
+
+void invalidateReservationSyncProviders(WidgetRef ref) {
+  ref.invalidate(incomingRequestsProvider);
+  ref.invalidate(supplierNotificationsProvider);
+  ref.invalidate(supplierDashboardProvider);
+  ref.invalidate(pickupScheduleProvider);
+  ref.invalidate(pickupScheduleSummaryProvider);
+  ref.invalidate(supplierMyMaterialsProvider);
+  invalidateLearnerReservationCaches(ref);
+  ref.invalidate(homeSuggestedMaterialsProvider);
 }

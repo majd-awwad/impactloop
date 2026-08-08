@@ -14,7 +14,7 @@ import {
 } from './ai-project-authoring-real.provider.js';
 import type { SequentialComponent } from './ai-project-authoring-sequential.policy.js';
 import type { AiLocale, BoundedHistoryMessage } from './ai.types.js';
-import type { ProjectRecord } from './project-authoring-session.helpers.js';
+import type { ProjectRecord } from './project-authoring-session.types.js';
 
 const componentRoleSchema = z.enum(['REQUIRED_MATERIAL', 'TOOL', 'CONSUMABLE']);
 
