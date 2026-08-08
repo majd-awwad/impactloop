@@ -24,7 +24,7 @@ export type AnonymizedProjectContextDto = {
   componentName: string | null;
 } | null;
 
-type RequestRow = {
+export type RequestRow = {
   id: string;
   learnerId: string;
   categoryId: string;

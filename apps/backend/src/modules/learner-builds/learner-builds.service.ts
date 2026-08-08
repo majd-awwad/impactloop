@@ -14,6 +14,7 @@ import {
   getOwnedProjectBuildByBuildId,
   hydrateLearnerProjectBuildFromRecord,
 } from '../learning-projects/learning-projects.service.js';
+import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
 import {
   mapMyBuildsLearningSummary,
   mapPortfolioLearningStory,

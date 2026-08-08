@@ -14,6 +14,10 @@
     "ci:recommendations:db": "npm run test:recommendations:ci:db -w apps/backend",
     "ci:recommendations:typecheck": "npm run typecheck:recommendations:ci -w apps/backend",
     "ci:recommendations:database-guard": "npm run guard:recommendations:ci:database -w apps/backend",
+    "ci:baseline:pure": "npm run test:baseline:ci:pure -w apps/backend",
+    "ci:baseline:db": "npm run test:baseline:ci:db -w apps/backend",
+    "ci:baseline:build": "npm run backend:build",
+    "ci:baseline:database-guard": "npm run guard:baseline:ci:database -w apps/backend",
     "recommendations:ml:train:local": "npm run recommendations:ml:train:local -w apps/backend --",
     "recommendations:ml:smoke:local": "npm run recommendations:ml:smoke:local -w apps/backend --"
   },

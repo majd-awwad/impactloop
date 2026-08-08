@@ -51,7 +51,7 @@ export const upsertNoShowReportByIncidentKey = async (
   input: {
     key: NoShowReportIncidentKeyInput;
     create: NoShowReportCreateData;
-    update: Prisma.NoShowReportUpdateInput;
+    update: Prisma.NoShowReportUncheckedUpdateInput;
   },
 ) => {
   const incidentKey = buildNoShowReportIncidentKey(input.key);

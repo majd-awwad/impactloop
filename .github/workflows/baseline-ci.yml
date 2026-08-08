@@ -1,0 +1,238 @@
+name: Baseline CI — core platform gates
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: baseline-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-build:
+    name: backend-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate -w apps/backend
+
+      - name: Backend production build
+        run: npm run backend:build
+
+  backend-migrations:
+    name: backend-migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      IMPACTLOOP_CI_DATABASE: '1'
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      DATABASE_URL: postgresql://impactloop:impactloop@127.0.0.1:5432/impactloop_ci?schema=public
+    services:
+      postgres:
+        image: postgis/postgis:16-3.5
+        env:
+          POSTGRES_USER: impactloop
+          POSTGRES_PASSWORD: impactloop
+          POSTGRES_DB: impactloop_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U impactloop -d impactloop_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Database isolation guard
+        run: npm run guard:baseline:ci:database -w apps/backend
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate -w apps/backend
+
+      - name: Validate Prisma schema
+        run: npm exec -w apps/backend -- prisma validate
+
+      - name: Apply Prisma migrations
+        run: npm exec -w apps/backend -- prisma migrate deploy
+
+  backend-integration-pure:
+    name: backend-integration-pure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      PAYMENT_MOCK_WEBHOOK_SECRET: ci-payment-mock-webhook-secret
+      PAYMENT_MOCK_CHECKOUT_TOKEN_SECRET: ci-payment-mock-checkout-token-secret
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate -w apps/backend
+
+      - name: Critical pure integration tests
+        run: npm run test:baseline:ci:pure -w apps/backend
+
+  backend-integration-db:
+    name: backend-integration-db
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NODE_ENV: test
+      IMPACTLOOP_CI_DATABASE: '1'
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      PAYMENT_MOCK_WEBHOOK_SECRET: ci-payment-mock-webhook-secret
+      PAYMENT_MOCK_CHECKOUT_TOKEN_SECRET: ci-payment-mock-checkout-token-secret
+      DATABASE_URL: postgresql://impactloop:impactloop@127.0.0.1:5432/impactloop_ci?schema=public
+    services:
+      postgres:
+        image: postgis/postgis:16-3.5
+        env:
+          POSTGRES_USER: impactloop
+          POSTGRES_PASSWORD: impactloop
+          POSTGRES_DB: impactloop_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U impactloop -d impactloop_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Database isolation guard
+        run: npm run guard:baseline:ci:database -w apps/backend
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate -w apps/backend
+
+      - name: Apply Prisma migrations
+        run: npm exec -w apps/backend -- prisma migrate deploy
+
+      - name: Critical database integration tests
+        run: npm run test:baseline:ci:db -w apps/backend
+
+  flutter-analyze:
+    name: flutter-analyze
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Flutter analyze
+        run: flutter analyze lib --no-fatal-warnings --no-fatal-infos
+
+  flutter-tests:
+    name: flutter-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Critical Flutter regression tests
+        run: |
+          flutter test \
+            test/auth_password_reset_test.dart \
+            test/auth_interceptor_test.dart \
+            test/auth_change_password_test.dart \
+            test/auth_navigation_test.dart \
+            test/pay06_ar_mobile_acceptance_test.dart \
+            test/pay05f_cross_flow_presentation_test.dart \
+            test/learner_checkout_pay05c_test.dart \
+            test/payment_order_model_test.dart \
+            test/reservation_payment_summary_test.dart \
+            test/learner_reservation_ui_helpers_test.dart \
+            test/reservations_partial_models_test.dart \
+            test/supplier_reservation_detail_models_test.dart \
+            test/driver_portal_first_release_test.dart \
+            test/features/ai/ai_content_blocks_test.dart \
+            test/features/ai/ai_recommendation_blocks_widget_test.dart
