@@ -15,6 +15,8 @@ healthRouter.get('/ready', (_req: Request, res: Response): void => {
       successResponse('API is ready', {
         ready: true,
         recommendationOutbox: readiness.recommendationOutbox,
+        database: readiness.database,
+        reservationLifecycle: readiness.reservationLifecycle,
       }),
     );
     return;
@@ -24,6 +26,8 @@ healthRouter.get('/ready', (_req: Request, res: Response): void => {
     errorResponse('API is not ready', 'NOT_READY', {
       ready: false,
       recommendationOutbox: readiness.recommendationOutbox,
+      database: readiness.database,
+      reservationLifecycle: readiness.reservationLifecycle,
       reasonCodes: readiness.reasonCodes,
     }),
   );

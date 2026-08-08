@@ -5,15 +5,19 @@ import { afterEach, describe, test } from 'node:test';
 import express from 'express';
 
 import { healthRouter } from './health.routes.js';
+import type { DatabaseHealthSnapshot } from './database-health.probe.js';
 import {
   beginReadinessShutdown,
+  registerDatabaseHealthProvider,
   registerRecommendationOutboxHealthProvider,
+  registerReservationLifecycleHealthProvider,
   resetHealthShutdownStateForTests,
   runReadinessAwareShutdown,
 } from './health.service.js';
 import type { RecommendationOutboxHealthSnapshot } from '../recommendation-events/recommendation-events.outbox.worker.js';
+import type { ReservationLifecycleHealthSnapshot } from '../reservations/reservation-lifecycle.worker.js';
 
-const baseSnapshot = (
+const baseOutboxSnapshot = (
   overrides: Partial<RecommendationOutboxHealthSnapshot> = {},
 ): RecommendationOutboxHealthSnapshot => ({
   enabled: true,
@@ -44,6 +48,68 @@ const baseSnapshot = (
   ...overrides,
 });
 
+const baseDatabaseSnapshot = (
+  overrides: Partial<DatabaseHealthSnapshot> = {},
+): DatabaseHealthSnapshot => ({
+  state: 'HEALTHY',
+  effectiveState: 'HEALTHY',
+  startedAt: new Date().toISOString(),
+  lastProbeStartedAt: new Date().toISOString(),
+  lastProbeCompletedAt: new Date().toISOString(),
+  lastSuccessfulProbeAt: new Date().toISOString(),
+  lastFailureAt: null,
+  lastFailureCode: null,
+  consecutiveFailures: 0,
+  probeInFlight: false,
+  probeIntervalMs: 5_000,
+  probeTimeoutMs: 2_000,
+  staleAfterMs: 10_000,
+  stale: false,
+  reasonCodes: ['OK'],
+  ready: true,
+  ...overrides,
+});
+
+const baseReservationLifecycleSnapshot = (
+  overrides: Partial<ReservationLifecycleHealthSnapshot> = {},
+): ReservationLifecycleHealthSnapshot => ({
+  state: 'HEALTHY',
+  effectiveState: 'HEALTHY',
+  startedAt: new Date().toISOString(),
+  lastBatchStartedAt: new Date().toISOString(),
+  lastBatchCompletedAt: new Date().toISOString(),
+  lastSuccessfulBatchAt: new Date().toISOString(),
+  lastFailureAt: null,
+  lastFailureCode: null,
+  consecutiveFailures: 0,
+  batchInFlight: false,
+  intervalMs: 30_000,
+  staleAfterMs: 90_000,
+  stale: false,
+  reasonCodes: ['OK'],
+  ready: true,
+  ...overrides,
+});
+
+const registerHealthyReadinessProviders = (
+  overrides: {
+    outbox?: Partial<RecommendationOutboxHealthSnapshot>;
+    database?: Partial<DatabaseHealthSnapshot>;
+    reservationLifecycle?: Partial<ReservationLifecycleHealthSnapshot>;
+  } = {},
+): void => {
+  registerRecommendationOutboxHealthProvider({
+    getSnapshot: () => baseOutboxSnapshot(overrides.outbox),
+  });
+  registerDatabaseHealthProvider({
+    getSnapshot: () => baseDatabaseSnapshot(overrides.database),
+  });
+  registerReservationLifecycleHealthProvider({
+    getSnapshot: () =>
+      baseReservationLifecycleSnapshot(overrides.reservationLifecycle),
+  });
+};
+
 const withHealthServer = async (
   run: (baseUrl: string) => Promise<void>,
 ): Promise<void> => {
@@ -64,13 +130,16 @@ const withHealthServer = async (
     await run(`http://127.0.0.1:${address.port}`);
   } finally {
     await new Promise<void>((resolve, reject) => {
+      server.closeAllConnections();
       server.close((error) => (error ? reject(error) : resolve()));
     });
   }
 };
 
 const fetchJson = async (url: string) => {
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: { connection: 'close' },
+  });
   const body = (await response.json()) as Record<string, unknown>;
   return { response, body };
 };
@@ -82,10 +151,18 @@ describe('RP-04.1 health liveness and readiness routes', () => {
 
   test('GET /health stays 200 with existing fields when worker is FAILED', async () => {
     let metricsRefreshCalls = 0;
+    registerHealthyReadinessProviders({
+      outbox: {
+        state: 'FAILED',
+        effectiveState: 'FAILED',
+        ready: false,
+        reasonCodes: ['CONSECUTIVE_POLL_FAILURES'],
+      },
+    });
     registerRecommendationOutboxHealthProvider({
       getSnapshot: () => {
         metricsRefreshCalls += 1;
-        return baseSnapshot({
+        return baseOutboxSnapshot({
           state: 'FAILED',
           effectiveState: 'FAILED',
           ready: false,
@@ -108,9 +185,7 @@ describe('RP-04.1 health liveness and readiness routes', () => {
   });
 
   test('GET /health/ready returns 200 when ready and 503 with success=false when not', async () => {
-    registerRecommendationOutboxHealthProvider({
-      getSnapshot: () => baseSnapshot(),
-    });
+    registerHealthyReadinessProviders();
 
     await withHealthServer(async (baseUrl) => {
       const ready = await fetchJson(`${baseUrl}/health/ready`);
@@ -118,18 +193,19 @@ describe('RP-04.1 health liveness and readiness routes', () => {
       assert.equal(ready.body.success, true);
       const readyData = ready.body.data as Record<string, unknown>;
       assert.equal(readyData.ready, true);
+      assert.ok(readyData.database);
+      assert.ok(readyData.reservationLifecycle);
     });
 
-    registerRecommendationOutboxHealthProvider({
-      getSnapshot: () =>
-        baseSnapshot({
-          enabled: false,
-          required: true,
-          state: 'DISABLED',
-          effectiveState: 'DISABLED',
-          ready: false,
-          reasonCodes: ['WORKER_REQUIRED_BUT_DISABLED'],
-        }),
+    registerHealthyReadinessProviders({
+      outbox: {
+        enabled: false,
+        required: true,
+        state: 'DISABLED',
+        effectiveState: 'DISABLED',
+        ready: false,
+        reasonCodes: ['WORKER_REQUIRED_BUT_DISABLED'],
+      },
     });
 
     await withHealthServer(async (baseUrl) => {
@@ -144,6 +220,48 @@ describe('RP-04.1 health liveness and readiness routes', () => {
     });
   });
 
+  test('readiness is not ready when database probe is unhealthy', async () => {
+    registerHealthyReadinessProviders({
+      database: {
+        state: 'FAILED',
+        effectiveState: 'FAILED',
+        ready: false,
+        reasonCodes: ['CONSECUTIVE_PROBE_FAILURES'],
+      },
+    });
+
+    await withHealthServer(async (baseUrl) => {
+      const { response, body } = await fetchJson(`${baseUrl}/health/ready`);
+      assert.equal(response.status, 503);
+      const error = body.error as Record<string, unknown>;
+      const details = error.details as Record<string, unknown>;
+      assert.ok(
+        (details.reasonCodes as string[]).includes('CONSECUTIVE_PROBE_FAILURES'),
+      );
+    });
+  });
+
+  test('readiness is not ready when reservation lifecycle worker is unhealthy', async () => {
+    registerHealthyReadinessProviders({
+      reservationLifecycle: {
+        state: 'FAILED',
+        effectiveState: 'FAILED',
+        ready: false,
+        reasonCodes: ['CONSECUTIVE_BATCH_FAILURES'],
+      },
+    });
+
+    await withHealthServer(async (baseUrl) => {
+      const { response, body } = await fetchJson(`${baseUrl}/health/ready`);
+      assert.equal(response.status, 503);
+      const error = body.error as Record<string, unknown>;
+      const details = error.details as Record<string, unknown>;
+      assert.ok(
+        (details.reasonCodes as string[]).includes('CONSECUTIVE_BATCH_FAILURES'),
+      );
+    });
+  });
+
   test('optional-disabled remains ready; failed/stale/stopping/stopped are not', async () => {
     const cases: Array<{
       name: string;
@@ -152,7 +270,7 @@ describe('RP-04.1 health liveness and readiness routes', () => {
     }> = [
       {
         name: 'optional-disabled',
-        snapshot: baseSnapshot({
+        snapshot: baseOutboxSnapshot({
           enabled: false,
           required: false,
           state: 'DISABLED',
@@ -164,7 +282,7 @@ describe('RP-04.1 health liveness and readiness routes', () => {
       },
       {
         name: 'failed',
-        snapshot: baseSnapshot({
+        snapshot: baseOutboxSnapshot({
           state: 'FAILED',
           effectiveState: 'FAILED',
           ready: false,
@@ -174,7 +292,7 @@ describe('RP-04.1 health liveness and readiness routes', () => {
       },
       {
         name: 'stopping',
-        snapshot: baseSnapshot({
+        snapshot: baseOutboxSnapshot({
           state: 'STOPPING',
           effectiveState: 'STOPPING',
           ready: false,
@@ -184,7 +302,7 @@ describe('RP-04.1 health liveness and readiness routes', () => {
       },
       {
         name: 'stopped',
-        snapshot: baseSnapshot({
+        snapshot: baseOutboxSnapshot({
           state: 'STOPPED',
           effectiveState: 'STOPPED',
           ready: false,
@@ -195,6 +313,7 @@ describe('RP-04.1 health liveness and readiness routes', () => {
     ];
 
     for (const entry of cases) {
+      registerHealthyReadinessProviders();
       registerRecommendationOutboxHealthProvider({
         getSnapshot: () => entry.snapshot,
       });
@@ -213,10 +332,11 @@ describe('RP-04.1 health liveness and readiness routes', () => {
 
   test('readiness handlers never touch Prisma and repeated requests only read snapshot', async () => {
     let snapshotReads = 0;
+    registerHealthyReadinessProviders();
     registerRecommendationOutboxHealthProvider({
       getSnapshot: () => {
         snapshotReads += 1;
-        return baseSnapshot();
+        return baseOutboxSnapshot();
       },
     });
 
@@ -239,9 +359,10 @@ describe('RP-04.1 readiness-aware shutdown ordering', () => {
     const events: string[] = [];
     let stoppedMarked = false;
 
+    registerHealthyReadinessProviders();
     registerRecommendationOutboxHealthProvider({
       getSnapshot: () =>
-        baseSnapshot({
+        baseOutboxSnapshot({
           state: stoppedMarked ? 'STOPPED' : 'STOPPING',
           effectiveState: stoppedMarked ? 'STOPPED' : 'STOPPING',
           ready: false,
@@ -294,9 +415,10 @@ describe('RP-04.1 readiness-aware shutdown ordering', () => {
     let hardExitCalls = 0;
     let closeHttpCalls = 0;
 
+    registerHealthyReadinessProviders();
     registerRecommendationOutboxHealthProvider({
       getSnapshot: () =>
-        baseSnapshot({
+        baseOutboxSnapshot({
           state: 'STOPPING',
           effectiveState: 'STOPPING',
           ready: false,

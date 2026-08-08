@@ -12,9 +12,12 @@ import { databasePool, getDatabasePoolSnapshot, prisma } from './database/prisma
 import { verifySmtpInvitationTransport } from './modules/invitations/email/smtp-email-invitation-provider.js';
 import {
   beginReadinessShutdown,
+  registerDatabaseHealthProvider,
   registerRecommendationOutboxHealthProvider,
+  registerReservationLifecycleHealthProvider,
   runReadinessAwareShutdown,
 } from './modules/health/health.service.js';
+import { DatabaseHealthProbe } from './modules/health/database-health.probe.js';
 import {
   RecommendationOutboxWorker,
   RECOMMENDATION_OUTBOX_SHUTDOWN_WAIT_MS,
@@ -74,8 +77,17 @@ registerRecommendationOutboxHealthProvider({
   },
 });
 
+const databaseHealthProbe = new DatabaseHealthProbe();
+databaseHealthProbe.start();
+registerDatabaseHealthProvider({
+  getSnapshot: (nowMs) => databaseHealthProbe.getHealthSnapshot(nowMs),
+});
+
 const reservationLifecycleWorker = new ReservationLifecycleWorker();
 reservationLifecycleWorker.start();
+registerReservationLifecycleHealthProvider({
+  getSnapshot: (nowMs) => reservationLifecycleWorker.getHealthSnapshot(nowMs),
+});
 
 const materialRequestLifecycleWorker = new MaterialRequestLifecycleWorker();
 materialRequestLifecycleWorker.start();
@@ -94,6 +106,7 @@ const shutdown = async (signal: string): Promise<void> => {
   shuttingDown = true;
   reservationLifecycleWorker.stop();
   materialRequestLifecycleWorker.stop();
+  databaseHealthProbe.stop();
   console.log(`[ImpactLoop API] ${signal} received; shutting down`);
 
   await runReadinessAwareShutdown({
