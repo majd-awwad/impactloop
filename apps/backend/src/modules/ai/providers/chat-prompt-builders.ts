@@ -1,9 +1,13 @@
-import { GENERAL_LEARNING_SYSTEM_POLICY, EXTERNAL_RETRIEVAL_SYSTEM_POLICY } from '../ai.policy.js';
+import {
+  resolveGeneralLearningSystemPolicy,
+} from '../ai.policy.js';
 import type {
   AiChatClassifyScopeInput,
   AiChatGenerateAnswerInput,
 } from './ai-chat-provider.types.js';
 import { isExternalRetrievalSynthesisInput } from '../ai-external-knowledge.service.js';
+
+export { resolveGeneralLearningSystemPolicy } from '../ai.policy.js';
 
 export const buildClassifierPrompt = (input: AiChatClassifyScopeInput) =>
   [
@@ -27,13 +31,11 @@ export const buildAnswerUserPrompt = (input: AiChatGenerateAnswerInput) =>
   ].join('\n\n');
 
 export const buildAnswerPrompt = (input: AiChatGenerateAnswerInput) => {
+  const { policy } = resolveGeneralLearningSystemPolicy(input.userMessage);
+
   if (isExternalRetrievalSynthesisInput(input.userMessage)) {
-    return [
-      GENERAL_LEARNING_SYSTEM_POLICY,
-      EXTERNAL_RETRIEVAL_SYSTEM_POLICY,
-      input.userMessage,
-    ].join('\n\n');
+    return [policy, input.userMessage].join('\n\n');
   }
 
-  return [GENERAL_LEARNING_SYSTEM_POLICY, buildAnswerUserPrompt(input)].join('\n\n');
+  return [policy, buildAnswerUserPrompt(input)].join('\n\n');
 };

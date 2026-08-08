@@ -1,5 +1,6 @@
 import { env } from '../../config/env.js';
 import { AppError } from '../../utils/app-error.js';
+import { EXTERNAL_DOMAIN_KNOWLEDGE_POLICY_VERSION } from './ai.policy.js';
 import type { AiContentBlock } from './ai.content-blocks.js';
 import { scoreExternalSourceProvenance } from './external-source-provenance.js';
 import { getExternalKnowledgeProvider } from './providers/external-knowledge-provider.factory.js';
@@ -8,7 +9,7 @@ import type { AiExternalKnowledgeResult } from './providers/ai-external-knowledg
 const MAX_SNIPPET_LENGTH = 500;
 const MAX_SYNTHESIS_PAYLOAD_CHARS = 4_000;
 
-export const EXTERNAL_RETRIEVAL_MARKER = 'EXTERNAL_DOMAIN_KNOWLEDGE_V1';
+export const EXTERNAL_RETRIEVAL_MARKER = EXTERNAL_DOMAIN_KNOWLEDGE_POLICY_VERSION;
 export const UNTRUSTED_EXTERNAL_RETRIEVAL_HEADER = 'UNTRUSTED_EXTERNAL_RETRIEVAL_JSON';
 
 const FILTERED_INSTRUCTION_TOKEN = '[filtered-instruction]';
