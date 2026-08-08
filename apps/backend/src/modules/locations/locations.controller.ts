@@ -24,7 +24,10 @@ export const reverseGeocodeHandler = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const result = await reverseGeocodeLocation(req.body as ReverseGeocodeInput);
+  const result = await reverseGeocodeLocation(
+    req.auth!.sub,
+    req.body as ReverseGeocodeInput,
+  );
 
   res.json(successResponse('Address resolved', result));
 };
@@ -33,7 +36,10 @@ export const forwardGeocodeHandler = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const result = await forwardGeocodeLocation(req.body as ForwardGeocodeInput);
+  const result = await forwardGeocodeLocation(
+    req.auth!.sub,
+    req.body as ForwardGeocodeInput,
+  );
 
   res.json(successResponse('Coordinates resolved', result));
 };
