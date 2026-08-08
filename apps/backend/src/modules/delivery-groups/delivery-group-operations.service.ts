@@ -5,6 +5,7 @@ import {
   createDeliveryId,
 } from '../../utils/handover-codes.js';
 import { applyReservationCompletionToMaterial } from '../reservations/reservations.quantity.js';
+import { formatReservationHistoryNote } from '../reservations/reservation-status-history.js';
 
 export const DELIVERABLE_GROUP_RESERVATION_STATUSES = [
   'ACCEPTED',
@@ -407,9 +408,11 @@ export const completeReservationsForDeliveredDelivery = async (
         oldStatus,
         newStatus: 'COMPLETED',
         changedBy: input.driverUserId,
-        note: input.delivery.deliveryGroupId
-          ? 'Grouped delivery completed by driver'
-          : 'Delivery completed by driver',
+        note: formatReservationHistoryNote(
+          input.delivery.deliveryGroupId
+            ? 'GROUPED_DELIVERY_COMPLETED_BY_DRIVER'
+            : 'DELIVERY_COMPLETED_BY_DRIVER',
+        ),
       },
     });
   }

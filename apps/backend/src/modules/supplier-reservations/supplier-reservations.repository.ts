@@ -11,6 +11,7 @@ import {
 } from '../reservations/reservations.quantity.js';
 import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
 import { ACTIVE_RESERVATION_STATUSES } from '../reservations/reservation-status.js';
+import { formatReservationHistoryNote } from '../reservations/reservation-status-history.js';
 import { resolveReservationFollowUp } from '../reservations/reservation-follow-up.js';
 import {
   buildSelfPickupCodeData,
@@ -908,7 +909,9 @@ export const acceptSupplierReservation = async (input: {
         oldStatus: 'PENDING',
         newStatus: updated.status,
         changedBy: input.ownerId,
-        note: supplierNote ?? 'Accepted by supplier',
+        note: formatReservationHistoryNote('ACCEPTED_BY_SUPPLIER', {
+          reasonText: supplierNote,
+        }),
       },
     });
 
@@ -969,7 +972,9 @@ export const declineSupplierReservation = async (input: {
         oldStatus: 'PENDING',
         newStatus: 'REJECTED',
         changedBy: input.ownerId,
-        note: reason,
+        note: formatReservationHistoryNote('DECLINED_BY_SUPPLIER', {
+          reasonText: reason,
+        }),
       },
     });
 
@@ -1106,7 +1111,7 @@ export const completeSupplierReservation = async (input: {
         oldStatus: 'ACCEPTED',
         newStatus: 'COMPLETED',
         changedBy: input.ownerId,
-        note: 'Pickup completed by supplier',
+        note: formatReservationHistoryNote('PICKUP_COMPLETED_BY_SUPPLIER'),
       },
     });
 
@@ -1217,7 +1222,9 @@ export const rescheduleSupplierReservation = async (input: {
         oldStatus: existing.status,
         newStatus: 'AWAITING_LEARNER_CONFIRMATION',
         changedBy: input.ownerId,
-        note: `Supplier requested reschedule: ${reason}`,
+        note: formatReservationHistoryNote('SUPPLIER_REQUESTED_RESCHEDULE', {
+          reasonText: reason,
+        }),
       },
     });
 
@@ -1309,7 +1316,7 @@ export const acceptLearnerRescheduleProposal = async (input: {
         oldStatus: 'AWAITING_SUPPLIER_CONFIRMATION',
         newStatus: 'ACCEPTED',
         changedBy: input.ownerId,
-        note: 'Supplier accepted learner reschedule proposal',
+        note: formatReservationHistoryNote('SUPPLIER_ACCEPTED_LEARNER_RESCHEDULE'),
       },
     });
 
@@ -1379,7 +1386,9 @@ export const cancelSupplierAcceptedReservation = async (input: {
           oldStatus: 'AWAITING_SUPPLIER_CONFIRMATION',
           newStatus: 'CANCELLED',
           changedBy: input.ownerId,
-          note: reason,
+          note: formatReservationHistoryNote('SUPPLIER_CANCELLED_PENDING_RESCHEDULE', {
+            reasonText: reason,
+          }),
         },
       });
 
@@ -1439,7 +1448,9 @@ export const cancelSupplierAcceptedReservation = async (input: {
         oldStatus: 'ACCEPTED',
         newStatus: 'CANCELLED',
         changedBy: input.ownerId,
-        note: reason,
+        note: formatReservationHistoryNote('SUPPLIER_CANCELLED', {
+          reasonText: reason,
+        }),
       },
     });
 
@@ -1613,7 +1624,7 @@ export const createSupplierNoShowReport = async (input: {
           oldStatus: 'ACCEPTED',
           newStatus: 'AWAITING_RESOLUTION',
           changedBy: input.ownerId,
-          note: 'Reported to admin after missed pickup window',
+          note: formatReservationHistoryNote('REPORTED_AFTER_MISSED_PICKUP'),
         },
       });
 

@@ -6041,6 +6041,154 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supplierNoHistoryEvents => 'No history events were returned.';
 
   @override
+  String get supplierHistoryEventAcceptedBySupplier => 'Accepted by supplier';
+
+  @override
+  String get supplierHistoryEventDeclinedBySupplier => 'Declined by supplier';
+
+  @override
+  String get supplierHistoryEventPickupCompletedBySupplier =>
+      'Pickup completed by supplier';
+
+  @override
+  String get supplierHistoryEventSupplierRequestedReschedule =>
+      'Supplier requested reschedule';
+
+  @override
+  String get supplierHistoryEventSupplierAcceptedLearnerReschedule =>
+      'Supplier accepted learner reschedule proposal';
+
+  @override
+  String get supplierHistoryEventSupplierCancelled => 'Cancelled by supplier';
+
+  @override
+  String get supplierHistoryEventSupplierCancelledPendingReschedule =>
+      'Cancelled by supplier after reschedule request';
+
+  @override
+  String get supplierHistoryEventReportedAfterMissedPickup =>
+      'Reported to admin after missed pickup window';
+
+  @override
+  String get supplierHistoryEventRequestedByLearner =>
+      'Reservation requested by learner';
+
+  @override
+  String get supplierHistoryEventCancelledByLearner => 'Cancelled by learner';
+
+  @override
+  String get supplierHistoryEventCancelledByLearnerAwaitingConfirmation =>
+      'Cancelled by learner while awaiting confirmation';
+
+  @override
+  String get supplierHistoryEventLearnerAcceptedSupplierPickupWindow =>
+      'Learner accepted supplier proposed pickup window';
+
+  @override
+  String get supplierHistoryEventLearnerConfirmedDeliveryWindow =>
+      'Learner confirmed feasible delivery window';
+
+  @override
+  String get supplierHistoryEventLearnerRequestedReschedule =>
+      'Learner requested reschedule';
+
+  @override
+  String get supplierHistoryEventLearnerCancelledAfterReschedule =>
+      'Learner cancelled after reschedule request';
+
+  @override
+  String get supplierHistoryEventLearnerNoShowAfterPickup =>
+      'Learner no-show after pickup window';
+
+  @override
+  String get supplierHistoryEventLearnerReportedSupplierIssue =>
+      'Learner reported supplier issue after pickup window';
+
+  @override
+  String get supplierHistoryEventPendingExpiredAfterPreferredWindow =>
+      'Expired after the last preferred scheduling window passed without supplier response';
+
+  @override
+  String get supplierHistoryEventPendingExpiredAfterTimeout =>
+      'Expired after timeout without supplier response';
+
+  @override
+  String get supplierHistoryEventMissedPickupAutoExpired =>
+      'Automatically expired after missed pickup window';
+
+  @override
+  String get supplierHistoryEventNoDriverAvailable => 'No driver available';
+
+  @override
+  String get supplierHistoryEventNoDriverAutoEscalated =>
+      'No driver auto-escalated';
+
+  @override
+  String get supplierHistoryEventAssignedDriverPickupAutoEscalated =>
+      'Assigned-driver pickup auto-escalated';
+
+  @override
+  String get supplierHistoryEventDeliveryPickupWindowExpired =>
+      'Delivery pickup window expired';
+
+  @override
+  String get supplierHistoryEventDriverNoShowAtSupplier =>
+      'Driver no-show at supplier pickup';
+
+  @override
+  String get supplierHistoryEventDriverNoShowReportedBySupplier =>
+      'Driver no-show reported by supplier';
+
+  @override
+  String get supplierHistoryEventSupplierMarkedPickupExpired =>
+      'Supplier marked pickup window expired';
+
+  @override
+  String get supplierHistoryEventSupplierPickupWindowExpiredNoDriver =>
+      'Supplier pickup window expired with no driver assigned';
+
+  @override
+  String get supplierHistoryEventDeliveryCompletedByDriver =>
+      'Delivery completed by driver';
+
+  @override
+  String get supplierHistoryEventGroupedDeliveryCompletedByDriver =>
+      'Grouped delivery completed by driver';
+
+  @override
+  String get supplierHistoryEventSupplierSubmittedPickupWindowNoDriver =>
+      'Supplier submitted new pickup window after no driver available';
+
+  @override
+  String get supplierHistoryEventSupplierSubmittedReplacementPickupWindow =>
+      'Supplier submitted replacement pickup window after partial pickup';
+
+  @override
+  String get supplierHistoryEventSupplierSubmittedPickupWindowAdminRecovery =>
+      'Supplier submitted new pickup window after admin recovery';
+
+  @override
+  String get supplierHistoryEventAdminRequestedNewPickupWindowNoDriver =>
+      'Admin asked supplier to choose a new pickup window after no driver was available';
+
+  @override
+  String
+  get supplierHistoryEventAdminRequestedNewPickupWindowPickupIncomplete =>
+      'Admin asked supplier to choose a new pickup window after pickup was not completed';
+
+  @override
+  String get supplierHistoryEventAdminCancelledNoDriver =>
+      'Admin cancelled and released hold after no driver available';
+
+  @override
+  String get supplierHistoryEventAdminCancelledPickupIncomplete =>
+      'Admin cancelled and released hold after pickup was not completed';
+
+  @override
+  String get supplierHistoryEventFulfillmentIssueReported =>
+      'Fulfillment issue reported';
+
+  @override
   String get supplierWorkflowField => 'Workflow';
 
   @override

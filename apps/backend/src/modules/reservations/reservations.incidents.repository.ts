@@ -18,6 +18,7 @@ import { recomputeAndUpdateMaterialStatus, runSerializableTransaction } from './
 import { createNoShowReportOnce } from '../no-show-reports/no-show-report.create.js';
 import { buildNoShowReportIncidentKey } from '../no-show-reports/no-show-report.incident-key.js';
 import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
+import { formatReservationHistoryNote } from './reservation-status-history.js';
 
 const mapLearnerSupplierReason = (
   reason: string,
@@ -57,7 +58,9 @@ const transitionSelfPickupToAwaitingResolution = async (
       oldStatus: input.oldStatus,
       newStatus: 'AWAITING_RESOLUTION',
       changedBy: input.changedBy,
-      note: input.note,
+      note: formatReservationHistoryNote('FULFILLMENT_ISSUE_REPORTED', {
+        reasonText: input.note,
+      }),
     },
   });
 
@@ -144,7 +147,7 @@ export const createLearnerSupplierIssueReport = async (input: {
       materialId: existing.materialId,
       oldStatus: existing.status,
       changedBy: input.learnerId,
-      note: 'Learner reported supplier issue after pickup window',
+      note: formatReservationHistoryNote('LEARNER_REPORTED_SUPPLIER_ISSUE'),
       releaseHold: true,
     });
 
@@ -436,7 +439,7 @@ export const createNoDriverAvailableReport = async (input: {
       changedBy: input.reporterUserId,
       note: input.note ?? 'No driver available',
       deliveryHistoryNote: 'No driver available reported',
-      reservationHistoryNote: 'No driver available',
+      reservationHistoryNote: formatReservationHistoryNote('NO_DRIVER_AVAILABLE'),
     });
 
     if (!result.created) {

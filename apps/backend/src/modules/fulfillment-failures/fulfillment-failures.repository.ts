@@ -17,6 +17,7 @@ import {
   flushPostCommitPaymentRefunds,
   handleReservationPaymentLifecycleTransition,
 } from '../payments/payments.lifecycle.js';
+import { formatReservationHistoryNote } from '../reservations/reservation-status-history.js';
 import {
   groupedDeliveryStateConflict,
   loadAndAssertGroupedDeliveryState,
@@ -124,7 +125,9 @@ const transitionFailureReservations = async (
         oldStatus: reservation.status,
         newStatus: 'AWAITING_RESOLUTION',
         changedBy: input.changedByUserId,
-        note: input.note,
+        note: formatReservationHistoryNote('FULFILLMENT_ISSUE_REPORTED', {
+          reasonText: input.note,
+        }),
       },
     });
     await applyBuildReservationSyncInTransaction(tx, reservation.id);
@@ -236,7 +239,9 @@ export const markLearnerPickupNoShow = async (input: {
         oldStatus: 'ACCEPTED',
         newStatus: 'NO_SHOW',
         changedBy: input.ownerId,
-        note: input.note?.trim() || 'Learner no-show after pickup window',
+        note: formatReservationHistoryNote('LEARNER_NO_SHOW_AFTER_PICKUP', {
+          reasonText: input.note,
+        }),
       },
     });
 
@@ -367,7 +372,7 @@ export const markDeliveryPickupWindowExpired = async (input: {
         oldStatus: 'ACCEPTED',
         newStatus: 'AWAITING_RESOLUTION',
         changedBy: input.ownerId,
-        note: 'Delivery pickup window expired',
+        note: formatReservationHistoryNote('DELIVERY_PICKUP_WINDOW_EXPIRED'),
       },
     });
     await applyBuildReservationSyncInTransaction(tx, reservation.id);
@@ -519,7 +524,7 @@ export const markDriverNoShow = async (input: {
         oldStatus: 'ACCEPTED',
         newStatus: 'AWAITING_RESOLUTION',
         changedBy: input.ownerId,
-        note: 'Driver no-show at supplier pickup',
+        note: formatReservationHistoryNote('DRIVER_NO_SHOW_AT_SUPPLIER'),
       },
     });
     await applyBuildReservationSyncInTransaction(tx, reservation.id);

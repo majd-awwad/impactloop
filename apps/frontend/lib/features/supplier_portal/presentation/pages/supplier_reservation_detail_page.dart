@@ -11,6 +11,7 @@ import '../../../../shared/widgets/app_section_card.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../controllers/supplier_requests_providers.dart';
+import '../supplier_reservation_history_notes.dart';
 import '../supplier_reservation_ui_helpers.dart';
 import '../theme/supplier_theme_extension.dart';
 import '../widgets/accept_incoming_request_dialog.dart';
@@ -1554,6 +1555,7 @@ class _HistoryEvent extends StatelessWidget {
             _reasonLabel(context, event.oldStatus ?? 'Request'),
             _reasonLabel(context, event.newStatus!),
           );
+    final noteLabel = supplierReservationHistoryNoteLabel(l, event);
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(
@@ -1582,8 +1584,8 @@ class _HistoryEvent extends StatelessWidget {
                     color: context.supplierColors.textSecondary,
                   ),
                 ),
-                if (event.note != null && event.note!.trim().isNotEmpty)
-                  Text(event.note!, style: context.supplierLabel()),
+                if (noteLabel != null && noteLabel.isNotEmpty)
+                  Text(noteLabel, style: context.supplierLabel()),
               ],
             ),
           ),

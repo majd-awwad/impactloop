@@ -10350,6 +10350,234 @@ abstract class AppLocalizations {
   /// **'No history events were returned.'**
   String get supplierNoHistoryEvents;
 
+  /// No description provided for @supplierHistoryEventAcceptedBySupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted by supplier'**
+  String get supplierHistoryEventAcceptedBySupplier;
+
+  /// No description provided for @supplierHistoryEventDeclinedBySupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Declined by supplier'**
+  String get supplierHistoryEventDeclinedBySupplier;
+
+  /// No description provided for @supplierHistoryEventPickupCompletedBySupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup completed by supplier'**
+  String get supplierHistoryEventPickupCompletedBySupplier;
+
+  /// No description provided for @supplierHistoryEventSupplierRequestedReschedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier requested reschedule'**
+  String get supplierHistoryEventSupplierRequestedReschedule;
+
+  /// No description provided for @supplierHistoryEventSupplierAcceptedLearnerReschedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier accepted learner reschedule proposal'**
+  String get supplierHistoryEventSupplierAcceptedLearnerReschedule;
+
+  /// No description provided for @supplierHistoryEventSupplierCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled by supplier'**
+  String get supplierHistoryEventSupplierCancelled;
+
+  /// No description provided for @supplierHistoryEventSupplierCancelledPendingReschedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled by supplier after reschedule request'**
+  String get supplierHistoryEventSupplierCancelledPendingReschedule;
+
+  /// No description provided for @supplierHistoryEventReportedAfterMissedPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'Reported to admin after missed pickup window'**
+  String get supplierHistoryEventReportedAfterMissedPickup;
+
+  /// No description provided for @supplierHistoryEventRequestedByLearner.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation requested by learner'**
+  String get supplierHistoryEventRequestedByLearner;
+
+  /// No description provided for @supplierHistoryEventCancelledByLearner.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled by learner'**
+  String get supplierHistoryEventCancelledByLearner;
+
+  /// No description provided for @supplierHistoryEventCancelledByLearnerAwaitingConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled by learner while awaiting confirmation'**
+  String get supplierHistoryEventCancelledByLearnerAwaitingConfirmation;
+
+  /// No description provided for @supplierHistoryEventLearnerAcceptedSupplierPickupWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner accepted supplier proposed pickup window'**
+  String get supplierHistoryEventLearnerAcceptedSupplierPickupWindow;
+
+  /// No description provided for @supplierHistoryEventLearnerConfirmedDeliveryWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner confirmed feasible delivery window'**
+  String get supplierHistoryEventLearnerConfirmedDeliveryWindow;
+
+  /// No description provided for @supplierHistoryEventLearnerRequestedReschedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner requested reschedule'**
+  String get supplierHistoryEventLearnerRequestedReschedule;
+
+  /// No description provided for @supplierHistoryEventLearnerCancelledAfterReschedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner cancelled after reschedule request'**
+  String get supplierHistoryEventLearnerCancelledAfterReschedule;
+
+  /// No description provided for @supplierHistoryEventLearnerNoShowAfterPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner no-show after pickup window'**
+  String get supplierHistoryEventLearnerNoShowAfterPickup;
+
+  /// No description provided for @supplierHistoryEventLearnerReportedSupplierIssue.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner reported supplier issue after pickup window'**
+  String get supplierHistoryEventLearnerReportedSupplierIssue;
+
+  /// No description provided for @supplierHistoryEventPendingExpiredAfterPreferredWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired after the last preferred scheduling window passed without supplier response'**
+  String get supplierHistoryEventPendingExpiredAfterPreferredWindow;
+
+  /// No description provided for @supplierHistoryEventPendingExpiredAfterTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired after timeout without supplier response'**
+  String get supplierHistoryEventPendingExpiredAfterTimeout;
+
+  /// No description provided for @supplierHistoryEventMissedPickupAutoExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically expired after missed pickup window'**
+  String get supplierHistoryEventMissedPickupAutoExpired;
+
+  /// No description provided for @supplierHistoryEventNoDriverAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No driver available'**
+  String get supplierHistoryEventNoDriverAvailable;
+
+  /// No description provided for @supplierHistoryEventNoDriverAutoEscalated.
+  ///
+  /// In en, this message translates to:
+  /// **'No driver auto-escalated'**
+  String get supplierHistoryEventNoDriverAutoEscalated;
+
+  /// No description provided for @supplierHistoryEventAssignedDriverPickupAutoEscalated.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned-driver pickup auto-escalated'**
+  String get supplierHistoryEventAssignedDriverPickupAutoEscalated;
+
+  /// No description provided for @supplierHistoryEventDeliveryPickupWindowExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery pickup window expired'**
+  String get supplierHistoryEventDeliveryPickupWindowExpired;
+
+  /// No description provided for @supplierHistoryEventDriverNoShowAtSupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver no-show at supplier pickup'**
+  String get supplierHistoryEventDriverNoShowAtSupplier;
+
+  /// No description provided for @supplierHistoryEventDriverNoShowReportedBySupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver no-show reported by supplier'**
+  String get supplierHistoryEventDriverNoShowReportedBySupplier;
+
+  /// No description provided for @supplierHistoryEventSupplierMarkedPickupExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier marked pickup window expired'**
+  String get supplierHistoryEventSupplierMarkedPickupExpired;
+
+  /// No description provided for @supplierHistoryEventSupplierPickupWindowExpiredNoDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier pickup window expired with no driver assigned'**
+  String get supplierHistoryEventSupplierPickupWindowExpiredNoDriver;
+
+  /// No description provided for @supplierHistoryEventDeliveryCompletedByDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery completed by driver'**
+  String get supplierHistoryEventDeliveryCompletedByDriver;
+
+  /// No description provided for @supplierHistoryEventGroupedDeliveryCompletedByDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Grouped delivery completed by driver'**
+  String get supplierHistoryEventGroupedDeliveryCompletedByDriver;
+
+  /// No description provided for @supplierHistoryEventSupplierSubmittedPickupWindowNoDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier submitted new pickup window after no driver available'**
+  String get supplierHistoryEventSupplierSubmittedPickupWindowNoDriver;
+
+  /// No description provided for @supplierHistoryEventSupplierSubmittedReplacementPickupWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier submitted replacement pickup window after partial pickup'**
+  String get supplierHistoryEventSupplierSubmittedReplacementPickupWindow;
+
+  /// No description provided for @supplierHistoryEventSupplierSubmittedPickupWindowAdminRecovery.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier submitted new pickup window after admin recovery'**
+  String get supplierHistoryEventSupplierSubmittedPickupWindowAdminRecovery;
+
+  /// No description provided for @supplierHistoryEventAdminRequestedNewPickupWindowNoDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin asked supplier to choose a new pickup window after no driver was available'**
+  String get supplierHistoryEventAdminRequestedNewPickupWindowNoDriver;
+
+  /// No description provided for @supplierHistoryEventAdminRequestedNewPickupWindowPickupIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin asked supplier to choose a new pickup window after pickup was not completed'**
+  String get supplierHistoryEventAdminRequestedNewPickupWindowPickupIncomplete;
+
+  /// No description provided for @supplierHistoryEventAdminCancelledNoDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin cancelled and released hold after no driver available'**
+  String get supplierHistoryEventAdminCancelledNoDriver;
+
+  /// No description provided for @supplierHistoryEventAdminCancelledPickupIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin cancelled and released hold after pickup was not completed'**
+  String get supplierHistoryEventAdminCancelledPickupIncomplete;
+
+  /// No description provided for @supplierHistoryEventFulfillmentIssueReported.
+  ///
+  /// In en, this message translates to:
+  /// **'Fulfillment issue reported'**
+  String get supplierHistoryEventFulfillmentIssueReported;
+
   /// No description provided for @supplierWorkflowField.
   ///
   /// In en, this message translates to:

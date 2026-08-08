@@ -7,6 +7,7 @@ import {
   staleAssignedDriverAutoEscalationNote,
 } from './reservation-assigned-driver-pickup-overdue.js';
 import { escalateStaleAssignedDriverPickupInTransaction } from './reservations.incidents.repository.js';
+import { formatReservationHistoryNote } from './reservation-status-history.js';
 import { NO_DRIVER_AUTO_ESCALATION_HOURS } from './reservation-timing-policy.js';
 import { runSerializableTransaction } from './reservations.quantity.js';
 import { notifyDriverDeliveryMovedToAdminReview } from '../notifications/driver-delivery-notifications.js';
@@ -90,7 +91,9 @@ export const escalateStaleAssignedDriverPickupsInTransaction = async (
       changedBy: null,
       note: staleAssignedDriverAutoEscalationNote(),
       deliveryHistoryNote: 'Assigned-driver pickup auto-escalated',
-      reservationHistoryNote: 'Assigned-driver pickup auto-escalated',
+      reservationHistoryNote: formatReservationHistoryNote(
+        'ASSIGNED_DRIVER_PICKUP_AUTO_ESCALATED',
+      ),
     });
 
     if (result.created && result.driverUserId && result.deliveryId) {

@@ -12,6 +12,7 @@ import {
   flushPostCommitPaymentRefunds,
   handleReservationPaymentLifecycleTransition,
 } from '../payments/payments.lifecycle.js';
+import { formatReservationHistoryNote } from './reservation-status-history.js';
 
 const learnerRescheduleExistingSelect = {
   id: true,
@@ -90,7 +91,9 @@ export const requestLearnerPickupReschedule = async (input: {
         oldStatus: 'ACCEPTED',
         newStatus: 'AWAITING_SUPPLIER_CONFIRMATION',
         changedBy: input.requesterId,
-        note: `Learner requested reschedule: ${reason}`,
+        note: formatReservationHistoryNote('LEARNER_REQUESTED_RESCHEDULE', {
+          reasonText: reason,
+        }),
       },
     });
 
@@ -149,7 +152,7 @@ export const cancelLearnerRescheduleRequest = async (input: {
         oldStatus: 'AWAITING_SUPPLIER_CONFIRMATION',
         newStatus: 'CANCELLED',
         changedBy: input.requesterId,
-        note: 'Learner cancelled after reschedule request',
+        note: formatReservationHistoryNote('LEARNER_CANCELLED_AFTER_RESCHEDULE'),
       },
     });
 

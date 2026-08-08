@@ -3,6 +3,7 @@ import type { ReservationFulfillmentMethod } from '../../generated/prisma/client
 import {
   PENDING_SUPPLIER_RESPONSE_HOURS,
 } from './reservation-timing-policy.js';
+import { formatReservationHistoryNote } from './reservation-status-history.js';
 
 type PreferredWindow = {
   start: string;
@@ -101,8 +102,8 @@ export const pendingReservationExpiredNote = (
     windows.length > 0 &&
     deadline.getTime() < supplierResponseDeadline.getTime()
   ) {
-    return 'Expired automatically after the last preferred scheduling window passed without supplier response.';
+    return formatReservationHistoryNote('PENDING_EXPIRED_AFTER_PREFERRED_WINDOW');
   }
 
-  return `Expired automatically after ${PENDING_SUPPLIER_RESPONSE_HOURS} hours without supplier response.`;
+  return formatReservationHistoryNote('PENDING_EXPIRED_AFTER_TIMEOUT');
 };

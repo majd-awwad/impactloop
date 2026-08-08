@@ -7,6 +7,7 @@ import {
 } from './reservation-no-driver-auto-escalation.js';
 import { NO_DRIVER_AUTO_ESCALATION_HOURS } from './reservation-timing-policy.js';
 import { escalateNoDriverAvailableInTransaction } from './reservations.incidents.repository.js';
+import { formatReservationHistoryNote } from './reservation-status-history.js';
 import { runSerializableTransaction } from './reservations.quantity.js';
 import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 
@@ -85,7 +86,7 @@ export const escalateStaleNoDriverDeliveriesInTransaction = async (
       changedBy: null,
       note: noDriverAutoEscalationNote(),
       deliveryHistoryNote: 'No driver auto-escalated',
-      reservationHistoryNote: 'No driver auto-escalated',
+      reservationHistoryNote: formatReservationHistoryNote('NO_DRIVER_AUTO_ESCALATED'),
     });
 
     if (result.created) {

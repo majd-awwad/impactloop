@@ -7,6 +7,7 @@ import {
 } from '../reservations/reservation-timing-policy.js';
 import { assertValidPickupWindow } from '../reservations/pickup-window-validation.js';
 import { runSerializableTransaction } from '../reservations/reservations.quantity.js';
+import { formatReservationHistoryNote } from '../reservations/reservation-status-history.js';
 import {
   reservationInclude,
   type SupplierReservationRecord,
@@ -368,9 +369,11 @@ export const submitNoDriverPickupWindowForSupplier = async (input: {
           oldStatus: 'AWAITING_SUPPLIER_CONFIRMATION',
           newStatus: 'ACCEPTED',
           changedBy: input.ownerId,
-          note: isPartialPickupRecovery
-            ? 'Supplier submitted replacement pickup window after partial pickup'
-            : 'Supplier submitted new pickup window after admin recovery',
+          note: formatReservationHistoryNote(
+            isPartialPickupRecovery
+              ? 'SUPPLIER_SUBMITTED_REPLACEMENT_PICKUP_WINDOW'
+              : 'SUPPLIER_SUBMITTED_PICKUP_WINDOW_ADMIN_RECOVERY',
+          ),
         },
       });
 
