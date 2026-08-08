@@ -38,7 +38,7 @@ class AdminSupplierVerificationPage extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              error.toString(),
+            AdminL10n.of(context).localizedError(error),
               style: AdminTypography.pageSubtitle(palette),
             ),
             const SizedBox(height: 12),
@@ -169,10 +169,10 @@ class _VerificationBodyState extends ConsumerState<_VerificationBody> {
       await ref.read(adminSupplierVerificationsProvider.future);
     } on ApiException catch (error) {
       if (!mounted) return;
-      _showSnack(error.displayMessage, isError: true);
+      _showSnack(AdminL10n.of(context).localizedError(error), isError: true);
     } catch (error) {
       if (!mounted) return;
-      _showSnack(error.toString(), isError: true);
+      _showSnack(AdminL10n.of(context).localizedError(error), isError: true);
     }
   }
 
@@ -1344,7 +1344,7 @@ class _VerificationDetailsDialogState
       setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error.displayMessage),
+          content: Text(AdminL10n.of(context).localizedError(error)),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -1353,7 +1353,7 @@ class _VerificationDetailsDialogState
       setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error.toString()),
+          content: Text(AdminL10n.of(context).localizedError(error)),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -1446,7 +1446,7 @@ class _VerificationDetailsDialogState
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(snapshot.error.toString()),
+                  Text(AdminL10n.of(context).localizedError(snapshot.error!)),
                   const SizedBox(height: 12),
                   FilledButton(
                     onPressed: () => setState(_loadDetail),
@@ -2078,9 +2078,7 @@ class _VerificationDocumentCardState
       if (!mounted) {
         return;
       }
-      final message = error is ApiException
-          ? error.message
-          : 'Unable to open verification document.';
+      final message = AdminL10n.of(context).localizedError(error);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );

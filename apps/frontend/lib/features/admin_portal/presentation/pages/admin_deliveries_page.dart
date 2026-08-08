@@ -340,12 +340,12 @@ class _AdminDeliveriesPageState extends ConsumerState<AdminDeliveriesPage> {
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
       );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
       );
     } finally {
       if (mounted) {
@@ -388,9 +388,7 @@ class _AdminDeliveriesPageState extends ConsumerState<AdminDeliveriesPage> {
               loading: () => const _DeliveriesLoadingSkeleton(),
               error: (error, _) => AdminMonitoringErrorPanel(
                 title: 'Could not load deliveries.',
-                message: error is ApiException
-                    ? error.displayMessage
-                    : error.toString(),
+                message: AdminL10n.of(context).localizedError(error),
                 onRetry: _refresh,
               ),
               data: (data) => Column(
@@ -1597,7 +1595,7 @@ class _DeliveryDetailDialogState extends ConsumerState<_DeliveryDetailDialog> {
       setState(() => _isReopening = false);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
+      ).showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
     }
   }
 
@@ -2091,13 +2089,13 @@ class _AdminDeliveriesExportDialogState
       if (!mounted) return;
       setState(() {
         _isDownloading = false;
-        _error = error.displayMessage;
+        _error = AdminL10n.of(context).localizedError(error);
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _isDownloading = false;
-        _error = error.toString();
+        _error = AdminL10n.of(context).localizedError(error);
       });
     }
   }

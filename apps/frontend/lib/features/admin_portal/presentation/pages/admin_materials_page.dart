@@ -309,12 +309,12 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
       );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
       );
     } finally {
       if (mounted) {
@@ -392,12 +392,12 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
       );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
       );
     } finally {
       if (mounted) {
@@ -436,7 +436,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
+      ).showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
     }
   }
 
@@ -566,7 +566,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
+      ).showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
     }
   }
 
@@ -801,7 +801,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
                           } on ApiException catch (error) {
                             setState(() {
                               submitting = false;
-                              errorText = error.displayMessage;
+                              errorText = AdminL10n.of(context).localizedError(error);
                             });
                           } catch (_) {
                             setState(() {
@@ -896,7 +896,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
                           } on ApiException catch (error) {
                             setState(() {
                               submitting = false;
-                              errorText = error.displayMessage;
+                              errorText = AdminL10n.of(context).localizedError(error);
                             });
                           } catch (_) {
                             setState(() {
@@ -1265,13 +1265,13 @@ class _AdminMaterialsExportDialogState
       if (!mounted) return;
       setState(() {
         _isDownloading = false;
-        _error = error.displayMessage;
+        _error = AdminL10n.of(context).localizedError(error);
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _isDownloading = false;
-        _error = error.toString();
+        _error = AdminL10n.of(context).localizedError(error);
       });
     }
   }
@@ -1415,13 +1415,13 @@ class _AdminMaterialReportsExportDialogState
       if (!mounted) return;
       setState(() {
         _isDownloading = false;
-        _error = error.displayMessage;
+        _error = AdminL10n.of(context).localizedError(error);
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _isDownloading = false;
-        _error = error.toString();
+        _error = AdminL10n.of(context).localizedError(error);
       });
     }
   }
@@ -1803,7 +1803,7 @@ class _MaterialsTab extends ConsumerWidget {
       error: (error, _) => AdminEmptyState(
         icon: Icons.inventory_2_outlined,
         title: 'Could not load materials',
-        subtitle: error.toString(),
+        subtitle: AdminL10n.of(context).localizedError(error),
       ),
       data: (items) {
         if (items.isEmpty) {
@@ -1862,7 +1862,7 @@ class _ReportsTab extends ConsumerWidget {
       error: (error, _) => AdminEmptyState(
         icon: Icons.flag_outlined,
         title: 'Could not load reports',
-        subtitle: error.toString(),
+        subtitle: AdminL10n.of(context).localizedError(error),
       ),
       data: (items) {
         if (items.isEmpty) {

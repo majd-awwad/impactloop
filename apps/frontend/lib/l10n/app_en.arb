@@ -15,6 +15,16 @@
   "invalidPickupWindow": "The pickup window is not valid. Choose a different time.",
   "invalidValue": "Invalid value",
   "completeRequiredDetail": "Complete this required detail before continuing.",
+  "projectSubmissionCoverImageRequired": "Add at least one project image before submitting for review.",
+  "projectSubmissionRequiredComponentsRequired": "Add at least one required component before submitting.",
+  "projectSubmissionStepsRequired": "Add at least one project step before submitting.",
+  "projectSubmissionCategoryRequired": "Choose a project category before submitting.",
+  "projectSubmissionTitleRequired": "Add a project title before submitting.",
+  "projectSubmissionShortDescriptionRequired": "Add a short description before submitting.",
+  "projectSubmissionDescriptionRequired": "Add a full project description before submitting.",
+  "projectSubmissionDifficultyRequired": "Choose a difficulty level before submitting.",
+  "projectSubmissionDurationRequired": "Add an estimated project duration before submitting.",
+  "projectSubmissionDetailsRequired": "Complete the required project details before submitting.",
   "currencyNis": "{amount} NIS",
   "@currencyNis": {
     "placeholders": {

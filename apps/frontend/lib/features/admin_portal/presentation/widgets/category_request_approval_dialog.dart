@@ -289,9 +289,9 @@ class _CategoryRequestApprovalDialogState
           case 'CATEGORY_NAME_CONFLICT':
             final matchedField = error.details?['matchedProposedField'];
             if (matchedField == 'nameAr') {
-              _nameArError = error.displayMessage;
+              _nameArError = AdminL10n.of(context).localizedError(error);
             } else {
-              _nameEnError = error.displayMessage;
+              _nameEnError = AdminL10n.of(context).localizedError(error);
             }
             _conflictingCategory = _readConflict(error);
           case 'MATERIAL_FAMILY_NOT_FOUND':
@@ -313,11 +313,10 @@ class _CategoryRequestApprovalDialogState
                 final field = path is List && path.isNotEmpty
                     ? path.last.toString()
                     : path?.toString();
-                final message = issue['message']?.toString();
                 if (field == 'nameEn') {
-                  _nameEnError = message ?? l.englishNameRequired;
+                  _nameEnError = l.englishNameRequired;
                 } else if (field == 'nameAr') {
-                  _nameArError = message ?? l.arabicNameRequired;
+                  _nameArError = l.arabicNameRequired;
                 }
               }
             }
@@ -327,12 +326,12 @@ class _CategoryRequestApprovalDialogState
           case 'EXISTING_CATEGORY_UNOWNED':
           case 'EXISTING_CATEGORY_FAMILY_TYPE_MISMATCH':
           case 'EXISTING_CATEGORY_FAMILY_INACTIVE':
-            _categoryError = error.displayMessage;
+            _categoryError = AdminL10n.of(context).localizedError(error);
           case 'CATEGORY_REQUEST_NOT_PENDING':
             _requestStale = true;
-            _generalError = error.displayMessage;
+            _generalError = AdminL10n.of(context).localizedError(error);
           default:
-            _generalError = error.displayMessage;
+            _generalError = AdminL10n.of(context).localizedError(error);
         }
       });
       if (error.code == 'CATEGORY_REQUEST_NOT_PENDING') {
@@ -350,7 +349,7 @@ class _CategoryRequestApprovalDialogState
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _generalError = userFriendlyErrorMessage(error);
+        _generalError = AdminL10n.of(context).localizedError(error);
       });
     }
   }
@@ -487,7 +486,7 @@ class _CategoryRequestApprovalDialogState
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _generalError = error.displayMessage;
+        _generalError = AdminL10n.of(context).localizedError(error);
       });
     }
   }

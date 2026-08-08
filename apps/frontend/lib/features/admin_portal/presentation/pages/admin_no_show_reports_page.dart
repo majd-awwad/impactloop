@@ -361,12 +361,12 @@ class _AdminNoShowReportsPageState
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
       );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
       );
     } finally {
       if (mounted) {
@@ -1518,13 +1518,13 @@ class _AdminIncidentReportsExportDialogState
       if (!mounted) return;
       setState(() {
         _isDownloading = false;
-        _error = error.displayMessage;
+        _error = AdminL10n.of(context).localizedError(error);
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _isDownloading = false;
-        _error = error.toString();
+        _error = AdminL10n.of(context).localizedError(error);
       });
     }
   }

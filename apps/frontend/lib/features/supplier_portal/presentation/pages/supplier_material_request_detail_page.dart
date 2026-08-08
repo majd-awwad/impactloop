@@ -333,7 +333,10 @@ class _CandidateMaterialsSectionState
           return;
         }
       } else {
-        showSupplierErrorSnackBar(context, error.displayMessage);
+        showSupplierErrorSnackBar(
+          context,
+          localizedApiErrorMessage(error, context.l10n),
+        );
       }
     } catch (_) {
       if (!mounted) return;

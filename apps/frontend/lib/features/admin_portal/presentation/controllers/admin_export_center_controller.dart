@@ -32,7 +32,7 @@ class AdminExportCenterController extends ChangeNotifier {
   bool _previewStale = true;
   bool _isPreviewLoading = false;
   bool _isExporting = false;
-  String? _error;
+  Object? _error;
   int _previewGeneration = 0;
 
   AdminExportDomainKey get domain => _domain;
@@ -47,7 +47,7 @@ class AdminExportCenterController extends ChangeNotifier {
   bool get previewStale => _previewStale;
   bool get isPreviewLoading => _isPreviewLoading;
   bool get isExporting => _isExporting;
-  String? get error => _error;
+  Object? get error => _error;
   int get previewGeneration => _previewGeneration;
 
   bool get canPreview => !_isPreviewLoading && !_isExporting;
@@ -203,14 +203,14 @@ class AdminExportCenterController extends ChangeNotifier {
       }
       _preflight = null;
       _previewStale = true;
-      _error = error.displayMessage;
+      _error = error;
     } catch (error) {
       if (generation != _previewGeneration || domainAtStart != _domain) {
         return;
       }
       _preflight = null;
       _previewStale = true;
-      _error = error.toString();
+      _error = error;
     } finally {
       if (generation == _previewGeneration) {
         _isPreviewLoading = false;
@@ -244,11 +244,11 @@ class AdminExportCenterController extends ChangeNotifier {
       return true;
     } on ApiException catch (error) {
       if (domainAtStart != _domain) return false;
-      _error = error.displayMessage;
+      _error = error;
       return false;
     } catch (error) {
       if (domainAtStart != _domain) return false;
-      _error = error.toString();
+      _error = error;
       return false;
     } finally {
       _isExporting = false;

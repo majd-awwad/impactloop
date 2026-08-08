@@ -541,7 +541,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       showInfoSnackBar(context, message);
     } catch (error) {
       if (!mounted) return;
-      showErrorSnackBar(context, error, l10n: l10n);
+      showErrorSnackBar(context, error);
     }
   }
 

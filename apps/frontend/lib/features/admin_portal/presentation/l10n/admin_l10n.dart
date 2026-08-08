@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/errors/api_exception.dart';
 import '../../../../l10n/app_localizations_ar.dart';
 import '../../../../l10n/app_localizations_en.dart';
 import '../../../../l10n/l10n.dart';
@@ -21,6 +22,8 @@ class AdminL10n {
   }
 
   String t(String en, String ar) => isArabic ? ar : en;
+
+  String localizedError(Object error) => localizedApiErrorMessage(error, _l10n);
 
   String get navOverview => _l10n.adminNavOverview;
   String get navUsers => _l10n.adminNavUsers;

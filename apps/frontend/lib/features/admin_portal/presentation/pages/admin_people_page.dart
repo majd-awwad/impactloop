@@ -304,7 +304,7 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
+      ).showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
     }
   }
 
@@ -322,7 +322,7 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
+      ).showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
     }
   }
 
@@ -519,12 +519,12 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
       );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
       );
     } finally {
       if (mounted) {
@@ -607,7 +607,7 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
               error: (error, _) => AdminEmptyState(
                 icon: Icons.people_outline,
                 title: 'Could not load people',
-                subtitle: error.toString(),
+                subtitle: AdminL10n.of(context).localizedError(error),
               ),
               data: (result) {
                 if (result.items.isEmpty) {
@@ -2461,13 +2461,13 @@ class _AdminPeopleExportDialogState extends State<AdminPeopleExportDialog> {
       if (!mounted) return;
       setState(() {
         _isDownloading = false;
-        _error = error.displayMessage;
+        _error = AdminL10n.of(context).localizedError(error);
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _isDownloading = false;
-        _error = error.toString();
+        _error = AdminL10n.of(context).localizedError(error);
       });
     }
   }

@@ -65,6 +65,46 @@ class AppLocalizationsEn extends AppLocalizations {
       'Complete this required detail before continuing.';
 
   @override
+  String get projectSubmissionCoverImageRequired =>
+      'Add at least one project image before submitting for review.';
+
+  @override
+  String get projectSubmissionRequiredComponentsRequired =>
+      'Add at least one required component before submitting.';
+
+  @override
+  String get projectSubmissionStepsRequired =>
+      'Add at least one project step before submitting.';
+
+  @override
+  String get projectSubmissionCategoryRequired =>
+      'Choose a project category before submitting.';
+
+  @override
+  String get projectSubmissionTitleRequired =>
+      'Add a project title before submitting.';
+
+  @override
+  String get projectSubmissionShortDescriptionRequired =>
+      'Add a short description before submitting.';
+
+  @override
+  String get projectSubmissionDescriptionRequired =>
+      'Add a full project description before submitting.';
+
+  @override
+  String get projectSubmissionDifficultyRequired =>
+      'Choose a difficulty level before submitting.';
+
+  @override
+  String get projectSubmissionDurationRequired =>
+      'Add an estimated project duration before submitting.';
+
+  @override
+  String get projectSubmissionDetailsRequired =>
+      'Complete the required project details before submitting.';
+
+  @override
   String currencyNis(String amount) {
     return '$amount NIS';
   }

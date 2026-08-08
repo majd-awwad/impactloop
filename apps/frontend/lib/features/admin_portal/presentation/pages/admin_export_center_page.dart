@@ -421,7 +421,9 @@ class _SummaryPanel extends StatelessWidget {
           if (controller.error != null) ...[
             const SizedBox(height: 12),
             Text(
-              controller.error!,
+              controller.error is String
+                  ? controller.error! as String
+                  : adminL10n.localizedError(controller.error!),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ],

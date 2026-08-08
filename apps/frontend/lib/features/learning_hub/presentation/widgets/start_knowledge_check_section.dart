@@ -523,7 +523,7 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
       });
     } on ApiException catch (error) {
       if (mounted) {
-        showErrorSnackBar(context, error.message);
+        showErrorSnackBar(context, error);
       }
     } finally {
       if (mounted) {
@@ -556,7 +556,7 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
       });
     } on ApiException catch (error) {
       if (mounted) {
-        showErrorSnackBar(context, error.message);
+        showErrorSnackBar(context, error);
       }
     } finally {
       if (mounted) {
@@ -575,7 +575,7 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
       setState(() => _showHint = true);
     } on ApiException catch (error) {
       if (mounted) {
-        showErrorSnackBar(context, error.message);
+        showErrorSnackBar(context, error);
       }
     }
   }

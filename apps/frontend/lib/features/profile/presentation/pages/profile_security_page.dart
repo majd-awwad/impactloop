@@ -76,7 +76,7 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
 
       setState(() {
         _isSubmitting = false;
-        _formError = error.displayMessage;
+        _formError = localizedApiErrorMessage(error, l10n);
       });
     } catch (_) {
       if (!mounted) {

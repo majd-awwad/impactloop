@@ -165,7 +165,7 @@ Future<void> _copyInvitationLink(
       SnackBar(
         content: Text(
           error is ApiException
-              ? error.message
+              ? AdminL10n.of(context).localizedError(error)
               : 'Could not copy invitation link.',
         ),
       ),
@@ -206,7 +206,7 @@ Future<AdminInvitationCreateResult?> _resendInvitation(
     return result;
   } catch (error) {
     if (!context.mounted) return null;
-    messenger.showSnackBar(SnackBar(content: Text(error.toString())));
+    messenger.showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
     return null;
   }
 }
@@ -229,7 +229,7 @@ Future<AdminInvitationItem?> _revokeInvitation(
     return result;
   } catch (error) {
     if (!context.mounted) return null;
-    messenger.showSnackBar(SnackBar(content: Text(error.toString())));
+    messenger.showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
     return null;
   }
 }
@@ -258,7 +258,7 @@ class _AdminInvitationsPageState extends ConsumerState<AdminInvitationsPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              error.toString(),
+              AdminL10n.of(context).localizedError(error),
               style: AdminTypography.pageSubtitle(palette),
             ),
             const SizedBox(height: 12),
@@ -2258,11 +2258,7 @@ class _CreateInvitationDialogState
         final existing = _parseExistingInvitation(error);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              error.message.isNotEmpty
-                  ? error.message
-                  : 'An active pending invitation already exists for this email and role.',
-            ),
+            content: Text(AdminL10n.of(context).localizedError(error)),
             action: existing != null && widget.onDuplicate != null
                 ? SnackBarAction(
                     label: AdminL10n.of(context).view,
@@ -2280,7 +2276,7 @@ class _CreateInvitationDialogState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            error is ApiException ? error.message : error.toString(),
+            AdminL10n.of(context).localizedError(error),
           ),
         ),
       );

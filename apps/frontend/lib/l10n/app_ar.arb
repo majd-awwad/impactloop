@@ -14,6 +14,16 @@
   "invalidPickupWindow": "موعد الاستلام غير صالح. اختر موعدًا آخر.",
   "invalidValue": "قيمة غير صالحة",
   "completeRequiredDetail": "أكمل هذا الحقل المطلوب قبل المتابعة.",
+  "projectSubmissionCoverImageRequired": "أضف صورة واحدة على الأقل للمشروع قبل إرساله للمراجعة.",
+  "projectSubmissionRequiredComponentsRequired": "أضف مكوّنًا مطلوبًا واحدًا على الأقل قبل الإرسال.",
+  "projectSubmissionStepsRequired": "أضف خطوة واحدة على الأقل للمشروع قبل الإرسال.",
+  "projectSubmissionCategoryRequired": "اختر فئة المشروع قبل الإرسال.",
+  "projectSubmissionTitleRequired": "أضف عنوانًا للمشروع قبل الإرسال.",
+  "projectSubmissionShortDescriptionRequired": "أضف وصفًا قصيرًا قبل الإرسال.",
+  "projectSubmissionDescriptionRequired": "أضف وصفًا كاملاً للمشروع قبل الإرسال.",
+  "projectSubmissionDifficultyRequired": "اختر مستوى الصعوبة قبل الإرسال.",
+  "projectSubmissionDurationRequired": "أضف المدة التقديرية للمشروع قبل الإرسال.",
+  "projectSubmissionDetailsRequired": "أكمل تفاصيل المشروع المطلوبة قبل الإرسال.",
   "currencyNis": "{amount} شيكل",
   "@currencyNis": {
     "placeholders": {

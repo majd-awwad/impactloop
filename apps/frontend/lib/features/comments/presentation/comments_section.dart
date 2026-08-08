@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../l10n/l10n.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../shared/widgets/app_feedback.dart';
 import '../../../shared/widgets/supplier/supplier_identity_widgets.dart';
@@ -126,7 +127,7 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
         return;
       }
       if (mounted) {
-        showErrorSnackBar(context, error.message);
+        showErrorSnackBar(context, error);
       }
     } finally {
       if (mounted) {
@@ -213,7 +214,7 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
       await _refreshRoots();
     } on ApiException catch (error) {
       if (mounted) {
-        showErrorSnackBar(context, error.message);
+        showErrorSnackBar(context, error);
       }
     } finally {
       if (mounted) {
@@ -257,7 +258,7 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
       }
     } on ApiException catch (error) {
       if (mounted) {
-        showErrorSnackBar(context, error.message);
+        showErrorSnackBar(context, error);
       }
     }
   }
@@ -336,7 +337,7 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
             ),
             error: (error, _) => Text(
               error is ApiException
-                  ? error.message
+                  ? localizedApiErrorMessage(error, context.l10n)
                   : 'Could not load comments.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.error,
