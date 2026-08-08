@@ -1,8 +1,9 @@
-import { GENERAL_LEARNING_SYSTEM_POLICY } from '../ai.policy.js';
+import { GENERAL_LEARNING_SYSTEM_POLICY, EXTERNAL_RETRIEVAL_SYSTEM_POLICY } from '../ai.policy.js';
 import type {
   AiChatClassifyScopeInput,
   AiChatGenerateAnswerInput,
 } from './ai-chat-provider.types.js';
+import { isExternalRetrievalSynthesisInput } from '../ai-external-knowledge.service.js';
 
 export const buildClassifierPrompt = (input: AiChatClassifyScopeInput) =>
   [
@@ -25,5 +26,14 @@ export const buildAnswerUserPrompt = (input: AiChatGenerateAnswerInput) =>
     `Latest user message: ${JSON.stringify(input.userMessage)}`,
   ].join('\n\n');
 
-export const buildAnswerPrompt = (input: AiChatGenerateAnswerInput) =>
-  [GENERAL_LEARNING_SYSTEM_POLICY, buildAnswerUserPrompt(input)].join('\n\n');
+export const buildAnswerPrompt = (input: AiChatGenerateAnswerInput) => {
+  if (isExternalRetrievalSynthesisInput(input.userMessage)) {
+    return [
+      GENERAL_LEARNING_SYSTEM_POLICY,
+      EXTERNAL_RETRIEVAL_SYSTEM_POLICY,
+      input.userMessage,
+    ].join('\n\n');
+  }
+
+  return [GENERAL_LEARNING_SYSTEM_POLICY, buildAnswerUserPrompt(input)].join('\n\n');
+};

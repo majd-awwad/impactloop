@@ -230,7 +230,8 @@ describe('gemini grounding external knowledge provider', () => {
 
   test('search result snippets are bounded untrusted data', () => {
     const mapped = mapGeminiGroundingResponse(sampleGroundingResponse, 5);
-    const snippet = mapped[0]?.snippet ?? '';
+    const normalized = normalizeExternalKnowledgeResults(mapped, 5);
+    const snippet = normalized[0]?.snippet ?? '';
     assert.ok(snippet.length <= 500);
     assert.match(snippet, /Untrusted provider snippet/);
   });

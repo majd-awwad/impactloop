@@ -84,6 +84,7 @@ import {
   buildProjectBudgetEstimationIntro,
 } from './ai-tool-mappers.js';
 import {
+  buildExternalRetrievalSynthesisUserMessage,
   buildExternalSourcesBlock,
   searchExternalDomainKnowledge,
 } from '../ai-external-knowledge.service.js';
@@ -2061,21 +2062,15 @@ const handleExternalDomainKnowledgeTurn = async (input: {
   });
 
   const provider = getAiChatProvider();
-  const trustedSummary = JSON.stringify({
-    query: input.userMessage,
-    externalReferences: search.results,
-  }).slice(0, 4_000);
+  const synthesisUserMessage = buildExternalRetrievalSynthesisUserMessage({
+    locale: input.locale,
+    userMessage: input.userMessage,
+    results: search.results,
+  });
 
   const synthesis = await provider.generateGeneralLearningAnswer({
     locale: input.locale,
-    userMessage: [
-      input.userMessage,
-      '',
-      'Use only the external references below. Do not invent citations or URLs.',
-      'Distinguish external references from ImpactLoop inventory or platform data.',
-      'If the references are insufficient, say so clearly.',
-      trustedSummary,
-    ].join('\n'),
+    userMessage: synthesisUserMessage,
     history: input.history,
     scopeClassification: 'DOMAIN_KNOWLEDGE',
   });

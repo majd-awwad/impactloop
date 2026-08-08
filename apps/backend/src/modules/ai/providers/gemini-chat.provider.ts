@@ -13,12 +13,13 @@ import {
   aiProviderAnswerSchema,
   aiScopeClassifierSchema,
 } from '../ai.content-blocks.js';
-import { GENERAL_LEARNING_SYSTEM_POLICY } from '../ai.policy.js';
+import { GENERAL_LEARNING_SYSTEM_POLICY, EXTERNAL_RETRIEVAL_SYSTEM_POLICY } from '../ai.policy.js';
 import { extractJsonObject } from '../../../services/gemini-price-suggestion.provider.js';
 import {
   buildAnswerUserPrompt,
   buildClassifierPrompt,
 } from './chat-prompt-builders.js';
+import { isExternalRetrievalSynthesisInput } from '../ai-external-knowledge.service.js';
 import type {
   AiChatClassifyScopeInput,
   AiChatGenerateAnswerInput,
@@ -570,9 +571,10 @@ const toProviderError = (
 export const buildGeminiAnswerContents = (
   input: AiChatGenerateAnswerInput,
 ): string | Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> => {
-  const prompt = isAdminProjectReviewInput(input)
-    ? input.userMessage
-    : buildAnswerUserPrompt(input);
+  const prompt =
+    isAdminProjectReviewInput(input) || isExternalRetrievalSynthesisInput(input.userMessage)
+      ? input.userMessage
+      : buildAnswerUserPrompt(input);
   const imageInputs = input.imageInputs ?? [];
   if (imageInputs.length === 0) {
     return prompt;
@@ -722,6 +724,10 @@ export class GeminiAiChatProvider implements AiChatProvider {
     const ai = this.getClient();
 
     try {
+      const systemInstruction = isExternalRetrievalSynthesisInput(input.userMessage)
+        ? `${GENERAL_LEARNING_SYSTEM_POLICY}\n\n${EXTERNAL_RETRIEVAL_SYSTEM_POLICY}`
+        : GENERAL_LEARNING_SYSTEM_POLICY;
+
       const { response, model } = await withTimeout(
         generateContentWithModelFallback(
           ai,
@@ -733,7 +739,7 @@ export class GeminiAiChatProvider implements AiChatProvider {
               temperature: 0.4,
               maxOutputTokens: env.aiChatMaxOutputTokens,
               responseMimeType: 'application/json',
-              systemInstruction: GENERAL_LEARNING_SYSTEM_POLICY,
+              systemInstruction,
             },
           }),
         ),
