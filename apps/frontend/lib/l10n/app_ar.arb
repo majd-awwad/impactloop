@@ -1268,7 +1268,23 @@
   "comingLater": "قريبًا",
   "comingLaterSubtitle": "إحصاءات الأثر مخطط لها لكنها غير متاحة بعد.",
   "impactSnapshot": "ملخص الأثر",
-  "impactSnapshotDescription": "سيظهر أثر إعادة الاستخدام هنا بعد إكمال الحجوزات والمشاريع.",
+  "impactSnapshotSubtitle": "تقدّم إعادة الاستخدام من الاستلامات والمشاريع المكتملة.",
+  "impactSnapshotDescription": "أكمل استلام المواد ومشاريع التنفيذ لبدء تتبّع أثر إعادة الاستخدام.",
+  "impactSnapshotCompletedPickups": "استلامات مكتملة",
+  "impactSnapshotCompletedBuilds": "مشاريع مكتملة",
+  "impactSnapshotActiveReservations": "حجوزات نشطة",
+  "impactSnapshotActiveBuilds": "مشاريع قيد التنفيذ",
+  "impactSnapshotInProgressNote": "{activeReservations} حجوزات نشطة و{activeBuilds} مشاريع قيد التنفيذ.",
+  "@impactSnapshotInProgressNote": {
+    "placeholders": {
+      "activeReservations": {
+        "type": "String"
+      },
+      "activeBuilds": {
+        "type": "String"
+      }
+    }
+  },
   "landingFutureBadge": "ابنِ مستقبلًا أفضل",
   "landingHeroSubtitle": "اكتشف مواد قابلة لإعادة الاستخدام، وشارك الموارد الفائضة، وحوّلها إلى مشاريع ضمن تجربة مجتمعية أكثر استدامة.",
   "landingCtaNote": "دون بطاقة ائتمان أو ضوضاء. ابدأ التنفيذ فحسب.",

@@ -2660,8 +2660,32 @@ class AppLocalizationsAr extends AppLocalizations {
   String get impactSnapshot => 'ملخص الأثر';
 
   @override
+  String get impactSnapshotSubtitle =>
+      'تقدّم إعادة الاستخدام من الاستلامات والمشاريع المكتملة.';
+
+  @override
   String get impactSnapshotDescription =>
-      'سيظهر أثر إعادة الاستخدام هنا بعد إكمال الحجوزات والمشاريع.';
+      'أكمل استلام المواد ومشاريع التنفيذ لبدء تتبّع أثر إعادة الاستخدام.';
+
+  @override
+  String get impactSnapshotCompletedPickups => 'استلامات مكتملة';
+
+  @override
+  String get impactSnapshotCompletedBuilds => 'مشاريع مكتملة';
+
+  @override
+  String get impactSnapshotActiveReservations => 'حجوزات نشطة';
+
+  @override
+  String get impactSnapshotActiveBuilds => 'مشاريع قيد التنفيذ';
+
+  @override
+  String impactSnapshotInProgressNote(
+    String activeReservations,
+    String activeBuilds,
+  ) {
+    return '$activeReservations حجوزات نشطة و$activeBuilds مشاريع قيد التنفيذ.';
+  }
 
   @override
   String get landingFutureBadge => 'ابنِ مستقبلًا أفضل';

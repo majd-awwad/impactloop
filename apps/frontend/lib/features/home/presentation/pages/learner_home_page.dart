@@ -16,6 +16,7 @@ import '../widgets/empty_activity_card.dart';
 import '../widgets/home_action_card.dart';
 import '../widgets/home_section_header.dart';
 import '../widgets/learner_home_feed_sections.dart';
+import '../widgets/learner_impact_snapshot_section.dart';
 import '../../application/learner_home_provider.dart';
 import '../../data/learner_home_api.dart';
 
@@ -54,7 +55,7 @@ class LearnerHomePage extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.xl),
                         const _PersonalizedFeedSection(),
                         const SizedBox(height: AppSpacing.xl),
-                        _FutureToolsSection(),
+                        const LearnerImpactSnapshotSection(),
                       ],
                     ),
                   ),
@@ -429,27 +430,6 @@ class _PersonalizedFeedSection extends ConsumerWidget {
         );
       },
       data: (feed) => LearnerHomeFeedSections(feed: feed),
-    );
-  }
-}
-
-class _FutureToolsSection extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        HomeSectionHeader(
-          title: context.l10n.comingLater,
-          subtitle: context.l10n.comingLaterSubtitle,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        EmptyActivityCard(
-          icon: Icons.eco_outlined,
-          title: context.l10n.impactSnapshot,
-          description: context.l10n.impactSnapshotDescription,
-        ),
-      ],
     );
   }
 }

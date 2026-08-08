@@ -4670,11 +4670,50 @@ abstract class AppLocalizations {
   /// **'Impact snapshot'**
   String get impactSnapshot;
 
+  /// No description provided for @impactSnapshotSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reuse progress from completed pickups and project builds.'**
+  String get impactSnapshotSubtitle;
+
   /// No description provided for @impactSnapshotDescription.
   ///
   /// In en, this message translates to:
-  /// **'Your reuse impact will appear here after you complete reservations and projects.'**
+  /// **'Complete material pickups and project builds to start tracking your reuse impact.'**
   String get impactSnapshotDescription;
+
+  /// No description provided for @impactSnapshotCompletedPickups.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed pickups'**
+  String get impactSnapshotCompletedPickups;
+
+  /// No description provided for @impactSnapshotCompletedBuilds.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed builds'**
+  String get impactSnapshotCompletedBuilds;
+
+  /// No description provided for @impactSnapshotActiveReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Active reservations'**
+  String get impactSnapshotActiveReservations;
+
+  /// No description provided for @impactSnapshotActiveBuilds.
+  ///
+  /// In en, this message translates to:
+  /// **'Builds in progress'**
+  String get impactSnapshotActiveBuilds;
+
+  /// No description provided for @impactSnapshotInProgressNote.
+  ///
+  /// In en, this message translates to:
+  /// **'{activeReservations} active reservations and {activeBuilds} builds in progress.'**
+  String impactSnapshotInProgressNote(
+    String activeReservations,
+    String activeBuilds,
+  );
 
   /// No description provided for @landingFutureBadge.
   ///
