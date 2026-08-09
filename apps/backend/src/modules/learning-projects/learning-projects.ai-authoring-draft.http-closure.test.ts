@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import type { Server } from 'node:http';
 import { after, before, beforeEach, describe, test } from 'node:test';
+import type { AccessTokenPayload } from '../../utils/jwt.js';
 
 process.env.JWT_ACCESS_SECRET ??= 'ai-authoring-draft-access-secret';
 process.env.JWT_REFRESH_SECRET ??= 'ai-authoring-draft-refresh-secret';
@@ -126,7 +127,10 @@ async function createMaterialCategory() {
   return category;
 }
 
-function tokenFor(userId: string, roles: string[] = ['LEARNER']) {
+function tokenFor(
+  userId: string,
+  roles: AccessTokenPayload['roles'] = ['LEARNER'],
+) {
   return signAccessToken({ sub: userId, roles });
 }
 

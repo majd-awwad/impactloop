@@ -1,4 +1,5 @@
 import type { AiContentBlock } from '../ai.content-blocks.js';
+import type { AccessTokenPayload } from '../../../utils/jwt.js';
 import { parseStoredContentBlocks } from '../ai-context-builder.js';
 import { listMessagesForConversation } from '../ai.repository.js';
 import { isActiveReservationBehaviorStatus } from '../../reservations/reservations.quantity.js';
@@ -1118,7 +1119,10 @@ export const resolveOwnedBuildForProjectTitle = async (input: {
     return null;
   }
 
-  const viewer = { sub: input.userId, roles: ['LEARNER'] as string[] };
+  const viewer: AccessTokenPayload = {
+    sub: input.userId,
+    roles: ['LEARNER'],
+  };
   const projects = await getLearningProjects(
     { page: 1, limit: 8, q: normalized },
     viewer,
@@ -1185,7 +1189,10 @@ export const resolveBuildIdForUserMessage = async (input: {
 
   const titleQuery = extractProjectTitleQuery(input.userMessage);
   if (titleQuery) {
-    const viewer = { sub: input.userId, roles: ['LEARNER'] as string[] };
+    const viewer: AccessTokenPayload = {
+      sub: input.userId,
+      roles: ['LEARNER'],
+    };
     const projects = await getLearningProjects(
       { page: 1, limit: 5, q: titleQuery },
       viewer,

@@ -1,9 +1,10 @@
 import type { NextFunction, Request, Response } from 'express';
 import { COMMON_ERROR_CODES } from '../contracts/errors/common-error-codes.js';
+import type { UserRole } from '../generated/prisma/client.js';
 import { AppError } from '../utils/app-error.js';
 
 export const requireRoles =
-  (...allowedRoles: string[]) =>
+  (...allowedRoles: UserRole[]) =>
   (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.auth) {
       next(

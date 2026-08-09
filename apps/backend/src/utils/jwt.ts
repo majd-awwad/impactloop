@@ -1,9 +1,15 @@
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import { env } from '../config/env.js';
+import { UserRole } from '../generated/prisma/client.js';
+
+const USER_ROLES = new Set<UserRole>(Object.values(UserRole));
+
+const isUserRole = (value: unknown): value is UserRole =>
+  typeof value === 'string' && USER_ROLES.has(value as UserRole);
 
 export type AccessTokenPayload = {
   sub: string;
-  roles: string[];
+  roles: UserRole[];
 };
 
 export type RefreshTokenPayload = {
@@ -37,7 +43,7 @@ export const verifyAccessToken = (token: string): AccessTokenPayload => {
   return {
     sub: decoded.sub,
     roles: Array.isArray(decoded.roles)
-      ? decoded.roles.filter((role): role is string => typeof role === 'string')
+      ? decoded.roles.filter(isUserRole)
       : [],
   };
 };

@@ -9,7 +9,10 @@ process.env.ZOOM_INTEGRATION_MODE = 'fake';
 
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
-import { signAccessToken } from '../../utils/jwt.js';
+import {
+  signAccessToken,
+  type AccessTokenPayload,
+} from '../../utils/jwt.js';
 import { pauseProjectBuild } from '../learning-projects/project-build-lifecycle.js';
 import { upsertAuthorHelpSessionSettings } from './project-help-session-offering.js';
 import {
@@ -176,7 +179,7 @@ async function timeOptionCount(
 let httpServer: Server | null = null;
 let baseUrl = '';
 
-const tokenFor = (userId: string, roles: string[]) =>
+const tokenFor = (userId: string, roles: AccessTokenPayload['roles']) =>
   signAccessToken({ sub: userId, roles });
 
 before(async () => {

@@ -1,5 +1,6 @@
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
+import type { AccessTokenPayload } from '../../utils/jwt.js';
 import {
   getMaterialById,
 } from '../materials/materials.service.js';
@@ -38,7 +39,10 @@ export type PreparedActionResult = {
   pendingActionId: string;
 };
 
-const buildViewer = (userId: string) => ({ sub: userId, roles: ['LEARNER'] });
+const buildViewer = (userId: string): AccessTokenPayload => ({
+  sub: userId,
+  roles: ['LEARNER'],
+});
 
 export const buildActionViewer = buildViewer;
 

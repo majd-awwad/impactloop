@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import type { Server } from 'node:http';
 import { after, before, describe, test } from 'node:test';
+import type { AccessTokenPayload } from '../../utils/jwt.js';
 
 process.env.JWT_ACCESS_SECRET ??= 'closure-test-access-secret';
 process.env.JWT_REFRESH_SECRET ??= 'closure-test-refresh-secret';
@@ -83,7 +84,7 @@ async function createSupplierUser() {
   return user;
 }
 
-function tokenFor(userId: string, roles: string[]) {
+function tokenFor(userId: string, roles: AccessTokenPayload['roles']) {
   return signAccessToken({ sub: userId, roles });
 }
 
