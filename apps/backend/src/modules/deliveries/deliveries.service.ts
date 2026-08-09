@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { Prisma, type DeliveryStatus } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
@@ -413,7 +414,7 @@ export const requestDeliveryForReservation = async (
     throw new AppError(
       'A delivery drop-off address is required.',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
       { field: 'dropoffLocation' },
     );
   }
@@ -826,7 +827,7 @@ export const requestDeliveryForReservation = async (
       throw new AppError(
         'This reservation already has an active delivery.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     }
 
@@ -899,24 +900,28 @@ export const requestDeliveryForReservation = async (
         },
       );
     case 'NOT_FOUND':
-      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Reservation not found.',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     case 'INVALID_STATUS':
       throw new AppError(
         'Delivery can only be requested after the supplier accepts the reservation.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     case 'DELIVERY_NOT_ALLOWED':
       throw new AppError(
         'Delivery is not enabled for this material.',
         400,
-        'VALIDATION_ERROR',
+        COMMON_ERROR_CODES.validationError,
       );
     case 'ACTIVE_DELIVERY_EXISTS':
       throw new AppError(
         'This reservation already has an active delivery.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     case 'DELIVERY_PRICING_ERROR':
       throw new AppError(
@@ -925,7 +930,11 @@ export const requestDeliveryForReservation = async (
         'DELIVERY_PRICING_ERROR',
       );
     default:
-      throw new AppError('Unable to request delivery.', 500, 'INTERNAL_ERROR');
+      throw new AppError(
+        'Unable to request delivery.',
+        500,
+        COMMON_ERROR_CODES.internalError,
+      );
   }
 };
 
@@ -975,7 +984,11 @@ export const getMyDelivery = async (learnerId: string, deliveryId: string) => {
   });
 
   if (!delivery) {
-    throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Delivery not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   await escalateStaleAssignedDriverPickupsByIds([delivery.reservationId]);
@@ -989,7 +1002,11 @@ export const getMyDelivery = async (learnerId: string, deliveryId: string) => {
   });
 
   if (!delivery) {
-    throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Delivery not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   if (
@@ -1017,7 +1034,11 @@ export const getLearnerDeliveryTracking = async (
   });
 
   if (!delivery) {
-    throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Delivery not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   const canTrack = canLearnerTrackDriver(delivery.status);
