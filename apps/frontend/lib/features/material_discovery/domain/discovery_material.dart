@@ -28,6 +28,21 @@ class DiscoveryMaterialSupplierSummary {
   final String? area;
   final int? followersCount;
   final bool isFollowedByViewer;
+
+  DiscoveryMaterialSupplierSummary copyWith({
+    int? followersCount,
+    bool? isFollowedByViewer,
+  }) {
+    return DiscoveryMaterialSupplierSummary(
+      id: id,
+      displayName: displayName,
+      avatarUrl: avatarUrl,
+      city: city,
+      area: area,
+      followersCount: followersCount ?? this.followersCount,
+      isFollowedByViewer: isFollowedByViewer ?? this.isFollowedByViewer,
+    );
+  }
 }
 
 class DiscoveryMaterial {
@@ -147,6 +162,7 @@ class DiscoveryMaterial {
     bool? isLiked,
     bool? isOwnMaterial,
     bool? canReserve,
+    DiscoveryMaterialSupplierSummary? supplier,
     Object? reserveBlockReason = _copyWithUnset,
     String? recommendationImpressionId,
   }) {
@@ -180,7 +196,7 @@ class DiscoveryMaterial {
       supplierSubtitle: supplierSubtitle,
       supplierType: supplierType,
       supplierVerified: supplierVerified,
-      supplier: supplier,
+      supplier: supplier ?? this.supplier,
       heroIconData: heroIconData,
       cardGradient: cardGradient,
       imageUrl: imageUrl,

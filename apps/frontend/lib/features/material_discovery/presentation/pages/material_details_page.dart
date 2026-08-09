@@ -22,7 +22,6 @@ import '../../../auth/application/auth_controller.dart';
 import '../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
-import '../../../../shared/widgets/supplier/supplier_identity_widgets.dart';
 import '../../../comments/domain/comment_models.dart';
 import '../../../comments/presentation/comments_section.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
@@ -44,6 +43,7 @@ import '../material_reserve_eligibility.dart';
 import '../material_discovery_content.dart';
 import '../widgets/material_related_projects_section.dart';
 import '../widgets/material_details_gallery.dart';
+import '../widgets/material_supplier_profile_card.dart';
 import '../discovery_material_display.dart';
 import '../widgets/discovery_location_privacy_panel.dart';
 import '../widgets/material_details_report_section.dart';
@@ -401,6 +401,9 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
             isLiked: _materialOverride?.isLiked ?? viewerState.isLiked,
             isOwnMaterial: viewerState.isOwnMaterial,
             canReserve: viewerState.canReserve,
+            supplier: material.supplier?.copyWith(
+              isFollowedByViewer: viewerState.supplierFollowed,
+            ),
             reserveBlockReason: viewerState.reserveBlockReason,
           );
         }
@@ -408,6 +411,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
         final loadedMaterial = material;
         return _MaterialDetailsLoadedContent(
           material: loadedMaterial,
+          repository: _activeRepository,
           learnerReservation: viewerState?.reservation,
           isLoadingReservation: _viewerStateLoading,
           buildItemId: widget.buildItemId,
@@ -595,6 +599,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
 class _MaterialDetailsLoadedContent extends ConsumerWidget {
   const _MaterialDetailsLoadedContent({
     required this.material,
+    required this.repository,
     required this.learnerReservation,
     required this.isLoadingReservation,
     this.buildItemId,
@@ -606,6 +611,7 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
   });
 
   final DiscoveryMaterial material;
+  final MaterialDiscoveryRepository repository;
   final LearnerReservation? learnerReservation;
   final bool isLoadingReservation;
   final String? buildItemId;
@@ -635,6 +641,7 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
 
     final sideColumn = _DetailsSideColumn(
       material: material,
+      repository: repository,
       reservationUi: reservationUi,
       learnerDelivery: learnerDelivery,
       onReserve: onReserve,
@@ -763,7 +770,10 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                                 materialId: material.id,
                               ),
                               const SizedBox(height: AppSpacing.md),
-                              _SupplierCard(material: material),
+                              MaterialSupplierProfileCard(
+                                material: material,
+                                repository: repository,
+                              ),
                               const SizedBox(height: AppSpacing.md),
                               _LazyViewportSection(
                                 builder: (_) => CommentsSection(
@@ -1393,257 +1403,6 @@ class _DetailTextSection extends StatelessWidget {
   }
 }
 
-class _SupplierCard extends ConsumerStatefulWidget {
-  const _SupplierCard({required this.material});
-
-  final DiscoveryMaterial material;
-
-  @override
-  ConsumerState<_SupplierCard> createState() => _SupplierCardState();
-}
-
-class _SupplierCardState extends ConsumerState<_SupplierCard> {
-  late bool _isFollowedByViewer;
-  late int _followersCount;
-  bool _isUpdatingFollow = false;
-
-  DiscoveryMaterial get material => widget.material;
-
-  @override
-  void initState() {
-    super.initState();
-    _syncFromMaterial();
-  }
-
-  @override
-  void didUpdateWidget(covariant _SupplierCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.material.id != material.id ||
-        oldWidget.material.supplier?.isFollowedByViewer !=
-            material.supplier?.isFollowedByViewer ||
-        oldWidget.material.supplier?.followersCount !=
-            material.supplier?.followersCount) {
-      _syncFromMaterial();
-    }
-  }
-
-  void _syncFromMaterial() {
-    _isFollowedByViewer = material.supplier?.isFollowedByViewer ?? false;
-    _followersCount = material.supplier?.followersCount ?? 0;
-  }
-
-  String? get _supplierProfileId => material.supplier?.id.trim();
-
-  Future<void> _toggleFollow() async {
-    final supplierProfileId = _supplierProfileId;
-    if (supplierProfileId == null ||
-        supplierProfileId.isEmpty ||
-        _isUpdatingFollow) {
-      return;
-    }
-
-    final authState = ref.read(authControllerProvider);
-    if (authState.status != AuthStatus.authenticated) {
-      final from = Uri.encodeQueryComponent('/materials/${material.id}');
-      context.go('/login?from=$from');
-      return;
-    }
-
-    if (authState.user?.hasRole('LEARNER') != true) {
-      showInfoSnackBar(context, 'Use a learner account to follow suppliers.');
-      return;
-    }
-
-    final previousFollowing = _isFollowedByViewer;
-    final previousCount = _followersCount;
-    final shouldFollow = !_isFollowedByViewer;
-
-    setState(() {
-      _isUpdatingFollow = true;
-      _isFollowedByViewer = shouldFollow;
-      _followersCount = shouldFollow
-          ? _followersCount + 1
-          : (_followersCount > 0 ? _followersCount - 1 : 0);
-    });
-
-    try {
-      final repository = ref.read(materialDiscoveryRepositoryProvider);
-      final status = shouldFollow
-          ? await repository.followSupplier(supplierProfileId)
-          : await repository.unfollowSupplier(supplierProfileId);
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _followersCount = status.followersCount;
-        _isFollowedByViewer = status.isFollowedByViewer;
-      });
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _isFollowedByViewer = previousFollowing;
-        _followersCount = previousCount;
-      });
-      showErrorSnackBar(context, error);
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isUpdatingFollow = false;
-        });
-      }
-    }
-  }
-
-  void _openSupplierProfile() {
-    final supplierProfileId = _supplierProfileId;
-    if (supplierProfileId == null || supplierProfileId.isEmpty) {
-      return;
-    }
-
-    context.go('/suppliers/$supplierProfileId');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-    final supplier = material.supplier;
-    final displayName =
-        supplier?.displayName ?? material.supplierName.resolve(context);
-    final location = [
-      supplier?.city,
-      supplier?.area,
-    ].whereType<String>().where((value) => value.trim().isNotEmpty).join(', ');
-    final canNavigate = _supplierProfileId != null;
-
-    return _Panel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              GestureDetector(
-                onTap: canNavigate ? _openSupplierProfile : null,
-                child: SupplierIdentityAvatar(
-                  displayName: displayName,
-                  avatarUrl: supplier?.avatarUrl,
-                  radius: 28,
-                  borderColor: palette.cardSurface,
-                  borderWidth: 2,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: GestureDetector(
-                  onTap: canNavigate ? _openSupplierProfile : null,
-                  behavior: HitTestBehavior.opaque,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        const LocalizedText(
-                          en: 'Supplier',
-                          ar: 'المورد',
-                        ).resolve(context),
-                        style: AppTextStyles.label(
-                          context,
-                        ).copyWith(color: palette.textMuted),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              displayName,
-                              style: AppTextStyles.title(
-                                context,
-                              ).copyWith(color: palette.textPrimary),
-                            ),
-                          ),
-                          if (material.supplierVerified)
-                            Icon(
-                              Icons.verified_rounded,
-                              color: palette.mint,
-                              size: 18,
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        material.supplierSubtitle.resolve(context),
-                        style: AppTextStyles.body(
-                          context,
-                        ).copyWith(color: palette.textSecondary),
-                      ),
-                      if (location.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          location,
-                          style: AppTextStyles.body(
-                            context,
-                          ).copyWith(color: palette.textSecondary),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (canNavigate) ...[
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _isUpdatingFollow ? null : _toggleFollow,
-                    child: Text(
-                      _isFollowedByViewer
-                          ? const LocalizedText(
-                              en: 'Following',
-                              ar: 'متابَع',
-                            ).resolve(context)
-                          : const LocalizedText(
-                              en: 'Follow',
-                              ar: 'متابعة',
-                            ).resolve(context),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                OutlinedButton(
-                  onPressed: _openSupplierProfile,
-                  child: Text(
-                    const LocalizedText(
-                      en: 'View profile',
-                      ar: 'عرض الملف',
-                    ).resolve(context),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              LocalizedText(
-                en: '$_followersCount followers',
-                ar: '$_followersCount متابع',
-              ).resolve(context),
-              style: AppTextStyles.label(
-                context,
-              ).copyWith(color: palette.textMuted),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 class _ReservationPanel extends StatelessWidget {
   const _ReservationPanel({
     required this.material,
@@ -1918,6 +1677,7 @@ class _DetailsMainColumn extends StatelessWidget {
 class _DetailsSideColumn extends StatelessWidget {
   const _DetailsSideColumn({
     required this.material,
+    required this.repository,
     required this.reservationUi,
     required this.learnerDelivery,
     required this.onReserve,
@@ -1925,6 +1685,7 @@ class _DetailsSideColumn extends StatelessWidget {
   });
 
   final DiscoveryMaterial material;
+  final MaterialDiscoveryRepository repository;
   final MaterialReserveEligibility reservationUi;
   final LearnerReservationActiveDelivery? learnerDelivery;
   final VoidCallback onReserve;
@@ -1935,7 +1696,7 @@ class _DetailsSideColumn extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _SupplierCard(material: material),
+        MaterialSupplierProfileCard(material: material, repository: repository),
         const SizedBox(height: _materialDetailsSectionGap),
         _ReservationPanel(
           material: material,
@@ -2331,7 +2092,6 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-
 class _LazyViewportSection extends StatefulWidget {
   const _LazyViewportSection({required this.builder});
 
@@ -2386,6 +2146,3 @@ class _LazyViewportSectionState extends State<_LazyViewportSection> {
     return const SizedBox(height: 1);
   }
 }
-
-
-

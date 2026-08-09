@@ -177,16 +177,28 @@ class PublicSupplierProfileHeader extends StatelessWidget {
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : Text(
-                            supplier.isFollowedByViewer
-                                ? const LocalizedText(
-                                    en: 'Following',
-                                    ar: 'متابَع',
-                                  ).resolve(context)
-                                : const LocalizedText(
-                                    en: 'Follow',
-                                    ar: 'متابعة',
-                                  ).resolve(context),
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                supplier.isFollowedByViewer
+                                    ? Icons.check_rounded
+                                    : Icons.person_add_outlined,
+                                size: 19,
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Text(
+                                supplier.isFollowedByViewer
+                                    ? const LocalizedText(
+                                        en: 'Following',
+                                        ar: 'متابَع',
+                                      ).resolve(context)
+                                    : const LocalizedText(
+                                        en: 'Follow',
+                                        ar: 'متابعة',
+                                      ).resolve(context),
+                              ),
+                            ],
                           ),
                   ),
                 ],

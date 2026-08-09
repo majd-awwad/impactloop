@@ -16,6 +16,7 @@ import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/material_discovery_providers.dart';
+import '../../application/supplier_follow_controller.dart';
 import '../../domain/discovery_material.dart';
 import '../../domain/material_discovery_query.dart';
 import '../../domain/material_discovery_repository.dart';
@@ -51,7 +52,6 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
   bool _isProfileLoading = true;
   bool _isMaterialsLoading = true;
   bool _isLoadingMore = false;
-  bool _isUpdatingFollow = false;
   String? _profileError;
   String? _materialsError;
   int _page = 0;
@@ -87,7 +87,9 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
     });
 
     try {
-      final supplier = _repository is PublicSupplierPerformanceRepository
+      final usesSplitViewerState =
+          _repository is PublicSupplierPerformanceRepository;
+      final supplier = usesSplitViewerState
           ? await (_repository as PublicSupplierPerformanceRepository)
                 .fetchPublicSupplierCore(
                   widget.supplierProfileId,
@@ -108,6 +110,23 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
         _supplier = supplier;
         _isProfileLoading = false;
       });
+      final auth = ref.read(authControllerProvider);
+      final controller = ref.read(supplierFollowControllerProvider.notifier);
+      if (usesSplitViewerState) {
+        controller.setAuthoritativeCount(
+          supplierProfileId: supplier.id,
+          viewerId: auth.user?.id,
+          followersCount: supplier.followersCount,
+          fallbackIsFollowedByViewer: supplier.isFollowedByViewer,
+        );
+      } else {
+        controller.setAuthoritative(
+          supplierProfileId: supplier.id,
+          viewerId: auth.user?.id,
+          followersCount: supplier.followersCount,
+          isFollowedByViewer: supplier.isFollowedByViewer,
+        );
+      }
     } on DioException catch (error) {
       if (CancelToken.isCancel(error) || !mounted) return;
       setState(() {
@@ -187,10 +206,16 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
     }
     if (auth.status != AuthStatus.authenticated) {
       _viewerCancelToken?.cancel('Supplier viewer is no longer authenticated');
-      if (mounted && _supplier?.isFollowedByViewer == true) {
-        setState(
-          () => _supplier = _supplier!.copyWith(isFollowedByViewer: false),
-        );
+      final supplier = _supplier;
+      if (supplier != null) {
+        ref
+            .read(supplierFollowControllerProvider.notifier)
+            .setAuthoritativeFollowing(
+              supplierProfileId: supplier.id,
+              viewerId: null,
+              isFollowedByViewer: false,
+              fallbackFollowersCount: supplier.followersCount,
+            );
       }
       return;
     }
@@ -204,11 +229,14 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
             cancelToken: token,
           );
       if (!mounted || token.isCancelled || _supplier == null) return;
-      setState(
-        () => _supplier = _supplier!.copyWith(
-          isFollowedByViewer: state.isFollowedByViewer,
-        ),
-      );
+      ref
+          .read(supplierFollowControllerProvider.notifier)
+          .setAuthoritativeFollowing(
+            supplierProfileId: widget.supplierProfileId,
+            viewerId: auth.user?.id,
+            isFollowedByViewer: state.isFollowedByViewer,
+            fallbackFollowersCount: _supplier!.followersCount,
+          );
     } catch (_) {
       // Header remains usable; follow mutations surface their own errors.
     }
@@ -250,9 +278,7 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
 
   Future<void> _toggleFollow() async {
     final supplier = _supplier;
-    if (supplier == null || _isUpdatingFollow) {
-      return;
-    }
+    if (supplier == null) return;
 
     final authState = ref.read(authControllerProvider);
     if (authState.status != AuthStatus.authenticated) {
@@ -268,53 +294,38 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
       return;
     }
 
-    final previousCount = supplier.followersCount;
-    final previousFollowing = supplier.isFollowedByViewer;
-    final shouldFollow = !supplier.isFollowedByViewer;
     _viewerCancelToken?.cancel('Follow mutation started');
 
-    setState(() {
-      _isUpdatingFollow = true;
-      _supplier = supplier.copyWith(
-        isFollowedByViewer: shouldFollow,
-        followersCount: shouldFollow
-            ? supplier.followersCount + 1
-            : (supplier.followersCount > 0 ? supplier.followersCount - 1 : 0),
-      );
-    });
-
     try {
-      final status = shouldFollow
-          ? await _repository.followSupplier(widget.supplierProfileId)
-          : await _repository.unfollowSupplier(widget.supplierProfileId);
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _supplier = supplier.copyWith(
-          followersCount: status.followersCount,
-          isFollowedByViewer: status.isFollowedByViewer,
-        );
-      });
+      final status = await ref
+          .read(supplierFollowControllerProvider.notifier)
+          .toggle(
+            supplierProfileId: widget.supplierProfileId,
+            viewerId: authState.user?.id,
+            repository: _repository,
+            fallbackFollowersCount: supplier.followersCount,
+            fallbackIsFollowedByViewer: supplier.isFollowedByViewer,
+          );
+      if (!mounted || status == null) return;
+      showSuccessSnackBar(
+        context,
+        status.isFollowedByViewer
+            ? const LocalizedText(
+                en: 'Supplier followed successfully',
+                ar: 'تمت المتابعة بنجاح',
+              ).resolve(context)
+            : const LocalizedText(
+                en: 'Supplier unfollowed',
+                ar: 'تم إلغاء المتابعة',
+              ).resolve(context),
+      );
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _supplier = supplier.copyWith(
-          followersCount: previousCount,
-          isFollowedByViewer: previousFollowing,
-        );
-      });
-      showErrorSnackBar(context, localizedApiErrorMessage(error, context.l10n));
-    } finally {
       if (mounted) {
-        setState(() {
-          _isUpdatingFollow = false;
-        });
+        showErrorSnackBar(
+          context,
+          error,
+          message: localizedApiErrorMessage(error, context.l10n),
+        );
       }
     }
   }
@@ -322,7 +333,23 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final supplier = _supplier;
+    final sourceSupplier = _supplier;
+    final auth = ref.watch(authControllerProvider);
+    final followStates = ref.watch(supplierFollowControllerProvider);
+    final followState = sourceSupplier == null
+        ? null
+        : followStates[supplierFollowStateKey(
+            supplierProfileId: sourceSupplier.id,
+            viewerId: auth.status == AuthStatus.authenticated
+                ? auth.user?.id
+                : null,
+          )];
+    final supplier = sourceSupplier == null || followState == null
+        ? sourceSupplier
+        : sourceSupplier.copyWith(
+            followersCount: followState.followersCount,
+            isFollowedByViewer: followState.isFollowedByViewer,
+          );
 
     ref.listen(authControllerProvider, (previous, next) {
       if (previous?.status != next.status ||
@@ -399,7 +426,8 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
                                     children: [
                                       PublicSupplierProfileHeader(
                                         supplier: supplier,
-                                        isUpdatingFollow: _isUpdatingFollow,
+                                        isUpdatingFollow:
+                                            followState?.isUpdating ?? false,
                                         onToggleFollow: _toggleFollow,
                                       ),
                                       const SizedBox(height: AppSpacing.md),
