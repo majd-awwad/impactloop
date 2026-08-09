@@ -4283,6 +4283,43 @@ describe("deleteSupplierMaterial", () => {
       },
     );
   });
+
+  test("rejects materials with confirmation or resolution reservations", async () => {
+    const statuses = [
+      "AWAITING_LEARNER_CONFIRMATION",
+      "AWAITING_SUPPLIER_CONFIRMATION",
+      "AWAITING_RESOLUTION",
+    ] as const;
+
+    for (const status of statuses) {
+      const material = await createMaterial(
+        ctx,
+        ctx.supplierId,
+        `delete-with-${status.toLowerCase()}`,
+        "AVAILABLE",
+      );
+      const reservation = await prisma.reservation.create({
+        data: {
+          materialId: material.id,
+          requesterId: ctx.learnerId,
+          ownerId: ctx.supplierId,
+          quantityRequested: 1,
+          status,
+        },
+      });
+      ctx.createdReservationIds.push(reservation.id);
+
+      await assert.rejects(
+        () => deleteSupplierMaterial(ctx.supplierId, material.id),
+        (error: unknown) => {
+          assert.ok(error instanceof AppError);
+          assert.equal(error.statusCode, 409);
+          assert.match(error.message, /active requests/i);
+          return true;
+        },
+      );
+    }
+  });
 });
 
 describe("supplier material status and detail", () => {
@@ -4391,6 +4428,53 @@ describe("supplier material status and detail", () => {
     assert.equal(detail.demandScorePercent, 50);
     assert.equal(detail.reservations.length, 2);
     assert.equal(detail.canMarkUnavailable, false);
+  });
+
+  test("high demand includes confirmation and resolution reservations", async () => {
+    const statuses = [
+      "AWAITING_LEARNER_CONFIRMATION",
+      "AWAITING_SUPPLIER_CONFIRMATION",
+      "AWAITING_RESOLUTION",
+    ] as const;
+    const materialIds: string[] = [];
+
+    for (const status of statuses) {
+      const material = await createMaterial(
+        ctx,
+        ctx.supplierId,
+        `high-demand-${status.toLowerCase()}`,
+        "AVAILABLE",
+      );
+      materialIds.push(material.id);
+
+      const reservation = await prisma.reservation.create({
+        data: {
+          materialId: material.id,
+          requesterId: ctx.learnerId,
+          ownerId: ctx.supplierId,
+          quantityRequested: 1,
+          status,
+        },
+      });
+      ctx.createdReservationIds.push(reservation.id);
+    }
+
+    const profile = await prisma.supplierProfile.findUnique({
+      where: { userId: ctx.supplierId },
+      select: { id: true },
+    });
+    const highDemand = await supplierRepository.findHighDemandMaterials(
+      {
+        userId: ctx.supplierId,
+        supplierProfileId: profile?.id ?? null,
+      },
+      100,
+    );
+    const highDemandIds = new Set(highDemand.map((entry) => entry.material.id));
+
+    for (const materialId of materialIds) {
+      assert.equal(highDemandIds.has(materialId), true);
+    }
   });
 
   test("detail includes lifetime demand from completed reservation without active demand", async () => {

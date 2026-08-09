@@ -20,6 +20,11 @@ import {
   MATERIAL_DEMAND_TRACKED_STATUSES,
   type MaterialReservationStatusCounts,
 } from "./supplier.material-demand-metrics.js";
+import {
+  MATERIAL_MUTATION_BLOCKING_RESERVATION_STATUSES,
+} from "../materials/material-reservation.policy.js";
+import { ACTIVE_RESERVATION_STATUSES } from "../reservations/reservation-status.js";
+
 type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
 
 const CONCEPT_WRITE_INTERNAL_MESSAGE =
@@ -363,7 +368,7 @@ export const findHighDemandMaterials = async (
   const demandGroups = await prisma.reservation.groupBy({
     by: ['materialId'],
     where: {
-      status: { in: ['PENDING', 'ACCEPTED'] },
+      status: { in: [...MATERIAL_DEMAND_ACTIVE_STATUSES] },
       material: materialWhere,
     },
     _count: { _all: true },
@@ -931,7 +936,7 @@ export const countBlockingReservationsByMaterialIds = async (
     by: ["materialId"],
     where: {
       materialId: { in: materialIds },
-      status: { in: ["PENDING", "ACCEPTED", "COMPLETED"] },
+      status: { in: [...MATERIAL_MUTATION_BLOCKING_RESERVATION_STATUSES] },
     },
     _count: { _all: true },
   });
@@ -945,7 +950,7 @@ export const countBlockingReservationsForMaterial = async (
   return prisma.reservation.count({
     where: {
       materialId,
-      status: { in: ["PENDING", "ACCEPTED", "COMPLETED"] },
+      status: { in: [...MATERIAL_MUTATION_BLOCKING_RESERVATION_STATUSES] },
     },
   });
 };
@@ -1405,7 +1410,7 @@ export const countActiveReservationsForMaterial = async (materialId: string) => 
   return prisma.reservation.count({
     where: {
       materialId,
-      status: { in: [...MATERIAL_DEMAND_ACTIVE_STATUSES] },
+      status: { in: [...ACTIVE_RESERVATION_STATUSES] },
     },
   });
 };

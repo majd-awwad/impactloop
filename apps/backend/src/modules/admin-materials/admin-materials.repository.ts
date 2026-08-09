@@ -2,6 +2,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
 import { createNotification } from '../notifications/notifications.repository.js';
+import { ACTIVE_RESERVATION_STATUSES } from '../reservations/reservation-status.js';
 import type {
   AdminMaterialReportsExportFilters,
   AdminMaterialReportsListQuery,
@@ -275,7 +276,7 @@ export const countActiveReservations = async (materialId: string) => {
   return prisma.reservation.count({
     where: {
       materialId,
-      status: { in: ['PENDING', 'ACCEPTED'] },
+      status: { in: [...ACTIVE_RESERVATION_STATUSES] },
     },
   });
 };

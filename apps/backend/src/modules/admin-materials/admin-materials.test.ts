@@ -26,6 +26,7 @@ type TestContext = {
   categoryId: string;
   locationId: string;
   materialIds: string[];
+  reservationIds: string[];
   reportIds: string[];
   userIds: string[];
 };
@@ -37,6 +38,7 @@ const ctx: TestContext = {
   categoryId: '',
   locationId: '',
   materialIds: [],
+  reservationIds: [],
   reportIds: [],
   userIds: [],
 };
@@ -148,6 +150,9 @@ describe('admin materials management', () => {
     });
     await prisma.materialReport.deleteMany({
       where: { id: { in: ctx.reportIds } },
+    });
+    await prisma.reservation.deleteMany({
+      where: { id: { in: ctx.reservationIds } },
     });
     await prisma.materialImage.deleteMany({
       where: { materialId: { in: ctx.materialIds } },
@@ -282,6 +287,44 @@ describe('admin materials management', () => {
         return true;
       },
     );
+  });
+
+  test('confirmation and resolution reservations block material moderation', async () => {
+    const statuses = [
+      'AWAITING_LEARNER_CONFIRMATION',
+      'AWAITING_SUPPLIER_CONFIRMATION',
+      'AWAITING_RESOLUTION',
+    ] as const;
+
+    for (const status of statuses) {
+      const material = await createMaterial('AVAILABLE');
+      const reservation = await prisma.reservation.create({
+        data: {
+          materialId: material.id,
+          requesterId: ctx.learnerId,
+          ownerId: ctx.supplierId,
+          quantityRequested: 1,
+          status,
+        },
+      });
+      ctx.reservationIds.push(reservation.id);
+
+      await assert.rejects(
+        () =>
+          markAdminMaterialUnavailable(ctx.adminId, material.id, {
+            reason: `Should not moderate material with ${status}`,
+          }),
+        (error: unknown) => {
+          assert.ok(error instanceof AppError);
+          assert.equal(error.statusCode, 409);
+          assert.equal(
+            (error.details as { reason?: string } | undefined)?.reason,
+            'ACTIVE_RESERVATION',
+          );
+          return true;
+        },
+      );
+    }
   });
 
   test('reserved material cannot be hidden', async () => {
