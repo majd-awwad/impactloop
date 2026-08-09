@@ -1,3 +1,5 @@
+import type { ProjectBuildStatus } from '../../generated/prisma/client.js';
+
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 
@@ -27,9 +29,12 @@ import {
   mapLearnerLearningAssignment,
 } from './project-learning.dto.js';
 
-const MUTABLE_BUILD_STATUSES = new Set(['IN_PROGRESS', 'PAUSED']);
+const MUTABLE_BUILD_STATUSES = new Set<ProjectBuildStatus>([
+  'IN_PROGRESS',
+  'PAUSED',
+]);
 
-const assertBuildAllowsStepCheckMutation = (buildStatus: string) => {
+const assertBuildAllowsStepCheckMutation = (buildStatus: ProjectBuildStatus) => {
   if (buildStatus === 'ARCHIVED') {
     throw new AppError(
       'Step learning check is locked for archived builds.',
@@ -150,7 +155,7 @@ const assertStepCheckAccessible = (input: {
 const mapStepCheck = (
   assignment: StepLearningAssignmentRecord,
   stepId: string,
-  buildStatus: string,
+  buildStatus: ProjectBuildStatus,
 ): LearnerStepLearningCheckDto =>
   mapLearnerStepLearningCheck(assignment, {
     stepId,
@@ -400,7 +405,7 @@ export const getStepLearningCheckAiHandoff = async (input: {
 export const getStepLearningChecksForSession = async (input: {
   buildId: string;
   learnerId: string;
-  buildStatus: string;
+  buildStatus: ProjectBuildStatus;
   completedStepIds: string[];
 }) => {
   const session = await prisma.projectBuildLearningSession.findFirst({

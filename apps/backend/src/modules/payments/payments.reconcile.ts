@@ -1,3 +1,8 @@
+import type {
+  DeliveryStatus,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
+
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
@@ -52,7 +57,7 @@ const TERMINAL_RESERVATION_STATUSES = [
   'EXPIRED',
   'NO_SHOW',
   'FULFILLMENT_FAILED',
-] as const;
+] as const satisfies readonly ReservationStatus[];
 
 const FULFILLMENT_STARTED_DELIVERY_STATUSES = [
   'DRIVER_ASSIGNED',
@@ -66,7 +71,7 @@ const FULFILLMENT_STARTED_DELIVERY_STATUSES = [
   'DRIVER_NO_SHOW',
   'LEARNER_NO_SHOW',
   'AWAITING_RESOLUTION',
-] as const;
+] as const satisfies readonly DeliveryStatus[];
 
 const PRE_FULFILLMENT_TERMINAL = [
   'CANCELLED',
@@ -145,8 +150,8 @@ export const reconcileAcceptedPaymentObligations = async (input?: {
 
   for (const reservation of reservations) {
     if (
-      (TERMINAL_RESERVATION_STATUSES as readonly string[]).includes(
-        reservation.status,
+      TERMINAL_RESERVATION_STATUSES.some(
+        (status) => status === reservation.status,
       )
     ) {
       result.skippedTerminal += 1;

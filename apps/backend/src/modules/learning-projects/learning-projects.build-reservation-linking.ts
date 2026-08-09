@@ -1,4 +1,4 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type { Prisma, ReservationStatus } from '../../generated/prisma/client.js';
 
 import {
   isReservationLinkedToAnotherBuildItem,
@@ -23,9 +23,9 @@ const PUBLIC_PROJECT_WHERE: Prisma.LearningProjectWhereInput = {
 
 export { ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES } from './learning-projects.build-reservation.constants.js';
 
-const isActiveLinkedReservationStatus = (status: string) =>
-  ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES.includes(
-    status as (typeof ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES)[number],
+const isActiveLinkedReservationStatus = (status: ReservationStatus) =>
+  ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES.some(
+    (activeStatus) => activeStatus === status,
   );
 
 export type BuildItemReservationLinkValidationCode =

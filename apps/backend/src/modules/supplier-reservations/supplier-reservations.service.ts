@@ -1,4 +1,7 @@
-import type { ReservationStatus } from '../../generated/prisma/client.js';
+import type {
+  ReservationFulfillmentMethod,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
 
 import {
@@ -205,7 +208,7 @@ const tabToReservationStatuses = (status: string): ReservationStatus[] | null =>
 };
 
 const mapFulfillmentLabel = (
-  fulfillmentMethod: string,
+  fulfillmentMethod: ReservationFulfillmentMethod,
   deliveryCount: number,
 ): string => mapReservationFulfillmentLabel(fulfillmentMethod, deliveryCount);
 

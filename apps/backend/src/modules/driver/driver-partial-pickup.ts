@@ -1,6 +1,7 @@
 import {
   Prisma,
   type DeliveryStatus,
+  type ReservationFulfillmentMethod,
   type ReservationStatus,
 } from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
@@ -42,7 +43,7 @@ export const reservationStatusForUnpickedReason = (
 export type GroupMemberReservation = {
   id: string;
   status: ReservationStatus;
-  fulfillmentMethod: string;
+  fulfillmentMethod: ReservationFulfillmentMethod;
   materialId: string;
   quantityRequested: Prisma.Decimal;
   ownerId?: string;

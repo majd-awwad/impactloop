@@ -1,4 +1,4 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type { PaymentOrderStatus, Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import {
   claimIdempotencyRecord,
@@ -69,7 +69,7 @@ const assertPayerOrAdmin = (
   throw new AppError('Payment order not found.', 404, 'NOT_FOUND');
 };
 
-const rejectCheckoutStatus = (status: string): never => {
+const rejectCheckoutStatus = (status: PaymentOrderStatus): never => {
   const code =
     status === 'PAID'
       ? 'PAYMENT_ALREADY_PAID'

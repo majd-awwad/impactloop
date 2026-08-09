@@ -1,4 +1,8 @@
 import { prisma } from '../../database/prisma.js';
+import type {
+  LearnerMaterialRequestStatus,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 
 import type { BuildMaterialRequestSyncOutcome } from '../learning-projects/learning-projects.build-material-request-sync.js';
 
@@ -18,13 +22,13 @@ const isBuildItemSyncedWithMatch = (input: {
   input.linkedReservationId === input.reservationId;
 
 export const findCompletedReservationMatchForFulfilledRequest = (input: {
-  status: string;
+  status: LearnerMaterialRequestStatus;
   matches: Array<{
     materialId: string;
     reservationId: string | null;
     reservation?: {
       id: string;
-      status: string;
+      status: ReservationStatus;
       materialId: string;
     } | null;
   }>;

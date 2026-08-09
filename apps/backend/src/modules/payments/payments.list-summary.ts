@@ -1,4 +1,9 @@
-import type { PaymentOrderStatus } from '../../generated/prisma/client.js';
+import type {
+  DeliveryStatus,
+  PaymentOrderStatus,
+  ReservationFulfillmentMethod,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { isWithinAllowedHandoverRange } from '../../utils/handover-timing.js';
 
@@ -27,13 +32,13 @@ export type ReservationPaymentListSummary = {
 
 export type ReservationPaymentListSummaryInput = {
   id: string;
-  status: string;
-  fulfillmentMethod: 'PICKUP' | 'DELIVERY' | string;
+  status: ReservationStatus;
+  fulfillmentMethod: ReservationFulfillmentMethod;
   materialSubtotal: unknown;
   deliveryFee: unknown;
   pricingCurrency: string | null;
   deliveryGroupId: string | null;
-  deliveryStatus: string | null;
+  deliveryStatus: DeliveryStatus | null;
   assignedDriverProfileId: string | null;
   pickupWindowStart?: Date | string | null;
   pickupWindowEnd?: Date | string | null;
@@ -82,7 +87,9 @@ type OrderRow = {
   cycleNumber: number;
 };
 
-const DISPATCHABLE_DELIVERY_STATUSES = new Set(['WAITING_FOR_DRIVER']);
+const DISPATCHABLE_DELIVERY_STATUSES = new Set<DeliveryStatus>([
+  'WAITING_FOR_DRIVER',
+]);
 
 const mapOrderReadiness = (status: PaymentOrderStatus): string => {
   switch (status) {

@@ -1,3 +1,5 @@
+import type { PaymentAttemptStatus } from '../../generated/prisma/client.js';
+
 export const PAYMENT_CHECKOUT_IDEMPOTENCY_SCOPE = 'PAYMENT_CHECKOUT';
 
 /** Reservation-scoped checkout (PAY-05D) — one session may settle many orders. */
@@ -47,7 +49,7 @@ export {
   isPayablePaymentOrderStatus,
 } from './payments.status-policy.js';
 
-export const isActivePaymentAttemptStatus = (status: string): boolean =>
+export const isActivePaymentAttemptStatus = (status: PaymentAttemptStatus): boolean =>
   status === 'CREATED' || status === 'PENDING';
 
 /**

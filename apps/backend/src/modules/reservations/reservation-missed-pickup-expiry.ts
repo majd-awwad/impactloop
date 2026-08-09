@@ -1,11 +1,16 @@
+import type {
+  ReservationFulfillmentMethod,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
+
 import {
   MISSED_PICKUP_AUTO_CLOSE_GRACE_HOURS,
 } from './reservation-timing-policy.js';
 import { formatReservationHistoryNote } from './reservation-status-history.js';
 
 export type AcceptedMissedPickupExpiryRecord = {
-  status: string;
-  fulfillmentMethod: string;
+  status: ReservationStatus;
+  fulfillmentMethod: ReservationFulfillmentMethod;
   pickupWindowEnd: Date | null;
   deliveryCount: number;
 };

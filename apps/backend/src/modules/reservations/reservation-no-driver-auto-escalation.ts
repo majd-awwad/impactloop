@@ -1,10 +1,16 @@
+import type {
+  DeliveryStatus,
+  ReservationFulfillmentMethod,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
+
 import { NO_DRIVER_AUTO_ESCALATION_HOURS } from './reservation-timing-policy.js';
 
 export type NoDriverAutoEscalationRecord = {
-  status: string;
-  fulfillmentMethod: string;
+  status: ReservationStatus;
+  fulfillmentMethod: ReservationFulfillmentMethod;
   supplierPickupWindowEnd: Date | null;
-  deliveryStatus: string | null;
+  deliveryStatus: DeliveryStatus | null;
   assignedDriverProfileId: string | null;
   hasNoDriverReport: boolean;
 };

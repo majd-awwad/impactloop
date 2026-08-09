@@ -1,3 +1,5 @@
+import type { ProjectBuildStatus } from '../../generated/prisma/client.js';
+
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 
@@ -52,7 +54,7 @@ const areRequiredStepsComplete = async (input: {
   return projectSteps.every((step) => completed.has(step.id));
 };
 
-const assertFinalCheckMutationAllowed = (buildStatus: string) => {
+const assertFinalCheckMutationAllowed = (buildStatus: ProjectBuildStatus) => {
   if (buildStatus === 'ARCHIVED') {
     throw new AppError(
       'Final learning check is locked for archived builds.',

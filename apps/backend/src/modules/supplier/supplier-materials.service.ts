@@ -1,3 +1,5 @@
+import type { MaterialStatus } from '../../generated/prisma/client.js';
+
 import { AppError } from "../../utils/app-error.js";
 import { prisma } from "../../database/prisma.js";
 import { decimalToNumber } from "../../utils/decimal.js";
@@ -239,7 +241,7 @@ const mapSupplierOwnedMaterial = (
 };
 
 const resolveSupplierMaterialStatusActions = (
-  status: string,
+  status: MaterialStatus,
   activeReservationCount: number,
 ) => {
   const policy = getMaterialModerationPolicy(status);

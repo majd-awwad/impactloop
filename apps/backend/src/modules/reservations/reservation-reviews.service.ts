@@ -1,4 +1,9 @@
-import type { ReviewTargetType } from '../../generated/prisma/client.js';
+import type {
+  DeliveryStatus,
+  ReservationFulfillmentMethod,
+  ReservationStatus,
+  ReviewTargetType,
+} from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 
@@ -26,9 +31,9 @@ export type ReservationReviewsStateDto = {
 
 type ReservationReviewContext = {
   id: string;
-  status: string;
+  status: ReservationStatus;
   ownerId: string;
-  fulfillmentMethod: string;
+  fulfillmentMethod: ReservationFulfillmentMethod;
   owner: {
     displayName: string | null;
     supplierProfile: {
@@ -39,7 +44,7 @@ type ReservationReviewContext = {
     } | null;
   };
   deliveries: Array<{
-    status: string;
+    status: DeliveryStatus;
     assignedDriverProfileId: string | null;
     assignedDriverProfile: {
       userId: string;

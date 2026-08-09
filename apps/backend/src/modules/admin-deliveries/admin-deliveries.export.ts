@@ -1,4 +1,5 @@
 import type { Response } from 'express';
+import type { NoShowReportStatus } from '../../generated/prisma/client.js';
 
 import { AppError } from '../../utils/app-error.js';
 import {
@@ -69,7 +70,10 @@ const formatLocationLabel = (
 const mapPrimaryIncidentContract = (
   delivery: repository.AdminDeliveryExportRecord,
   report: repository.AdminDeliveryPrimaryIncident,
-): DeliveryIncidentContract & { status: string; reasonCode: string } => {
+): DeliveryIncidentContract & {
+  status: NoShowReportStatus;
+  reasonCode: string;
+} => {
   const contract = classifyAdminReportContract({
     report,
     reservation: delivery.reservation,

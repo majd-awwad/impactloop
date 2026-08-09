@@ -1339,7 +1339,10 @@ export const findReservationDemandByMaterialIds = async (
     _count: { _all: true },
   });
 
-  const groupedByMaterial = new Map<string, Array<{ status: string; count: number }>>();
+  const groupedByMaterial = new Map<
+    string,
+    Array<{ status: ReservationStatus; count: number }>
+  >();
 
   for (const group of groups) {
     const materialGroups = groupedByMaterial.get(group.materialId) ?? [];

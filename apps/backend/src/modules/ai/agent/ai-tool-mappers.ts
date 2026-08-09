@@ -1,3 +1,8 @@
+import type {
+  ProjectBuildItemStatus,
+  ReservationStatus,
+} from '../../../generated/prisma/client.js';
+
 import type { AiContentBlock } from '../ai.content-blocks.js';
 import type { AiLocale } from '../ai.types.js';
 import type { ProjectMaterialBudgetEstimate } from '../../learning-projects/learning-projects.build-material-linking.js';
@@ -225,9 +230,9 @@ export const toComponentListBlock = (
 });
 
 export type BuildGuideReadinessItem = {
-  status: string;
+  status: ProjectBuildItemStatus;
   linkedMaterial?: { id: string } | null;
-  linkedReservation?: { id: string; status: string } | null;
+  linkedReservation?: { id: string; status: ReservationStatus } | null;
 };
 
 export const isGenuinelyReadyForStepUnlock = (item: BuildGuideReadinessItem): boolean =>
@@ -255,7 +260,7 @@ export const toBuildChecklistBlock = (
     items: Array<{
       id: string;
       requiredComponentId: string;
-      status: string;
+      status: ProjectBuildItemStatus;
       readinessLabel: string;
       linkedMaterial?: { id: string } | null;
       linkedReservation?: { id: string } | null;
@@ -283,13 +288,10 @@ export const toMissingBuildChecklistBlock = (
     id: string;
     projectId: string;
     progress: { ready: number; total: number };
-    items: Array<{
+    items: Array<BuildGuideReadinessItem & {
       id: string;
       requiredComponentId: string;
-      status: string;
       readinessLabel: string;
-      linkedMaterial?: { id: string } | null;
-      linkedReservation?: { id: string; status: string } | null;
       component: { componentName: string };
     }>;
   },

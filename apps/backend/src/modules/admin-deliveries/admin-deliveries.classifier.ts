@@ -1,3 +1,9 @@
+import type {
+  DeliveryAssignmentStatus,
+  DeliveryStatus,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
+
 export type DeliveryScope = 'SINGLE' | 'GROUPED';
 
 export type DeliveryLifecyclePhase =
@@ -43,7 +49,7 @@ export type DeliveryIncidentContract = {
 
 export type DeliveryAssignmentContract = {
   id: string;
-  status: string;
+  status: DeliveryAssignmentStatus;
   acceptedAt: Date | null;
   releasedAt?: Date | null;
   driver: { id: string; displayName: string; email: string } | null;
@@ -52,13 +58,13 @@ export type DeliveryAssignmentContract = {
 export type AdminDeliveryClassifierContext = {
   delivery: {
     id: string;
-    status: string;
+    status: DeliveryStatus;
     deliveryGroupId: string | null;
     assignedDriverProfileId: string | null;
   };
   reservation: {
     id: string;
-    status: string;
+    status: ReservationStatus;
     pendingRescheduleRequestedBy: string | null;
     pendingRescheduleReason: string | null;
   };
@@ -68,14 +74,26 @@ export type AdminDeliveryClassifierContext = {
   assignments: DeliveryAssignmentContract[];
 };
 
-const recoveryStatuses = new Set([
+const recoveryStatuses = new Set<DeliveryStatus>([
   'AWAITING_RESOLUTION',
   'DRIVER_NO_SHOW',
   'FAILED_PICKUP',
 ]);
-const terminalFailureStatuses = new Set(['FAILED_DELIVERY', 'FAILED_PICKUP', 'DRIVER_NO_SHOW', 'LEARNER_NO_SHOW']);
-const prePickupStatuses = new Set(['DRIVER_ASSIGNED', 'ARRIVED_PICKUP']);
-const inTransitStatuses = new Set(['PICKED_UP', 'ON_THE_WAY', 'ARRIVED_DROPOFF']);
+const terminalFailureStatuses = new Set<DeliveryStatus>([
+  'FAILED_DELIVERY',
+  'FAILED_PICKUP',
+  'DRIVER_NO_SHOW',
+  'LEARNER_NO_SHOW',
+]);
+const prePickupStatuses = new Set<DeliveryStatus>([
+  'DRIVER_ASSIGNED',
+  'ARRIVED_PICKUP',
+]);
+const inTransitStatuses = new Set<DeliveryStatus>([
+  'PICKED_UP',
+  'ON_THE_WAY',
+  'ARRIVED_DROPOFF',
+]);
 const incidentDecisionActions = new Set([
   'VERIFY',
   'REJECT',

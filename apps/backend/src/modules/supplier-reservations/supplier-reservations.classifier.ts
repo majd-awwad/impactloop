@@ -1,3 +1,9 @@
+import type {
+  DeliveryStatus,
+  ReservationFulfillmentMethod,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
+
 export const RESERVATION_ATTENTION_STATES = [
   'SUPPLIER_ACTION_REQUIRED',
   'WAITING_FOR_LEARNER',
@@ -65,9 +71,9 @@ export type SupplierReservationAction =
  * calculated by existing eligibility code before it reaches this classifier.
  */
 export type SupplierReservationClassifierContext = {
-  status: string;
-  fulfillmentMethod: string;
-  deliveryStatus: string | null;
+  status: ReservationStatus;
+  fulfillmentMethod: ReservationFulfillmentMethod;
+  deliveryStatus: DeliveryStatus | null;
   hasDelivery: boolean;
   canAccept: boolean;
   canDecline: boolean;
@@ -93,7 +99,7 @@ export type SupplierReservationContract = {
   availableActions: SupplierReservationAction[];
 };
 
-const CLOSED_STATUSES = new Set([
+const CLOSED_STATUSES = new Set<ReservationStatus>([
   'REJECTED',
   'CANCELLED',
   'EXPIRED',
@@ -101,7 +107,7 @@ const CLOSED_STATUSES = new Set([
   'FULFILLMENT_FAILED',
 ]);
 
-const DRIVER_FULFILLMENT_STATUSES = new Set([
+const DRIVER_FULFILLMENT_STATUSES = new Set<DeliveryStatus>([
   'WAITING_FOR_DRIVER',
   'DRIVER_ASSIGNED',
   'ARRIVED_PICKUP',
@@ -190,7 +196,10 @@ export const classifyNextActor = (input: {
   if (input.attentionState === 'ADMIN_REVIEW_REQUIRED') return 'ADMIN';
   if (input.attentionState === 'TERMINAL') return 'NONE';
 
-  if (DRIVER_FULFILLMENT_STATUSES.has(input.context.deliveryStatus ?? '')) {
+  if (
+    input.context.deliveryStatus &&
+    DRIVER_FULFILLMENT_STATUSES.has(input.context.deliveryStatus)
+  ) {
     return 'DRIVER';
   }
   if (input.context.status === 'AWAITING_SUPPLIER_CONFIRMATION') {

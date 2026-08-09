@@ -1,4 +1,5 @@
 import type {
+  DeliveryStatus,
   DriverAvailabilityStatus,
   Prisma,
   PrismaClient,
@@ -10,7 +11,7 @@ export const DRIVER_IN_PROGRESS_ASSIGNED_STATUSES = [
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
-] as const;
+] as const satisfies readonly DeliveryStatus[];
 
 export const MAX_ACTIVE_DRIVER_DELIVERIES = 3;
 

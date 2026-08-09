@@ -1,3 +1,5 @@
+import type { DeliveryStatus, Prisma } from '../../generated/prisma/client.js';
+
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
@@ -24,13 +26,14 @@ import {
 } from './payments.notifications.js';
 import { LIFECYCLE_REFUND_REASONS } from './payments.lifecycle.policy.js';
 import { refundDuplicateSessionAllocationsKeepingOrdersPaid } from './payments.refunds.js';
+import type { ProcessProviderEventResult } from './payments.event-processor.types.js';
 
 const REOPENABLE_DELIVERY_STATUSES = [
   'AWAITING_RESOLUTION',
   'FAILED_PICKUP',
   'DRIVER_NO_SHOW',
   'CANCELLED',
-] as const;
+] as const satisfies readonly DeliveryStatus[];
 
 /**
  * After a PaymentOrder is transactionally PAID, reevaluate fulfillment.
@@ -167,29 +170,9 @@ const reservationFulfillmentSelect = {
   },
 } as const;
 
-type FulfillmentReservation = {
-  id: string;
-  status: string;
-  fulfillmentMethod: string;
-  requesterId: string;
-  deliveryGroupId: string | null;
-  deliveryAddressText: string | null;
-  dropoffCity: string | null;
-  dropoffArea: string | null;
-  deliveryNote: string | null;
-  ownerId: string;
-  material: {
-    location: {
-      country: string;
-      city: string;
-      area: string | null;
-      addressLine: string | null;
-      latitude: unknown;
-      longitude: unknown;
-      isApproximate: boolean;
-    };
-  };
-};
+type FulfillmentReservation = Prisma.ReservationGetPayload<{
+  select: typeof reservationFulfillmentSelect;
+}>;
 
 const createOrReopenDeliveryIfReady = async (
   reservation: FulfillmentReservation,
@@ -314,8 +297,8 @@ const createOrReopenDeliveryIfReady = async (
         }
 
         if (
-          !(REOPENABLE_DELIVERY_STATUSES as readonly string[]).includes(
-            existing.status,
+          !REOPENABLE_DELIVERY_STATUSES.some(
+            (status) => status === existing.status,
           )
         ) {
           return;
@@ -440,7 +423,7 @@ const createOrReopenDeliveryIfReady = async (
  * is known, so transient Delivery orchestration failures remain retryable.
  */
 export const afterVerifiedPaymentEventProcessed = async (input: {
-  processingStatus: string;
+  processingStatus: ProcessProviderEventResult['processingStatus'];
   paymentOrderId?: string;
   paymentOrderIds?: string[];
   checkoutSessionId?: string;

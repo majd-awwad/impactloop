@@ -40,7 +40,7 @@ export type RequestRow = {
   projectId: string | null;
   projectBuildId: string | null;
   projectBuildItemId: string | null;
-  status: string;
+  status: LearnerMaterialRequestStatus;
   neededBy: Date | null;
   expiresAt: Date;
   fulfilledAt: Date | null;
@@ -91,7 +91,7 @@ export const mapLearnerRequest = (
   },
 ) => {
   const effectiveStatus = effectiveRequestStatus({
-    status: row.status as LearnerMaterialRequestStatus,
+    status: row.status,
     expiresAt: row.expiresAt,
   });
   const activeSuggestionCount = countActiveSuggestions(

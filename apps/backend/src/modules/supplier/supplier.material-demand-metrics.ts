@@ -62,14 +62,14 @@ export type MaterialDemandMetrics = MaterialDemandMetricsInput & {
   reservationsCount: number;
 };
 
-const isPendingDemandStatus = (status: string) =>
-  MATERIAL_DEMAND_PENDING_STATUSES.includes(
-    status as (typeof MATERIAL_DEMAND_PENDING_STATUSES)[number],
+const isPendingDemandStatus = (status: ReservationStatus) =>
+  MATERIAL_DEMAND_PENDING_STATUSES.some(
+    (pendingStatus) => pendingStatus === status,
   );
 
-const isAcceptedDemandStatus = (status: string) =>
-  MATERIAL_DEMAND_ACCEPTED_STATUSES.includes(
-    status as (typeof MATERIAL_DEMAND_ACCEPTED_STATUSES)[number],
+const isAcceptedDemandStatus = (status: ReservationStatus) =>
+  MATERIAL_DEMAND_ACCEPTED_STATUSES.some(
+    (acceptedStatus) => acceptedStatus === status,
   );
 
 export const emptyMaterialReservationStatusCounts =
@@ -80,7 +80,7 @@ export const emptyMaterialReservationStatusCounts =
   });
 
 export const foldMaterialReservationStatusCounts = (
-  groups: Array<{ status: string; count: number }>,
+  groups: Array<{ status: ReservationStatus; count: number }>,
 ): MaterialReservationStatusCounts => {
   const counts = emptyMaterialReservationStatusCounts();
 

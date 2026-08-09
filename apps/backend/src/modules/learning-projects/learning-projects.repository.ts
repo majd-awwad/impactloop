@@ -1,4 +1,7 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type {
+  Prisma,
+  ProjectBuildItemStatus,
+} from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
@@ -1784,7 +1787,7 @@ export const updateOwnedProjectBuildItemsStatusBatch = async (input: {
   targetStatus: 'ALREADY_OWNED' | 'MISSING';
   items: Array<{
     buildItemId: string;
-    previousStatus: string;
+    previousStatus: ProjectBuildItemStatus;
   }>;
 }) => {
   if (input.items.length === 0) {

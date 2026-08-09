@@ -1,4 +1,9 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type {
+  Prisma,
+  ProjectBuildItemStatus,
+  ProjectBuildStatus,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 
 import {
   ACTIVE_HOLD_STATUSES,
@@ -8,7 +13,7 @@ import {
 
 import { ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES } from './learning-projects.build-reservation.constants.js';
 
-const TERMINAL_FAILED_RESERVATION_STATUSES = new Set([
+const TERMINAL_FAILED_RESERVATION_STATUSES = new Set<ReservationStatus>([
   'REJECTED',
   'CANCELLED',
   'EXPIRED',
@@ -37,7 +42,7 @@ export type BuildItemAllocationPeer = {
   componentRole: string;
   linkedReservation: {
     id: string;
-    status: string;
+    status: ReservationStatus;
     quantityRequested: Prisma.Decimal;
     materialId: string;
   } | null;
@@ -45,7 +50,7 @@ export type BuildItemAllocationPeer = {
 
 export type BuildItemAllocationInput = {
   itemId: string;
-  status: string;
+  status: ProjectBuildItemStatus;
   componentRole: string;
   requiredQuantity: number;
   requiredUnit: string;
@@ -53,12 +58,12 @@ export type BuildItemAllocationInput = {
   materialUnit?: string | null;
   linkedReservation: {
     id: string;
-    status: string;
+    status: ReservationStatus;
     quantityRequested: Prisma.Decimal;
     materialId: string;
   } | null;
   peerItems: BuildItemAllocationPeer[];
-  buildStatus?: string;
+  buildStatus?: ProjectBuildStatus;
 };
 
 export type BuildItemQuantityAllocationView = {
@@ -173,22 +178,19 @@ export const unitsAreCompatible = (
   return left === right;
 };
 
-const isActiveLinkedReservationStatus = (status: string) =>
-  (ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES as readonly string[]).includes(
-    status,
-  ) ||
-  (ACTIVE_HOLD_STATUSES as readonly string[]).includes(
-    status as (typeof ACTIVE_HOLD_STATUSES)[number],
-  );
+const isActiveLinkedReservationStatus = (status: ReservationStatus) =>
+  ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES.some(
+    (activeStatus) => activeStatus === status,
+  ) || ACTIVE_HOLD_STATUSES.some((activeStatus) => activeStatus === status);
 
-const isTerminalFailedReservationStatus = (status: string) =>
+const isTerminalFailedReservationStatus = (status: ReservationStatus) =>
   TERMINAL_FAILED_RESERVATION_STATUSES.has(status);
 
 export const resolveBuildItemMaterialClaim = (input: {
   requiredQuantity: number;
   linkedMaterialId: string | null;
   linkedReservation: {
-    status: string;
+    status: ReservationStatus;
     quantityRequested: Prisma.Decimal;
   } | null;
 }): number => {
@@ -261,14 +263,14 @@ export const isReservationLinkedToAnotherBuildItem = async (
 };
 
 export const evaluateBuildItemQuantityAllocation = (input: {
-  status: string;
+  status: ProjectBuildItemStatus;
   componentRole: string;
   requiredQuantity: number;
   requiredUnit: string;
   linkedMaterialId: string | null;
   materialUnit?: string | null;
   linkedReservation?: {
-    status: string;
+    status: ReservationStatus;
     quantityRequested: Prisma.Decimal;
   } | null;
   availableQuantity?: number | null;
@@ -476,7 +478,7 @@ export const validateMaterialLinkAllocationInBuild = async (
     requiredQuantity: number;
     requiredUnit: string;
     componentRole: string;
-    buildStatus: string;
+    buildStatus: ProjectBuildStatus;
     peerItems: BuildItemAllocationPeer[];
   },
 ): Promise<
@@ -693,7 +695,7 @@ export const detectHistoricalAllocationConflict = (input: {
   requiredQuantity: number;
   linkedReservation: {
     id: string;
-    status: string;
+    status: ReservationStatus;
     quantityRequested: Prisma.Decimal;
   } | null;
   peerItems: BuildItemAllocationPeer[];
@@ -730,7 +732,8 @@ export const detectHistoricalAllocationConflict = (input: {
   for (const peer of peersOnMaterial) {
     if (
       peer.linkedReservation?.status === 'COMPLETED' ||
-      isActiveLinkedReservationStatus(peer.linkedReservation?.status ?? '')
+      (peer.linkedReservation != null &&
+        isActiveLinkedReservationStatus(peer.linkedReservation.status))
     ) {
       activeHeld += decimalToNumber(peer.linkedReservation?.quantityRequested) ?? 0;
       if (peer.linkedReservation?.status === 'COMPLETED') {
@@ -810,7 +813,7 @@ export const buildAllocationPeersFromBuildItems = (
     };
     linkedReservation: {
       id: string;
-      status: string;
+      status: ReservationStatus;
       quantityRequested: Prisma.Decimal;
       materialId: string;
     } | null;
@@ -829,10 +832,10 @@ export const buildAllocationPeersFromBuildItems = (
 export const resolveBuildItemAllocationContext = async (
   client: Parameters<typeof getMaterialQuantityState>[0],
   input: {
-    buildStatus: string;
+    buildStatus: ProjectBuildStatus;
     items: Array<{
       id: string;
-      status: string;
+      status: ProjectBuildItemStatus;
       linkedMaterialId: string | null;
       linkedReservationId: string | null;
       requiredComponent: {
@@ -843,7 +846,7 @@ export const resolveBuildItemAllocationContext = async (
       linkedMaterial: { id: string; unit: string } | null;
       linkedReservation: {
         id: string;
-        status: string;
+        status: ReservationStatus;
         quantityRequested: Prisma.Decimal;
         materialId: string;
       } | null;

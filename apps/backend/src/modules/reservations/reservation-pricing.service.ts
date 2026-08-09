@@ -1,4 +1,8 @@
-import { Prisma } from '../../generated/prisma/client.js';
+import {
+  Prisma,
+  type MaterialStatus,
+  type ReservationFulfillmentMethod,
+} from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 
 import {
@@ -24,14 +28,14 @@ export type MaterialPricingContext = {
   supplierProfileId: string | null;
   deliveryAllowed: boolean;
   pickupAllowed: boolean;
-  status: string;
+  status: MaterialStatus;
 };
 
 export type ReservationQuoteInput = {
   learnerId: string;
   materialId: string;
   quantity: number;
-  fulfillmentMethod: 'PICKUP' | 'DELIVERY';
+  fulfillmentMethod: ReservationFulfillmentMethod;
   dropoffCity?: string;
   dropoffArea?: string | null;
   learnerPreferredDeliveryWindows?: { start: string; end: string }[];
@@ -47,7 +51,7 @@ export type ReservationQuoteResult = {
   totalAmount: number;
   currency: string;
   deliveryZone: string | null;
-  fulfillmentMethod: 'PICKUP' | 'DELIVERY';
+  fulfillmentMethod: ReservationFulfillmentMethod;
   canDeliver: boolean;
   groupingAvailable: boolean;
   groupingApplied: boolean;

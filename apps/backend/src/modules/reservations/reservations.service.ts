@@ -1,5 +1,9 @@
 import { AppError } from '../../utils/app-error.js';
-import type { ReservationStatus } from '../../generated/prisma/client.js';
+import type {
+  DeliveryStatus,
+  PaymentOrderStatus,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 import { ACTIVE_DELIVERY_STATUSES } from '../deliveries/deliveries.service.js';
 import { notifyNewJobForReservationWaitingDelivery } from '../notifications/driver-notification-events.service.js';
 import { notifyReservationCancelledByLearner } from '../notifications/reservation-notifications.js';
@@ -79,7 +83,10 @@ import type {
   ReservationQuoteInput as ReservationQuoteBody,
 } from './reservations.validation.js';
 
-const PICKUP_LOCATION_REVEAL_STATUSES = new Set(['ACCEPTED', 'COMPLETED']);
+const PICKUP_LOCATION_REVEAL_STATUSES = new Set<ReservationStatus>([
+  'ACCEPTED',
+  'COMPLETED',
+]);
 
 type PreferredWindow = {
   start: string;
@@ -184,7 +191,7 @@ const mapReservation = (
   ...mapPricingFields(reservation),
 });
 
-const LEARNER_DELIVERY_CODE_VISIBLE_STATUSES = new Set([
+const LEARNER_DELIVERY_CODE_VISIBLE_STATUSES = new Set<DeliveryStatus>([
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
@@ -1059,7 +1066,10 @@ export const resolvePickupCodeVisibilityByReservationIds = async (
     },
   });
 
-  const currentByReservation = new Map<string, { status: string }>();
+  const currentByReservation = new Map<
+    string,
+    { status: PaymentOrderStatus }
+  >();
   for (const order of orders) {
     if (!order.reservationId) continue;
     if (!currentByReservation.has(order.reservationId)) {

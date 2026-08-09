@@ -1,11 +1,9 @@
-export type IncidentReviewStatus =
-  | 'PENDING_REVIEW'
-  | 'VERIFIED'
-  | 'REJECTED'
-  | 'RESOLVED_NO_STRIKE';
+import type { NoShowReportStatus } from '../../generated/prisma/client.js';
+
+export type IncidentReviewStatus = NoShowReportStatus;
 
 export const resolveIncidentReviewStatus = (
-  reports: readonly { status: string }[],
+  reports: readonly { status: NoShowReportStatus }[],
 ): IncidentReviewStatus | null => {
   if (reports.length === 0) {
     return null;

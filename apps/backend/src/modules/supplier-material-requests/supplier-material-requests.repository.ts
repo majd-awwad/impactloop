@@ -1,4 +1,4 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type { MaterialStatus, Prisma } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
 
@@ -6,7 +6,7 @@ const ELIGIBLE_MATERIAL_STATUSES = [
   'AVAILABLE',
   'PENDING_RESERVATION',
   'RESERVED',
-] as const;
+] as const satisfies readonly MaterialStatus[];
 
 export const supplierRequestInclude = (
   supplierUserId: string,

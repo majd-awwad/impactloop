@@ -1,4 +1,9 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type {
+  PaymentOrderStatus,
+  Prisma,
+  ReservationFulfillmentMethod,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
 import { prisma } from '../../database/prisma.js';
 import { logger } from '../../observability/logger.js';
@@ -378,7 +383,7 @@ const findReservationDelivery = async (
   tx: Prisma.TransactionClient,
   reservation: {
     id: string;
-    fulfillmentMethod: string;
+    fulfillmentMethod: ReservationFulfillmentMethod;
     deliveryGroupId: string | null;
   },
 ) => {
@@ -643,7 +648,7 @@ export const evaluateMaterialLateSuccessAction = async (
 
 const applyOrderTerminalAction = async (
   tx: Prisma.TransactionClient,
-  order: { id: string; status: string },
+  order: { id: string; status: PaymentOrderStatus },
   reason: string,
   actions: PaymentLifecycleAction[],
   postCommitRefunds: PostCommitRefundTask[],
@@ -709,7 +714,7 @@ export const handleReservationPaymentLifecycleTransition = async (
   tx: Prisma.TransactionClient,
   input: {
     reservationId: string;
-    newStatus: string;
+    newStatus: ReservationStatus;
     actorUserId?: string | null;
     reason?: string;
   },

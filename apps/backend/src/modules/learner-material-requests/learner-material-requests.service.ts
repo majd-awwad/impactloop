@@ -1,6 +1,9 @@
 import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { prisma } from '../../database/prisma.js';
-import type { Prisma } from '../../generated/prisma/client.js';
+import type {
+  LearnerMaterialRequestStatus,
+  Prisma,
+} from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
 import { normalizeSearchText } from '../../utils/normalize-search-text.js';
 import {
@@ -37,7 +40,10 @@ import type {
   UpdateLearnerMaterialRequestInput,
 } from './learner-material-requests.validation.js';
 
-const assertRequestOpen = (row: { status: string; expiresAt: Date }) => {
+const assertRequestOpen = (row: {
+  status: LearnerMaterialRequestStatus;
+  expiresAt: Date;
+}) => {
   if (
     shouldLazyExpire({
       status: 'OPEN',
@@ -51,7 +57,10 @@ const assertRequestOpen = (row: { status: string; expiresAt: Date }) => {
   }
 };
 
-const assertRequestEditable = (row: { status: string; expiresAt: Date }) => {
+const assertRequestEditable = (row: {
+  status: LearnerMaterialRequestStatus;
+  expiresAt: Date;
+}) => {
   if (
     shouldLazyExpire({
       status: 'OPEN',
@@ -616,7 +625,7 @@ export type FulfillFromCompletedReservationResult = {
   id: string;
   learnerId: string;
   requestedItemName: string;
-  status: string;
+  status: LearnerMaterialRequestStatus;
   transitionedToFulfilled: boolean;
   buildSyncOutcome: BuildMaterialRequestSyncOutcome;
 };

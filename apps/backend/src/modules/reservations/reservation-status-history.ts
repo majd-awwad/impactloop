@@ -1,3 +1,7 @@
+import type {
+  ReservationStatusGroup,
+} from '../../generated/prisma/client.js';
+
 import {
   MISSED_PICKUP_AUTO_CLOSE_GRACE_HOURS,
   PENDING_SUPPLIER_RESPONSE_HOURS,
@@ -325,7 +329,7 @@ export const parseReservationHistoryNote = (
 
 export const mapReservationStatusHistoryForClient = (entry: {
   id: string;
-  statusGroup: string;
+  statusGroup: ReservationStatusGroup;
   oldStatus: string | null;
   newStatus: string;
   note: string | null;

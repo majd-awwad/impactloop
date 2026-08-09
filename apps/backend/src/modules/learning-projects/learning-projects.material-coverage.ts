@@ -1,4 +1,8 @@
-import type { Prisma, ProjectComponentRole } from '../../generated/prisma/client.js';
+import type {
+  Prisma,
+  ProjectBuildItemStatus,
+  ProjectComponentRole,
+} from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
 import { getMaterialQuantityState } from '../reservations/reservations.quantity.js';
@@ -432,7 +436,7 @@ export const summarizeMaterialCoverage = (
 };
 
 export const isPersonallyReadyBuildItem = (input: {
-  status: string;
+  status: ProjectBuildItemStatus;
   acquisitionState: string;
   allocationResult: string | null;
   allocationWarning?: string | null;
@@ -453,7 +457,7 @@ export const isPersonallyReadyBuildItem = (input: {
 
 type BuildItemForPersonalReadiness = {
   id: string;
-  status: string;
+  status: ProjectBuildItemStatus;
   requiredComponent: CoverageComponentRecord;
   linkedMaterial: Parameters<typeof resolveBuildItemReadiness>[0]['linkedMaterial'];
   linkedReservation: Parameters<typeof resolveBuildItemReadiness>[0]['linkedReservation'];

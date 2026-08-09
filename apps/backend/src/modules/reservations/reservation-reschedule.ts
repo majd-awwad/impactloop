@@ -1,4 +1,7 @@
-import type { ReservationStatus } from '../../generated/prisma/client.js';
+import type {
+  ReservationFulfillmentMethod,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 import {
   resolvePickupHandoverPhase,
   type PickupHandoverPhase,
@@ -19,7 +22,7 @@ export const resolveSelfPickupHandoverPhase = (input: {
   status: ReservationStatus;
   pickupWindowStart: Date | null;
   pickupWindowEnd: Date | null;
-  fulfillmentMethod: string;
+  fulfillmentMethod: ReservationFulfillmentMethod;
   deliveryCount: number;
 }): PickupHandoverPhase | null => {
   if (
@@ -41,7 +44,7 @@ export const resolveSelfPickupHandoverPhase = (input: {
 
 export const canRequestPickupReschedule = (input: {
   status: ReservationStatus;
-  fulfillmentMethod: string;
+  fulfillmentMethod: ReservationFulfillmentMethod;
   deliveryCount: number;
   pickupWindowStart: Date | null;
   pickupWindowEnd: Date | null;

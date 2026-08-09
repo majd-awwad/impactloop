@@ -1,3 +1,9 @@
+import type {
+  LearnerMaterialRequestMatchStatus,
+  LearnerMaterialRequestStatus,
+  MaterialStatus,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 import { decimalToNumber } from '../../utils/decimal.js';
 import { cardMaterialImageUrl } from '../../utils/material-image-url.js';
 import { deriveEffectiveMatchStatus } from './material-requests.match-availability.js';
@@ -5,7 +11,7 @@ import { deriveEffectiveMatchStatus } from './material-requests.match-availabili
 type MatchMaterialRow = {
   id: string;
   title: string;
-  status: string;
+  status: MaterialStatus;
   quantity: { toNumber(): number } | number;
   unit: string;
   condition: string;
@@ -35,14 +41,14 @@ export type LearnerMatchRow = {
   materialRequestId: string;
   materialId: string;
   supplierUserId: string;
-  status: string;
+  status: LearnerMaterialRequestMatchStatus;
   matchReasonCode: string | null;
   rankingScore: number | null;
   reservationId: string | null;
   createdAt: Date;
   updatedAt: Date;
   material?: MatchMaterialRow | null;
-  reservation?: { id: string; status: string } | null;
+  reservation?: { id: string; status: ReservationStatus } | null;
 };
 
 const toQuantity = (value: { toNumber(): number } | number) =>
@@ -80,16 +86,16 @@ const isSupplierVerified = (verificationStatus: string | null | undefined) => {
   return normalized === 'APPROVED' || normalized === 'VERIFIED';
 };
 
-const RESERVABLE_MATERIAL_STATUSES = new Set([
+const RESERVABLE_MATERIAL_STATUSES = new Set<MaterialStatus>([
   'AVAILABLE',
   'PENDING_RESERVATION',
   'RESERVED',
 ]);
 
 export const deriveMatchReserveEligibility = (input: {
-  matchStatus: string;
-  requestStatus: string;
-  materialStatus?: string | null;
+  matchStatus: LearnerMaterialRequestMatchStatus;
+  requestStatus: LearnerMaterialRequestStatus;
+  materialStatus?: MaterialStatus | null;
   reservationId?: string | null;
 }) => {
   if (input.reservationId) {
@@ -150,7 +156,7 @@ export const deriveMatchReserveEligibility = (input: {
   };
 };
 
-export const sortLearnerMatches = <T extends { canReserve: boolean; status: string; reservationId?: string | null; createdAt: string }>(
+export const sortLearnerMatches = <T extends { canReserve: boolean; status: LearnerMaterialRequestMatchStatus; reservationId?: string | null; createdAt: string }>(
   matches: T[],
 ) =>
   [...matches].sort((left, right) => {
@@ -177,7 +183,7 @@ export const sortLearnerMatches = <T extends { canReserve: boolean; status: stri
 
 export const mapMatchForLearner = (
   match: LearnerMatchRow,
-  requestStatus: string,
+  requestStatus: LearnerMaterialRequestStatus,
   options?: { heldQuantity?: number },
 ) => {
   const effectiveMatchStatus = deriveEffectiveMatchStatus(match, options?.heldQuantity);
@@ -247,11 +253,11 @@ export const mapMatchForLearner = (
 
 export const countActiveSuggestions = (
   matches: Array<{
-    status: string;
+    status: LearnerMaterialRequestMatchStatus;
     materialId: string;
     material?: MatchMaterialRow | null;
   }>,
-  _requestStatus?: string,
+  _requestStatus?: LearnerMaterialRequestStatus,
   heldByMaterialId?: Map<string, number>,
 ) =>
   matches.filter((match) => {

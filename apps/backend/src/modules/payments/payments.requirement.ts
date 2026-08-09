@@ -1,4 +1,9 @@
-import type { PaymentOrderStatus } from '../../generated/prisma/client.js';
+import type {
+  DeliveryStatus,
+  PaymentOrderStatus,
+  ReservationFulfillmentMethod,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 
@@ -22,7 +27,7 @@ import { isPickupCodeVisibilityWindowOpen } from './payments.list-summary.js';
 
 export type ReservationPaymentRequirementDto = {
   reservationId: string;
-  reservationStatus: string;
+  reservationStatus: ReservationStatus;
   paymentEnforcementEnabled: boolean;
   overallStatus:
     | PaymentReadinessStatus
@@ -33,7 +38,7 @@ export type ReservationPaymentRequirementDto = {
     | 'NEW_PAYMENT_CYCLE_REQUIRED'
     | 'RESOLUTION_REQUIRED'
     | 'PAYMENT_FAILED';
-  fulfillmentMethod: 'PICKUP' | 'DELIVERY';
+  fulfillmentMethod: ReservationFulfillmentMethod;
   material: {
     required: boolean;
     status: PaymentReadinessStatus;
@@ -71,16 +76,18 @@ export type ReservationPaymentRequirementDto = {
   fulfillmentReady: boolean;
   pickupCodeAvailable: boolean;
   deliveryExists: boolean;
-  deliveryStatus: string | null;
+  deliveryStatus: DeliveryStatus | null;
   deliveryDispatchable: boolean;
   fulfillmentStarted: boolean;
   outstandingPaymentOrderIds: string[];
   evaluatedAt: string;
 };
 
-const DISPATCHABLE_DELIVERY_STATUSES = new Set(['WAITING_FOR_DRIVER']);
+const DISPATCHABLE_DELIVERY_STATUSES = new Set<DeliveryStatus>([
+  'WAITING_FOR_DRIVER',
+]);
 
-const FULFILLMENT_STARTED_STATUSES = new Set([
+const FULFILLMENT_STARTED_STATUSES = new Set<DeliveryStatus>([
   'WAITING_FOR_DRIVER',
   'DRIVER_ASSIGNED',
   'ARRIVED_PICKUP',

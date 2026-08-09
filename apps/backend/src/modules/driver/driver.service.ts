@@ -1154,7 +1154,7 @@ export const updateDriverDeliveryStatus = async (
               {
                 id: delivery.reservationId,
                 status: delivery.reservation.status,
-                fulfillmentMethod: 'DELIVERY',
+                fulfillmentMethod: 'DELIVERY' as const,
                 materialId: delivery.reservation.materialId,
                 material: delivery.reservation.material,
                 quantityRequested: delivery.reservation.quantityRequested,

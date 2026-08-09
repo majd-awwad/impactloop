@@ -1,3 +1,8 @@
+import type {
+  ProjectBuildItemStatus,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
+
 import { ACTIVE_HOLD_STATUSES } from '../reservations/reservations.quantity.js';
 
 import {
@@ -25,13 +30,13 @@ export type BuildItemAllocationResult =
   | 'historical_conflict'
   | 'not_applicable';
 
-const BUILD_ITEM_READY_STATUSES = new Set([
+const BUILD_ITEM_READY_STATUSES = new Set<ProjectBuildItemStatus>([
   'ALREADY_OWNED',
   'AVAILABLE',
   'ALTERNATIVE',
 ]);
 
-const TERMINAL_FAILED_RESERVATION_STATUSES = new Set([
+const TERMINAL_FAILED_RESERVATION_STATUSES = new Set<ReservationStatus>([
   'REJECTED',
   'CANCELLED',
   'EXPIRED',
@@ -39,10 +44,9 @@ const TERMINAL_FAILED_RESERVATION_STATUSES = new Set([
   'FULFILLMENT_FAILED',
 ]);
 
-const isActiveLinkedReservationStatus = (status: string) =>
-  (ACTIVE_HOLD_STATUSES as readonly string[]).includes(
-    status as (typeof ACTIVE_HOLD_STATUSES)[number],
-  ) || status === 'AWAITING_RESOLUTION';
+const isActiveLinkedReservationStatus = (status: ReservationStatus) =>
+  ACTIVE_HOLD_STATUSES.some((activeStatus) => activeStatus === status) ||
+  status === 'AWAITING_RESOLUTION';
 
 export const mapAllocationOutcomeToResult = (
   outcome: string | undefined | null,
@@ -76,7 +80,7 @@ export type ResolvedBuildItemState = {
 };
 
 const buildQuantityAllocationInput = (input: {
-  status: string;
+  status: ProjectBuildItemStatus;
   componentRole?: string;
   requiredQuantity?: number;
   requiredUnit?: string;
@@ -97,7 +101,7 @@ const buildQuantityAllocationInput = (input: {
   peerClaimsOnMaterial: input.peerClaimsOnMaterial,
 });
 
-const resolveChecklistReadyLabel = (status: string) => {
+const resolveChecklistReadyLabel = (status: ProjectBuildItemStatus) => {
   if (status === 'ALREADY_OWNED') {
     return 'Marked as already owned';
   }
@@ -127,7 +131,7 @@ const resolveCompletedReadinessLabel = (
 };
 
 export const resolveBuildItemState = (input: {
-  status: string;
+  status: ProjectBuildItemStatus;
   componentRole?: string;
   requiredQuantity?: number;
   requiredUnit?: string;
@@ -183,7 +187,7 @@ export const resolveBuildItemState = (input: {
     };
   }
 
-  if (reservation && isActiveLinkedReservationStatus(reservationStatus ?? '')) {
+  if (reservation && isActiveLinkedReservationStatus(reservation.status)) {
     const quantityAllocation = evaluateBuildItemQuantityAllocation(
       buildQuantityAllocationInput(input),
     );
@@ -199,7 +203,7 @@ export const resolveBuildItemState = (input: {
 
   if (
     reservation &&
-    TERMINAL_FAILED_RESERVATION_STATUSES.has(reservationStatus ?? '')
+    TERMINAL_FAILED_RESERVATION_STATUSES.has(reservation.status)
   ) {
     return {
       acquisitionState: 'needs_attention',
@@ -267,7 +271,7 @@ export const resolveBuildItemState = (input: {
 };
 
 export const resolveBuildItemReadinessFromState = (input: {
-  status: string;
+  status: ProjectBuildItemStatus;
   componentRole?: string;
   requiredQuantity?: number;
   requiredUnit?: string;
@@ -290,7 +294,7 @@ export const resolveBuildItemReadinessFromState = (input: {
 };
 
 export const resolveBuildItemStepUnlockReadinessFromState = (input: {
-  status: string;
+  status: ProjectBuildItemStatus;
   componentRole?: string;
   requiredQuantity?: number;
   requiredUnit?: string;
@@ -316,7 +320,7 @@ export const resolveBuildItemStepUnlockReadinessFromState = (input: {
 };
 
 export const resolveBuildItemReadiness = (input: {
-  status: string;
+  status: ProjectBuildItemStatus;
   componentRole?: string;
   requiredQuantity?: number;
   requiredUnit?: string;
@@ -329,7 +333,7 @@ export const resolveBuildItemReadiness = (input: {
 }) => resolveBuildItemReadinessFromState(input);
 
 export const resolveBuildItemStepUnlockReadiness = (input: {
-  status: string;
+  status: ProjectBuildItemStatus;
   componentRole?: string;
   requiredQuantity?: number;
   requiredUnit?: string;

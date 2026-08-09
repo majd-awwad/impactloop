@@ -1,4 +1,4 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type { DeliveryStatus, Prisma } from '../../generated/prisma/client.js';
 
 import type { AdminNoShowReportsFilterInput } from './admin-no-show-reports.validation.js';
 
@@ -31,7 +31,7 @@ const RECOVERY_DELIVERY_STATUSES = [
   'AWAITING_RESOLUTION',
   'DRIVER_NO_SHOW',
   'FAILED_PICKUP',
-] as const;
+] as const satisfies readonly DeliveryStatus[];
 
 const startOfUtcDay = (date: Date) => {
   const copy = new Date(date);

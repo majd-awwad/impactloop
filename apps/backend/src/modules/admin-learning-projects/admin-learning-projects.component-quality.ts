@@ -1,4 +1,7 @@
-import type { ProjectComponentRole } from '../../generated/prisma/client.js';
+import type {
+  LearningProjectStatus,
+  ProjectComponentRole,
+} from '../../generated/prisma/client.js';
 
 export type ComponentQualityIssue = {
   code: string;
@@ -273,7 +276,7 @@ export const assessComponentQuality = (
   return { hardIssues, softWarnings, byComponentId };
 };
 
-export const COMPONENT_EDITABLE_STATUSES = new Set([
+export const COMPONENT_EDITABLE_STATUSES = new Set<LearningProjectStatus>([
   'PENDING_REVIEW',
   'CHANGES_REQUESTED',
 ]);

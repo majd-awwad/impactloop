@@ -10,11 +10,11 @@ export const UNSUCCESSFUL_TERMINAL_RESERVATION_STATUSES = [
   'FULFILLMENT_FAILED',
 ] as const satisfies readonly ReservationStatus[];
 
-const ACTIVE_RESERVATION_STATUSES = new Set<string>(
+const ACTIVE_RESERVATION_STATUSES = new Set<ReservationStatus>(
   ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES,
 );
 
-const UNSUCCESSFUL_TERMINAL_SET = new Set<string>(
+const UNSUCCESSFUL_TERMINAL_SET = new Set<ReservationStatus>(
   UNSUCCESSFUL_TERMINAL_RESERVATION_STATUSES,
 );
 
@@ -29,14 +29,14 @@ export type BuildReservationSyncOutcome =
   | 'no_build_item'
   | 'archived_build';
 
-export const isUnsuccessfulTerminalReservationStatus = (status: string) =>
+export const isUnsuccessfulTerminalReservationStatus = (status: ReservationStatus) =>
   UNSUCCESSFUL_TERMINAL_SET.has(status);
 
 export const syncBuildItemFromReservationStatus = async (
   tx: Prisma.TransactionClient,
   input: {
     reservationId: string;
-    reservationStatus: string;
+    reservationStatus: ReservationStatus;
   },
 ): Promise<BuildReservationSyncOutcome> => {
   const { reservationId, reservationStatus } = input;

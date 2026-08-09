@@ -1,4 +1,4 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type { Prisma, ReservationStatus } from '../../generated/prisma/client.js';
 
 import { ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES } from './learning-projects.build-reservation.constants.js';
 import {
@@ -17,9 +17,9 @@ export type BuildMaterialRequestSyncOutcome =
   | 'build_item_not_found'
   | 'dismissed_allocation';
 
-const isActiveReservationStatus = (status: string) =>
-  (ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES as readonly string[]).includes(
-    status,
+const isActiveReservationStatus = (status: ReservationStatus) =>
+  ACTIVE_BUILD_ITEM_LINKED_RESERVATION_STATUSES.some(
+    (activeStatus) => activeStatus === status,
   );
 
 export type SyncBuildItemFromCompletedMaterialRequestInput = {
@@ -36,7 +36,7 @@ export type SyncBuildItemFromCompletedMaterialRequestInput = {
   };
   reservation: {
     id: string;
-    status: string;
+    status: ReservationStatus;
     requesterId: string;
     materialId: string;
   };

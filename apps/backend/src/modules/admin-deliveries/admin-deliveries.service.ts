@@ -1,5 +1,10 @@
 import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
-import type { DeliveryStatus } from '../../generated/prisma/client.js';
+import type {
+  DeliveryStatus,
+  NoShowReportStatus,
+  ReservationFulfillmentMethod,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
 
 import * as repository from './admin-deliveries.repository.js';
@@ -137,7 +142,7 @@ const buildTimelineEvents = (
 
 type IncidentRecord = {
   id: string;
-  status: string;
+  status: NoShowReportStatus;
   reasonCode: string;
   targetRole: string;
   targetUserId: string | null;
@@ -151,18 +156,22 @@ type IncidentRecord = {
 const mapIncidentContract = (
   delivery: {
     id: string;
-    status: string;
+    status: DeliveryStatus;
     deliveryGroupId: string | null;
     assignedDriverProfileId: string | null;
     reservation: {
-      status: string;
-      fulfillmentMethod: string;
+      status: ReservationStatus;
+      fulfillmentMethod: ReservationFulfillmentMethod;
       pendingRescheduleRequestedBy: string | null;
       pendingRescheduleReason: string | null;
     };
   },
   report: IncidentRecord,
-): DeliveryIncidentContract & { createdAt: Date; status: string; reasonCode: string } => {
+): DeliveryIncidentContract & {
+  createdAt: Date;
+  status: NoShowReportStatus;
+  reasonCode: string;
+} => {
   const contract = classifyAdminReportContract({
     report,
     reservation: delivery.reservation,

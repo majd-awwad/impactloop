@@ -1,4 +1,8 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type {
+  DeliveryStatus,
+  Prisma,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 
 import {
@@ -15,7 +19,7 @@ const TERMINAL_RESERVATION_STATUSES = [
   'EXPIRED',
   'NO_SHOW',
   'FULFILLMENT_FAILED',
-] as const;
+] as const satisfies readonly ReservationStatus[];
 
 const BLOCKING_DELIVERY_STATUSES = [
   'DRIVER_ASSIGNED',
@@ -29,7 +33,7 @@ const BLOCKING_DELIVERY_STATUSES = [
   'DRIVER_NO_SHOW',
   'LEARNER_NO_SHOW',
   'AWAITING_RESOLUTION',
-] as const;
+] as const satisfies readonly DeliveryStatus[];
 
 export type DeliveryGroupCandidate = {
   id: string;

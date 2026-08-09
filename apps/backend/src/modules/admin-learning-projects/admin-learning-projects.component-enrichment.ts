@@ -1,4 +1,8 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type {
+  LearningProjectStatus,
+  Prisma,
+  ProjectReviewStatus,
+} from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
@@ -50,7 +54,7 @@ const dedupeKeywords = (keywords: string[], componentName?: string) => {
   return [...normalized.values()].slice(0, MAX_COMPONENT_KEYWORDS);
 };
 
-export const assertEditableProjectStatus = (status: string) => {
+export const assertEditableProjectStatus = (status: LearningProjectStatus) => {
   if (status !== 'PENDING_REVIEW' && status !== 'CHANGES_REQUESTED') {
     throw new AppError(
       'Components can only be edited while the project is pending review or changes were requested.',
@@ -116,7 +120,7 @@ export const buildComponentUpdateData = async (
   current: {
     componentName: string;
     materialType: string;
-    reviewStatus: string;
+    reviewStatus: ProjectReviewStatus;
   },
 ): Promise<Prisma.ProjectRequiredComponentUpdateInput> => {
   const data: Prisma.ProjectRequiredComponentUpdateInput = {};

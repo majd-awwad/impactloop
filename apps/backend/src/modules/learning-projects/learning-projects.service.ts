@@ -1,4 +1,7 @@
-import type { LearningProjectStatus } from '../../generated/prisma/client.js';
+import type {
+  LearningProjectStatus,
+  ProjectBuildItemStatus,
+} from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
 import type { AccessTokenPayload } from '../../utils/jwt.js';
 import {
@@ -72,7 +75,7 @@ import {
 type SubmitLearningProjectResponse = {
   id: string;
   title: string;
-  status: string;
+  status: LearningProjectStatus;
   submittedAt: string | null;
   message: string;
 };
@@ -375,7 +378,7 @@ const mapLearningProjectDetail = (
 const summarizeMaterialReadiness = (
   items: Array<{
     isReadyForBuild: boolean;
-    status: string;
+    status: ProjectBuildItemStatus;
     linkedMaterial: unknown;
     linkedReservation: unknown;
   }>,

@@ -1,4 +1,4 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type { PaymentAttemptStatus, Prisma } from '../../generated/prisma/client.js';
 
 import { PROVIDER_EVENT_TYPES } from './payments.constants.js';
 import { isPayablePaymentOrderStatus } from './payments.status-policy.js';
@@ -26,7 +26,7 @@ export const processSessionOwnedPaymentEvent = async (input: {
   eventRowId: string;
   attempt: {
     id: string;
-    status: string;
+    status: PaymentAttemptStatus;
     provider: string;
     providerRef: string | null;
     amountMinor: number;

@@ -1,5 +1,11 @@
 import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
-import type { Prisma, DeliveryStatus } from '../../generated/prisma/client.js';
+import type {
+  DeliveryGroupStatus,
+  DeliveryStatus,
+  Prisma,
+  ReservationFulfillmentMethod,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { reconcileDriverAvailability } from '../driver/driver-availability.js';
@@ -290,12 +296,12 @@ export type AdminDeliveryPrimaryIncident = Prisma.NoShowReportGetPayload<{
 
 type ReopenDeliveryGroupRecord = {
   id: string;
-  status: string;
+  status: DeliveryGroupStatus;
   assignedDriverProfileId: string | null;
   reservations: Array<{
     id: string;
-    status: string;
-    fulfillmentMethod: string;
+    status: ReservationStatus;
+    fulfillmentMethod: ReservationFulfillmentMethod;
   }>;
 };
 

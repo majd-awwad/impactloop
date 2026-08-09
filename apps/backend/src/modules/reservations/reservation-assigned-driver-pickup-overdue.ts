@@ -1,4 +1,8 @@
-import type { DeliveryStatus } from '../../generated/prisma/client.js';
+import type {
+  DeliveryStatus,
+  ReservationFulfillmentMethod,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 import { isAfterWindowWithGrace } from '../../utils/handover-timing.js';
 import { resolveSupplierPickupWindowEnd } from '../fulfillment-failures/fulfillment-failures.eligibility.js';
 import { NO_DRIVER_AUTO_ESCALATION_HOURS } from './reservation-timing-policy.js';
@@ -43,8 +47,8 @@ export const isAssignedDriverPickupOverdue = (
 };
 
 export type StaleAssignedDriverAutoEscalationRecord = {
-  status: string;
-  fulfillmentMethod: string;
+  status: ReservationStatus;
+  fulfillmentMethod: ReservationFulfillmentMethod;
   supplierPickupWindowEnd: Date | null;
   deliveryStatus: DeliveryStatus | null;
   assignedDriverProfileId: string | null;

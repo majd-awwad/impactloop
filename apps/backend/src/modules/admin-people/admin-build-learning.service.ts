@@ -1,3 +1,5 @@
+import type { ProjectBuildStatus } from '../../generated/prisma/client.js';
+
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 
@@ -14,7 +16,7 @@ export type AdminBuildLearningDetailDto = {
   projectId: string;
   projectTitle: string;
   attemptNumber: number;
-  buildStatus: string;
+  buildStatus: ProjectBuildStatus;
   packVersion: number | null;
   sessionId: string | null;
   sessionCreatedAt: string | null;

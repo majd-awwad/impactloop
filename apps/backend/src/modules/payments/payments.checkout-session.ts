@@ -1,5 +1,6 @@
 import type {
   PaymentAttemptStatus,
+  PaymentCheckoutSessionItemStatus,
   PaymentCheckoutSessionStatus,
   PaymentOrderStatus,
   PaymentPurpose,
@@ -138,7 +139,7 @@ export type ReservationCheckoutItemDto = {
   amount: string;
   amountMinor: number;
   currency: string;
-  status: string;
+  status: PaymentCheckoutSessionItemStatus;
   reservationId: string | null;
   materialTitle: string | null;
 };
@@ -415,7 +416,7 @@ const mapSessionDto = (input: {
       amount: Prisma.Decimal;
       amountMinor: number;
       currency: string;
-      status: string;
+      status: PaymentCheckoutSessionItemStatus;
       paymentOrder: {
         status: PaymentOrderStatus;
         reservationId: string | null;

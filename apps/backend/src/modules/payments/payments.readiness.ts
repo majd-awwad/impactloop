@@ -1,4 +1,8 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type {
+  PaymentOrderStatus,
+  Prisma,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 
@@ -51,11 +55,11 @@ const ACTIVE_GROUP_RESERVATION_STATUSES = [
   'ACCEPTED',
   'AWAITING_LEARNER_CONFIRMATION',
   'AWAITING_SUPPLIER_CONFIRMATION',
-] as const;
+] as const satisfies readonly ReservationStatus[];
 
 const resolveTx = (tx?: Prisma.TransactionClient) => tx ?? prisma;
 
-const mapOrderStatus = (status: string): PaymentReadinessStatus => {
+const mapOrderStatus = (status: PaymentOrderStatus): PaymentReadinessStatus => {
   switch (status) {
     case 'PAID':
       return 'PAID';

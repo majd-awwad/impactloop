@@ -1,4 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import type {
+  MaterialCondition,
+  ProjectBuildItemStatus,
+  ProjectDifficulty,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
+
 import { env } from '../../config/env.js';
 import {
   RECOMMENDATION_SCORER_VERSION,
@@ -69,11 +76,6 @@ import type {
   LearnerAffinityProfile,
   LearnerBehaviorContext,
 } from './learner-home.types.js';
-import type {
-  MaterialCondition,
-  ProjectDifficulty,
-  ReservationStatus,
-} from '../../generated/prisma/client.js';
 import { isActiveReservationBehaviorStatus } from '../reservations/reservations.quantity.js';
 import { isContinueBuildItemReady } from '../learning-projects/project-build-continuation.js';
 import { getRequestId } from '../../observability/request-context.js';
@@ -553,8 +555,8 @@ const recommendationReasonDetails = (reasons: string[]) =>
   reasons.map(recommendationReasonDetail);
 
 const isBuildItemReady = (item: {
-  status: string;
-  linkedReservation: { status: string } | null;
+  status: ProjectBuildItemStatus;
+  linkedReservation: { status: ReservationStatus } | null;
 }) => isContinueBuildItemReady(item);
 
 const mapBuildItem = (

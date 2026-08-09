@@ -1,5 +1,6 @@
 import {
   Prisma,
+  type ReservationFulfillmentMethod,
   type ReservationStatus,
 } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
@@ -365,7 +366,7 @@ const acceptReservationExistingSelect = {
 
 export const supplierCanCompleteReservation = (input: {
   status: ReservationStatus;
-  fulfillmentMethod: string;
+  fulfillmentMethod: ReservationFulfillmentMethod;
   hasDelivery: boolean;
 }) => {
   if (input.status !== 'ACCEPTED') {

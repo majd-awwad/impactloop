@@ -1,3 +1,8 @@
+import type {
+  DeliveryStatus,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
+
 /**
  * PAY-03 reservation status → payment action classification.
  * Based on actual repository writers, not aspirational semantics.
@@ -17,7 +22,7 @@ export type ReservationPaymentLifecycleClass =
  * do not auto-refund — existing incident/admin recovery decides outcomes.
  */
 export const classifyReservationPaymentLifecycle = (
-  status: string,
+  status: ReservationStatus,
 ): ReservationPaymentLifecycleClass => {
   switch (status) {
     case 'CANCELLED':
@@ -36,8 +41,6 @@ export const classifyReservationPaymentLifecycle = (
     case 'AWAITING_LEARNER_CONFIRMATION':
       return 'RECOVERABLE';
     case 'PENDING':
-      return 'PAYMENT_UNAFFECTED';
-    default:
       return 'PAYMENT_UNAFFECTED';
   }
 };
@@ -83,7 +86,7 @@ export const ACTIVE_DELIVERY_GROUP_RESERVATION_STATUSES = [
   'AWAITING_SUPPLIER_CONFIRMATION',
   'AWAITING_RESOLUTION',
   'FULFILLMENT_FAILED',
-] as const;
+] as const satisfies readonly ReservationStatus[];
 
 export const FULFILLMENT_STARTED_DELIVERY_STATUSES = [
   'DRIVER_ASSIGNED',
@@ -97,13 +100,15 @@ export const FULFILLMENT_STARTED_DELIVERY_STATUSES = [
   'DRIVER_NO_SHOW',
   'LEARNER_NO_SHOW',
   'AWAITING_RESOLUTION',
-] as const;
+] as const satisfies readonly DeliveryStatus[];
 
-export const COMPLETED_DELIVERY_STATUSES = ['DELIVERED'] as const;
+export const COMPLETED_DELIVERY_STATUSES = [
+  'DELIVERED',
+] as const satisfies readonly DeliveryStatus[];
 
 export const UNASSIGNED_CLOSEABLE_DELIVERY_STATUSES = [
   'WAITING_FOR_DRIVER',
-] as const;
+] as const satisfies readonly DeliveryStatus[];
 
 export {
   PAYMENT_ORDER_NEW_CYCLE_TERMINAL_STATUSES as TERMINAL_PAYMENT_ORDER_FOR_CYCLE,

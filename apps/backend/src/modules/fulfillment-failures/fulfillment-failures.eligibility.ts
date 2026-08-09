@@ -1,4 +1,8 @@
-import type { DeliveryStatus, ReservationStatus } from '../../generated/prisma/client.js';
+import type {
+  DeliveryStatus,
+  ReservationFulfillmentMethod,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 import { isAfterWindowWithGrace } from '../../utils/handover-timing.js';
 
 const prePickupDeliveryStatuses = [
@@ -15,7 +19,7 @@ const postPickupDeliveryStatuses = [
 
 export const canSupplierMarkLearnerPickupNoShow = (input: {
   status: ReservationStatus;
-  fulfillmentMethod: string;
+  fulfillmentMethod: ReservationFulfillmentMethod;
   pickupWindowEnd: Date | null;
   now?: Date;
 }) =>
@@ -30,7 +34,7 @@ export const resolveSupplierPickupWindowEnd = (input: {
 
 export const canSupplierMarkDeliveryPickupExpired = (input: {
   status: ReservationStatus;
-  fulfillmentMethod: string;
+  fulfillmentMethod: ReservationFulfillmentMethod;
   supplierPickupWindowEnd: Date | null;
   pickupWindowEnd?: Date | null;
   deliveryStatus: DeliveryStatus | null;

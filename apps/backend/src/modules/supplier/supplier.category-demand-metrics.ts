@@ -1,4 +1,7 @@
-import type { ReservationStatus } from '../../generated/prisma/client.js';
+import type {
+  MaterialStatus,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 
 export const CATEGORY_DEMAND_PERIOD_DAYS = 30;
 export const CATEGORY_DEMAND_METHODOLOGY_VERSION = 'category-demand-v1';
@@ -14,7 +17,7 @@ export const CATEGORY_DEMAND_PUBLIC_LISTING_STATUSES = [
   'AVAILABLE',
   'PENDING_RESERVATION',
   'RESERVED',
-] as const;
+] as const satisfies readonly MaterialStatus[];
 
 /**
  * Positive reservation statuses for category demand.

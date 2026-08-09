@@ -1,6 +1,7 @@
 import {
   Prisma,
   type ProjectBuildItemStatus,
+  type ReservationStatus,
 } from '../../generated/prisma/client.js';
 
 export const CONTINUE_BUILD_READY_ITEM_STATUSES = [
@@ -26,8 +27,8 @@ export const CONTINUE_PROJECT_BUILD_ORDER_BY = [
 ] satisfies Prisma.ProjectBuildOrderByWithRelationInput[];
 
 export const isContinueBuildItemReady = (item: {
-  status: string;
-  linkedReservation: { status: string; quantityRequested?: { toNumber(): number } | number } | null;
+  status: ProjectBuildItemStatus;
+  linkedReservation: { status: ReservationStatus; quantityRequested?: { toNumber(): number } | number } | null;
   requiredQuantity?: number;
 }): boolean => {
   if (item.linkedReservation?.status === 'COMPLETED') {
@@ -40,8 +41,8 @@ export const isContinueBuildItemReady = (item: {
     return required <= 0 || acquired >= required;
   }
 
-  return (CONTINUE_BUILD_READY_ITEM_STATUSES as readonly string[]).includes(
-    item.status,
+  return CONTINUE_BUILD_READY_ITEM_STATUSES.some(
+    (readyStatus) => readyStatus === item.status,
   );
 };
 

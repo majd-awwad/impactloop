@@ -1,3 +1,11 @@
+import type {
+  DeliveryGroupStatus,
+  DeliveryStatus,
+  NoShowReportStatus,
+  ReservationFulfillmentMethod,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
+
 import {
   isAfterAllowedEnd,
   isWithinAllowedHandoverRange,
@@ -32,8 +40,8 @@ export type SupplierScheduleCategory =
 
 export type SupplierScheduleSource = {
   id: string;
-  status: string;
-  fulfillmentMethod: string;
+  status: ReservationStatus;
+  fulfillmentMethod: ReservationFulfillmentMethod;
   quantityRequested: number;
   unit: string;
   material: {
@@ -52,20 +60,20 @@ export type SupplierScheduleSource = {
   };
   deliverySummary: {
     deliveryId: string;
-    status: string;
+    status: DeliveryStatus;
     pickedUpAt: string | null;
     deliveredAt: string | null;
     recoveryRequired: boolean;
   } | null;
   groupSummary: {
     groupId: string;
-    status: string;
+    status: DeliveryGroupStatus;
     itemCount: number;
     grouped: boolean;
   } | null;
   incidentSummary: {
     id: string;
-    status: string;
+    status: NoShowReportStatus;
     targetRole: string;
     reasonCode: string;
   } | null;
@@ -112,7 +120,7 @@ export type SupplierScheduleClassifierInput = {
   dayEnd: Date;
 };
 
-const CLOSED_STATUSES = new Set([
+const CLOSED_STATUSES = new Set<ReservationStatus>([
   'REJECTED',
   'CANCELLED',
   'EXPIRED',
@@ -120,7 +128,7 @@ const CLOSED_STATUSES = new Set([
   'FULFILLMENT_FAILED',
 ]);
 
-const ACTIVE_DRIVER_STATUSES = new Set([
+const ACTIVE_DRIVER_STATUSES = new Set<DeliveryStatus>([
   'DRIVER_ASSIGNED',
   'ARRIVED_PICKUP',
   'PICKED_UP',
@@ -262,7 +270,7 @@ const categoryForScheduledEntry = (input: {
   if (isAfterAllowedEnd(now, end)) return 'OVERDUE';
 
   const inProgress = source.fulfillmentMethod === 'DELIVERY'
-    ? ACTIVE_DRIVER_STATUSES.has(deliveryStatus ?? '')
+    ? deliveryStatus != null && ACTIVE_DRIVER_STATUSES.has(deliveryStatus)
     : isWithinAllowedHandoverRange(now, start, end);
   if (inProgress) return 'IN_PROGRESS';
   if (start >= dayEnd) return 'UPCOMING';

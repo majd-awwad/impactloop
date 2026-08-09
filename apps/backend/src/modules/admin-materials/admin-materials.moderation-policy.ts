@@ -1,4 +1,5 @@
 import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
+import type { MaterialStatus } from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
 
 import * as repository from './admin-materials.repository.js';
@@ -7,17 +8,19 @@ export const MODERATION_LOCKED_STATUSES = [
   'PENDING_RESERVATION',
   'RESERVED',
   'REUSED',
-] as const;
+] as const satisfies readonly MaterialStatus[];
 
 export type ModerationLockedStatus = (typeof MODERATION_LOCKED_STATUSES)[number];
 
-export const getMaterialModerationPolicy = (status: string) => {
+const moderationLockedStatusSet = new Set<MaterialStatus>(
+  MODERATION_LOCKED_STATUSES,
+);
+
+export const getMaterialModerationPolicy = (status: MaterialStatus) => {
   const canHide = status === 'AVAILABLE';
   const canMarkUnavailable = status === 'AVAILABLE';
   const canRestore = status === 'UNAVAILABLE';
-  const isModerationLocked = MODERATION_LOCKED_STATUSES.includes(
-    status as ModerationLockedStatus,
-  );
+  const isModerationLocked = moderationLockedStatusSet.has(status);
 
   let lockReason: string | null = null;
   if (status === 'REUSED') {
@@ -53,9 +56,9 @@ const restoreBlockedMessage =
 
 export const assertCanHideMaterial = async (
   materialId: string,
-  status: string,
+  status: MaterialStatus,
 ) => {
-  if (MODERATION_LOCKED_STATUSES.includes(status as ModerationLockedStatus)) {
+  if (moderationLockedStatusSet.has(status)) {
     throw new AppError(hideBlockedMessage, 409, COMMON_ERROR_CODES.conflict, {
       reason: 'MODERATION_LOCKED',
       status,
@@ -82,9 +85,9 @@ export const assertCanHideMaterial = async (
 
 export const assertCanMarkMaterialUnavailable = async (
   materialId: string,
-  status: string,
+  status: MaterialStatus,
 ) => {
-  if (MODERATION_LOCKED_STATUSES.includes(status as ModerationLockedStatus)) {
+  if (moderationLockedStatusSet.has(status)) {
     throw new AppError(
       markUnavailableBlockedMessage,
       409,
@@ -119,8 +122,8 @@ export const assertCanMarkMaterialUnavailable = async (
   }
 };
 
-export const assertCanRestoreMaterial = (status: string) => {
-  if (MODERATION_LOCKED_STATUSES.includes(status as ModerationLockedStatus)) {
+export const assertCanRestoreMaterial = (status: MaterialStatus) => {
+  if (moderationLockedStatusSet.has(status)) {
     throw new AppError(restoreBlockedMessage, 409, COMMON_ERROR_CODES.conflict, {
       reason: 'MODERATION_LOCKED',
       status,

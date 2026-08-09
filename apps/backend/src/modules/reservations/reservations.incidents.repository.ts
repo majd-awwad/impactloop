@@ -3,6 +3,8 @@ import type {
   NoShowReportReason,
   NoShowReportTargetRole,
   Prisma,
+  ReservationFulfillmentMethod,
+  ReservationStatus,
 } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import {
@@ -40,7 +42,7 @@ const transitionSelfPickupToAwaitingResolution = async (
   input: {
     reservationId: string;
     materialId: string;
-    oldStatus: string;
+    oldStatus: ReservationStatus;
     changedBy: string;
     note: string;
     releaseHold: boolean;
@@ -159,7 +161,7 @@ export const escalateNoDriverAvailableInTransaction = async (
   input: {
     reservation: {
       id: string;
-      status: string;
+      status: ReservationStatus;
       requesterId: string;
       supplierPickupWindowStart: Date | null;
       supplierPickupWindowEnd: Date | null;
@@ -257,7 +259,7 @@ export const escalateStaleAssignedDriverPickupInTransaction = async (
   input: {
     reservation: {
       id: string;
-      status: string;
+      status: ReservationStatus;
       requesterId: string;
       supplierPickupWindowStart: Date | null;
       supplierPickupWindowEnd: Date | null;
@@ -450,11 +452,11 @@ export const createNoDriverAvailableReport = async (input: {
   });
 
 export const canReportNoDriverAvailable = (input: {
-  status: string;
-  fulfillmentMethod: string;
+  status: ReservationStatus;
+  fulfillmentMethod: ReservationFulfillmentMethod;
   supplierPickupWindowEnd: Date | null;
   pickupWindowEnd?: Date | null;
-  deliveryStatus: string | null;
+  deliveryStatus: DeliveryStatus | null;
   assignedDriverProfileId: string | null;
   hasDelivery?: boolean;
   hasPendingReport: boolean;
@@ -464,21 +466,19 @@ export const canReportNoDriverAvailable = (input: {
   }
 
   return canSupplierMarkDeliveryPickupExpired({
-    status: input.status as 'ACCEPTED',
+    status: input.status,
     fulfillmentMethod: input.fulfillmentMethod,
     supplierPickupWindowEnd: input.supplierPickupWindowEnd,
     pickupWindowEnd: input.pickupWindowEnd,
-    deliveryStatus: input.deliveryStatus as
-      | import('../../generated/prisma/client.js').DeliveryStatus
-      | null,
+    deliveryStatus: input.deliveryStatus,
     assignedDriverProfileId: input.assignedDriverProfileId,
     hasDelivery: input.hasDelivery,
   });
 };
 
 export const canLearnerReportSupplierIssue = (input: {
-  status: string;
-  fulfillmentMethod: string;
+  status: ReservationStatus;
+  fulfillmentMethod: ReservationFulfillmentMethod;
   deliveryCount: number;
   pickupWindowEnd: Date | null;
   hasPendingReport: boolean;

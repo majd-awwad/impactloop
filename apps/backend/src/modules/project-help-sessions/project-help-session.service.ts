@@ -47,10 +47,16 @@ import {
   validateProblemDescription,
 } from './project-help-session-time.js';
 import { getUtcIsoWeekStart } from './project-help-session-weekly-capacity.js';
-import type { ProjectHelpSessionStatus } from '../../generated/prisma/client.js';
+import type {
+  ProjectBuildStatus,
+  ProjectHelpSessionStatus,
+} from '../../generated/prisma/client.js';
 import type { CreateProjectHelpSessionRequestInput } from './project-help-session.validation.js';
 
-const ELIGIBLE_BUILD_STATUSES = ['IN_PROGRESS', 'PAUSED'] as const;
+const ELIGIBLE_BUILD_STATUSES = [
+  'IN_PROGRESS',
+  'PAUSED',
+] as const satisfies readonly ProjectBuildStatus[];
 
 const notFoundHelpSession = () =>
   new AppError(
@@ -252,9 +258,7 @@ export const createProjectHelpSessionRequest = async (
     throw notFoundBuild();
   }
   if (
-    !ELIGIBLE_BUILD_STATUSES.includes(
-      build.status as (typeof ELIGIBLE_BUILD_STATUSES)[number],
-    )
+    !ELIGIBLE_BUILD_STATUSES.some((status) => status === build.status)
   ) {
     throw new AppError(
       'This build is not eligible for help sessions.',

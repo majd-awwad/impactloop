@@ -1,4 +1,7 @@
-import type { ReservationFulfillmentMethod } from '../../generated/prisma/client.js';
+import type {
+  ReservationFulfillmentMethod,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 
 import {
   PENDING_SUPPLIER_RESPONSE_HOURS,
@@ -11,7 +14,7 @@ type PreferredWindow = {
 };
 
 export type PendingReservationExpiryRecord = {
-  status: string;
+  status: ReservationStatus;
   fulfillmentMethod: ReservationFulfillmentMethod;
   learnerPreferredPickupWindows: unknown;
   learnerPreferredDeliveryWindows: unknown;

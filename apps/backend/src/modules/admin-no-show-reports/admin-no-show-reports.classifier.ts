@@ -1,3 +1,10 @@
+import type {
+  DeliveryStatus,
+  NoShowReportStatus,
+  ReservationFulfillmentMethod,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
+
 export const ADMIN_REPORT_ACTIONS = [
   'VERIFY',
   'REJECT',
@@ -19,21 +26,21 @@ export type AdminReportStrikeImpact = 'NONE' | 'STRIKE_IF_VERIFIED';
 
 export type AdminReportClassifierContext = {
   report: {
-    status: string;
+    status: NoShowReportStatus;
     reasonCode: string;
     targetRole: string;
     targetUserId: string | null;
     deliveryId: string | null;
   };
   reservation: {
-    status: string;
-    fulfillmentMethod: string;
+    status: ReservationStatus;
+    fulfillmentMethod: ReservationFulfillmentMethod;
     pendingRescheduleRequestedBy?: string | null;
     pendingRescheduleReason?: string | null;
   };
   delivery: {
     id: string;
-    status: string;
+    status: DeliveryStatus;
     assignedDriverProfileId: string | null;
     deliveryGroupId?: string | null;
   } | null;
@@ -55,7 +62,7 @@ const RECOVERY_REASON_CODES = new Set([
   'PICKUP_FAILED',
 ]);
 
-const RECOVERY_DELIVERY_STATUSES = new Set([
+const RECOVERY_DELIVERY_STATUSES = new Set<DeliveryStatus>([
   'AWAITING_RESOLUTION',
   'DRIVER_NO_SHOW',
   'FAILED_PICKUP',

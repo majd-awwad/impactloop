@@ -1,3 +1,5 @@
+import type { ReservationStatus } from '../../generated/prisma/client.js';
+
 import { isAcceptedMissedPickupExpired } from './reservation-missed-pickup-expiry.js';
 import {
   isPendingReservationExpired,
@@ -11,7 +13,7 @@ export type EffectiveReservationViewInput = PendingReservationExpiryRecord & {
 };
 
 export type EffectiveReservationView = {
-  status: string;
+  status: ReservationStatus;
   rejectionReason: string | null;
 };
 

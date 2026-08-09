@@ -1,4 +1,8 @@
-import type { DeliveryStatus, Prisma } from '../../generated/prisma/client.js';
+import type {
+  DeliveryStatus,
+  Prisma,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { DRIVER_IN_PROGRESS_ASSIGNED_STATUSES } from '../deliveries/deliveries.service.js';
@@ -462,7 +466,7 @@ export const driverIncidentOutcome = (report: {
   recoveryAction: string | null;
   recoveryCompletedAt: Date | null;
   holdReleasedAt: Date | null;
-  reservation: { status: string };
+  reservation: { status: ReservationStatus };
 }) => {
   if (report.holdReleasedAt) return 'RESERVATION_CANCELLED_OR_EXPIRED';
   if (report.recoveryCompletedAt) {

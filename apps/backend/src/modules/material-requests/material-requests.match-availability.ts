@@ -1,4 +1,8 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type {
+  LearnerMaterialRequestMatchStatus,
+  MaterialStatus,
+  Prisma,
+} from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
 import { createNotificationIfMissing } from '../notifications/notifications.repository.js';
@@ -7,15 +11,18 @@ import {
   getHeldQuantitiesByMaterialIds,
 } from '../reservations/reservations.quantity.js';
 
-const NON_ELIGIBLE_MATERIAL_STATUSES = new Set(['REUSED', 'UNAVAILABLE']);
+const NON_ELIGIBLE_MATERIAL_STATUSES = new Set<MaterialStatus>([
+  'REUSED',
+  'UNAVAILABLE',
+]);
 
 export type SuggestedMatchAvailabilityRow = {
   id: string;
-  status: string;
+  status: LearnerMaterialRequestMatchStatus;
   materialId: string;
   materialRequestId: string;
   material: {
-    status: string;
+    status: MaterialStatus;
     quantity: Prisma.Decimal;
   };
 };
@@ -38,15 +45,15 @@ const isSuggestedMatchMaterialUnavailable = (
 /** Read-only SUGGESTED→UNAVAILABLE view for responses without mutating rows. */
 export const deriveEffectiveMatchStatus = (
   match: {
-    status: string;
+    status: LearnerMaterialRequestMatchStatus;
     materialId: string;
     material?: {
-      status: string;
+      status: MaterialStatus;
       quantity: Prisma.Decimal | { toNumber(): number } | number;
     } | null;
   },
   heldQuantity?: number | Prisma.Decimal,
-): string => {
+): LearnerMaterialRequestMatchStatus => {
   if (match.status !== 'SUGGESTED' || !match.material) {
     return match.status;
   }

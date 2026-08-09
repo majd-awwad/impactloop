@@ -1,4 +1,8 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type {
+  PaymentOrderStatus,
+  PaymentPurpose,
+  Prisma,
+} from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 import { prisma } from '../../database/prisma.js';
@@ -22,9 +26,9 @@ export type EnsurePaymentOrderResult =
       order: {
         id: string;
         payerUserId: string;
-        purpose: 'MATERIAL_SUBTOTAL' | 'DELIVERY_FEE';
+        purpose: PaymentPurpose;
         cycleNumber: number;
-        status: string;
+        status: PaymentOrderStatus;
         currency: string;
         amount: string;
         reservationId: string | null;
@@ -37,9 +41,9 @@ export type EnsurePaymentOrderResult =
 const mapOrder = (order: {
   id: string;
   payerUserId: string;
-  purpose: 'MATERIAL_SUBTOTAL' | 'DELIVERY_FEE';
+  purpose: PaymentPurpose;
   cycleNumber: number;
-  status: string;
+  status: PaymentOrderStatus;
   currency: string;
   amount: Prisma.Decimal;
   reservationId: string | null;

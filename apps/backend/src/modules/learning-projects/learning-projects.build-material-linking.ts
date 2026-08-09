@@ -1,4 +1,9 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type {
+  MaterialStatus,
+  Prisma,
+  ProjectBuildItemStatus,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
@@ -23,9 +28,11 @@ import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 const CANDIDATE_LIMIT = 10;
 const CANDIDATE_POOL_LIMIT = 60;
 
-const LINKABLE_MATERIAL_STATUSES = ['AVAILABLE'] as const;
+const LINKABLE_MATERIAL_STATUSES = [
+  'AVAILABLE',
+] as const satisfies readonly MaterialStatus[];
 
-const TERMINAL_RESERVATION_STATUSES = new Set([
+const TERMINAL_RESERVATION_STATUSES = new Set<ReservationStatus>([
   'REJECTED',
   'CANCELLED',
   'EXPIRED',
@@ -77,7 +84,7 @@ const resolvePublicSupplierVerified = (
 export const mapLinkedMaterialSummary = (
   material: LinkedMaterialRecord | null | undefined,
   options?: {
-    linkedReservationStatus?: string | null;
+    linkedReservationStatus?: ReservationStatus | null;
   },
 ) => {
   if (!material) {
@@ -139,7 +146,7 @@ export const mapLinkedReservationSummary = (
   };
 };
 
-const formatReservationStatusLabel = (status: string) => {
+const formatReservationStatusLabel = (status: ReservationStatus) => {
   switch (status) {
     case 'PENDING':
       return 'Reservation pending — waiting for supplier';
@@ -159,16 +166,10 @@ const formatReservationStatusLabel = (status: string) => {
       return 'Reservation ended — choose another option';
     case 'AWAITING_RESOLUTION':
       return 'Reservation requires resolution';
-    default:
-      return status
-        .toLowerCase()
-        .split('_')
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
   }
 };
 
-const BUILD_ITEM_READY_STATUSES = new Set([
+const BUILD_ITEM_READY_STATUSES = new Set<ProjectBuildItemStatus>([
   'ALREADY_OWNED',
   'AVAILABLE',
   'ALTERNATIVE',
