@@ -5,6 +5,7 @@ import type {
   SupplierProfileManagementResponseDto,
   SupplierProfileResponseDto,
 } from "./dto/supplier-profile.dto.js";
+import { COMMON_ERROR_CODES } from "../../contracts/errors/common-error-codes.js";
 import {
   buildSupplierManagementVerification,
   calculateSupplierEssentialsCompletion,
@@ -431,7 +432,11 @@ export const updateSupplierProfileImages = async (
   const existing =
     await supplierRepository.findSupplierProfileDetailsByUserId(userId);
   if (!existing) {
-    throw new AppError('Create your supplier profile first.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Create your supplier profile first.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   await supplierRepository.updateSupplierProfileImages(userId, input);

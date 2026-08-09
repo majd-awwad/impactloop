@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 import type { AccessTokenPayload } from '../../utils/jwt.js';
 import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
@@ -111,7 +112,11 @@ const assertSupplierProfileExists = async (supplierProfileId: string) => {
     );
 
   if (!profile) {
-    throw new AppError('Supplier profile not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Supplier profile not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   return profile;

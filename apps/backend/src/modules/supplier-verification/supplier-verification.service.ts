@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import {
@@ -66,7 +67,11 @@ export const getSupplierVerificationStatus = async (userId: string) => {
   const profile = await repository.findSupplierVerificationContext(userId);
 
   if (!profile) {
-    throw new AppError('Supplier profile not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Supplier profile not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   return mapStatusDto(profile);
@@ -76,14 +81,18 @@ export const getSupplierVerificationDocumentForOwner = async (userId: string) =>
   const profile = await repository.findSupplierVerificationContext(userId);
 
   if (!profile) {
-    throw new AppError('Supplier profile not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Supplier profile not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   if (!requiresOrganizationVerification(profile.supplierType)) {
     throw new AppError(
       'Verification documents are only available for organization suppliers.',
       404,
-      'NOT_FOUND',
+      COMMON_ERROR_CODES.notFound,
     );
   }
 
@@ -104,7 +113,7 @@ export const submitSupplierVerification = async (
     throw new AppError(
       'Verification submission is only required for organization suppliers',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -140,14 +149,18 @@ export const resubmitSupplierVerification = async (
   const existing = await repository.findSupplierVerificationContext(userId);
 
   if (!existing) {
-    throw new AppError('Supplier profile not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Supplier profile not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   if (!requiresOrganizationVerification(existing.supplierType)) {
     throw new AppError(
       'Verification resubmission is only for organization suppliers',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -159,7 +172,7 @@ export const resubmitSupplierVerification = async (
     throw new AppError(
       'Verification document can only be resubmitted after rejection or changes requested',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 

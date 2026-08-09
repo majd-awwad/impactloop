@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import {
@@ -256,7 +257,11 @@ const loadVerificationOrThrow = async (id: string) => {
   const profile = await repository.findOrganizationSupplierVerificationById(id);
 
   if (!profile) {
-    throw new AppError('Supplier verification request not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Supplier verification request not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   return profile;
