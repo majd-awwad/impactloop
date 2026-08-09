@@ -758,7 +758,74 @@ void main() {
         harness.router.state.uri.path,
         '/learner/reservations/reservation-1',
       );
+      expect(
+        find.byKey(const Key('notification-unread-dot-unread-1')),
+        findsNothing,
+      );
+      expect(
+        harness.container.read(myNotificationUnreadCountProvider).value,
+        0,
+      );
     });
+
+    testWidgets(
+      'non-navigable unread notification marks read and stays on page',
+      (tester) async {
+        final harness = await _pumpShell(
+          tester,
+          initialLocation: '/notifications',
+          surfaceSize: const Size(1100, 900),
+          listNotifierBuilder: _GenericUnreadListNotifier.new,
+        );
+
+        expect(
+          find.byKey(const Key('notification-unread-dot-generic-1')),
+          findsOneWidget,
+        );
+        expect(
+          harness.container.read(myNotificationUnreadCountProvider).value,
+          1,
+        );
+
+        await tester.tap(find.text('Something happened'));
+        await tester.pumpAndSettle();
+
+        expect(harness.router.state.uri.path, '/notifications');
+        expect(
+          find.byKey(const Key('notification-unread-dot-generic-1')),
+          findsNothing,
+        );
+        expect(
+          harness.container.read(myNotificationUnreadCountProvider).value,
+          0,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'already-read navigable notification skips mark-read and still navigates',
+      (tester) async {
+        final harness = await _pumpShell(
+          tester,
+          initialLocation: '/notifications',
+          surfaceSize: const Size(1100, 900),
+          listNotifierBuilder: _AlreadyReadReservationListNotifier.new,
+        );
+
+        await tester.tap(find.text('Reservation accepted'));
+        await tester.pumpAndSettle();
+
+        expect(
+          harness.router.state.uri.path,
+          '/learner/reservations/reservation-1',
+        );
+        final notifier = harness.container
+                .read(notificationsListProvider.notifier)
+            as _AlreadyReadReservationListNotifier;
+        expect(notifier.markReadCalls, isEmpty);
+      },
+    );
   });
 }
 
@@ -1075,6 +1142,71 @@ class _DelayedNotificationsListNotifier extends _TestNotificationsListNotifier {
       return;
     }
     state = AsyncData(next.copyWith(isBackgroundRefreshing: false));
+  }
+}
+
+class _GenericUnreadListNotifier extends NotificationsListNotifier {
+  @override
+  Future<NotificationsListState> build() async {
+    return NotificationsListState(
+      items: [
+        AppNotification(
+          id: 'generic-1',
+          notificationType: 'LEGACY_UNKNOWN_EVENT',
+          title: 'Something happened',
+          body: 'Please check your account.',
+          isRead: false,
+          createdAt: DateTime.utc(2026),
+        ),
+      ],
+      page: 1,
+      totalPages: 1,
+      total: 1,
+      unreadCount: 1,
+      isLoadingMore: false,
+      filter: NotificationReadFilter.all,
+    );
+  }
+
+  @override
+  Future<void> markReadLocal(String notificationId) async {
+    applyReadLocal(notificationId);
+    ref.read(myNotificationUnreadCountProvider.notifier).adjustBy(-1);
+  }
+}
+
+class _AlreadyReadReservationListNotifier extends NotificationsListNotifier {
+  final List<String> markReadCalls = [];
+
+  @override
+  Future<NotificationsListState> build() async {
+    return NotificationsListState(
+      items: [
+        AppNotification(
+          id: 'read-res-1',
+          notificationType: 'RESERVATION_ACCEPTED',
+          title: 'Reservation accepted',
+          body: 'Wood boards was accepted.',
+          relatedEntityType: 'RESERVATION',
+          relatedEntityId: 'reservation-1',
+          isRead: true,
+          createdAt: DateTime.utc(2026, 1, 2),
+          metadata: const {'materialTitle': 'Wood boards'},
+        ),
+      ],
+      page: 1,
+      totalPages: 1,
+      total: 1,
+      unreadCount: 0,
+      isLoadingMore: false,
+      filter: NotificationReadFilter.all,
+    );
+  }
+
+  @override
+  Future<void> markReadLocal(String notificationId) async {
+    markReadCalls.add(notificationId);
+    await super.markReadLocal(notificationId);
   }
 }
 

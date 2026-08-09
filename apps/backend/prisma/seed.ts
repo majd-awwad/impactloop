@@ -8831,7 +8831,18 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
     });
   }
 
-  const notifications = [
+  const motorsMaterialTitle = "Small DC Gear Motors Pair (Spare Batch)";
+
+  const notifications: Array<{
+    userId: string;
+    type: string;
+    title: string;
+    body: string;
+    entityType: string;
+    entityKey: string | null;
+    actionType: string | null;
+    metadata?: Record<string, string>;
+  }> = [
     {
       userId: majdSupplierId,
       type: "RESERVATION_REQUESTED",
@@ -8839,14 +8850,23 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
       body: "Majd Learner requested Arduino Uno R3 Boards for a robotics project.",
       entityType: "RESERVATION",
       entityKey: "r-majd-arduino-pending",
+      actionType: "REVIEW_RESERVATION",
+      metadata: {
+        materialTitle: "Arduino Uno R3 Boards",
+        learnerName: "Majd Learner",
+      },
     },
+    // Real learner reservation acceptance — navigates to reservation detail.
+    // Replaces obsolete DELIVERY_WAITING_FOR_DRIVER (no producer, null entity).
     {
       userId: majdLearnerId,
-      type: "DELIVERY_WAITING_FOR_DRIVER",
-      title: "Delivery request opened",
-      body: "Your Arduino delivery is waiting for an available driver.",
-      entityType: "DELIVERY",
-      entityKey: null,
+      type: "RESERVATION_ACCEPTED",
+      title: "Reservation accepted",
+      body: `${motorsMaterialTitle} was accepted. Check your pickup or delivery details.`,
+      entityType: "RESERVATION",
+      entityKey: "r-majd-motors-accepted",
+      actionType: "OPEN_RESERVATION",
+      metadata: { materialTitle: motorsMaterialTitle },
     },
     {
       userId: adminId,
@@ -8855,7 +8875,9 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
       body: "A PVC pipe delivery needs admin resolution after a pickup issue.",
       entityType: "RESERVATION",
       entityKey: "r-learner-pvc-resolution",
+      actionType: null,
     },
+    // Informational/non-navigable sample for drivers (no delivery id in seed).
     {
       userId: driverUserId,
       type: "DRIVER_ASSIGNMENT_AVAILABLE",
@@ -8863,10 +8885,14 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
       body: "A learner delivery request is waiting for a driver in your area.",
       entityType: "DELIVERY",
       entityKey: null,
+      actionType: null,
     },
   ];
 
   for (const notification of notifications) {
+    const relatedEntityId = notification.entityKey
+      ? (context.reservations.get(notification.entityKey) ?? null)
+      : null;
     await prisma.notification.create({
       data: {
         userId: notification.userId,
@@ -8874,20 +8900,14 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
         title: notification.title,
         body: notification.body,
         relatedEntityType: notification.entityType,
-        relatedEntityId: notification.entityKey
-          ? (context.reservations.get(notification.entityKey) ?? null)
-          : null,
+        relatedEntityId,
         entityType: notification.entityType,
-        entityId: notification.entityKey
-          ? (context.reservations.get(notification.entityKey) ?? null)
-          : null,
+        entityId: relatedEntityId,
         eventKey: notification.entityKey
-          ? `seed:${notification.type}:${notification.userId}:${context.reservations.get(notification.entityKey) ?? notification.entityKey}`
+          ? `seed:${notification.type}:${notification.userId}:${relatedEntityId ?? notification.entityKey}`
           : null,
-        actionType:
-          notification.type === "RESERVATION_REQUESTED"
-            ? "REVIEW_RESERVATION"
-            : null,
+        actionType: notification.actionType,
+        metadata: notification.metadata ?? undefined,
         isRead: false,
       },
     });

@@ -136,7 +136,20 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
 
   @override
   void dispose() {
-    _pageVisibleNotifier?.decrement();
+    final pageVisibleNotifier = _pageVisibleNotifier;
+    _pageVisibleNotifier = null;
+    // Defer provider writes — Riverpod forbids mutating during unmount.
+    // Prefer microtask over Future()/Timer.zero so flutter_test teardown
+    // does not see a pending timer.
+    if (pageVisibleNotifier != null) {
+      scheduleMicrotask(() {
+        try {
+          pageVisibleNotifier.decrement();
+        } catch (_) {
+          // ProviderScope may already be disposed with the element tree.
+        }
+      });
+    }
     disposeLifecyclePollingHost();
     super.dispose();
   }
@@ -397,36 +410,40 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
       return;
     }
 
-    final currentUser = ref.read(authControllerProvider).user;
-    final isSupplierMode =
-        currentUser?.isSupplierMode == true &&
-        currentUser?.hasRole('SUPPLIER') == true;
-    final isDriverMode =
-        currentUser?.isDriverMode == true &&
-        currentUser?.hasRole('DRIVER') == true;
+    _openingNotificationId = notification.id;
+    try {
+      // Mark-as-read must not depend on successful navigation.
+      if (!notification.isRead) {
+        await _markNotificationReadInBackground(ref, notification.id);
+      }
 
-    final route = notificationOpenRoute(
-      notification,
-      isSupplierMode: isSupplierMode,
-      isDriverMode: isDriverMode,
-    );
-
-    if (route == null) {
       if (!context.mounted) {
         return;
       }
-      if (isProjectHelpSessionNotification(notification)) {
-        showErrorSnackBar(
-          context,
-          ProjectHelpSessionsL10n.notificationOpenUnavailable.resolve(context),
-        );
-      }
-      return;
-    }
 
-    _openingNotificationId = notification.id;
-    try {
-      if (!context.mounted) {
+      final currentUser = ref.read(authControllerProvider).user;
+      final isSupplierMode =
+          currentUser?.isSupplierMode == true &&
+          currentUser?.hasRole('SUPPLIER') == true;
+      final isDriverMode =
+          currentUser?.isDriverMode == true &&
+          currentUser?.hasRole('DRIVER') == true;
+
+      final route = notificationOpenRoute(
+        notification,
+        isSupplierMode: isSupplierMode,
+        isDriverMode: isDriverMode,
+      );
+
+      if (route == null) {
+        if (isProjectHelpSessionNotification(notification)) {
+          showErrorSnackBar(
+            context,
+            ProjectHelpSessionsL10n.notificationOpenUnavailable.resolve(
+              context,
+            ),
+          );
+        }
         return;
       }
 
@@ -469,10 +486,6 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
                 }
               : null,
         );
-
-        if (!notification.isRead) {
-          unawaited(_markNotificationReadInBackground(ref, notification.id));
-        }
         return;
       }
 
@@ -482,10 +495,6 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
         context.go(route);
       } else {
         context.push(route);
-      }
-
-      if (!notification.isRead) {
-        unawaited(_markNotificationReadInBackground(ref, notification.id));
       }
     } finally {
       if (_openingNotificationId == notification.id) {

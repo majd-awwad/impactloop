@@ -371,16 +371,21 @@ class NotificationsListNotifier extends AsyncNotifier<NotificationsListState> {
         ) ??
         false;
 
-    await ref.read(notificationsApiProvider).markRead(notificationId);
-
-    if (!ref.mounted) {
+    // Already-read taps must not issue a redundant mark-read mutation.
+    if (!wasUnread) {
       return;
     }
 
+    // Optimistic local + badge update so the list reflects read state
+    // immediately, independent of navigation outcome.
     applyReadLocal(notificationId);
+    ref.read(myNotificationUnreadCountProvider.notifier).adjustBy(-1);
 
-    if (wasUnread) {
-      ref.read(myNotificationUnreadCountProvider.notifier).adjustBy(-1);
+    try {
+      await ref.read(notificationsApiProvider).markRead(notificationId);
+    } catch (_) {
+      // Keep optimistic UI; a later refresh reconciles with the server.
+      rethrow;
     }
   }
 
