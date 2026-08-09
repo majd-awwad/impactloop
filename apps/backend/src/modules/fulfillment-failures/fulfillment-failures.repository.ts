@@ -25,6 +25,8 @@ import {
 import { reconcileDriverAvailability } from '../driver/driver-availability.js';
 import { createNoShowReportOnce } from '../no-show-reports/no-show-report.create.js';
 
+export { isTerminalDeliveryStatus } from '../deliveries/delivery-status.policy.js';
+
 const prePickupDeliveryStatuses = [
   'WAITING_FOR_DRIVER',
   'DRIVER_ASSIGNED',
@@ -35,16 +37,6 @@ const postPickupDeliveryStatuses = [
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
-] as const satisfies readonly DeliveryStatus[];
-
-const terminalDeliveryStatuses = [
-  'DELIVERED',
-  'CANCELLED',
-  'FAILED_PICKUP',
-  'FAILED_DELIVERY',
-  'DRIVER_NO_SHOW',
-  'LEARNER_NO_SHOW',
-  'AWAITING_RESOLUTION',
 ] as const satisfies readonly DeliveryStatus[];
 
 export const releaseDriverFromDelivery = async (
@@ -989,6 +981,3 @@ export const markDriverIssueAfterPickup = async (input: {
       delivery: updatedDelivery,
     };
   });
-
-export const isTerminalDeliveryStatus = (status: DeliveryStatus) =>
-  (terminalDeliveryStatuses as readonly DeliveryStatus[]).includes(status);

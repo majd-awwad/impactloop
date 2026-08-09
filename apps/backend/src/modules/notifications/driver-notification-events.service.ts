@@ -5,6 +5,10 @@ import {
 } from '../driver/driver-availability.js';
 import { DRIVER_NOTIFICATION_TYPES } from './driver-delivery-notification-types.js';
 import { createNotificationIfMissing } from './notifications.repository.js';
+import {
+  isTerminalDeliveryStatus,
+  TERMINAL_DELIVERY_STATUSES,
+} from '../deliveries/delivery-status.policy.js';
 
 /** Reminder fires within this window before pickup/drop-off start. */
 const REMINDER_LOOKAHEAD_MS = 15 * 60 * 1000;
@@ -16,16 +20,6 @@ type ReminderSyncEntry = {
 };
 
 const reminderSyncByUser = new Map<string, ReminderSyncEntry>();
-
-const TERMINAL_DELIVERY_STATUSES = [
-  'DELIVERED',
-  'CANCELLED',
-  'FAILED_PICKUP',
-  'FAILED_DELIVERY',
-  'DRIVER_NO_SHOW',
-  'LEARNER_NO_SHOW',
-  'AWAITING_RESOLUTION',
-] as const satisfies readonly DeliveryStatus[];
 
 const deliveryContextSelect = {
   id: true,
@@ -70,8 +64,6 @@ type DeliveryContext = {
   dropoffLocation: { city: string | null; area: string | null };
   assignedDriverProfile: { userId: string } | null;
 };
-
-const terminalStatuses = new Set<DeliveryStatus>(TERMINAL_DELIVERY_STATUSES);
 
 const beforePickupStatuses = new Set<DeliveryStatus>([
   'DRIVER_ASSIGNED',
@@ -299,7 +291,11 @@ export const notifyDriverPickupTime = async (deliveryId: string) =>
     const delivery = await loadDeliveryContext(deliveryId);
     const driverUserId = delivery?.assignedDriverProfile?.userId;
 
-    if (!delivery || !driverUserId || terminalStatuses.has(delivery.status)) {
+    if (
+      !delivery ||
+      !driverUserId ||
+      isTerminalDeliveryStatus(delivery.status)
+    ) {
       return;
     }
 
@@ -339,7 +335,11 @@ export const notifyDriverDropoffTime = async (deliveryId: string) =>
     const delivery = await loadDeliveryContext(deliveryId);
     const driverUserId = delivery?.assignedDriverProfile?.userId;
 
-    if (!delivery || !driverUserId || terminalStatuses.has(delivery.status)) {
+    if (
+      !delivery ||
+      !driverUserId ||
+      isTerminalDeliveryStatus(delivery.status)
+    ) {
       return;
     }
 

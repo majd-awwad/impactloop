@@ -5,6 +5,7 @@ import { formatDistanceLabel } from '../../utils/haversine.js';
 import {
   LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES,
 } from '../deliveries/deliveries.service.js';
+import { isTerminalDeliveryStatus } from '../deliveries/delivery-status.policy.js';
 import {
   escalateStaleAssignedDriverPickupsByIds,
 } from '../reservations/reservations.stale-assigned-driver-auto-escalation.repository.js';
@@ -146,16 +147,6 @@ const collectCompletedReservationIdsForDelivery = async (
 
   return reservation?.status === 'COMPLETED' ? [reservation.id] : [];
 };
-
-const terminalStatuses = [
-  'DELIVERED',
-  'CANCELLED',
-  'FAILED_PICKUP',
-  'FAILED_DELIVERY',
-  'DRIVER_NO_SHOW',
-  'LEARNER_NO_SHOW',
-  'AWAITING_RESOLUTION',
-] as const satisfies readonly DeliveryStatus[];
 
 const allowedTransitions: Partial<Record<DeliveryStatus, DeliveryStatus>> = {
   DRIVER_ASSIGNED: 'ARRIVED_PICKUP',
@@ -1059,7 +1050,7 @@ export const updateDriverDeliveryStatus = async (
       return { outcome: 'NOT_FOUND' as const };
     }
 
-    if ((terminalStatuses as readonly DeliveryStatus[]).includes(delivery.status)) {
+    if (isTerminalDeliveryStatus(delivery.status)) {
       return { outcome: 'TERMINAL' as const };
     }
 

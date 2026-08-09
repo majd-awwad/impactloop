@@ -27,10 +27,13 @@ import { isElectronicPaymentEnforced } from '../payments/payments.policy.js';
 import { evaluateDeliveryGroupPaymentReadiness } from '../payments/payments.readiness.js';
 import { isPositiveMoney, toMoneyDecimal } from '../payments/payments.money.js';
 import { ensureDeliveryForAcceptedReservation } from '../delivery-groups/delivery-group-operations.service.js';
+import { isTerminalDeliveryStatus } from './delivery-status.policy.js';
 export {
   DRIVER_IN_PROGRESS_ASSIGNED_STATUSES,
   MAX_ACTIVE_DRIVER_DELIVERIES,
 } from '../driver/driver-availability.js';
+export { TERMINAL_DELIVERY_STATUSES } from './delivery-status.policy.js';
+export { isTerminalDeliveryStatus };
 
 export const ACTIVE_DELIVERY_STATUSES = [
   'WAITING_FOR_DRIVER',
@@ -39,16 +42,6 @@ export const ACTIVE_DELIVERY_STATUSES = [
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
-] as const satisfies readonly DeliveryStatus[];
-
-export const TERMINAL_DELIVERY_STATUSES = [
-  'DELIVERED',
-  'CANCELLED',
-  'FAILED_PICKUP',
-  'FAILED_DELIVERY',
-  'DRIVER_NO_SHOW',
-  'LEARNER_NO_SHOW',
-  'AWAITING_RESOLUTION',
 ] as const satisfies readonly DeliveryStatus[];
 
 /** Driver may send location pings only after supplier pickup is confirmed. */
@@ -343,9 +336,7 @@ export const mapLearnerDelivery = (
     note: item.note,
     createdAt: item.createdAt.toISOString(),
   })),
-  learnerDeliveryCode: (TERMINAL_DELIVERY_STATUSES as readonly DeliveryStatus[]).includes(
-    delivery.status,
-  )
+  learnerDeliveryCode: isTerminalDeliveryStatus(delivery.status)
     ? null
     : deriveHandoverCode('learner-delivery', delivery.id),
 });

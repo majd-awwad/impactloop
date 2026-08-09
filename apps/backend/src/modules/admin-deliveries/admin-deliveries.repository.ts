@@ -3,6 +3,7 @@ import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { reconcileDriverAvailability } from '../driver/driver-availability.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
+import { isTerminalDeliveryStatus } from '../deliveries/delivery-status.policy.js';
 
 import type { AdminDeliveriesExportFilters, AdminDeliveriesListQuery } from './admin-deliveries.validation.js';
 
@@ -415,16 +416,6 @@ export const hasPickupStarted = (delivery: {
   delivery.onTheWayAt != null ||
   delivery.arrivedDropoffAt != null;
 
-const terminalOrFailedStatuses = new Set<DeliveryStatus>([
-  'DELIVERED',
-  'CANCELLED',
-  'FAILED_PICKUP',
-  'FAILED_DELIVERY',
-  'DRIVER_NO_SHOW',
-  'LEARNER_NO_SHOW',
-  'AWAITING_RESOLUTION',
-]);
-
 const activeAssignedStatuses: DeliveryStatus[] = [
   'DRIVER_ASSIGNED',
   'ARRIVED_PICKUP',
@@ -828,7 +819,7 @@ export const reopenDriverAssignmentForAdmin = async (input: {
       return { outcome: 'PICKUP_STARTED' as const, status: delivery.status };
     }
 
-    if (terminalOrFailedStatuses.has(delivery.status)) {
+    if (isTerminalDeliveryStatus(delivery.status)) {
       return { outcome: 'TERMINAL_OR_FAILED' as const, status: delivery.status };
     }
 
