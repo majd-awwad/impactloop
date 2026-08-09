@@ -1123,26 +1123,7 @@ export const completeSupplierReservation = async (
       const { fulfillRequestFromCompletedReservation } = await import(
         '../learner-material-requests/learner-material-requests.service.js'
       );
-      const { createNotificationIfMissing } = await import(
-        '../notifications/notifications.repository.js'
-      );
-      const reconciled = await fulfillRequestFromCompletedReservation(
-        result.reservation.id,
-      );
-      if (reconciled?.transitionedToFulfilled) {
-        await createNotificationIfMissing({
-          userId: reconciled.learnerId,
-          notificationType: 'MATERIAL_REQUEST_FULFILLED',
-          title: 'Material request fulfilled',
-          body: `Your request “${reconciled.requestedItemName}” was marked fulfilled after a completed reservation.`,
-          relatedEntityType: 'MATERIAL_REQUEST',
-          relatedEntityId: reconciled.id,
-          eventKey: `mr:fulfilled:${reconciled.id}`,
-          entityType: 'MATERIAL_REQUEST',
-          entityId: reconciled.id,
-          actionType: 'OPEN_ENTITY',
-        });
-      }
+      await fulfillRequestFromCompletedReservation(result.reservation.id);
       const existingReservation =
         await supplierReservationsRepository.findSupplierReservationForOwner(
           ownerId,
@@ -1165,26 +1146,7 @@ export const completeSupplierReservation = async (
   const { fulfillRequestFromCompletedReservation } = await import(
     '../learner-material-requests/learner-material-requests.service.js'
   );
-  const { createNotificationIfMissing } = await import(
-    '../notifications/notifications.repository.js'
-  );
-  const fulfilled = await fulfillRequestFromCompletedReservation(
-    result.reservation.id,
-  );
-  if (fulfilled?.transitionedToFulfilled) {
-    await createNotificationIfMissing({
-      userId: fulfilled.learnerId,
-      notificationType: 'MATERIAL_REQUEST_FULFILLED',
-      title: 'Material request fulfilled',
-      body: `Your request “${fulfilled.requestedItemName}” was marked fulfilled after a completed reservation.`,
-      relatedEntityType: 'MATERIAL_REQUEST',
-      relatedEntityId: fulfilled.id,
-      eventKey: `mr:fulfilled:${fulfilled.id}`,
-      entityType: 'MATERIAL_REQUEST',
-      entityId: fulfilled.id,
-      actionType: 'OPEN_ENTITY',
-    });
-  }
+  await fulfillRequestFromCompletedReservation(result.reservation.id);
   return mapSupplierReservation(result.reservation);
 };
 

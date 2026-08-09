@@ -78,7 +78,7 @@ import {
   type PartialPickupUnpickedItem,
 } from './driver-partial-pickup.js';
 
-const notifyMaterialRequestsFulfilledByReservations = async (
+const fulfillMaterialRequestsForReservations = async (
   reservationIds: string[],
 ) => {
   if (reservationIds.length === 0) {
@@ -88,28 +88,8 @@ const notifyMaterialRequestsFulfilledByReservations = async (
   const { fulfillRequestFromCompletedReservation } = await import(
     '../learner-material-requests/learner-material-requests.service.js'
   );
-  const { createNotificationIfMissing } = await import(
-    '../notifications/notifications.repository.js'
-  );
-
   for (const reservationId of reservationIds) {
-    const fulfilled = await fulfillRequestFromCompletedReservation(reservationId);
-    if (!fulfilled?.transitionedToFulfilled) {
-      continue;
-    }
-
-    await createNotificationIfMissing({
-      userId: fulfilled.learnerId,
-      notificationType: 'MATERIAL_REQUEST_FULFILLED',
-      title: 'Material request fulfilled',
-      body: `Your request "${fulfilled.requestedItemName}" was marked fulfilled after a completed reservation.`,
-      relatedEntityType: 'MATERIAL_REQUEST',
-      relatedEntityId: fulfilled.id,
-      eventKey: `mr:fulfilled:${fulfilled.id}`,
-      entityType: 'MATERIAL_REQUEST',
-      entityId: fulfilled.id,
-      actionType: 'OPEN_ENTITY',
-    });
+    await fulfillRequestFromCompletedReservation(reservationId);
   }
 };
 
@@ -1384,7 +1364,7 @@ export const updateDriverDeliveryStatus = async (
       }
       if (input.status === 'DELIVERED') {
         invalidateLearnerHomeForReservationTransition('ACCEPTED', 'COMPLETED');
-        await notifyMaterialRequestsFulfilledByReservations(
+        await fulfillMaterialRequestsForReservations(
           result.completedReservationIds,
         );
       }
@@ -1397,7 +1377,7 @@ export const updateDriverDeliveryStatus = async (
         const completedReservationIds =
           await collectCompletedReservationIdsForDelivery(deliveryId);
         if (completedReservationIds.length > 0) {
-          await notifyMaterialRequestsFulfilledByReservations(
+          await fulfillMaterialRequestsForReservations(
             completedReservationIds,
           );
         }

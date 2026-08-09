@@ -27,6 +27,7 @@ import {
   buildLearnerMaterialRequestOpenBusinessKey,
   clearLearnerMaterialRequestOpenBusinessKey,
 } from '../material-requests/material-requests.open-business-key.js';
+import { notifyMaterialRequestFulfilled } from '../material-requests/material-request-fulfillment-notification.js';
 import { getHeldQuantitiesByMaterialIds } from '../reservations/reservations.quantity.js';
 
 import * as repository from './learner-material-requests.repository.js';
@@ -775,6 +776,14 @@ export const fulfillRequestFromCompletedReservation = async (
 
   if (outcome.buildSyncOutcome === 'synced') {
     invalidateLearnerHomeCache(outcome.learnerId);
+  }
+
+  if (outcome.transitionedToFulfilled) {
+    await notifyMaterialRequestFulfilled({
+      requestId: outcome.id,
+      learnerId: outcome.learnerId,
+      requestedItemName: outcome.requestedItemName,
+    });
   }
 
   return outcome;
