@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import {
@@ -301,7 +302,7 @@ export const listAdminPeople = async (
 export const getAdminPersonById = async (actorId: string, userId: string) => {
   const user = await repository.findUserWithRoles(userId);
   if (!user) {
-    throw new AppError('User not found.', 404, 'NOT_FOUND');
+    throw new AppError('User not found.', 404, COMMON_ERROR_CODES.notFound);
   }
 
   return await mapDetail(user, actorId);
@@ -317,7 +318,7 @@ export const suspendAdminPerson = async (
     throw new AppError(
       parsed.error.issues[0]?.message ?? 'Suspension reason is required.',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -330,7 +331,7 @@ export const suspendAdminPerson = async (
     throw new AppError(
       'Only active or pending accounts can be suspended.',
       409,
-      'CONFLICT',
+      COMMON_ERROR_CODES.conflict,
       { reason: 'INVALID_STATUS_TRANSITION' },
     );
   }
@@ -360,7 +361,7 @@ export const reactivateAdminPerson = async (actorId: string, userId: string) => 
     throw new AppError(
       'Only suspended accounts can be reactivated.',
       409,
-      'CONFLICT',
+      COMMON_ERROR_CODES.conflict,
       { reason: 'INVALID_STATUS_TRANSITION' },
     );
   }

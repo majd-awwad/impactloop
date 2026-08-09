@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import * as repository from './admin-people.repository.js';
@@ -17,14 +18,14 @@ export const assertActorMayChangeUserStatus = async (
     throw new AppError(
       'You cannot change the status of your own account.',
       403,
-      'FORBIDDEN',
+      COMMON_ERROR_CODES.forbidden,
       { reason: 'SELF_ACTION_BLOCKED' },
     );
   }
 
   const target = await repository.findUserWithRoles(targetUserId);
   if (!target) {
-    throw new AppError('User not found.', 404, 'NOT_FOUND');
+    throw new AppError('User not found.', 404, COMMON_ERROR_CODES.notFound);
   }
 
   if (userHasAdminRole(target)) {
@@ -33,7 +34,7 @@ export const assertActorMayChangeUserStatus = async (
       throw new AppError(
         'The last active admin account cannot be modified.',
         403,
-        'FORBIDDEN',
+        COMMON_ERROR_CODES.forbidden,
         { reason: 'LAST_ACTIVE_ADMIN' },
       );
     }
@@ -41,7 +42,7 @@ export const assertActorMayChangeUserStatus = async (
     throw new AppError(
       'Admin accounts cannot be suspended or reactivated through People Management.',
       403,
-      'FORBIDDEN',
+      COMMON_ERROR_CODES.forbidden,
       { reason: 'PROTECTED_ADMIN_ACCOUNT' },
     );
   }
