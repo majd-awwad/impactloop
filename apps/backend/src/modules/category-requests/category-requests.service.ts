@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 import { normalizeSearchText } from '../../utils/normalize-search-text.js';
 import * as categoriesRepository from '../categories/categories.repository.js';
@@ -55,7 +56,7 @@ const assertCategoryRequestMaterialContext = (draft: ListingDraftJson) => {
     throw new AppError(
       'Enter the material name before requesting a new category.',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -63,7 +64,7 @@ const assertCategoryRequestMaterialContext = (draft: ListingDraftJson) => {
     throw new AppError(
       'Describe the material so admin can review the category request.',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -72,12 +73,16 @@ const assertCategoryRequestMaterialContext = (draft: ListingDraftJson) => {
     throw new AppError(
       'Explain why existing categories do not fit.',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
   if (!draft.requestedCategoryName.trim()) {
-    throw new AppError('Enter the requested category name.', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Enter the requested category name.',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 };
 
@@ -87,7 +92,11 @@ export const submitCategoryRequest = async (
 ) => {
   const requestedName = input.requestedName.trim();
   if (!requestedName) {
-    throw new AppError('Enter the requested category name.', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Enter the requested category name.',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   const normalizedRequestedName = normalizeSearchText(requestedName);
@@ -195,14 +204,18 @@ export const getCategoryRequestDraft = async (userId: string, id: string) => {
   );
 
   if (!request) {
-    throw new AppError('Category request not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Category request not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   if (request.publishedMaterialId) {
     throw new AppError(
       'This listing was already completed.',
       409,
-      'CONFLICT',
+      COMMON_ERROR_CODES.conflict,
     );
   }
 
