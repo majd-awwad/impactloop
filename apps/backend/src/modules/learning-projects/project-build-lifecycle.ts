@@ -9,11 +9,9 @@ import { AppError } from '../../utils/app-error.js';
 
 import { projectBuildInclude } from './learning-projects.project-build.includes.js';
 import { createProjectBuildCompletionSnapshot } from './project-build-completion-snapshot.js';
+import { ACTIVE_PROJECT_BUILD_STATUSES } from './learning-project-status.policy.js';
 
-export const ACTIVE_PROJECT_BUILD_STATUSES = [
-  'IN_PROGRESS',
-  'PAUSED',
-] as const satisfies readonly ProjectBuildStatus[];
+export { ACTIVE_PROJECT_BUILD_STATUSES } from './learning-project-status.policy.js';
 
 const TERMINAL_RESERVATION_STATUSES = new Set<ReservationStatus>([
   'COMPLETED',

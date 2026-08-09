@@ -1,3 +1,4 @@
+import type { LearningProjectStatus } from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
 import type { AccessTokenPayload } from '../../utils/jwt.js';
 import {
@@ -17,6 +18,11 @@ import {
 
 import { deriveAuthoringDraftFields } from './learning-projects.authoring-draft-fields.js';
 import { buildCompletionPhotoContentPath } from './build-completion-uploads.storage.js';
+import {
+  isLearningProjectResubmittable,
+  isLearningProjectSubmissionEditable,
+  isLearningProjectSubmittable,
+} from './learning-project-status.policy.js';
 
 import * as learningProjectsRepository from './learning-projects.repository.js';
 import {
@@ -87,12 +93,6 @@ type ProjectBuildRecord = NonNullable<
 
 const findBuildItem = (build: ProjectBuildRecord | null, itemId: string) =>
   build?.items.find((item) => item.id === itemId) ?? null;
-
-const EDITABLE_SUBMISSION_STATUSES = new Set([
-  'DRAFT',
-  'CHANGES_REQUESTED',
-  'PENDING_REVIEW',
-]);
 
 const decimalToSerializable = (value: { toNumber(): number } | number): number => {
   if (typeof value === 'number') {
@@ -189,11 +189,11 @@ const mapLearningProjectListItem = (
   ...mapMaterialCoverageDto(engagement.coverage),
 });
 
-const mapSubmissionActions = (status: string) => ({
+const mapSubmissionActions = (status: LearningProjectStatus) => ({
   canView: true,
-  canEdit: EDITABLE_SUBMISSION_STATUSES.has(status),
-  canSubmit: status === 'DRAFT',
-  canResubmit: status === 'CHANGES_REQUESTED',
+  canEdit: isLearningProjectSubmissionEditable(status),
+  canSubmit: isLearningProjectSubmittable(status),
+  canResubmit: isLearningProjectResubmittable(status),
   canViewPublic: status === 'PUBLISHED',
 });
 
@@ -936,7 +936,7 @@ export const submitMyLearningProjectDraftById = async (
     };
   }
 
-  if (project.status !== 'DRAFT') {
+  if (!isLearningProjectSubmittable(project.status)) {
     throw new AppError(
       'Only draft projects can be submitted for review.',
       409,
@@ -995,7 +995,7 @@ export const updateMyLearningProjectSubmissionById = async (
     throw new AppError('Learning project submission not found', 404, 'NOT_FOUND');
   }
 
-  if (!EDITABLE_SUBMISSION_STATUSES.has(project.status)) {
+  if (!isLearningProjectSubmissionEditable(project.status)) {
     throw new AppError(
       'This project submission cannot be edited in its current status.',
       409,
@@ -1034,7 +1034,7 @@ export const updateMyLearningProjectSubmissionById = async (
       throw new AppError('Learning project submission not found', 404, 'NOT_FOUND');
     }
 
-    if (!EDITABLE_SUBMISSION_STATUSES.has(latest.status)) {
+    if (!isLearningProjectSubmissionEditable(latest.status)) {
       throw new AppError(
         'This project submission cannot be edited in its current status.',
         409,
@@ -1068,7 +1068,7 @@ export const resubmitMyLearningProjectSubmissionById = async (
     throw new AppError('Learning project submission not found', 404, 'NOT_FOUND');
   }
 
-  if (project.status !== 'CHANGES_REQUESTED') {
+  if (!isLearningProjectResubmittable(project.status)) {
     throw new AppError(
       'Only submissions with requested changes can be resubmitted.',
       409,

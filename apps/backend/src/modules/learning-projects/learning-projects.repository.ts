@@ -22,6 +22,13 @@ import {
 } from './learning-projects.build-reservation-linking.js';
 import { resolveBuildItemStepUnlockReadinessFromState } from './learning-projects.build-item-state.js';
 import { projectBuildInclude } from './learning-projects.project-build.includes.js';
+import {
+  ACTIVE_PROJECT_BUILD_STATUSES,
+  EDITABLE_LEARNING_PROJECT_SUBMISSION_STATUSES,
+  RESUBMITTABLE_LEARNING_PROJECT_STATUSES,
+  SUBMITTABLE_LEARNING_PROJECT_STATUSES,
+  isLearningProjectSubmissionEditable,
+} from './learning-project-status.policy.js';
 
 export { projectBuildInclude } from './learning-projects.project-build.includes.js';
 import {
@@ -1310,11 +1317,7 @@ export const updateMyLearningProjectSubmission = async (input: {
       return null;
     }
 
-    if (
-      existing.status !== 'DRAFT' &&
-      existing.status !== 'CHANGES_REQUESTED' &&
-      existing.status !== 'PENDING_REVIEW'
-    ) {
+    if (!isLearningProjectSubmissionEditable(existing.status)) {
       return null;
     }
 
@@ -1349,7 +1352,9 @@ export const updateMyLearningProjectSubmission = async (input: {
       where: {
         id: input.id,
         createdBy: input.userId,
-        status: { in: ['DRAFT', 'CHANGES_REQUESTED', 'PENDING_REVIEW'] },
+        status: {
+          in: [...EDITABLE_LEARNING_PROJECT_SUBMISSION_STATUSES],
+        },
       },
       data: projectUpdateData,
     });
@@ -1527,7 +1532,7 @@ export const resubmitMyLearningProjectSubmission = async (
     where: {
       id,
       createdBy: userId,
-      status: 'CHANGES_REQUESTED',
+      status: { in: [...RESUBMITTABLE_LEARNING_PROJECT_STATUSES] },
     },
     data: {
       status: 'PENDING_REVIEW',
@@ -1551,7 +1556,7 @@ export const submitMyLearningProjectDraft = async (input: {
     where: {
       id: input.id,
       createdBy: input.userId,
-      status: 'DRAFT',
+      status: { in: [...SUBMITTABLE_LEARNING_PROJECT_STATUSES] },
     },
     data: {
       status: 'PENDING_REVIEW',
@@ -1612,7 +1617,7 @@ export const completeProjectBuildStep = async (input: {
       where: {
         projectId: input.projectId,
         learnerId: input.learnerId,
-        status: { in: ['IN_PROGRESS', 'PAUSED'] },
+        status: { in: [...ACTIVE_PROJECT_BUILD_STATUSES] },
       },
       select: {
         id: true,
