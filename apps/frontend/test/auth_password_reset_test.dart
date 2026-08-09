@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/core/auth/access_token_holder.dart';
+import 'package:frontend/core/auth/auth_session_refresh.dart';
 import 'package:frontend/core/auth/token_storage.dart';
 import 'package:frontend/features/auth/application/auth_providers.dart';
 import 'package:frontend/features/auth/application/auth_route_helpers.dart';
@@ -175,6 +176,10 @@ void main() {
         api: api,
         tokenStorage: tokenStorage,
         accessTokenHolder: accessTokenHolder,
+        sessionRefresher: _sessionRefresher(
+          tokenStorage: tokenStorage,
+          accessTokenHolder: accessTokenHolder,
+        ),
       );
 
       await repository.forgotPassword(email: 'learner@example.com');
@@ -190,10 +195,27 @@ void main() {
 }
 
 AuthRepository _repositoryFor(_RecordingAuthApi api) {
+  final tokenStorage = _FakeTokenStorage();
+  final accessTokenHolder = AccessTokenHolder();
   return AuthRepository(
     api: api,
-    tokenStorage: _FakeTokenStorage(),
-    accessTokenHolder: AccessTokenHolder(),
+    tokenStorage: tokenStorage,
+    accessTokenHolder: accessTokenHolder,
+    sessionRefresher: _sessionRefresher(
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+    ),
+  );
+}
+
+AuthSessionRefresher _sessionRefresher({
+  required TokenStorage tokenStorage,
+  required AccessTokenHolder accessTokenHolder,
+}) {
+  return AuthSessionRefresher(
+    refreshClient: Dio(),
+    tokenStorage: tokenStorage,
+    accessTokenHolder: accessTokenHolder,
   );
 }
 
@@ -226,11 +248,6 @@ class _RecordingAuthApi extends AuthApi {
     required String email,
     required String password,
   }) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<AuthTokens> refresh({String? refreshToken}) {
     throw UnimplementedError();
   }
 

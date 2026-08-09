@@ -1,4 +1,5 @@
 import '../../../core/auth/access_token_holder.dart';
+import '../../../core/auth/auth_session_refresh.dart';
 import '../../../core/auth/token_storage.dart';
 import 'auth_api.dart';
 import 'models/auth_tokens.dart';
@@ -12,13 +13,16 @@ class AuthRepository {
     required AuthApi api,
     required TokenStorage tokenStorage,
     required AccessTokenHolder accessTokenHolder,
+    required AuthSessionRefresher sessionRefresher,
   }) : _api = api,
        _tokenStorage = tokenStorage,
-       _accessTokenHolder = accessTokenHolder;
+       _accessTokenHolder = accessTokenHolder,
+       _sessionRefresher = sessionRefresher;
 
   final AuthApi _api;
   final TokenStorage _tokenStorage;
   final AccessTokenHolder _accessTokenHolder;
+  final AuthSessionRefresher _sessionRefresher;
 
   String? get accessToken => _accessTokenHolder.accessToken;
 
@@ -47,18 +51,13 @@ class AuthRepository {
       await refresh();
       return await me();
     } catch (_) {
-      await _clearSession();
+      await _sessionRefresher.clearSession();
       rethrow;
     }
   }
 
-  Future<String> refresh() async {
-    final storedRefreshToken = await _tokenStorage.readRefreshToken();
-    final tokens = await _api.refresh(refreshToken: storedRefreshToken);
-
-    await _applyTokens(tokens);
-
-    return tokens.accessToken;
+  Future<String> refresh() {
+    return _sessionRefresher.refreshAccessToken();
   }
 
   Future<void> logout() async {
@@ -67,7 +66,7 @@ class AuthRepository {
     try {
       await _api.logout(refreshToken: storedRefreshToken);
     } finally {
-      await _clearSession();
+      await _sessionRefresher.clearSession();
     }
   }
 
@@ -128,10 +127,5 @@ class AuthRepository {
     if (tokens.refreshToken != null && tokens.refreshToken!.isNotEmpty) {
       await _tokenStorage.saveRefreshToken(tokens.refreshToken!);
     }
-  }
-
-  Future<void> _clearSession() async {
-    _accessTokenHolder.accessToken = null;
-    await _tokenStorage.clearRefreshToken();
   }
 }

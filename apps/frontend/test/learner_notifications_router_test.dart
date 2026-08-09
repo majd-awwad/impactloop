@@ -8,11 +8,11 @@ import 'package:frontend/app/app.dart';
 import 'package:frontend/app/application/app_settings_notifier.dart';
 import 'package:frontend/app/router/app_router.dart';
 import 'package:frontend/core/auth/access_token_holder.dart';
+import 'package:frontend/core/auth/auth_session_refresh.dart';
 import 'package:frontend/core/auth/token_storage.dart';
 import 'package:frontend/features/auth/application/auth_providers.dart';
 import 'package:frontend/features/auth/data/auth_api.dart';
 import 'package:frontend/features/auth/data/auth_repository.dart';
-import 'package:frontend/features/auth/data/models/auth_tokens.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/learning_hub/application/learning_hub_providers.dart';
 import 'package:frontend/features/locations/application/saved_locations_providers.dart';
@@ -138,10 +138,16 @@ void main() {
 }
 
 Future<GoRouter> _pumpProductionRouter(WidgetTester tester, User user) async {
+  final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stored-refresh');
+  final accessTokenHolder = AccessTokenHolder();
   final repository = AuthRepository(
     api: _FakeAuthApi(meResult: user),
-    tokenStorage: _FakeTokenStorage(initialRefreshToken: 'stored-refresh'),
-    accessTokenHolder: AccessTokenHolder(),
+    tokenStorage: tokenStorage,
+    accessTokenHolder: accessTokenHolder,
+    sessionRefresher: _RestoringAuthSessionRefresher(
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+    ),
   );
 
   await tester.pumpWidget(
@@ -230,18 +236,33 @@ User _learner() {
   );
 }
 
+class _RestoringAuthSessionRefresher extends AuthSessionRefresher {
+  _RestoringAuthSessionRefresher({
+    required TokenStorage tokenStorage,
+    required AccessTokenHolder accessTokenHolder,
+  }) : _tokenStorage = tokenStorage,
+       _accessTokenHolder = accessTokenHolder,
+       super(
+         refreshClient: Dio(),
+         tokenStorage: tokenStorage,
+         accessTokenHolder: accessTokenHolder,
+       );
+
+  final TokenStorage _tokenStorage;
+  final AccessTokenHolder _accessTokenHolder;
+
+  @override
+  Future<String> refreshAccessToken() async {
+    _accessTokenHolder.accessToken = 'restored-access';
+    await _tokenStorage.saveRefreshToken('rotated-refresh');
+    return 'restored-access';
+  }
+}
+
 class _FakeAuthApi extends AuthApi {
   _FakeAuthApi({required this.meResult}) : super(Dio());
 
   final User meResult;
-
-  @override
-  Future<AuthTokens> refresh({String? refreshToken}) async {
-    return const AuthTokens(
-      accessToken: 'restored-access',
-      refreshToken: 'rotated-refresh',
-    );
-  }
 
   @override
   Future<User> me() async => meResult;

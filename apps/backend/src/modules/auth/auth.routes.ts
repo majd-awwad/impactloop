@@ -26,6 +26,7 @@ import {
   postSwitchRole,
 } from './auth.controller.js';
 
+import { getRefreshTokenRateLimitKey } from './auth-token-delivery.js';
 import {
   changePasswordSchema,
   forgotPasswordSchema,
@@ -138,7 +139,7 @@ const refreshIpRateLimit = createRateLimitMiddleware({
 
 const refreshTokenRateLimit = createRateLimitMiddleware({
   policy: refreshTokenPolicy,
-  keyGenerator: (req) => normalizeBodyToken(req.body?.refreshToken),
+  keyGenerator: getRefreshTokenRateLimitKey,
 });
 
 const forgotPasswordIpRateLimit = createRateLimitMiddleware({

@@ -548,11 +548,24 @@ class _AlwaysUnauthorizedAdapter implements HttpClientAdapter {
 
 class _LoginAuthRepository extends AuthRepository {
   _LoginAuthRepository()
-    : super(
-        api: AuthApi(Dio()),
+    : this._(
         tokenStorage: _MemoryTokenStorage(null),
         accessTokenHolder: AccessTokenHolder(),
       );
+
+  _LoginAuthRepository._({
+    required TokenStorage tokenStorage,
+    required AccessTokenHolder accessTokenHolder,
+  }) : super(
+         api: AuthApi(Dio()),
+         tokenStorage: tokenStorage,
+         accessTokenHolder: accessTokenHolder,
+         sessionRefresher: AuthSessionRefresher(
+           refreshClient: Dio(),
+           tokenStorage: tokenStorage,
+           accessTokenHolder: accessTokenHolder,
+         ),
+       );
 
   final _user = User(
     id: 'learner-1',

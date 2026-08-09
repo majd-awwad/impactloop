@@ -6,6 +6,7 @@ import 'package:frontend/app/app.dart';
 import 'package:frontend/app/application/app_settings_notifier.dart';
 import 'package:frontend/app/router/app_router.dart';
 import 'package:frontend/core/auth/access_token_holder.dart';
+import 'package:frontend/core/auth/auth_session_refresh.dart';
 import 'package:frontend/core/auth/token_storage.dart';
 import 'package:frontend/features/auth/data/models/register_request.dart';
 import 'package:frontend/features/auth/data/models/registration_draft.dart';
@@ -68,16 +69,22 @@ void main() {
     WidgetTester tester,
     User user,
   ) async {
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'stored-refresh',
+    );
+    final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
-      api: _FakeAuthApi(
+      api: _FakeAuthApi(meResult: user),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+      sessionRefresher: _ConfigurableAuthSessionRefresher(
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
         refreshResult: const AuthTokens(
           accessToken: 'restored-access',
           refreshToken: 'rotated-refresh',
         ),
-        meResult: user,
       ),
-      tokenStorage: _FakeTokenStorage(initialRefreshToken: 'stored-refresh'),
-      accessTokenHolder: AccessTokenHolder(),
     );
 
     await tester.pumpWidget(
@@ -191,15 +198,17 @@ void main() {
     );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
-      api: _FakeAuthApi(
+      api: _FakeAuthApi(meResult: _testUser()),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+      sessionRefresher: _ConfigurableAuthSessionRefresher(
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
         refreshResult: const AuthTokens(
           accessToken: 'restored-access',
           refreshToken: 'rotated-refresh',
         ),
-        meResult: _testUser(),
       ),
-      tokenStorage: tokenStorage,
-      accessTokenHolder: accessTokenHolder,
     );
 
     final container = ProviderContainer(
@@ -222,13 +231,16 @@ void main() {
     );
     final accessTokenHolder = AccessTokenHolder()..accessToken = 'stale-access';
     final repository = AuthRepository(
-      api: _FakeAuthApi(
+      api: _FakeAuthApi(),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+      sessionRefresher: _ConfigurableAuthSessionRefresher(
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
         refreshError: DioException(
           requestOptions: RequestOptions(path: '/api/auth/refresh'),
         ),
       ),
-      tokenStorage: tokenStorage,
-      accessTokenHolder: accessTokenHolder,
     );
 
     final container = ProviderContainer(
@@ -252,15 +264,17 @@ void main() {
     );
     final accessTokenHolder = AccessTokenHolder()..accessToken = 'access-token';
     final repository = AuthRepository(
-      api: _FakeAuthApi(
+      api: _FakeAuthApi(meResult: _testUser()),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+      sessionRefresher: _ConfigurableAuthSessionRefresher(
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
         refreshResult: const AuthTokens(
           accessToken: 'access-token',
           refreshToken: 'refresh-token',
         ),
-        meResult: _testUser(),
       ),
-      tokenStorage: tokenStorage,
-      accessTokenHolder: accessTokenHolder,
     );
 
     final container = ProviderContainer(
@@ -289,10 +303,6 @@ void main() {
     final accessTokenHolder = AccessTokenHolder()..accessToken = 'access-token';
     final repository = AuthRepository(
       api: _FakeAuthApi(
-        refreshResult: const AuthTokens(
-          accessToken: 'access-token',
-          refreshToken: 'refresh-token',
-        ),
         meResult: _testUser(),
         logoutError: DioException(
           requestOptions: RequestOptions(path: '/api/auth/logout'),
@@ -301,6 +311,14 @@ void main() {
       ),
       tokenStorage: tokenStorage,
       accessTokenHolder: accessTokenHolder,
+      sessionRefresher: _ConfigurableAuthSessionRefresher(
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
+        refreshResult: const AuthTokens(
+          accessToken: 'access-token',
+          refreshToken: 'refresh-token',
+        ),
+      ),
     );
 
     final container = ProviderContainer(
@@ -369,13 +387,16 @@ void main() {
     );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
-      api: _FakeAuthApi(
+      api: _FakeAuthApi(),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+      sessionRefresher: _ConfigurableAuthSessionRefresher(
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
         refreshError: DioException(
           requestOptions: RequestOptions(path: '/api/auth/refresh'),
         ),
       ),
-      tokenStorage: tokenStorage,
-      accessTokenHolder: accessTokenHolder,
     );
     await tester.pumpWidget(
       ProviderScope(
@@ -408,15 +429,17 @@ void main() {
     );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
-      api: _FakeAuthApi(
+      api: _FakeAuthApi(meResult: _testUser()),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+      sessionRefresher: _ConfigurableAuthSessionRefresher(
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
         refreshResult: const AuthTokens(
           accessToken: 'restored-access',
           refreshToken: 'rotated-refresh',
         ),
-        meResult: _testUser(),
       ),
-      tokenStorage: tokenStorage,
-      accessTokenHolder: accessTokenHolder,
     );
 
     await tester.pumpWidget(
@@ -451,15 +474,17 @@ void main() {
     );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
-      api: _FakeAuthApi(
+      api: _FakeAuthApi(meResult: _testUser()),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+      sessionRefresher: _ConfigurableAuthSessionRefresher(
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
         refreshResult: const AuthTokens(
           accessToken: 'restored-access',
           refreshToken: 'rotated-refresh',
         ),
-        meResult: _testUser(),
       ),
-      tokenStorage: tokenStorage,
-      accessTokenHolder: accessTokenHolder,
     );
 
     await tester.pumpWidget(
@@ -527,14 +552,21 @@ void main() {
   testWidgets('signed-out account settings deep link preserves its target', (
     tester,
   ) async {
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'stale-refresh',
+    );
+    final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
-      api: _FakeAuthApi(
+      api: _FakeAuthApi(),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+      sessionRefresher: _ConfigurableAuthSessionRefresher(
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
         refreshError: DioException(
           requestOptions: RequestOptions(path: '/api/auth/refresh'),
         ),
       ),
-      tokenStorage: _FakeTokenStorage(initialRefreshToken: 'stale-refresh'),
-      accessTokenHolder: AccessTokenHolder(),
     );
 
     await tester.pumpWidget(
@@ -564,14 +596,21 @@ void main() {
   testWidgets('signed-out learning profile deep link preserves its target', (
     tester,
   ) async {
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'stale-refresh',
+    );
+    final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
-      api: _FakeAuthApi(
+      api: _FakeAuthApi(),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+      sessionRefresher: _ConfigurableAuthSessionRefresher(
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
         refreshError: DioException(
           requestOptions: RequestOptions(path: '/api/auth/refresh'),
         ),
       ),
-      tokenStorage: _FakeTokenStorage(initialRefreshToken: 'stale-refresh'),
-      accessTokenHolder: AccessTokenHolder(),
     );
 
     await tester.pumpWidget(
@@ -653,15 +692,17 @@ void main() {
     );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
-      api: _FakeAuthApi(
+      api: _FakeAuthApi(meResult: _testUser(roles: const ['SUPPLIER'])),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+      sessionRefresher: _ConfigurableAuthSessionRefresher(
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
         refreshResult: const AuthTokens(
           accessToken: 'restored-access',
           refreshToken: 'rotated-refresh',
         ),
-        meResult: _testUser(roles: const ['SUPPLIER']),
       ),
-      tokenStorage: tokenStorage,
-      accessTokenHolder: accessTokenHolder,
     );
 
     await tester.pumpWidget(
@@ -707,10 +748,6 @@ void main() {
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
       api: _FakeAuthApi(
-        refreshResult: const AuthTokens(
-          accessToken: 'restored-access',
-          refreshToken: 'rotated-refresh',
-        ),
         meResult: _testUser(
           roles: const ['LEARNER', 'SUPPLIER'],
           activeRole: 'SUPPLIER',
@@ -718,6 +755,14 @@ void main() {
       ),
       tokenStorage: tokenStorage,
       accessTokenHolder: accessTokenHolder,
+      sessionRefresher: _ConfigurableAuthSessionRefresher(
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
+        refreshResult: const AuthTokens(
+          accessToken: 'restored-access',
+          refreshToken: 'rotated-refresh',
+        ),
+      ),
     );
 
     await tester.pumpWidget(
@@ -759,13 +804,16 @@ void main() {
     );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
-      api: _FakeAuthApi(
+      api: _FakeAuthApi(),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+      sessionRefresher: _ConfigurableAuthSessionRefresher(
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
         refreshError: DioException(
           requestOptions: RequestOptions(path: '/api/auth/refresh'),
         ),
       ),
-      tokenStorage: tokenStorage,
-      accessTokenHolder: accessTokenHolder,
     );
 
     await tester.pumpWidget(
@@ -799,15 +847,17 @@ void main() {
     );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
-      api: _FakeAuthApi(
+      api: _FakeAuthApi(meResult: _testUser()),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+      sessionRefresher: _ConfigurableAuthSessionRefresher(
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
         refreshResult: const AuthTokens(
           accessToken: 'restored-access',
           refreshToken: 'rotated-refresh',
         ),
-        meResult: _testUser(),
       ),
-      tokenStorage: tokenStorage,
-      accessTokenHolder: accessTokenHolder,
     );
 
     await tester.pumpWidget(
@@ -997,27 +1047,49 @@ class _FakeTokenStorage implements TokenStorage {
   }
 }
 
-class _FakeAuthApi extends AuthApi {
-  _FakeAuthApi({
+class _ConfigurableAuthSessionRefresher extends AuthSessionRefresher {
+  _ConfigurableAuthSessionRefresher({
+    required TokenStorage tokenStorage,
+    required AccessTokenHolder accessTokenHolder,
     this.refreshResult,
-    this.meResult,
     this.refreshError,
-    this.logoutError,
-  }) : super(Dio());
+  }) : _tokenStorage = tokenStorage,
+       _accessTokenHolder = accessTokenHolder,
+       super(
+         refreshClient: Dio(),
+         tokenStorage: tokenStorage,
+         accessTokenHolder: accessTokenHolder,
+       );
 
+  final TokenStorage _tokenStorage;
+  final AccessTokenHolder _accessTokenHolder;
   final AuthTokens? refreshResult;
-  final User? meResult;
   final Object? refreshError;
-  final Object? logoutError;
 
   @override
-  Future<AuthTokens> refresh({String? refreshToken}) async {
+  Future<String> refreshAccessToken() async {
     if (refreshError != null) {
       throw refreshError!;
     }
 
-    return refreshResult ?? const AuthTokens(accessToken: 'access-token');
+    final tokens =
+        refreshResult ?? const AuthTokens(accessToken: 'access-token');
+    _accessTokenHolder.accessToken = tokens.accessToken;
+
+    final rotated = tokens.refreshToken;
+    if (rotated != null && rotated.isNotEmpty) {
+      await _tokenStorage.saveRefreshToken(rotated);
+    }
+
+    return tokens.accessToken;
   }
+}
+
+class _FakeAuthApi extends AuthApi {
+  _FakeAuthApi({this.meResult, this.logoutError}) : super(Dio());
+
+  final User? meResult;
+  final Object? logoutError;
 
   @override
   Future<User> me() async {

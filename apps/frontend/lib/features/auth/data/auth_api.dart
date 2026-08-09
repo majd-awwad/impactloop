@@ -29,21 +29,6 @@ class AuthApi {
     );
   }
 
-  Future<AuthTokens> refresh({String? refreshToken}) {
-    return unwrapApiResponse(
-      _client.post<Map<String, dynamic>>(
-        '$_authBasePath/refresh',
-        data: refreshToken == null
-            ? const <String, dynamic>{}
-            : {'refreshToken': refreshToken},
-        options: Options(
-          extra: const {AuthInterceptor.skipAuthRefreshExtraKey: true},
-        ),
-      ),
-      AuthTokens.fromJson,
-    );
-  }
-
   Future<void> logout({String? refreshToken}) {
     return unwrapApiVoidResponse(
       _client.post<Map<String, dynamic>>(

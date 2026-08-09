@@ -6,6 +6,7 @@ import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js
 import { AppError } from '../../utils/app-error.js';
 
 import { getRefreshTokenMaxAgeMs } from '../../utils/jwt.js';
+import { hashToken } from '../../utils/token.js';
 
 import type { AuthResult, RefreshResult } from './auth.service.js';
 
@@ -77,6 +78,12 @@ export const requireRefreshTokenFromRequest = (req: Request): string => {
   }
 
   return refreshToken;
+};
+
+/** Hashed rate-limit key from cookie or body; never the raw refresh token. */
+export const getRefreshTokenRateLimitKey = (req: Request): string => {
+  const refreshToken = getRefreshTokenFromRequest(req);
+  return refreshToken ? hashToken(refreshToken) : 'missing';
 };
 
 const refreshTokenCookieOptions = () => ({

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:frontend/core/auth/access_token_holder.dart';
+import 'package:frontend/core/auth/auth_session_refresh.dart';
 import 'package:frontend/core/auth/token_storage.dart';
 import 'package:frontend/core/errors/api_exception.dart';
 import 'package:frontend/features/auth/application/auth_controller.dart';
@@ -28,7 +29,7 @@ void main() {
           user: _testUser(),
         ),
       );
-      final repository = AuthRepository(
+      final repository = _repositoryFor(
         api: api,
         tokenStorage: tokenStorage,
         accessTokenHolder: accessTokenHolder,
@@ -58,7 +59,7 @@ void main() {
           user: _testUser(),
         ),
       );
-      final repository = AuthRepository(
+      final repository = _repositoryFor(
         api: api,
         tokenStorage: tokenStorage,
         accessTokenHolder: accessTokenHolder,
@@ -89,7 +90,7 @@ void main() {
           user: _testUser(),
         ),
       );
-      final repository = AuthRepository(
+      final repository = _repositoryFor(
         api: api,
         tokenStorage: tokenStorage,
         accessTokenHolder: accessTokenHolder,
@@ -126,7 +127,7 @@ void main() {
         statusCode: 400,
       ),
     );
-    final repository = AuthRepository(
+    final repository = _repositoryFor(
       api: api,
       tokenStorage: tokenStorage,
       accessTokenHolder: accessTokenHolder,
@@ -161,7 +162,7 @@ void main() {
           user: _testUser(),
         ),
       );
-      final repository = AuthRepository(
+      final repository = _repositoryFor(
         api: api,
         tokenStorage: tokenStorage,
         accessTokenHolder: accessTokenHolder,
@@ -187,6 +188,23 @@ void main() {
       expect(accessTokenHolder.accessToken, 'shared-new-access');
       expect(await tokenStorage.readRefreshToken(), 'shared-new-refresh');
     },
+  );
+}
+
+AuthRepository _repositoryFor({
+  required AuthApi api,
+  required TokenStorage tokenStorage,
+  required AccessTokenHolder accessTokenHolder,
+}) {
+  return AuthRepository(
+    api: api,
+    tokenStorage: tokenStorage,
+    accessTokenHolder: accessTokenHolder,
+    sessionRefresher: AuthSessionRefresher(
+      refreshClient: Dio(),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+    ),
   );
 }
 
@@ -251,11 +269,6 @@ class _RecordingAuthApi extends AuthApi {
     required String email,
     required String password,
   }) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<AuthTokens> refresh({String? refreshToken}) {
     throw UnimplementedError();
   }
 
