@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 import type { AccessTokenPayload } from '../../utils/jwt.js';
 
@@ -103,7 +104,11 @@ const resolveTarget = async (kind: CommentTargetKind, targetId: string) => {
     const material =
       await commentsRepository.findPublicMaterialTarget(targetId);
     if (!material) {
-      throw new AppError('Material not found', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Material not found',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     }
 
     return { materialId: material.id } as const;
@@ -112,7 +117,11 @@ const resolveTarget = async (kind: CommentTargetKind, targetId: string) => {
   const project =
     await commentsRepository.findPublicLearningProjectTarget(targetId);
   if (!project) {
-    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Learning project not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   return { learningProjectId: project.id } as const;
@@ -120,7 +129,11 @@ const resolveTarget = async (kind: CommentTargetKind, targetId: string) => {
 
 const requireAuth = (viewer?: AccessTokenPayload) => {
   if (!viewer?.sub) {
-    throw new AppError('Authentication required', 401, 'UNAUTHENTICATED');
+    throw new AppError(
+      'Authentication required',
+      401,
+      COMMON_ERROR_CODES.unauthenticated,
+    );
   }
 
   return viewer;
@@ -169,7 +182,7 @@ export const listCommentReplies = async (
   );
 
   if (!root || root.parentCommentId !== null || root.rootCommentId !== null) {
-    throw new AppError('Comment not found', 404, 'NOT_FOUND');
+    throw new AppError('Comment not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   const page = query.page;
@@ -201,7 +214,11 @@ export const createComment = async (
   const body = input.body.trim();
 
   if (!body) {
-    throw new AppError('Comment cannot be empty.', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Comment cannot be empty.',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   if (!input.parentCommentId && !input.replyToCommentId) {
@@ -224,7 +241,7 @@ export const createComment = async (
     throw new AppError(
       'Parent comment not found on this target',
       404,
-      'NOT_FOUND',
+      COMMON_ERROR_CODES.notFound,
     );
   }
 
@@ -266,7 +283,7 @@ export const createComment = async (
       throw new AppError(
         'Parent comment not found on this target',
         404,
-        'NOT_FOUND',
+        COMMON_ERROR_CODES.notFound,
       );
     }
 
@@ -310,11 +327,15 @@ export const updateComment = async (
   );
 
   if (!existing) {
-    throw new AppError('Comment not found', 404, 'NOT_FOUND');
+    throw new AppError('Comment not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   if (existing.authorId !== auth.sub) {
-    throw new AppError('Insufficient permissions', 403, 'FORBIDDEN');
+    throw new AppError(
+      'Insufficient permissions',
+      403,
+      COMMON_ERROR_CODES.forbidden,
+    );
   }
 
   if (isPlaceholderStatus(existing.status)) {
@@ -323,7 +344,11 @@ export const updateComment = async (
 
   const body = input.body.trim();
   if (!body) {
-    throw new AppError('Comment cannot be empty.', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Comment cannot be empty.',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   const updated = await commentsRepository.updateCommentBody({
@@ -354,11 +379,15 @@ export const deleteOwnComment = async (
   );
 
   if (!existing) {
-    throw new AppError('Comment not found', 404, 'NOT_FOUND');
+    throw new AppError('Comment not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   if (existing.authorId !== auth.sub) {
-    throw new AppError('Insufficient permissions', 403, 'FORBIDDEN');
+    throw new AppError(
+      'Insufficient permissions',
+      403,
+      COMMON_ERROR_CODES.forbidden,
+    );
   }
 
   if (isPlaceholderStatus(existing.status)) {
@@ -390,12 +419,16 @@ export const moderateComment = async (
   );
 
   if (!isModerator) {
-    throw new AppError('Insufficient permissions', 403, 'FORBIDDEN');
+    throw new AppError(
+      'Insufficient permissions',
+      403,
+      COMMON_ERROR_CODES.forbidden,
+    );
   }
 
   const existing = await commentsRepository.findCommentById(commentId);
   if (!existing) {
-    throw new AppError('Comment not found', 404, 'NOT_FOUND');
+    throw new AppError('Comment not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   if (isPlaceholderStatus(existing.status)) {
