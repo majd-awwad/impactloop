@@ -1,0 +1,8 @@
+{
+  "contractId": "impactloop-idempotency-error-codes-v1",
+  "codes": {
+    "keyReused": "IDEMPOTENCY_KEY_REUSED",
+    "inProgress": "IDEMPOTENCY_IN_PROGRESS",
+    "previouslyFailed": "IDEMPOTENCY_PREVIOUSLY_FAILED"
+  }
+}

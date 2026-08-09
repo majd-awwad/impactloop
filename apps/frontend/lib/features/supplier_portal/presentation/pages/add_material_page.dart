@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../core/errors/idempotency_error_codes.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../materials/application/material_listing_providers.dart';
 import '../../../materials/data/material_listing_data_providers.dart';
@@ -2096,7 +2097,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       if (reason == 'REQUEST_IN_PROGRESS') {
         return l.materialBeingPublished;
       }
-      if (reason == 'IDEMPOTENCY_KEY_REUSED') {
+      if (reason == IdempotencyErrorCodes.keyReused) {
         return l.publishAttemptMismatch;
       }
     }

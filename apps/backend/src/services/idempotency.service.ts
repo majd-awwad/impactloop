@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import { IDEMPOTENCY_ERROR_CODES } from "../contracts/errors/idempotency-error-codes.js";
 import { prisma } from "../database/prisma.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { AppError } from "../utils/app-error.js";
@@ -144,9 +145,9 @@ export const runIdempotentOperation = async <TResponse extends object>({
       throw new AppError(
         "Idempotency key was already used with a different request.",
         409,
-        "IDEMPOTENCY_KEY_REUSED",
+        IDEMPOTENCY_ERROR_CODES.keyReused,
         {
-          reason: "IDEMPOTENCY_KEY_REUSED",
+          reason: IDEMPOTENCY_ERROR_CODES.keyReused,
           resourceType: existing.resourceType,
           resourceId: existing.resourceId,
         },
@@ -164,7 +165,7 @@ export const runIdempotentOperation = async <TResponse extends object>({
       throw new AppError(
         "Request is already being processed.",
         409,
-        "IDEMPOTENCY_IN_PROGRESS",
+        IDEMPOTENCY_ERROR_CODES.inProgress,
         {
           reason: "REQUEST_IN_PROGRESS",
           resourceType: existing.resourceType,
@@ -176,9 +177,9 @@ export const runIdempotentOperation = async <TResponse extends object>({
     throw new AppError(
       "Previous request with this idempotency key failed. Start a new request with a new key.",
       409,
-      "IDEMPOTENCY_PREVIOUSLY_FAILED",
+      IDEMPOTENCY_ERROR_CODES.previouslyFailed,
       {
-        reason: "IDEMPOTENCY_PREVIOUSLY_FAILED",
+        reason: IDEMPOTENCY_ERROR_CODES.previouslyFailed,
         resourceType: existing.resourceType,
         resourceId: existing.resourceId,
       },

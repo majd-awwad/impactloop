@@ -14,6 +14,9 @@ import type {
   RecommendationOutboxEventKind,
 } from '../../generated/prisma/client.js';
 
+import {
+  IDEMPOTENCY_ERROR_CODES,
+} from '../../contracts/errors/idempotency-error-codes.js';
 import { prisma } from '../../database/prisma.js';
 import { logger } from '../../observability/logger.js';
 import { getRequestId } from '../../observability/request-context.js';
@@ -895,8 +898,8 @@ const throwToggleIdempotencyConflict = (): never => {
   throw new AppError(
     'Idempotency key was already used with a different request.',
     409,
-    'IDEMPOTENCY_KEY_REUSED',
-    { reason: 'IDEMPOTENCY_KEY_REUSED' },
+    IDEMPOTENCY_ERROR_CODES.keyReused,
+    { reason: IDEMPOTENCY_ERROR_CODES.keyReused },
   );
 };
 
@@ -922,15 +925,15 @@ const resolveExistingToggleIdempotency = <TResponse extends object>(input: {
     throw new AppError(
       'Request is already being processed.',
       409,
-      'IDEMPOTENCY_IN_PROGRESS',
+      IDEMPOTENCY_ERROR_CODES.inProgress,
       { reason: 'REQUEST_IN_PROGRESS' },
     );
   }
   throw new AppError(
     'Previous request with this idempotency key failed. Start a new request with a new key.',
     409,
-    'IDEMPOTENCY_PREVIOUSLY_FAILED',
-    { reason: 'IDEMPOTENCY_PREVIOUSLY_FAILED' },
+    IDEMPOTENCY_ERROR_CODES.previouslyFailed,
+    { reason: IDEMPOTENCY_ERROR_CODES.previouslyFailed },
   );
 };
 
@@ -1044,8 +1047,8 @@ export const commitRecommendationToggleTransition = async <
         throw new AppError(
           'Idempotency key was already used with a different request.',
           409,
-          'IDEMPOTENCY_KEY_REUSED',
-          { reason: 'IDEMPOTENCY_KEY_REUSED' },
+          IDEMPOTENCY_ERROR_CODES.keyReused,
+          { reason: IDEMPOTENCY_ERROR_CODES.keyReused },
         );
       }
       return resolveExistingToggleIdempotency<TResponse>({
@@ -1129,15 +1132,15 @@ const resolveExistingViewIdempotency = <TResponse extends object>(input: {
     throw new AppError(
       'Request is already being processed.',
       409,
-      'IDEMPOTENCY_IN_PROGRESS',
+      IDEMPOTENCY_ERROR_CODES.inProgress,
       { reason: 'REQUEST_IN_PROGRESS' },
     );
   }
   throw new AppError(
     'Previous request with this idempotency key failed. Start a new request with a new key.',
     409,
-    'IDEMPOTENCY_PREVIOUSLY_FAILED',
-    { reason: 'IDEMPOTENCY_PREVIOUSLY_FAILED' },
+    IDEMPOTENCY_ERROR_CODES.previouslyFailed,
+    { reason: IDEMPOTENCY_ERROR_CODES.previouslyFailed },
   );
 };
 

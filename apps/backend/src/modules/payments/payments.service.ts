@@ -1,6 +1,9 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import {
+  IDEMPOTENCY_ERROR_CODES,
+} from '../../contracts/errors/idempotency-error-codes.js';
+import {
   computeIdempotencyRequestHash,
   validateIdempotencyKey,
 } from '../../services/idempotency.service.js';
@@ -584,7 +587,7 @@ export const startPaymentCheckout = async (input: {
       throw new AppError(
         'Idempotency key was already used with a different request.',
         409,
-        'IDEMPOTENCY_KEY_REUSED',
+        IDEMPOTENCY_ERROR_CODES.keyReused,
       );
     }
 
@@ -596,7 +599,7 @@ export const startPaymentCheckout = async (input: {
       throw new AppError(
         'Request is already being processed.',
         409,
-        'IDEMPOTENCY_IN_PROGRESS',
+        IDEMPOTENCY_ERROR_CODES.inProgress,
         { reason: 'REQUEST_IN_PROGRESS' },
       );
     }
@@ -604,7 +607,7 @@ export const startPaymentCheckout = async (input: {
     throw new AppError(
       'Previous request with this idempotency key failed. Start a new request with a new key.',
       409,
-      'IDEMPOTENCY_PREVIOUSLY_FAILED',
+      IDEMPOTENCY_ERROR_CODES.previouslyFailed,
     );
   }
 

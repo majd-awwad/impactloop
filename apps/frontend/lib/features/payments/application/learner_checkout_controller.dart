@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/api_exception.dart';
+import '../../../core/errors/idempotency_error_codes.dart';
 import '../../deliveries/application/learner_deliveries_provider.dart';
 import '../../reservations/application/learner_reservation_provider.dart';
 import '../../reservations/application/my_reservations_provider.dart';
@@ -606,7 +607,7 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
         clearError: true,
       );
     } on ApiException catch (error) {
-      if (error.code == 'IDEMPOTENCY_IN_PROGRESS') {
+      if (error.code == IdempotencyErrorCodes.inProgress) {
         state = state.copyWith(
           phase: CheckoutPhase.processing,
           step: CheckoutStep.result,
@@ -618,8 +619,9 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
         return;
       }
 
-      final refreshKey = error.code == 'IDEMPOTENCY_PREVIOUSLY_FAILED' ||
-          error.code == 'IDEMPOTENCY_KEY_REUSED';
+      final refreshKey =
+          error.code == IdempotencyErrorCodes.previouslyFailed ||
+          error.code == IdempotencyErrorCodes.keyReused;
       state = state.copyWith(
         submitting: false,
         errorMessage: error.message,
