@@ -195,7 +195,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             ? l10n.profileSavedRefreshFailed
             : l10n.profileUpdated,
       );
-      context.popOrGo('/profile');
+      context.popOrGo(accountSettingsRoute);
     } on ApiException catch (error) {
       if (!mounted) {
         return;
@@ -243,7 +243,6 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
 
     return ProfileFamilyPageScaffold(
       title: l10n.editProfile,
-      backTooltip: l10n.back,
       backFallbackRoute: accountSettingsRoute,
       child: Form(
         key: _formKey,

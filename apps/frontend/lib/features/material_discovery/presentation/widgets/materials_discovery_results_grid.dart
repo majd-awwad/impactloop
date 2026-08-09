@@ -49,7 +49,7 @@ VoidCallback? materialDiscoverySupplierTapHandler(
     return null;
   }
 
-  return () => context.go('/suppliers/$supplierId');
+  return () => context.push('/suppliers/$supplierId');
 }
 
 class MaterialsDiscoveryResultsGrid extends StatelessWidget {

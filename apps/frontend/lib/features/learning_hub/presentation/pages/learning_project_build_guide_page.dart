@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-
+import '../../../../app/router/navigation_extensions.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../ai/application/ai_assistant_shell_provider.dart';
 import '../../../ai/presentation/widgets/ai_assistant_shell.dart';
 import '../../application/learning_hub_providers.dart';
@@ -58,11 +58,9 @@ class _LearningProjectBuildGuidePageState
     );
   }
 
-  void _leaveGuide() {
+  Future<void> _leaveGuide() async {
     _shellNotifier?.close();
-    if (context.canPop()) {
-      context.pop();
-    }
+    await context.popOrGo('/learning/${widget.projectId}/build');
   }
 
   @override
@@ -70,18 +68,16 @@ class _LearningProjectBuildGuidePageState
     final title = widget.buildContext?.projectTitle ?? 'Build guide';
 
     return PopScope(
-      canPop: false,
+      canPop: true,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) {
-          _leaveGuide();
+        if (didPop) {
+          _shellNotifier?.close();
         }
       },
       child: Scaffold(
         appBar: AppBar(
           title: Text(title),
-          leading: BackButton(
-            onPressed: _leaveGuide,
-          ),
+          leading: AppBackAction.compact(onBack: _leaveGuide),
         ),
         body: const SafeArea(
           child: AiEmbeddedAssistantChat(),

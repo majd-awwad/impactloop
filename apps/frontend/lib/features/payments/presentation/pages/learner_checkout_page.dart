@@ -7,6 +7,8 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/app_back_action.dart';
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../auth/application/auth_route_helpers.dart';
 import '../../application/learner_checkout_controller.dart';
 import '../widgets/checkout_amount_summary.dart';
@@ -72,9 +74,7 @@ class _LearnerCheckoutPageState extends ConsumerState<LearnerCheckoutPage>
       backgroundColor: colors.pageBackground,
       appBar: AppBar(
         title: Text(l10n.checkoutPageTitle),
-        leading: BackButton(
-          onPressed: () => _goBack(context, state),
-        ),
+        leading: AppBackAction.compact(onBack: () => _goBack(context, state)),
         actions: [
           if (state.phase != CheckoutPhase.loading)
             IconButton(
@@ -342,12 +342,11 @@ class _LearnerCheckoutPageState extends ConsumerState<LearnerCheckoutPage>
     );
   }
 
-  void _goBack(BuildContext context, LearnerCheckoutState state) {
-    if (context.canPop()) {
-      context.pop();
-      return;
-    }
-    _goToReservation(context, state);
+  Future<void> _goBack(BuildContext context, LearnerCheckoutState state) async {
+    final fallback = state.reservationId.isNotEmpty
+        ? learnerReservationDetailRoute(state.reservationId)
+        : learnerReservationsRoute;
+    await context.popOrGo(fallback);
   }
 
   void _goToReservation(BuildContext context, LearnerCheckoutState state) {

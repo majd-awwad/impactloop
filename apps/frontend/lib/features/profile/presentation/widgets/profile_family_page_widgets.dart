@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../shared/widgets/notification_bell_button.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 
 const double profileFamilyMaxWidth = 920;
 const double profileFamilyWideBreakpoint = 840;
@@ -79,7 +79,6 @@ class ProfileFamilyPageScaffold extends StatelessWidget {
   const ProfileFamilyPageScaffold({
     super.key,
     required this.title,
-    required this.backTooltip,
     required this.backFallbackRoute,
     required this.child,
     this.headerAction,
@@ -87,7 +86,6 @@ class ProfileFamilyPageScaffold extends StatelessWidget {
   });
 
   final String title;
-  final String backTooltip;
   final String backFallbackRoute;
   final Widget child;
   final Widget? headerAction;
@@ -128,16 +126,8 @@ class ProfileFamilyPageScaffold extends StatelessWidget {
                       children: [
                         Align(
                           alignment: AlignmentDirectional.centerStart,
-                          child: Semantics(
-                            label: backTooltip,
-                            button: true,
-                            child: Tooltip(
-                              message: backTooltip,
-                              child: BackButton(
-                                onPressed: () =>
-                                    context.popOrGo(backFallbackRoute),
-                              ),
-                            ),
+                          child: AppBackAction(
+                            fallbackLocation: backFallbackRoute,
                           ),
                         ),
                         Padding(

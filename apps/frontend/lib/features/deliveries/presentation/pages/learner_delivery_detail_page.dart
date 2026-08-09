@@ -12,6 +12,8 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../auth/application/auth_route_helpers.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/app_back_action.dart';
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/learner_deliveries_provider.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
@@ -152,16 +154,7 @@ class _Header extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextButton.icon(
-            onPressed: () => _goBackFromDelivery(context, delivery),
-            style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
-            icon: const Icon(Icons.arrow_back_rounded, size: 18),
-            label: Text(
-              delivery.reservationId.trim().isNotEmpty
-                  ? context.l10n.viewReservation
-                  : context.l10n.backToReservations,
-            ),
-          ),
+          AppBackAction(onBack: () => _goBackFromDelivery(context, delivery)),
           const SizedBox(height: AppSpacing.xs),
           Text(
             context.l10n.deliveryStatusTitle,
@@ -276,26 +269,21 @@ class _DeliverySummaryPanel extends StatelessWidget {
               label: context.l10n.failureReason,
               value: delivery.failureReason!,
             ),
-          const SizedBox(height: AppSpacing.md),
-          TextButton.icon(
-            onPressed: () => context.go(learnerReservationsRoute),
-            style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
-            icon: const Icon(Icons.arrow_back_rounded, size: 18),
-            label: Text(context.l10n.backToReservations),
-          ),
         ],
       ),
     );
   }
 }
 
-void _goBackFromDelivery(BuildContext context, LearnerDelivery delivery) {
+Future<void> _goBackFromDelivery(
+  BuildContext context,
+  LearnerDelivery delivery,
+) async {
   final reservationId = delivery.reservationId.trim();
-  if (reservationId.isNotEmpty) {
-    context.go(learnerReservationDetailRoute(reservationId));
-    return;
-  }
-  context.go(learnerReservationsRoute);
+  final fallback = reservationId.isNotEmpty
+      ? learnerReservationDetailRoute(reservationId)
+      : learnerReservationsRoute;
+  await context.popOrGo(fallback);
 }
 
 class _TrackingStatusCard extends StatelessWidget {

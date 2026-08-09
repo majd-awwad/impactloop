@@ -10,6 +10,7 @@ import '../../../../shared/l10n/driver_quantity_labels.dart';
 import '../../../../shared/l10n/driver_status_labels.dart';
 import '../../../../shared/l10n/driver_ui_labels.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/bidi_text.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
@@ -29,14 +30,25 @@ class DriverHistoryDetailPage extends ConsumerWidget {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 900),
-          child: value.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, _) => _DetailNotice(
-              onRetry: () =>
-                  ref.invalidate(driverHistoricalDeliveryProvider(deliveryId)),
-            ),
-            data: (delivery) =>
-                DriverHistoricalDeliveryContent(delivery: delivery),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: AppBackAction(fallbackLocation: '/driver/history'),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              value.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (_, _) => _DetailNotice(
+                  onRetry: () => ref.invalidate(
+                    driverHistoricalDeliveryProvider(deliveryId),
+                  ),
+                ),
+                data: (delivery) =>
+                    DriverHistoricalDeliveryContent(delivery: delivery),
+              ),
+            ],
           ),
         ),
       ),

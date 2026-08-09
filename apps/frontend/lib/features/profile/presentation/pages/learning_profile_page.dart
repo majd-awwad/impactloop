@@ -21,7 +21,6 @@ class LearningProfilePage extends ConsumerWidget {
     return ProfileFamilyPageScaffold(
       title: l10n.learnerProfile,
       backFallbackRoute: profileRoute,
-      backTooltip: l10n.back,
       headerAction: user == null
           ? null
           : _LearningProfileHeaderAction(

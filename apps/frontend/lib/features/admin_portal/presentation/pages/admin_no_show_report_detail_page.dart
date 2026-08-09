@@ -8,6 +8,8 @@ import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_section_card.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/app_back_action.dart';
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../shared/widgets/incident_report_status_presentation.dart';
 import '../../data/admin_no_show_reports_api.dart';
 import '../l10n/admin_l10n.dart';
@@ -34,13 +36,7 @@ class _AdminNoShowReportDetailPageState
     extends ConsumerState<AdminNoShowReportDetailPage> {
   String? _busyAction;
 
-  void _goBack() {
-    if (context.canPop()) {
-      context.pop();
-    } else {
-      context.go('/admin/no-show-reports');
-    }
-  }
+  void _goBack() => context.popOrGo('/admin/no-show-reports');
 
   void _refresh() {
     ref.invalidate(adminNoShowReportDetailProvider(widget.reportId));
@@ -203,18 +199,11 @@ class _IncidentHeader extends StatelessWidget {
           final heading = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: AppSpacing.xs,
-                children: [
-                  TextButton.icon(
-                    onPressed: onBack,
-                    icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                    label: const Text('Incident Reports'),
-                  ),
-                  const Text('›'),
-                  Text('#${_shortId(report.id)}'),
-                ],
+              AppBackAction(onBack: onBack),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                '#${_shortId(report.id)}',
+                style: Theme.of(context).textTheme.labelLarge,
               ),
               const SizedBox(height: AppSpacing.xs),
               Wrap(

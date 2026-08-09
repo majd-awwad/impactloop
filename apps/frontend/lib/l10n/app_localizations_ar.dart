@@ -18,22 +18,26 @@ class AppLocalizationsAr extends AppLocalizations {
   String get somethingWentWrong => 'حدث خطأ ما. يُرجى المحاولة مرة أخرى.';
 
   @override
-  String get networkError => 'تعذّر الاتصال بالخادم. تحقّق من اتصالك بالإنترنت وحاول مرة أخرى.';
+  String get networkError =>
+      'تعذّر الاتصال بالخادم. تحقّق من اتصالك بالإنترنت وحاول مرة أخرى.';
 
   @override
-  String get timeoutError => 'استغرق الخادم وقتًا طويلًا للاستجابة. يُرجى المحاولة مرة أخرى.';
+  String get timeoutError =>
+      'استغرق الخادم وقتًا طويلًا للاستجابة. يُرجى المحاولة مرة أخرى.';
 
   @override
   String get serverError => 'حدثت مشكلة في الخادم. يُرجى المحاولة بعد قليل.';
 
   @override
-  String get sessionExpired => 'انتهت صلاحية جلستك. يُرجى تسجيل الدخول مرة أخرى.';
+  String get sessionExpired =>
+      'انتهت صلاحية جلستك. يُرجى تسجيل الدخول مرة أخرى.';
 
   @override
   String get forbiddenError => 'ليست لديك صلاحية لإكمال هذا الإجراء.';
 
   @override
-  String get conflictError => 'يتعارض هذا الطلب مع الحالة الحالية. حدّث الصفحة وحاول مرة أخرى.';
+  String get conflictError =>
+      'يتعارض هذا الطلب مع الحالة الحالية. حدّث الصفحة وحاول مرة أخرى.';
 
   @override
   String get validationError => 'تحقّق من المعلومات المحددة وحاول مرة أخرى.';
@@ -42,7 +46,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get accountSuspended => 'تم تعليق حسابك. تواصل مع مسؤول النظام.';
 
   @override
-  String get pickupWindowRequired => 'اختر وقت بدء وانتهاء جديدًا للاستلام قبل إرسال طلب إعادة الجدولة.';
+  String get pickupWindowRequired =>
+      'اختر وقت بدء وانتهاء جديدًا للاستلام قبل إرسال طلب إعادة الجدولة.';
 
   @override
   String get invalidPickupWindow => 'موعد الاستلام غير صالح. اختر موعدًا آخر.';
@@ -54,34 +59,44 @@ class AppLocalizationsAr extends AppLocalizations {
   String get completeRequiredDetail => 'أكمل هذا الحقل المطلوب قبل المتابعة.';
 
   @override
-  String get projectSubmissionCoverImageRequired => 'أضف صورة واحدة على الأقل للمشروع قبل إرساله للمراجعة.';
+  String get projectSubmissionCoverImageRequired =>
+      'أضف صورة واحدة على الأقل للمشروع قبل إرساله للمراجعة.';
 
   @override
-  String get projectSubmissionRequiredComponentsRequired => 'أضف مكوّنًا مطلوبًا واحدًا على الأقل قبل الإرسال.';
+  String get projectSubmissionRequiredComponentsRequired =>
+      'أضف مكوّنًا مطلوبًا واحدًا على الأقل قبل الإرسال.';
 
   @override
-  String get projectSubmissionStepsRequired => 'أضف خطوة واحدة على الأقل للمشروع قبل الإرسال.';
+  String get projectSubmissionStepsRequired =>
+      'أضف خطوة واحدة على الأقل للمشروع قبل الإرسال.';
 
   @override
-  String get projectSubmissionCategoryRequired => 'اختر فئة المشروع قبل الإرسال.';
+  String get projectSubmissionCategoryRequired =>
+      'اختر فئة المشروع قبل الإرسال.';
 
   @override
-  String get projectSubmissionTitleRequired => 'أضف عنوانًا للمشروع قبل الإرسال.';
+  String get projectSubmissionTitleRequired =>
+      'أضف عنوانًا للمشروع قبل الإرسال.';
 
   @override
-  String get projectSubmissionShortDescriptionRequired => 'أضف وصفًا قصيرًا قبل الإرسال.';
+  String get projectSubmissionShortDescriptionRequired =>
+      'أضف وصفًا قصيرًا قبل الإرسال.';
 
   @override
-  String get projectSubmissionDescriptionRequired => 'أضف وصفًا كاملاً للمشروع قبل الإرسال.';
+  String get projectSubmissionDescriptionRequired =>
+      'أضف وصفًا كاملاً للمشروع قبل الإرسال.';
 
   @override
-  String get projectSubmissionDifficultyRequired => 'اختر مستوى الصعوبة قبل الإرسال.';
+  String get projectSubmissionDifficultyRequired =>
+      'اختر مستوى الصعوبة قبل الإرسال.';
 
   @override
-  String get projectSubmissionDurationRequired => 'أضف المدة التقديرية للمشروع قبل الإرسال.';
+  String get projectSubmissionDurationRequired =>
+      'أضف المدة التقديرية للمشروع قبل الإرسال.';
 
   @override
-  String get projectSubmissionDetailsRequired => 'أكمل تفاصيل المشروع المطلوبة قبل الإرسال.';
+  String get projectSubmissionDetailsRequired =>
+      'أكمل تفاصيل المشروع المطلوبة قبل الإرسال.';
 
   @override
   String currencyNis(String amount) {
@@ -225,7 +240,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get statusWaitingSupplier => 'بانتظار رد المورّد';
 
   @override
-  String get statusWaitingSupplierWindow => 'بانتظار أن يختار المورّد موعد استلام جديدًا';
+  String get statusWaitingSupplierWindow =>
+      'بانتظار أن يختار المورّد موعد استلام جديدًا';
 
   @override
   String get statusAcceptedPickup => 'مقبول / جاهز للاستلام';
@@ -249,7 +265,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get statusCancelledNoDriver => 'ملغى — لا يتوفر سائق';
 
   @override
-  String get statusCancelledUnresolvedPickup => 'ألغاه المسؤول لعدم معالجة مشكلة الاستلام';
+  String get statusCancelledUnresolvedPickup =>
+      'ألغاه المسؤول لعدم معالجة مشكلة الاستلام';
 
   @override
   String get statusExpiredNoResponse => 'منتهي الصلاحية — لم يصل رد';
@@ -324,7 +341,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get statusDeliveryIssueReported => 'تم الإبلاغ عن مشكلة في التوصيل';
 
   @override
-  String get statusDriverNotAssignedInTime => 'لم يتم تعيين سائق في الوقت المحدد';
+  String get statusDriverNotAssignedInTime =>
+      'لم يتم تعيين سائق في الوقت المحدد';
 
   @override
   String get statusPickupNotCompleted => 'لم يكتمل الاستلام';
@@ -406,7 +424,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notificationsTitle => 'الإشعارات';
 
   @override
-  String get notificationsSubtitle => 'تحديثات الدفع والحجوزات والتوصيل والمشاريع والحساب.';
+  String get notificationsSubtitle =>
+      'تحديثات الدفع والحجوزات والتوصيل والمشاريع والحساب.';
 
   @override
   String get notificationsLoading => 'جارٍ تحميل الإشعارات…';
@@ -445,7 +464,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noReadNotifications => 'لا توجد إشعارات مقروءة بعد.';
 
   @override
-  String get openedNotificationsAppearHere => 'ستظهر الإشعارات التي فتحتها هنا.';
+  String get openedNotificationsAppearHere =>
+      'ستظهر الإشعارات التي فتحتها هنا.';
 
   @override
   String get noNotifications => 'لا توجد إشعارات بعد.';
@@ -524,12 +544,16 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String notificationPaymentRequiredBodyWithAmount(String amount, String materialTitle) {
+  String notificationPaymentRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
     return 'ادفع $amount مقابل $materialTitle للمتابعة.';
   }
 
   @override
-  String get notificationPaymentDeliveryFeeRequiredTitle => 'رسوم التوصيل مطلوبة';
+  String get notificationPaymentDeliveryFeeRequiredTitle =>
+      'رسوم التوصيل مطلوبة';
 
   @override
   String notificationPaymentDeliveryFeeRequiredBody(String materialTitle) {
@@ -537,7 +561,10 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String notificationPaymentDeliveryFeeRequiredBodyWithAmount(String amount, String materialTitle) {
+  String notificationPaymentDeliveryFeeRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
     return 'ادفع رسوم التوصيل بقيمة $amount قبل متابعة توصيل $materialTitle.';
   }
 
@@ -550,12 +577,16 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String notificationPaymentCompletedBodyWithAmount(String amount, String materialTitle) {
+  String notificationPaymentCompletedBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
     return 'تم استلام دفع بقيمة $amount مقابل $materialTitle.';
   }
 
   @override
-  String get notificationPaymentCompletedMoreRequiredTitle => 'تم استلام دفعة — ما زال هناك مبلغ مستحق';
+  String get notificationPaymentCompletedMoreRequiredTitle =>
+      'تم استلام دفعة — ما زال هناك مبلغ مستحق';
 
   @override
   String notificationPaymentCompletedMoreRequiredBody(String materialTitle) {
@@ -563,7 +594,10 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String notificationPaymentCompletedMoreRequiredBodyWithAmount(String amount, String materialTitle) {
+  String notificationPaymentCompletedMoreRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
     return 'تم استلام $amount مقابل $materialTitle، لكن ما زال هناك دفع مطلوب قبل متابعة التنفيذ.';
   }
 
@@ -592,7 +626,10 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String notificationPaymentRefundRequestedBodyWithAmount(String amount, String materialTitle) {
+  String notificationPaymentRefundRequestedBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
     return 'يتم معالجة استرداد بقيمة $amount لـ $materialTitle.';
   }
 
@@ -605,12 +642,16 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String notificationPaymentRefundedBodyWithAmount(String amount, String materialTitle) {
+  String notificationPaymentRefundedBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
     return 'اكتمل استردادك بقيمة $amount مقابل $materialTitle.';
   }
 
   @override
-  String get notificationPaymentRefundedNewCycleTitle => 'تم الاسترداد — مطلوب دفع جديد';
+  String get notificationPaymentRefundedNewCycleTitle =>
+      'تم الاسترداد — مطلوب دفع جديد';
 
   @override
   String notificationPaymentRefundedNewCycleBody(String materialTitle) {
@@ -618,7 +659,10 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String notificationPaymentRefundedNewCycleBodyWithAmount(String amount, String materialTitle) {
+  String notificationPaymentRefundedNewCycleBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
     return 'تم استرداد دفعتك السابقة بقيمة $amount مقابل $materialTitle. مطلوب الآن دفع جديد للمتابعة.';
   }
 
@@ -639,7 +683,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get notificationPaymentNewCycleRequiredTitle => 'دورة دفع جديدة مطلوبة';
+  String get notificationPaymentNewCycleRequiredTitle =>
+      'دورة دفع جديدة مطلوبة';
 
   @override
   String notificationPaymentNewCycleRequiredBody(String materialTitle) {
@@ -647,12 +692,16 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String notificationPaymentNewCycleRequiredBodyWithAmount(String amount, String materialTitle) {
+  String notificationPaymentNewCycleRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  ) {
     return 'ادفع $amount للدورة الجديدة من $materialTitle.';
   }
 
   @override
-  String get notificationPaymentResolutionRequiredTitle => 'مطلوب حل لمشكلة الدفع';
+  String get notificationPaymentResolutionRequiredTitle =>
+      'مطلوب حل لمشكلة الدفع';
 
   @override
   String notificationPaymentResolutionRequiredBody(String materialTitle) {
@@ -669,7 +718,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notificationPaymentStatusPaid => 'مدفوع';
 
   @override
-  String get notificationPaymentStatusRefundProcessing => 'جاري معالجة الاسترداد';
+  String get notificationPaymentStatusRefundProcessing =>
+      'جاري معالجة الاسترداد';
 
   @override
   String get notificationPaymentStatusRefunded => 'تم الاسترداد';
@@ -690,28 +740,36 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notificationPaymentStatusFulfillmentReady => 'جاهز للتنفيذ';
 
   @override
-  String get notificationPaymentNextStepPay => 'تابع إلى الدفع لإكمال هذه العملية.';
+  String get notificationPaymentNextStepPay =>
+      'تابع إلى الدفع لإكمال هذه العملية.';
 
   @override
-  String get notificationPaymentNextStepViewReservation => 'افتح تفاصيل الحجز لمراجعة سجل الدفع.';
+  String get notificationPaymentNextStepViewReservation =>
+      'افتح تفاصيل الحجز لمراجعة سجل الدفع.';
 
   @override
-  String get notificationPaymentNextStepPickup => 'افتح تفاصيل الحجز لعرض رمز الاستلام.';
+  String get notificationPaymentNextStepPickup =>
+      'افتح تفاصيل الحجز لعرض رمز الاستلام.';
 
   @override
-  String get notificationPaymentNextStepTrack => 'افتح تفاصيل الحجز لمتابعة التنفيذ.';
+  String get notificationPaymentNextStepTrack =>
+      'افتح تفاصيل الحجز لمتابعة التنفيذ.';
 
   @override
-  String get notificationPaymentNextStepRefundProcessing => 'افتح تفاصيل الحجز لمتابعة الاسترداد.';
+  String get notificationPaymentNextStepRefundProcessing =>
+      'افتح تفاصيل الحجز لمتابعة الاسترداد.';
 
   @override
-  String get notificationPaymentNextStepRefunded => 'افتح تفاصيل الحجز لمراجعة الدفعة المستردة.';
+  String get notificationPaymentNextStepRefunded =>
+      'افتح تفاصيل الحجز لمراجعة الدفعة المستردة.';
 
   @override
-  String get notificationPaymentNextStepResolution => 'افتح تفاصيل الحجز لحل مشكلة الدفع.';
+  String get notificationPaymentNextStepResolution =>
+      'افتح تفاصيل الحجز لحل مشكلة الدفع.';
 
   @override
-  String get notificationPaymentNextStepLateRefund => 'افتح تفاصيل الحجز لمراجعة الاسترداد التلقائي.';
+  String get notificationPaymentNextStepLateRefund =>
+      'افتح تفاصيل الحجز لمراجعة الاسترداد التلقائي.';
 
   @override
   String get notificationPaymentDetailSecondary => 'تفاصيل الحجز';
@@ -779,7 +837,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notificationReservationRequestedTitle => 'طلب حجز جديد';
 
   @override
-  String notificationReservationRequestedBody(String learnerName, String materialTitle) {
+  String notificationReservationRequestedBody(
+    String learnerName,
+    String materialTitle,
+  ) {
     return 'طلب $learnerName $materialTitle.';
   }
 
@@ -787,12 +848,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notificationReservationCancelledSupplierTitle => 'تم إلغاء الحجز';
 
   @override
-  String notificationReservationCancelledSupplierBody(String learnerName, String materialTitle) {
+  String notificationReservationCancelledSupplierBody(
+    String learnerName,
+    String materialTitle,
+  ) {
     return 'ألغى $learnerName طلب $materialTitle.';
   }
 
   @override
-  String get notificationReservationExpiredSupplierTitle => 'انتهت صلاحية الحجز';
+  String get notificationReservationExpiredSupplierTitle =>
+      'انتهت صلاحية الحجز';
 
   @override
   String notificationReservationExpiredSupplierBody(String materialTitle) {
@@ -819,25 +884,29 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notificationCategoryRequestUpdateTitle => 'تحديث طلب الفئة';
 
   @override
-  String get notificationCategoryRequestUpdateBody => 'هناك تحديث على طلب الفئة الخاص بك.';
+  String get notificationCategoryRequestUpdateBody =>
+      'هناك تحديث على طلب الفئة الخاص بك.';
 
   @override
   String get notificationPriceRequestUpdateTitle => 'تحديث مراجعة السعر';
 
   @override
-  String get notificationPriceRequestUpdateBody => 'هناك تحديث على طلب مراجعة السعر الخاص بك.';
+  String get notificationPriceRequestUpdateBody =>
+      'هناك تحديث على طلب مراجعة السعر الخاص بك.';
 
   @override
   String get notificationMaterialModerationUpdateTitle => 'تحديث مراجعة المادة';
 
   @override
-  String get notificationMaterialModerationUpdateBody => 'هناك تحديث على إدراج المادة الخاص بك.';
+  String get notificationMaterialModerationUpdateBody =>
+      'هناك تحديث على إدراج المادة الخاص بك.';
 
   @override
   String get notificationSupplierVerificationUpdateTitle => 'تحديث التحقق';
 
   @override
-  String get notificationSupplierVerificationUpdateBody => 'هناك تحديث على التحقق من حساب المورّد الخاص بك.';
+  String get notificationSupplierVerificationUpdateBody =>
+      'هناك تحديث على التحقق من حساب المورّد الخاص بك.';
 
   @override
   String get reservationAlreadyAccepted => 'تم قبول هذا الحجز مسبقًا.';
@@ -846,13 +915,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservationAlreadyDeclined => 'تم رفض هذا الحجز مسبقًا.';
 
   @override
-  String get reservationExpiredError => 'انتهت صلاحية هذا الحجز قبل إمكانية تحديثه.';
+  String get reservationExpiredError =>
+      'انتهت صلاحية هذا الحجز قبل إمكانية تحديثه.';
 
   @override
   String get reservationCancelledError => 'تم إلغاء هذا الحجز ولا يمكن تحديثه.';
 
   @override
-  String get reservationNotPending => 'يمكن تنفيذ هذا الإجراء على الحجوزات قيد الانتظار فقط.';
+  String get reservationNotPending =>
+      'يمكن تنفيذ هذا الإجراء على الحجوزات قيد الانتظار فقط.';
 
   @override
   String get projectModerationTitle => 'تم تحديث مراجعة المشروع';
@@ -952,7 +1023,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get draftStepsLabel => 'خطوات التنفيذ';
 
   @override
-  String get draftStepsHint => 'اكتب خطوة واحدة في كل سطر. لا حاجة إلى كتابة الخطوة 1.\nصِل المستشعر باللوحة.\nثبّت المكوّنات.\nاختبر القراءات.';
+  String get draftStepsHint =>
+      'اكتب خطوة واحدة في كل سطر. لا حاجة إلى كتابة الخطوة 1.\nصِل المستشعر باللوحة.\nثبّت المكوّنات.\nاختبر القراءات.';
 
   @override
   String get draftLinksLabel => 'روابط مفيدة';
@@ -967,13 +1039,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get draftSave => 'حفظ المسودة';
 
   @override
-  String get draftSavedMessage => 'تم حفظ المسودة. يمكنك إضافة الصور وإرسالها للمراجعة عندما تصبح جاهزة.';
+  String get draftSavedMessage =>
+      'تم حفظ المسودة. يمكنك إضافة الصور وإرسالها للمراجعة عندما تصبح جاهزة.';
 
   @override
-  String get draftSelectAvailableCategoryBeforeSave => 'اختر فئة مشروع متاحة قبل الحفظ.';
+  String get draftSelectAvailableCategoryBeforeSave =>
+      'اختر فئة مشروع متاحة قبل الحفظ.';
 
   @override
-  String get draftMinimumContentBeforeSave => 'أضف 10 أحرف على الأقل من محتوى المشروع قبل الحفظ.';
+  String get draftMinimumContentBeforeSave =>
+      'أضف 10 أحرف على الأقل من محتوى المشروع قبل الحفظ.';
 
   @override
   String get draftComponentRequired => 'أضف مكوّنًا واحدًا على الأقل مع اسمه.';
@@ -985,10 +1060,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get draftComponentUnique => 'يجب أن يكون لكل مكوّن اسم فريد.';
 
   @override
-  String get draftFullDescriptionMinimum => 'استخدم 10 أحرف على الأقل عند إضافة وصف كامل.';
+  String get draftFullDescriptionMinimum =>
+      'استخدم 10 أحرف على الأقل عند إضافة وصف كامل.';
 
   @override
-  String get draftFullDescriptionMaximum => 'اجعل الوصف الكامل أقل من 10000 حرف.';
+  String get draftFullDescriptionMaximum =>
+      'اجعل الوصف الكامل أقل من 10000 حرف.';
 
   @override
   String get draftTitleRequired => 'عنوان المشروع مطلوب.';
@@ -1027,7 +1104,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get draftLinksMaximum => 'استخدم 20 رابطًا أو أقل.';
 
   @override
-  String get draftLinksInvalid => 'استخدم روابط http أو https صالحة، رابطًا واحدًا في كل سطر.';
+  String get draftLinksInvalid =>
+      'استخدم روابط http أو https صالحة، رابطًا واحدًا في كل سطر.';
 
   @override
   String get draftComponentNameRequired => 'اسم المكوّن مطلوب.';
@@ -1045,13 +1123,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get draftNotesMaximum => 'اجعل الملاحظات أقل من 1000 حرف.';
 
   @override
-  String get draftKeywordsMaximum => 'استخدم ما يصل إلى 5 كلمات مفتاحية لكل مكوّن.';
+  String get draftKeywordsMaximum =>
+      'استخدم ما يصل إلى 5 كلمات مفتاحية لكل مكوّن.';
 
   @override
   String get draftKeywordMaximum => 'اجعل كل كلمة مفتاحية أقل من 80 حرفًا.';
 
   @override
-  String get draftValidMaterialCategory => 'اختر فئة مواد صالحة أو اتركها بلا تحديد.';
+  String get draftValidMaterialCategory =>
+      'اختر فئة مواد صالحة أو اتركها بلا تحديد.';
 
   @override
   String get pickupWindowNotSet => 'لم يُحدّد موعد الاستلام';
@@ -1110,19 +1190,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String get learnerAccountRequired => 'يلزم حساب متعلّم';
 
   @override
-  String get learnerAccountRequiredReservations => 'استخدم حساب متعلّم لعرض حجوزات المواد.';
+  String get learnerAccountRequiredReservations =>
+      'استخدم حساب متعلّم لعرض حجوزات المواد.';
 
   @override
   String get myReservations => 'حجوزاتي';
 
   @override
-  String get reservationsSubtitle => 'تابع جميع حجوزاتك وطلبات الاستلام والتوصيل والدفع من هنا.';
+  String get reservationsSubtitle =>
+      'تابع جميع حجوزاتك وطلبات الاستلام والتوصيل والدفع من هنا.';
 
   @override
   String get loadingReservations => 'جارٍ تحميل الحجوزات';
 
   @override
-  String get loadingReservationsSubtitle => 'جارٍ التحقق من أحدث نشاط للحجوزات.';
+  String get loadingReservationsSubtitle =>
+      'جارٍ التحقق من أحدث نشاط للحجوزات.';
 
   @override
   String get reservationsLoadError => 'تعذّر تحميل الحجوزات';
@@ -1131,7 +1214,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noReservations => 'لا توجد حجوزات بعد';
 
   @override
-  String get noReservationsSubtitle => 'احجز مادة متاحة وستظهر تحديثات المورّد هنا.';
+  String get noReservationsSubtitle =>
+      'احجز مادة متاحة وستظهر تحديثات المورّد هنا.';
 
   @override
   String get browseMaterials => 'تصفّح المواد';
@@ -1140,7 +1224,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noMatchingReservations => 'لا توجد حجوزات مطابقة';
 
   @override
-  String get noMatchingReservationsSubtitle => 'جرّب مرشحًا آخر أو تصفّح المواد لبدء طلب جديد.';
+  String get noMatchingReservationsSubtitle =>
+      'جرّب مرشحًا آخر أو تصفّح المواد لبدء طلب جديد.';
 
   @override
   String get deliveryUpdatesUnavailable => 'تحديثات التوصيل غير متاحة مؤقتًا.';
@@ -1164,10 +1249,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservationsSummaryTotal => 'إجمالي الحجوزات';
 
   @override
-  String get reservationsSummaryLoadedHint => 'الأعداد تعكس الحجوزات المحمّلة حالياً.';
+  String get reservationsSummaryLoadedHint =>
+      'الأعداد تعكس الحجوزات المحمّلة حالياً.';
 
   @override
-  String get reservationsTimezoneNote => 'جميع التواريخ والأوقات حسب المنطقة الزمنية الخاصة بك.';
+  String get reservationsTimezoneNote =>
+      'جميع التواريخ والأوقات حسب المنطقة الزمنية الخاصة بك.';
 
   @override
   String get reservationsFilter => 'تصفية';
@@ -1200,37 +1287,45 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get reservationMoneyMaterialPaidDeliveryDue => 'تم دفع دفعة المادة. رسوم التوصيل ما زالت مطلوبة.';
+  String get reservationMoneyMaterialPaidDeliveryDue =>
+      'تم دفع دفعة المادة. رسوم التوصيل ما زالت مطلوبة.';
 
   @override
-  String get reservationMoneyDeliveryPaidMaterialDue => 'تم تسديد رسوم التوصيل. دفعة المادة ما زالت مطلوبة.';
+  String get reservationMoneyDeliveryPaidMaterialDue =>
+      'تم تسديد رسوم التوصيل. دفعة المادة ما زالت مطلوبة.';
 
   @override
-  String get reservationMoneyBothOutstanding => 'تُدفع المادة ورسوم التوصيل معًا في دفعة واحدة.';
+  String get reservationMoneyBothOutstanding =>
+      'تُدفع المادة ورسوم التوصيل معًا في دفعة واحدة.';
 
   @override
   String get reservationNextStepPayTitle => 'أكمل الدفع لتأكيد الحجز';
 
   @override
-  String get reservationNextStepPaySupporting => 'سيظهر رمز الاستلام بعد الدفع وبدء نافذة الاستلام.';
+  String get reservationNextStepPaySupporting =>
+      'سيظهر رمز الاستلام بعد الدفع وبدء نافذة الاستلام.';
 
   @override
-  String get reservationNextStepPaySupportingDelivery => 'يبدأ التوصيل فقط بعد إكمال الدفع المطلوب.';
+  String get reservationNextStepPaySupportingDelivery =>
+      'يبدأ التوصيل فقط بعد إكمال الدفع المطلوب.';
 
   @override
   String get reservationNextStepPartialTitle => 'أكمل الدفع المتبقي';
 
   @override
-  String get reservationNextStepPartialSupporting => 'تم استلام دفعة، وما زالت رسوم التوصيل مطلوبة.';
+  String get reservationNextStepPartialSupporting =>
+      'تم استلام دفعة، وما زالت رسوم التوصيل مطلوبة.';
 
   @override
   String get paymentStatusNotRequired => 'الدفع غير مطلوب';
 
   @override
-  String get reservationNextStepPayToConfirm => 'ادفع لتأكيد الحجز وإظهار رمز الاستلام.';
+  String get reservationNextStepPayToConfirm =>
+      'ادفع لتأكيد الحجز وإظهار رمز الاستلام.';
 
   @override
-  String get reservationNextStepPayToConfirmDelivery => 'ادفع لتأكيد الحجز ومتابعة التوصيل.';
+  String get reservationNextStepPayToConfirmDelivery =>
+      'ادفع لتأكيد الحجز ومتابعة التوصيل.';
 
   @override
   String get materialDetailViewReservation => 'عرض الحجز';
@@ -1242,7 +1337,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get materialDetailViewDeliveryDetails => 'عرض تفاصيل التوصيل';
 
   @override
-  String get materialDetailRequestDeliveryInReservations => 'اطلب التوصيل من حجوزاتي';
+  String get materialDetailRequestDeliveryInReservations =>
+      'اطلب التوصيل من حجوزاتي';
 
   @override
   String get materialDetailViewDeliveryStatus => 'عرض حالة التوصيل';
@@ -1257,13 +1353,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get materialDetailViewReservationStatus => 'عرض حالة الحجز';
 
   @override
-  String get materialDetailAcceptedPickupReady => 'تم قبول الحجز. تفاصيل الاستلام جاهزة.';
+  String get materialDetailAcceptedPickupReady =>
+      'تم قبول الحجز. تفاصيل الاستلام جاهزة.';
 
   @override
-  String get materialDetailAcceptedDeliveryReady => 'تم قبول الحجز. افتح تفاصيل الحجز لحالة التوصيل والدفع.';
+  String get materialDetailAcceptedDeliveryReady =>
+      'تم قبول الحجز. افتح تفاصيل الحجز لحالة التوصيل والدفع.';
 
   @override
-  String get materialDetailAcceptedRequestDelivery => 'تم قبول الحجز. التوصيل الداخلي متاح من حجوزاتي.';
+  String get materialDetailAcceptedRequestDelivery =>
+      'تم قبول الحجز. التوصيل الداخلي متاح من حجوزاتي.';
 
   @override
   String materialDetailPreviousDeliveryRequestAgain(String status) {
@@ -1276,16 +1375,19 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get materialDetailPaymentRequired => 'ما زال الدفع مطلوبًا. افتح الحجز لمتابعة الدفع.';
+  String get materialDetailPaymentRequired =>
+      'ما زال الدفع مطلوبًا. افتح الحجز لمتابعة الدفع.';
 
   @override
-  String get materialDetailReservationPending => 'تم إرسال طلب الحجز. بانتظار رد المورد.';
+  String get materialDetailReservationPending =>
+      'تم إرسال طلب الحجز. بانتظار رد المورد.';
 
   @override
   String get notificationPaymentOpenCheckout => 'فتح الدفع';
 
   @override
-  String get notificationPaymentStatusCheckPayment => 'تحقق من حالة الدفع الحالية';
+  String get notificationPaymentStatusCheckPayment =>
+      'تحقق من حالة الدفع الحالية';
 
   @override
   String reservationMoneyAmountWithCurrency(String amount) {
@@ -1317,25 +1419,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get pickupCodeLockedPayment => 'أكمل الدفع لفتح رمز الاستلام.';
 
   @override
-  String get pickupCodeWaitingWindow => 'سيظهر رمز الاستلام عند بدء نافذة الاستلام.';
+  String get pickupCodeWaitingWindow =>
+      'سيظهر رمز الاستلام عند بدء نافذة الاستلام.';
 
   @override
   String get pickupCodeAvailableLabel => 'اعرض هذا الرمز للمورّد عند الاستلام.';
 
   @override
-  String get pickupCodeSafetyNote => 'لا تشارك هذا الرمز قبل وصولك إلى موقع الاستلام.';
+  String get pickupCodeSafetyNote =>
+      'لا تشارك هذا الرمز قبل وصولك إلى موقع الاستلام.';
 
   @override
   String get pickupCodeClosed => 'رمز الاستلام لم يعد متاحًا لهذا الحجز.';
 
   @override
-  String get pickupCodeProcessing => 'سيصبح رمز الاستلام متاحًا بعد تأكيد الدفع.';
+  String get pickupCodeProcessing =>
+      'سيصبح رمز الاستلام متاحًا بعد تأكيد الدفع.';
 
   @override
-  String get pickupCodeUnderReview => 'رمز الاستلام موقوف مؤقتًا أثناء مراجعة الحالة.';
+  String get pickupCodeUnderReview =>
+      'رمز الاستلام موقوف مؤقتًا أثناء مراجعة الحالة.';
 
   @override
-  String get pickupCodeRefundProcessing => 'رمز الاستلام غير متاح أثناء معالجة الاسترداد.';
+  String get pickupCodeRefundProcessing =>
+      'رمز الاستلام غير متاح أثناء معالجة الاسترداد.';
 
   @override
   String get pickupCodeRefunded => 'تم استرداد هذا الحجز. لا يلزم رمز استلام.';
@@ -1395,10 +1502,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservationDetailNotesPickupTitle => 'ملاحظات الاستلام';
 
   @override
-  String get reservationDetailNotesPickupSafety => 'أحضر هوية سارية وصل ضمن نافذة الاستلام المؤكدة.';
+  String get reservationDetailNotesPickupSafety =>
+      'أحضر هوية سارية وصل ضمن نافذة الاستلام المؤكدة.';
 
   @override
-  String get reservationDetailNotesPickupContact => 'تواصل مع المورّد عبر رسائل المتابعة إذا تأخرت.';
+  String get reservationDetailNotesPickupContact =>
+      'تواصل مع المورّد عبر رسائل المتابعة إذا تأخرت.';
 
   @override
   String get reservationDetailTimelineCreated => 'تم إنشاء الحجز';
@@ -1467,7 +1576,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservationDetailQuickActionsTitle => 'إجراءات سريعة';
 
   @override
-  String get reservationDetailOverdueBanner => 'فات موعد الاستلام. تواصل مع المورّد أو انتظر المتابعة.';
+  String get reservationDetailOverdueBanner =>
+      'فات موعد الاستلام. تواصل مع المورّد أو انتظر المتابعة.';
 
   @override
   String get allReservations => 'جميع الحجوزات';
@@ -1488,7 +1598,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get checkoutPageTitle => 'إتمام الدفع';
 
   @override
-  String get checkoutPageSubtitle => 'أنت على وشك تأكيد هذا الحجز بدفع المبلغ المطلوب بشكل آمن.';
+  String get checkoutPageSubtitle =>
+      'أنت على وشك تأكيد هذا الحجز بدفع المبلغ المطلوب بشكل آمن.';
 
   @override
   String get checkoutBreadcrumbHome => 'الرئيسية';
@@ -1571,22 +1682,26 @@ class AppLocalizationsAr extends AppLocalizations {
   String get checkoutCombinedPaymentTitle => 'يشمل الدفع';
 
   @override
-  String get checkoutCombinedPaymentHint => 'تُحصَّل المبالغ المتبقية للمادة والتوصيل معًا في جلسة دفع واحدة.';
+  String get checkoutCombinedPaymentHint =>
+      'تُحصَّل المبالغ المتبقية للمادة والتوصيل معًا في جلسة دفع واحدة.';
 
   @override
   String get checkoutPurposeMaterialTitle => 'سعر المادة';
 
   @override
-  String get checkoutPurposeMaterialHint => 'يدفع المبلغ المتبقي للمادة لهذا الحجز.';
+  String get checkoutPurposeMaterialHint =>
+      'يدفع المبلغ المتبقي للمادة لهذا الحجز.';
 
   @override
   String get checkoutPurposeDeliveryTitle => 'رسوم التوصيل';
 
   @override
-  String get checkoutPurposeDeliveryHint => 'يدفع رسوم التوصيل المتبقية لهذا الحجز.';
+  String get checkoutPurposeDeliveryHint =>
+      'يدفع رسوم التوصيل المتبقية لهذا الحجز.';
 
   @override
-  String get checkoutOtherOrderHint => 'أي مبالغ متبقية لهذا الحجز مشمولة في جلسة الدفع هذه.';
+  String get checkoutOtherOrderHint =>
+      'أي مبالغ متبقية لهذا الحجز مشمولة في جلسة الدفع هذه.';
 
   @override
   String get checkoutPaymentIncludesTitle => 'يشمل الدفع';
@@ -1598,13 +1713,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get checkoutIncludesPickupCode => 'إظهار رمز الاستلام عند الجاهزية';
 
   @override
-  String get checkoutIncludesDeliveryDispatch => 'تمكين إرسال التوصيل عند الجاهزية';
+  String get checkoutIncludesDeliveryDispatch =>
+      'تمكين إرسال التوصيل عند الجاهزية';
 
   @override
   String get checkoutSecurePaymentTitle => 'دفع آمن';
 
   @override
-  String get checkoutSecurePaymentBody => 'جلسة الدفع مشفّرة. لا يخزّن ImpactLoop بيانات البطاقات — يتم الدفع عبر مزوّد الدفع التجريبي الآمن في هذه البيئة.';
+  String get checkoutSecurePaymentBody =>
+      'جلسة الدفع مشفّرة. لا يخزّن ImpactLoop بيانات البطاقات — يتم الدفع عبر مزوّد الدفع التجريبي الآمن في هذه البيئة.';
 
   @override
   String get checkoutContinueToPayment => 'متابعة إلى الدفع';
@@ -1619,7 +1736,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get checkoutMockProviderTitle => 'مزوّد الدفع التجريبي';
 
   @override
-  String get checkoutMockProviderBody => 'تستخدم هذه البيئة مزوّد ImpactLoop التجريبي الآمن. إتمام الدفع يحدّث حالة الدفع الموثّقة في الخادم — الضغط على زر وحده لا يعني النجاح.';
+  String get checkoutMockProviderBody =>
+      'تستخدم هذه البيئة مزوّد ImpactLoop التجريبي الآمن. إتمام الدفع يحدّث حالة الدفع الموثّقة في الخادم — الضغط على زر وحده لا يعني النجاح.';
 
   @override
   String get checkoutMockPaySecurely => 'إتمام الدفع التجريبي';
@@ -1646,13 +1764,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get checkoutProcessingTitle => 'جارٍ معالجة الدفع…';
 
   @override
-  String get checkoutProcessingBody => 'يرجى عدم إغلاق هذه الصفحة. قد يستغرق الأمر بضع ثوانٍ أثناء التحقق من الدفع مع المزوّد.';
+  String get checkoutProcessingBody =>
+      'يرجى عدم إغلاق هذه الصفحة. قد يستغرق الأمر بضع ثوانٍ أثناء التحقق من الدفع مع المزوّد.';
 
   @override
   String get checkoutSuccessTitle => 'تم الدفع بنجاح!';
 
   @override
-  String get checkoutSuccessBody => 'تم تأكيد دفع الحجز. ارجع إلى تفاصيل الحجز للخطوة التالية.';
+  String get checkoutSuccessBody =>
+      'تم تأكيد دفع الحجز. ارجع إلى تفاصيل الحجز للخطوة التالية.';
 
   @override
   String get checkoutSuccessTransactionLabel => 'جلسة الدفع';
@@ -1667,7 +1787,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get checkoutFailureTitle => 'فشل الدفع';
 
   @override
-  String get checkoutFailureBody => 'تعذّر إتمام الدفع. يمكنك إعادة المحاولة بأمان دون إنشاء إرسال مكرر.';
+  String get checkoutFailureBody =>
+      'تعذّر إتمام الدفع. يمكنك إعادة المحاولة بأمان دون إنشاء إرسال مكرر.';
 
   @override
   String get checkoutRetry => 'إعادة المحاولة';
@@ -1679,67 +1800,78 @@ class AppLocalizationsAr extends AppLocalizations {
   String get checkoutCancelledTitle => 'تم إلغاء الدفع';
 
   @override
-  String get checkoutCancelledBody => 'تم إلغاء محاولة الدفع هذه. يمكنك بدء دفع آمن جديد عندما تكون جاهزًا.';
+  String get checkoutCancelledBody =>
+      'تم إلغاء محاولة الدفع هذه. يمكنك بدء دفع آمن جديد عندما تكون جاهزًا.';
 
   @override
   String get checkoutExpiredTitle => 'انتهت صلاحية الدفع';
 
   @override
-  String get checkoutExpiredBody => 'انتهت صلاحية محاولة الدفع قبل الإتمام. ابدأ دفعًا جديدًا للمتابعة.';
+  String get checkoutExpiredBody =>
+      'انتهت صلاحية محاولة الدفع قبل الإتمام. ابدأ دفعًا جديدًا للمتابعة.';
 
   @override
   String get checkoutAlreadyPaidTitle => 'مدفوع مسبقًا';
 
   @override
-  String get checkoutAlreadyPaidBody => 'دفع هذا الحجز مسدّد بالفعل. لا يلزم دفع إضافي.';
+  String get checkoutAlreadyPaidBody =>
+      'دفع هذا الحجز مسدّد بالفعل. لا يلزم دفع إضافي.';
 
   @override
   String get checkoutRefundPendingTitle => 'استرداد قيد المعالجة';
 
   @override
-  String get checkoutRefundPendingBody => 'يوجد استرداد قيد المعالجة لدفع هذا الحجز. الدفع غير متاح.';
+  String get checkoutRefundPendingBody =>
+      'يوجد استرداد قيد المعالجة لدفع هذا الحجز. الدفع غير متاح.';
 
   @override
   String get checkoutPartiallyRefundedTitle => 'استرداد جزئي';
 
   @override
-  String get checkoutPartiallyRefundedBody => 'يوجد استرداد قيد المعالجة أو مكتمل جزئيًا لهذا الحجز. الدفع غير متاح حتى تتضح حالة الدفع.';
+  String get checkoutPartiallyRefundedBody =>
+      'يوجد استرداد قيد المعالجة أو مكتمل جزئيًا لهذا الحجز. الدفع غير متاح حتى تتضح حالة الدفع.';
 
   @override
   String get checkoutRefundedTitle => 'تم الاسترداد';
 
   @override
-  String get checkoutRefundedBody => 'تم استرداد دفع هذا الحجز. قد يلزم بدء دورة دفع جديدة من تفاصيل الحجز.';
+  String get checkoutRefundedBody =>
+      'تم استرداد دفع هذا الحجز. قد يلزم بدء دورة دفع جديدة من تفاصيل الحجز.';
 
   @override
   String get checkoutOrderCancelledTitle => 'تم إلغاء طلب الدفع';
 
   @override
-  String get checkoutOrderCancelledBody => 'تم إلغاء دفع هذا الحجز ولا يمكن إتمام الدفع.';
+  String get checkoutOrderCancelledBody =>
+      'تم إلغاء دفع هذا الحجز ولا يمكن إتمام الدفع.';
 
   @override
   String get checkoutInvariantBlockedTitle => 'الدفع يحتاج مراجعة';
 
   @override
-  String get checkoutInvariantBlockedBody => 'الدفع محظور حتى تتم مراجعة حالة دفع هذا الحجز. ارجع إلى تفاصيل الحجز أو تواصل مع الدعم.';
+  String get checkoutInvariantBlockedBody =>
+      'الدفع محظور حتى تتم مراجعة حالة دفع هذا الحجز. ارجع إلى تفاصيل الحجز أو تواصل مع الدعم.';
 
   @override
   String get checkoutLoadErrorTitle => 'تعذّر تحميل صفحة الدفع';
 
   @override
-  String get checkoutLoadErrorBody => 'تعذّر تحميل دفع هذا الحجز. تحقق من الاتصال وحاول مرة أخرى.';
+  String get checkoutLoadErrorBody =>
+      'تعذّر تحميل دفع هذا الحجز. تحقق من الاتصال وحاول مرة أخرى.';
 
   @override
   String get checkoutMissingTitle => 'الدفع غير متاح';
 
   @override
-  String get checkoutMissingBody => 'لم يتم العثور على دفع هذا الحجز أو ليس لديك صلاحية الوصول إليه.';
+  String get checkoutMissingBody =>
+      'لم يتم العثور على دفع هذا الحجز أو ليس لديك صلاحية الوصول إليه.';
 
   @override
   String get checkoutRetryLoad => 'حاول مرة أخرى';
 
   @override
-  String get checkoutSubmittingGuard => 'الدفع قيد التنفيذ بالفعل. يرجى الانتظار.';
+  String get checkoutSubmittingGuard =>
+      'الدفع قيد التنفيذ بالفعل. يرجى الانتظار.';
 
   @override
   String get checkoutableOrderReadyHint => 'يوجد دفع جاهز لهذا الحجز.';
@@ -1769,7 +1901,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get paymentSummaryUnavailable => 'حالة الدفع غير متاحة';
 
   @override
-  String get paymentSummaryUnavailableHint => 'تفاصيل الحجز ما زالت متاحة. اسحب للتحديث أو حاول مرة أخرى.';
+  String get paymentSummaryUnavailableHint =>
+      'تفاصيل الحجز ما زالت متاحة. اسحب للتحديث أو حاول مرة أخرى.';
 
   @override
   String get reservationListStatusWaiting => 'قيد الانتظار';
@@ -1790,7 +1923,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservationListStatusNeedsReview => 'يتطلب مراجعة';
 
   @override
-  String get reservationNextStepDeliveryFeeRemaining => 'تم استلام دفعة، وما زالت رسوم التوصيل مطلوبة.';
+  String get reservationNextStepDeliveryFeeRemaining =>
+      'تم استلام دفعة، وما زالت رسوم التوصيل مطلوبة.';
 
   @override
   String get reservationNextStepWaitingSupplier => 'بانتظار موافقة المورد.';
@@ -1799,16 +1933,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservationNextStepConfirmProposal => 'راجع اقتراح المورد وأكّده.';
 
   @override
-  String get reservationNextStepPickupCodeWindow => 'تم الدفع، وسيصبح رمز الاستلام متاحًا داخل نافذة الاستلام.';
+  String get reservationNextStepPickupCodeWindow =>
+      'تم الدفع، وسيصبح رمز الاستلام متاحًا داخل نافذة الاستلام.';
 
   @override
-  String get reservationNextStepPickupCodeReady => 'رمز الاستلام جاهز في صفحة تفاصيل الحجز.';
+  String get reservationNextStepPickupCodeReady =>
+      'رمز الاستلام جاهز في صفحة تفاصيل الحجز.';
 
   @override
   String get reservationNextStepFindingDriver => 'جاري البحث عن سائق.';
 
   @override
-  String get reservationNextStepTrackDelivery => 'التوصيل قيد التنفيذ. تتبّعه للاطلاع على التحديثات.';
+  String get reservationNextStepTrackDelivery =>
+      'التوصيل قيد التنفيذ. تتبّعه للاطلاع على التحديثات.';
 
   @override
   String get reservationNextStepRefundProcessing => 'تتم معالجة إعادة المبلغ.';
@@ -1817,19 +1954,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservationNextStepRefunded => 'تم استرداد هذا الدفع.';
 
   @override
-  String get reservationNextStepUnderReview => 'الحالة قيد المراجعة، ولا يلزم إجراء منك الآن.';
+  String get reservationNextStepUnderReview =>
+      'الحالة قيد المراجعة، ولا يلزم إجراء منك الآن.';
 
   @override
   String get reservationNextStepPaymentProcessing => 'جارٍ معالجة الدفع.';
 
   @override
-  String get reservationNextStepPaymentUnavailable => 'حالة الدفع غير متاحة مؤقتًا. افتح التفاصيل أو حدّث الصفحة.';
+  String get reservationNextStepPaymentUnavailable =>
+      'حالة الدفع غير متاحة مؤقتًا. افتح التفاصيل أو حدّث الصفحة.';
 
   @override
-  String get reservationNextStepReadyPickup => 'تم قبول الحجز. افتح التفاصيل لمعلومات الاستلام.';
+  String get reservationNextStepReadyPickup =>
+      'تم قبول الحجز. افتح التفاصيل لمعلومات الاستلام.';
 
   @override
-  String get reservationNextStepAcceptedDelivery => 'تم قبول الحجز. سيتابع التوصيل عند الجاهزية.';
+  String get reservationNextStepAcceptedDelivery =>
+      'تم قبول الحجز. سيتابع التوصيل عند الجاهزية.';
 
   @override
   String get reservationNextStepDelivered => 'تم تسليم المواد بنجاح.';
@@ -1841,7 +1982,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservationNextStepClosed => 'هذا الحجز مغلق.';
 
   @override
-  String get reservationNextStepViewDetails => 'افتح التفاصيل لعرض الحالة الكاملة.';
+  String get reservationNextStepViewDetails =>
+      'افتح التفاصيل لعرض الحالة الكاملة.';
 
   @override
   String get payNow => 'ادفع الآن';
@@ -1880,7 +2022,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noDriverReportedAdmin => 'تم إبلاغ الإدارة بعدم توفر سائق.';
 
   @override
-  String get supplierPickupCodeInstructions => 'أعطِ هذا الرمز للمورّد عند استلام المادة.';
+  String get supplierPickupCodeInstructions =>
+      'أعطِ هذا الرمز للمورّد عند استلام المادة.';
 
   @override
   String pickupAddressValue(String address) {
@@ -1888,7 +2031,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get pickupWindowPassedFollowup => 'فات موعد الاستلام. تواصل مع المورّد أو انتظر المتابعة.';
+  String get pickupWindowPassedFollowup =>
+      'فات موعد الاستلام. تواصل مع المورّد أو انتظر المتابعة.';
 
   @override
   String get viewMaterial => 'عرض المادة';
@@ -1909,7 +2053,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get close => 'إغلاق';
 
   @override
-  String get cancelReleasesQuantity => 'ستُعاد الكمية المطلوبة إلى المادة المعروضة.';
+  String get cancelReleasesQuantity =>
+      'ستُعاد الكمية المطلوبة إلى المادة المعروضة.';
 
   @override
   String requestedQuantityLabel(String quantity) {
@@ -1950,13 +2095,15 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get rescheduleReasonWindowRequired => 'أدخل سببًا واختر موعد الاستلام.';
+  String get rescheduleReasonWindowRequired =>
+      'أدخل سببًا واختر موعد الاستلام.';
 
   @override
   String get endAfterStart => 'يجب أن يكون وقت النهاية بعد وقت البداية.';
 
   @override
-  String get pickupWindowTooClose => 'اختر موعد استلام يتيح وقتًا كافيًا لإتمام التسليم.';
+  String get pickupWindowTooClose =>
+      'اختر موعد استلام يتيح وقتًا كافيًا لإتمام التسليم.';
 
   @override
   String get sendRequest => 'إرسال الطلب';
@@ -1980,7 +2127,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reportSupplierIssue => 'الإبلاغ عن مشكلة مع المورّد';
 
   @override
-  String get reportSupplierDescription => 'أبلغ الإدارة بمشكلة مع المورّد. سيُغلق الحجز مؤقتًا بانتظار المراجعة.';
+  String get reportSupplierDescription =>
+      'أبلغ الإدارة بمشكلة مع المورّد. سيُغلق الحجز مؤقتًا بانتظار المراجعة.';
 
   @override
   String get reason => 'السبب';
@@ -1995,7 +2143,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reportNoDriverAvailable => 'الإبلاغ عن عدم توفر سائق';
 
   @override
-  String get reportNoDriverDescription => 'لم يقبل أي سائق طلب التوصيل. أرسل بلاغًا لمراجعة الإدارة.';
+  String get reportNoDriverDescription =>
+      'لم يقبل أي سائق طلب التوصيل. أرسل بلاغًا لمراجعة الإدارة.';
 
   @override
   String get actionRequired => 'إجراء مطلوب';
@@ -2004,7 +2153,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get pickupTimeAccepted => 'تم قبول موعد الاستلام.';
 
   @override
-  String get deliveryWindowAfterEarliest => 'يجب أن ينتهي الموعد المحدد بعد أقرب وقت ممكن للتوصيل.';
+  String get deliveryWindowAfterEarliest =>
+      'يجب أن ينتهي الموعد المحدد بعد أقرب وقت ممكن للتوصيل.';
 
   @override
   String get deliveryWindowSubmitted => 'تم إرسال موعد التوصيل.';
@@ -2019,7 +2169,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get confirmFlexibleDeliveryWindow => 'تأكيد موعد التوصيل';
 
   @override
-  String get flexibleDeliveryNeedsWindowHint => 'تركت توقيت التوصيل مفتوحًا. أكّد اقتراح المورّد أو اختر أي نافذة توصيل بعد أقرب وقت أدناه.';
+  String get flexibleDeliveryNeedsWindowHint =>
+      'تركت توقيت التوصيل مفتوحًا. أكّد اقتراح المورّد أو اختر أي نافذة توصيل بعد أقرب وقت أدناه.';
 
   @override
   String get newDeliveryWindow => 'موعد توصيل جديد';
@@ -2028,10 +2179,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get submitNewDeliveryWindow => 'إرسال موعد التوصيل الجديد';
 
   @override
-  String get pickupIncompleteAdminReview => 'لم يكتمل الاستلام قبل نهاية موعد المورّد. قد تراجع الإدارة الحالة إذا لم يبلّغ أحد عن المشكلة.';
+  String get pickupIncompleteAdminReview =>
+      'لم يكتمل الاستلام قبل نهاية موعد المورّد. قد تراجع الإدارة الحالة إذا لم يبلّغ أحد عن المشكلة.';
 
   @override
-  String get driverPickupIncompleteAdminReview => 'لم يُكمل السائق المعيّن الاستلام من المورّد قبل نهاية الموعد. قد تراجع الإدارة الحالة إذا لم يبلّغ أحد عن المشكلة.';
+  String get driverPickupIncompleteAdminReview =>
+      'لم يُكمل السائق المعيّن الاستلام من المورّد قبل نهاية الموعد. قد تراجع الإدارة الحالة إذا لم يبلّغ أحد عن المشكلة.';
 
   @override
   String schedulingConflict(String reason) {
@@ -2042,16 +2195,20 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservationWaitingSupplierMessage => 'بانتظار رد المورّد.';
 
   @override
-  String get reservationScheduleNeedsConfirmation => 'اقترح المورّد موعدًا يحتاج إلى تأكيدك.';
+  String get reservationScheduleNeedsConfirmation =>
+      'اقترح المورّد موعدًا يحتاج إلى تأكيدك.';
 
   @override
-  String get reservationFlexibleScheduleReady => 'حدّد المورّد موعدًا. أكّد نافذة التوصيل للمتابعة.';
+  String get reservationFlexibleScheduleReady =>
+      'حدّد المورّد موعدًا. أكّد نافذة التوصيل للمتابعة.';
 
   @override
-  String get reservationRescheduleWaitingSupplier => 'طلبت موعد استلام جديدًا. بانتظار رد المورّد.';
+  String get reservationRescheduleWaitingSupplier =>
+      'طلبت موعد استلام جديدًا. بانتظار رد المورّد.';
 
   @override
-  String get reservationReportedAwaitingAdmin => 'تم الإبلاغ عن هذا الحجز وهو بانتظار مراجعة الإدارة.';
+  String get reservationReportedAwaitingAdmin =>
+      'تم الإبلاغ عن هذا الحجز وهو بانتظار مراجعة الإدارة.';
 
   @override
   String get reservationReportVerifiedMessage => 'تحققت الإدارة من صحة بلاغك.';
@@ -2060,10 +2217,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservationReportDismissedMessage => 'راجعت الإدارة بلاغك ورفضته.';
 
   @override
-  String get reservationIncidentResolvedMessage => 'حُلّت هذه المشكلة دون تسجيل مخالفة.';
+  String get reservationIncidentResolvedMessage =>
+      'حُلّت هذه المشكلة دون تسجيل مخالفة.';
 
   @override
-  String get reservationAcceptedPickupMessage => 'تم قبول الحجز. اتبع موعد الاستلام الذي حدده المورّد.';
+  String get reservationAcceptedPickupMessage =>
+      'تم قبول الحجز. اتبع موعد الاستلام الذي حدده المورّد.';
 
   @override
   String get reservationRejectedSupplierMessage => 'رفض المورّد طلب الحجز.';
@@ -2075,10 +2234,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservationCancelledMessage => 'تم إلغاء هذا الحجز.';
 
   @override
-  String get reservationMissedPickupExpiredMessage => 'انتهت صلاحية الحجز بعد فوات موعد الاستلام دون متابعة. أنشئ حجزًا جديدًا إذا كنت لا تزال بحاجة إلى المادة.';
+  String get reservationMissedPickupExpiredMessage =>
+      'انتهت صلاحية الحجز بعد فوات موعد الاستلام دون متابعة. أنشئ حجزًا جديدًا إذا كنت لا تزال بحاجة إلى المادة.';
 
   @override
-  String get reservationSupplierNoResponseExpired => 'انتهت صلاحية الطلب لأن المورّد لم يرد في الوقت المحدد.';
+  String get reservationSupplierNoResponseExpired =>
+      'انتهت صلاحية الطلب لأن المورّد لم يرد في الوقت المحدد.';
 
   @override
   String get reservationExpiredMessage => 'انتهت صلاحية هذا الحجز.';
@@ -2123,13 +2284,15 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get combinedDeliveryFeeOnce => 'تُحتسب رسوم التوصيل مرة واحدة للمجموعة';
+  String get combinedDeliveryFeeOnce =>
+      'تُحتسب رسوم التوصيل مرة واحدة للمجموعة';
 
   @override
   String get welcomeBack => 'مرحبًا بعودتك';
 
   @override
-  String get loginSubtitle => 'سجّل الدخول لمتابعة اكتشاف المواد وتنفيذ المشاريع بنفايات أقل.';
+  String get loginSubtitle =>
+      'سجّل الدخول لمتابعة اكتشاف المواد وتنفيذ المشاريع بنفايات أقل.';
 
   @override
   String get email => 'البريد الإلكتروني';
@@ -2150,7 +2313,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get passwordRequired => 'كلمة المرور مطلوبة';
 
   @override
-  String get invalidCredentials => 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
+  String get invalidCredentials =>
+      'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
 
   @override
   String get forgotPasswordQuestion => 'هل نسيت كلمة المرور؟';
@@ -2168,10 +2332,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get resetYourPassword => 'إعادة تعيين كلمة المرور';
 
   @override
-  String get forgotPasswordSubtitle => 'أدخل البريد الإلكتروني لحسابك وسنرسل تعليمات إعادة التعيين إذا كان الحساب موجودًا.';
+  String get forgotPasswordSubtitle =>
+      'أدخل البريد الإلكتروني لحسابك وسنرسل تعليمات إعادة التعيين إذا كان الحساب موجودًا.';
 
   @override
-  String get forgotPasswordSuccess => 'إذا كان هناك حساب مرتبط بهذا البريد، فقد تم إرسال تعليمات إعادة التعيين.';
+  String get forgotPasswordSuccess =>
+      'إذا كان هناك حساب مرتبط بهذا البريد، فقد تم إرسال تعليمات إعادة التعيين.';
 
   @override
   String get backToSignIn => 'العودة إلى تسجيل الدخول';
@@ -2183,13 +2349,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get createNewPassword => 'إنشاء كلمة مرور جديدة';
 
   @override
-  String get resetPasswordSubtitle => 'اختر كلمة مرور جديدة لحسابك. لا يمكن استخدام رابط إعادة التعيين إلا مرة واحدة.';
+  String get resetPasswordSubtitle =>
+      'اختر كلمة مرور جديدة لحسابك. لا يمكن استخدام رابط إعادة التعيين إلا مرة واحدة.';
 
   @override
   String get resetLinkInvalid => 'رابط إعادة التعيين مفقود أو غير صالح.';
 
   @override
-  String get passwordUpdated => 'تم تحديث كلمة المرور. سجّل الدخول باستخدام كلمة المرور الجديدة.';
+  String get passwordUpdated =>
+      'تم تحديث كلمة المرور. سجّل الدخول باستخدام كلمة المرور الجديدة.';
 
   @override
   String get goToSignIn => 'الانتقال إلى تسجيل الدخول';
@@ -2225,7 +2393,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get createYourAccount => 'أنشئ حسابك';
 
   @override
-  String get registerSubtitle => 'حدّد كيف تريد استخدام ImpactLoop وأكمل ملفك الشخصي في خطوة واحدة.';
+  String get registerSubtitle =>
+      'حدّد كيف تريد استخدام ImpactLoop وأكمل ملفك الشخصي في خطوة واحدة.';
 
   @override
   String get alreadyHaveAccount => 'لديك حساب بالفعل؟';
@@ -2258,7 +2427,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get loggingOut => 'جارٍ تسجيل الخروج…';
 
   @override
-  String get signedOutOffline => 'تم تسجيل خروجك محليًا، لكن تعذّر الاتصال بالخادم.';
+  String get signedOutOffline =>
+      'تم تسجيل خروجك محليًا، لكن تعذّر الاتصال بالخادم.';
 
   @override
   String get learnReuseBuild => 'تعلّم. أعد الاستخدام. نفّذ.';
@@ -2281,7 +2451,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeHeroTitle => 'هل أنت مستعد لتنفيذ مشروع اليوم؟';
 
   @override
-  String get homeHeroSubtitle => 'اعثر على مواد قابلة لإعادة الاستخدام، واستكشف أفكار المشاريع، وتابع الحجوزات والتوصيل من مكان واحد.';
+  String get homeHeroSubtitle =>
+      'اعثر على مواد قابلة لإعادة الاستخدام، واستكشف أفكار المشاريع، وتابع الحجوزات والتوصيل من مكان واحد.';
 
   @override
   String get browseMaterialsAction => 'تصفّح المواد';
@@ -2314,7 +2485,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get recommendationsLoadError => 'تعذّر تحميل التوصيات';
 
   @override
-  String get recommendationsLoadErrorSubtitle => 'حاول مرة أخرى بعد قليل أو ارجع إلى الصفحة الرئيسية.';
+  String get recommendationsLoadErrorSubtitle =>
+      'حاول مرة أخرى بعد قليل أو ارجع إلى الصفحة الرئيسية.';
 
   @override
   String get showUpTo => 'عرض حتى';
@@ -2329,34 +2501,41 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sectionSuggestedMaterialsTitle => 'مواد مقترحة لك';
 
   @override
-  String get sectionSuggestedMaterialsSubtitle => 'مخصّصة وفق اهتماماتك ومشاريعك المحفوظة ونشاطك الأخير.';
+  String get sectionSuggestedMaterialsSubtitle =>
+      'مخصّصة وفق اهتماماتك ومشاريعك المحفوظة ونشاطك الأخير.';
 
   @override
-  String get sectionSuggestedMaterialsEmpty => 'اختر اهتماماتك لتحسين الاقتراحات.';
+  String get sectionSuggestedMaterialsEmpty =>
+      'اختر اهتماماتك لتحسين الاقتراحات.';
 
   @override
   String get sectionSavedProjectMaterialsTitle => 'مواد لمشاريعك المحفوظة';
 
   @override
-  String get sectionSavedProjectMaterialsSubtitle => 'مواد تطابق مكوّنات مشاريعك التعليمية المحفوظة.';
+  String get sectionSavedProjectMaterialsSubtitle =>
+      'مواد تطابق مكوّنات مشاريعك التعليمية المحفوظة.';
 
   @override
-  String get sectionSavedProjectMaterialsEmpty => 'احفظ مشروعًا تعليميًا لرؤية المواد المطابقة.';
+  String get sectionSavedProjectMaterialsEmpty =>
+      'احفظ مشروعًا تعليميًا لرؤية المواد المطابقة.';
 
   @override
   String get sectionSuggestedProjectsTitle => 'مشاريع قد تعجبك';
 
   @override
-  String get sectionSuggestedProjectsSubtitle => 'مقترحة وفق اهتماماتك والمواد المطابقة المتاحة.';
+  String get sectionSuggestedProjectsSubtitle =>
+      'مقترحة وفق اهتماماتك والمواد المطابقة المتاحة.';
 
   @override
-  String get sectionSuggestedProjectsEmpty => 'اختر اهتماماتك لرؤية توصيات المشاريع.';
+  String get sectionSuggestedProjectsEmpty =>
+      'اختر اهتماماتك لرؤية توصيات المشاريع.';
 
   @override
   String get sectionContinueProjectsTitle => 'تابع مشاريعك';
 
   @override
-  String get sectionContinueProjectsSubtitle => 'تابع تنفيذ المشاريع التي بدأت بها.';
+  String get sectionContinueProjectsSubtitle =>
+      'تابع تنفيذ المشاريع التي بدأت بها.';
 
   @override
   String get sectionContinueProjectsEmpty => 'ابدأ تنفيذ مشروع ليظهر هنا.';
@@ -2374,7 +2553,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sectionFreeMaterialsTitle => 'مواد مجانية بالقرب منك';
 
   @override
-  String get sectionFreeMaterialsSubtitle => 'مواد مجانية متاحة على ImpactLoop.';
+  String get sectionFreeMaterialsSubtitle =>
+      'مواد مجانية متاحة على ImpactLoop.';
 
   @override
   String get sectionFreeMaterialsEmpty => 'لم نعثر على مواد مجانية قريبة بعد.';
@@ -2383,7 +2563,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sectionPopularProjectsTitle => 'المشاريع الشائعة';
 
   @override
-  String get sectionPopularProjectsSubtitle => 'مشاريع تعليمية شائعة على ImpactLoop.';
+  String get sectionPopularProjectsSubtitle =>
+      'مشاريع تعليمية شائعة على ImpactLoop.';
 
   @override
   String get sectionPopularProjectsEmpty => 'لم نعثر على مشاريع شائعة بعد.';
@@ -2449,7 +2630,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get browseItems => 'تصفّح العناصر';
 
   @override
-  String get materialsActionDescription => 'ابحث في المواد التي يعرضها المورّدون حاليًا.';
+  String get materialsActionDescription =>
+      'ابحث في المواد التي يعرضها المورّدون حاليًا.';
 
   @override
   String get exploreLearningProjects => 'استكشف المشاريع التعليمية';
@@ -2464,22 +2646,26 @@ class AppLocalizationsAr extends AppLocalizations {
   String get trackPickups => 'تابع الاستلام';
 
   @override
-  String get reservationsActionDescription => 'تابع ردود المورّدين ومواعيد استلام المواد المطلوبة.';
+  String get reservationsActionDescription =>
+      'تابع ردود المورّدين ومواعيد استلام المواد المطلوبة.';
 
   @override
   String get comingLater => 'قريبًا';
 
   @override
-  String get comingLaterSubtitle => 'إحصاءات الأثر مخطط لها لكنها غير متاحة بعد.';
+  String get comingLaterSubtitle =>
+      'إحصاءات الأثر مخطط لها لكنها غير متاحة بعد.';
 
   @override
   String get impactSnapshot => 'ملخص الأثر';
 
   @override
-  String get impactSnapshotSubtitle => 'تقدّم إعادة الاستخدام من الاستلامات والمشاريع المكتملة.';
+  String get impactSnapshotSubtitle =>
+      'تقدّم إعادة الاستخدام من الاستلامات والمشاريع المكتملة.';
 
   @override
-  String get impactSnapshotDescription => 'أكمل استلام المواد ومشاريع التنفيذ لبدء تتبّع أثر إعادة الاستخدام.';
+  String get impactSnapshotDescription =>
+      'أكمل استلام المواد ومشاريع التنفيذ لبدء تتبّع أثر إعادة الاستخدام.';
 
   @override
   String get impactSnapshotCompletedPickups => 'استلامات مكتملة';
@@ -2494,7 +2680,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get impactSnapshotActiveBuilds => 'مشاريع قيد التنفيذ';
 
   @override
-  String impactSnapshotInProgressNote(String activeReservations, String activeBuilds) {
+  String impactSnapshotInProgressNote(
+    String activeReservations,
+    String activeBuilds,
+  ) {
     return '$activeReservations حجوزات نشطة و$activeBuilds مشاريع قيد التنفيذ.';
   }
 
@@ -2502,7 +2691,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get landingFutureBadge => 'ابنِ مستقبلًا أفضل';
 
   @override
-  String get landingHeroSubtitle => 'اكتشف مواد قابلة لإعادة الاستخدام، وشارك الموارد الفائضة، وحوّلها إلى مشاريع ضمن تجربة مجتمعية أكثر استدامة.';
+  String get landingHeroSubtitle =>
+      'اكتشف مواد قابلة لإعادة الاستخدام، وشارك الموارد الفائضة، وحوّلها إلى مشاريع ضمن تجربة مجتمعية أكثر استدامة.';
 
   @override
   String get landingCtaNote => 'دون بطاقة ائتمان أو ضوضاء. ابدأ التنفيذ فحسب.';
@@ -2514,13 +2704,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get activeMakers => 'صنّاع نشطون';
 
   @override
-  String get landingCommunity => 'انضم إلى مجتمع متنامٍ من الطلبة والصنّاع والمورّدين الذين ينفّذون مشاريع بنفايات أقل.';
+  String get landingCommunity =>
+      'انضم إلى مجتمع متنامٍ من الطلبة والصنّاع والمورّدين الذين ينفّذون مشاريع بنفايات أقل.';
 
   @override
   String get landingFeatureFindTitle => 'اعثر على مواد قابلة لإعادة الاستخدام';
 
   @override
-  String get landingFeatureFindBody => 'تصفّح مجموعة واسعة من المواد التي يشاركها مجتمعك.';
+  String get landingFeatureFindBody =>
+      'تصفّح مجموعة واسعة من المواد التي يشاركها مجتمعك.';
 
   @override
   String get exploreMaterials => 'استكشف المواد';
@@ -2529,7 +2721,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get landingFeatureShareTitle => 'شارك المواد الفائضة';
 
   @override
-  String get landingFeatureShareBody => 'اعرض ما لم تعد تحتاج إليه وساعد الآخرين على تنفيذ المزيد.';
+  String get landingFeatureShareBody =>
+      'اعرض ما لم تعد تحتاج إليه وساعد الآخرين على تنفيذ المزيد.';
 
   @override
   String get shareMaterials => 'مشاركة المواد';
@@ -2538,7 +2731,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get landingFeatureBuildTitle => 'نفّذ مشاريع بنفايات أقل';
 
   @override
-  String get landingFeatureBuildBody => 'وفّر المال وقلّل النفايات وحوّل أفكارك الإبداعية إلى واقع.';
+  String get landingFeatureBuildBody =>
+      'وفّر المال وقلّل النفايات وحوّل أفكارك الإبداعية إلى واقع.';
 
   @override
   String get startBuilding => 'ابدأ التنفيذ';
@@ -2558,10 +2752,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get deliveryRequested => 'تم طلب التوصيل.';
 
   @override
-  String get deliveryRequestedFree => 'تم طلب التوصيل. التوصيل مجاني لهذا الطلب.';
+  String get deliveryRequestedFree =>
+      'تم طلب التوصيل. التوصيل مجاني لهذا الطلب.';
 
   @override
-  String get deliveryFeePaymentRequired => 'تم إعداد التوصيل. ادفع رسوم التوصيل لبدء التنفيذ.';
+  String get deliveryFeePaymentRequired =>
+      'تم إعداد التوصيل. ادفع رسوم التوصيل لبدء التنفيذ.';
 
   @override
   String get freeDeliveryLabel => 'توصيل مجاني';
@@ -2573,7 +2769,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get savedAddressesLoadFailed => 'تعذّر تحميل العناوين المحفوظة.';
 
   @override
-  String get noSavedAddresses => 'لا توجد عناوين محفوظة بعد. أدخل عنوانًا أدناه.';
+  String get noSavedAddresses =>
+      'لا توجد عناوين محفوظة بعد. أدخل عنوانًا أدناه.';
 
   @override
   String get newAddress => 'عنوان جديد';
@@ -2617,7 +2814,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get preciseLocationHelp => 'يساعد الموقع الدقيق السائق في الوصول إليك. ويمكنك الاكتفاء بإدخال المدينة والعنوان.';
+  String get preciseLocationHelp =>
+      'يساعد الموقع الدقيق السائق في الوصول إليك. ويمكنك الاكتفاء بإدخال المدينة والعنوان.';
 
   @override
   String get saveAddressForLater => 'حفظ هذا العنوان لاستخدامه لاحقًا';
@@ -2647,7 +2845,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierMaterialsLoadFailed => 'تعذّر تحميل مواد المورّد.';
 
   @override
-  String get learnerAccountFollowRequired => 'استخدم حساب متعلّم لمتابعة المورّدين.';
+  String get learnerAccountFollowRequired =>
+      'استخدم حساب متعلّم لمتابعة المورّدين.';
 
   @override
   String publicMaterialsCount(int count) {
@@ -2674,22 +2873,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get aboutSupplier => 'عن هذا المورّد';
 
   @override
-  String get aboutSupplierDescription => 'تصفّح المواد العامة لهذا المورّد وتابع التحديثات عند نشر مخزون جديد.';
+  String get aboutSupplierDescription =>
+      'تصفّح المواد العامة لهذا المورّد وتابع التحديثات عند نشر مخزون جديد.';
 
   @override
-  String get deliveryQuoteFailed => 'تعذّر حساب سعر التوصيل. تحقق من موقع التوصيل وحاول مرة أخرى.';
+  String get deliveryQuoteFailed =>
+      'تعذّر حساب سعر التوصيل. تحقق من موقع التوصيل وحاول مرة أخرى.';
 
   @override
   String get cannotReserveOwnMaterial => 'لا يمكنك حجز مادة أدرجتها بنفسك.';
 
   @override
-  String get openReservationAlreadyExists => 'لديك طلب حجز مفتوح لهذه المادة. راجع حجوزي.';
+  String get openReservationAlreadyExists =>
+      'لديك طلب حجز مفتوح لهذه المادة. راجع حجوزي.';
 
   @override
-  String get materialUnavailableForReservation => 'لم تعد هذه المادة متاحة للحجوزات الجديدة.';
+  String get materialUnavailableForReservation =>
+      'لم تعد هذه المادة متاحة للحجوزات الجديدة.';
 
   @override
-  String get invalidReservationQuantity => 'أدخل كمية أكبر من صفر ولا تتجاوز الكمية المتاحة.';
+  String get invalidReservationQuantity =>
+      'أدخل كمية أكبر من صفر ولا تتجاوز الكمية المتاحة.';
 
   @override
   String reservationQuantityUpTo(String quantity) {
@@ -2732,7 +2936,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get failureReason => 'سبب التعذّر';
 
   @override
-  String get deliveryCodeInstructions => 'أعطِ هذا الرمز للسائق عند استلام المادة.';
+  String get deliveryCodeInstructions =>
+      'أعطِ هذا الرمز للسائق عند استلام المادة.';
 
   @override
   String get backToReservations => 'العودة إلى الحجوزات';
@@ -2771,7 +2976,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get waitingDriverLocation => 'بانتظار موقع السائق';
 
   @override
-  String get waitingDriverLocationDescription => 'استلم السائق مادتك، وسيظهر موقعه عند مشاركته.';
+  String get waitingDriverLocationDescription =>
+      'استلم السائق مادتك، وسيظهر موقعه عند مشاركته.';
 
   @override
   String get driverLocationStale => 'لم يتم تحديث موقع السائق مؤخرًا.';
@@ -2782,7 +2988,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get autoUpdateHint => 'يتم التحديث تلقائيًا ما دامت هذه الصفحة مفتوحة.';
+  String get autoUpdateHint =>
+      'يتم التحديث تلقائيًا ما دامت هذه الصفحة مفتوحة.';
 
   @override
   String get refreshing => 'جارٍ التحديث…';
@@ -2822,10 +3029,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get trackingComplete => 'اكتمل التتبع لهذا التوصيل.';
 
   @override
-  String get trackingAvailableAfterPickup => 'يصبح موقع السائق متاحًا بعد استلام المادة.';
+  String get trackingAvailableAfterPickup =>
+      'يصبح موقع السائق متاحًا بعد استلام المادة.';
 
   @override
-  String get driverLocationNotShared => 'لم يشارك السائق موقعه بعد. ستظهر تحديثات الموقع هنا عند مشاركته.';
+  String get driverLocationNotShared =>
+      'لم يشارك السائق موقعه بعد. ستظهر تحديثات الموقع هنا عند مشاركته.';
 
   @override
   String accuracyMeters(String meters) {
@@ -2833,7 +3042,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get trackingRefreshFailed => 'تعذّر تحديث التتبع. يتم عرض آخر موقع معروف.';
+  String get trackingRefreshFailed =>
+      'تعذّر تحديث التتبع. يتم عرض آخر موقع معروف.';
 
   @override
   String get supplierSupplierRole => 'دور المورد';
@@ -2869,22 +3079,28 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierViewSupplierProfile => 'عرض ملف المورد';
 
   @override
-  String get supplierTrackMaterialsRequestsAndImpact => 'تتبع المواد والطلبات والأثر.';
+  String get supplierTrackMaterialsRequestsAndImpact =>
+      'تتبع المواد والطلبات والأثر.';
 
   @override
-  String get supplierListSurplusMaterialsForReuseBy => 'أدرج المواد الفائضة لإعادة استخدامها من قبل المتعلمين والصناع.';
+  String get supplierListSurplusMaterialsForReuseBy =>
+      'أدرج المواد الفائضة لإعادة استخدامها من قبل المتعلمين والصناع.';
 
   @override
-  String get supplierManagePublicSupplierDetailsAndPickup => 'إدارة تفاصيل المورد العامة وموقع الاستلام.';
+  String get supplierManagePublicSupplierDetailsAndPickup =>
+      'إدارة تفاصيل المورد العامة وموقع الاستلام.';
 
   @override
-  String get supplierReviewLearnerRequestsAndSchedulePickups => 'راجع طلبات المتعلمين وحدد مواعيد الاستلام.';
+  String get supplierReviewLearnerRequestsAndSchedulePickups =>
+      'راجع طلبات المتعلمين وحدد مواعيد الاستلام.';
 
   @override
-  String get supplierTrackAcceptedPickupsAndUpcomingHandovers => 'تتبع عمليات الاستلام المقبولة والتسليمات القادمة.';
+  String get supplierTrackAcceptedPickupsAndUpcomingHandovers =>
+      'تتبع عمليات الاستلام المقبولة والتسليمات القادمة.';
 
   @override
-  String get supplierReviewUpdatesAndActionsThatNeed => 'راجع التحديثات والإجراءات التي تحتاج انتباهك.';
+  String get supplierReviewUpdatesAndActionsThatNeed =>
+      'راجع التحديثات والإجراءات التي تحتاج انتباهك.';
 
   @override
   String get supplierComingSoonInTheSupplierPortal => 'قريباً في بوابة المورد.';
@@ -2893,7 +3109,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierManageYourSupplierActivity => 'إدارة نشاطك كمورد.';
 
   @override
-  String get supplierManageYourListedSurplusMaterials => 'إدارة المواد الفائضة التي أدرجتها.';
+  String get supplierManageYourListedSurplusMaterials =>
+      'إدارة المواد الفائضة التي أدرجتها.';
 
   @override
   String get supplierSearchYourMaterials => 'ابحث في موادك';
@@ -2911,7 +3128,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierYouHaveNotListedAnyMaterials => 'لم تدرج أي مواد بعد.';
 
   @override
-  String get supplierShareSurplusMaterialsWithLearnersAnd => 'شارك المواد الفائضة مع المتعلمين والصناع من ورشتك.';
+  String get supplierShareSurplusMaterialsWithLearnersAnd =>
+      'شارك المواد الفائضة مع المتعلمين والصناع من ورشتك.';
 
   @override
   String get supplierAddYourFirstMaterial => 'أضف أول مادة';
@@ -2920,10 +3138,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierWeCouldNotLoadYourMaterials => 'تعذّر تحميل موادك.';
 
   @override
-  String get supplierNoMaterialsMatchYourFilters => 'لا توجد مواد مطابقة للتصفية.';
+  String get supplierNoMaterialsMatchYourFilters =>
+      'لا توجد مواد مطابقة للتصفية.';
 
   @override
-  String get supplierTryClearingFiltersOrAdjustingYour => 'جرّب مسح التصفية أو تعديل البحث.';
+  String get supplierTryClearingFiltersOrAdjustingYour =>
+      'جرّب مسح التصفية أو تعديل البحث.';
 
   @override
   String get supplierLikes => 'الإعجابات';
@@ -2947,19 +3167,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierDemandIndicators => 'مؤشرات الطلب';
 
   @override
-  String get supplierNoReservationsForThisMaterialYet => 'لا توجد حجوزات لهذه المادة بعد.';
+  String get supplierNoReservationsForThisMaterialYet =>
+      'لا توجد حجوزات لهذه المادة بعد.';
 
   @override
   String get supplierNoDemandSignalsYet => 'لا توجد إشارات طلب بعد.';
 
   @override
-  String get supplierNoActiveRequestsRightNowThis => 'لا توجد طلبات نشطة حالياً. تمت إعادة استخدام هذه المادة بالفعل.';
+  String get supplierNoActiveRequestsRightNowThis =>
+      'لا توجد طلبات نشطة حالياً. تمت إعادة استخدام هذه المادة بالفعل.';
 
   @override
   String get supplierThisMaterialHasActiveDemand => 'هذه المادة لديها طلب نشط.';
 
   @override
-  String get supplierLearnersAreShowingInterestButNo => 'المتعلمون يُظهرون اهتماماً، لكن لا توجد حجوزات بعد.';
+  String get supplierLearnersAreShowingInterestButNo =>
+      'المتعلمون يُظهرون اهتماماً، لكن لا توجد حجوزات بعد.';
 
   @override
   String get supplierNoActiveDemandYet => 'لا يوجد طلب نشط بعد.';
@@ -2976,7 +3199,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get supplierBasedOnViewsLikesActiveRequests => 'بناءً على المشاهدات والإعجابات والطلبات النشطة وعمليات إعادة الاستخدام المكتملة.';
+  String get supplierBasedOnViewsLikesActiveRequests =>
+      'بناءً على المشاهدات والإعجابات والطلبات النشطة وعمليات إعادة الاستخدام المكتملة.';
 
   @override
   String get supplierCompletedReservations => 'حجوزات مكتملة';
@@ -3033,16 +3257,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierEditMaterial => 'تعديل المادة';
 
   @override
-  String get supplierUpdateSafeListingDetailsPriceAnd => 'حدّث تفاصيل الإدراج الآمنة. تغييرات السعر والفئة تتطلب مراجعة.';
+  String get supplierUpdateSafeListingDetailsPriceAnd =>
+      'حدّث تفاصيل الإدراج الآمنة. تغييرات السعر والفئة تتطلب مراجعة.';
 
   @override
-  String get supplierPriceCategoryLocationAndImagesAre => 'السعر والفئة والموقع والصور غير قابلة للتعديل هنا بعد.';
+  String get supplierPriceCategoryLocationAndImagesAre =>
+      'السعر والفئة والموقع والصور غير قابلة للتعديل هنا بعد.';
 
   @override
   String get supplierMaterialUpdatedSuccessfully => 'تم تحديث المادة بنجاح.';
 
   @override
-  String get supplierCouldNotUpdateMaterialPleaseTry => 'تعذر تحديث المادة. يرجى المحاولة مرة أخرى.';
+  String get supplierCouldNotUpdateMaterialPleaseTry =>
+      'تعذر تحديث المادة. يرجى المحاولة مرة أخرى.';
 
   @override
   String get supplierDelete => 'حذف';
@@ -3051,31 +3278,39 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierDeleteMaterial => 'حذف المادة؟';
 
   @override
-  String get supplierThisWillRemoveTheMaterialFrom => 'سيؤدي هذا إلى إزالة المادة من إدراجاتك. لا يمكن التراجع عن هذا الإجراء.';
+  String get supplierThisWillRemoveTheMaterialFrom =>
+      'سيؤدي هذا إلى إزالة المادة من إدراجاتك. لا يمكن التراجع عن هذا الإجراء.';
 
   @override
   String get supplierMaterialDeletedSuccessfully => 'تم حذف المادة بنجاح.';
 
   @override
-  String get supplierCouldNotDeleteMaterialPleaseTry => 'تعذر حذف المادة. يرجى المحاولة مرة أخرى.';
+  String get supplierCouldNotDeleteMaterialPleaseTry =>
+      'تعذر حذف المادة. يرجى المحاولة مرة أخرى.';
 
   @override
-  String get supplierReusedMaterialsCannotBeDeletedBecause => 'لا يمكن حذف المواد المعاد استخدامها لأنها جزء من سجل إعادة الاستخدام.';
+  String get supplierReusedMaterialsCannotBeDeletedBecause =>
+      'لا يمكن حذف المواد المعاد استخدامها لأنها جزء من سجل إعادة الاستخدام.';
 
   @override
-  String get supplierCannotDeleteAMaterialWithActive => 'لا يمكن حذف مادة لديها طلبات نشطة.';
+  String get supplierCannotDeleteAMaterialWithActive =>
+      'لا يمكن حذف مادة لديها طلبات نشطة.';
 
   @override
-  String get supplierThisMaterialCannotBeDeletedRight => 'لا يمكن حذف هذه المادة الآن.';
+  String get supplierThisMaterialCannotBeDeletedRight =>
+      'لا يمكن حذف هذه المادة الآن.';
 
   @override
-  String get supplierReusedMaterialsCannotBeEditedBecause => 'لا يمكن تعديل المواد المعاد استخدامها لأنها جزء من سجل إعادة الاستخدام.';
+  String get supplierReusedMaterialsCannotBeEditedBecause =>
+      'لا يمكن تعديل المواد المعاد استخدامها لأنها جزء من سجل إعادة الاستخدام.';
 
   @override
-  String get supplierCannotEditAMaterialWithActive => 'لا يمكن تعديل مادة لديها طلبات نشطة أو حالة محظورة.';
+  String get supplierCannotEditAMaterialWithActive =>
+      'لا يمكن تعديل مادة لديها طلبات نشطة أو حالة محظورة.';
 
   @override
-  String get supplierThisMaterialCannotBeEditedRight => 'لا يمكن تعديل هذه المادة الآن.';
+  String get supplierThisMaterialCannotBeEditedRight =>
+      'لا يمكن تعديل هذه المادة الآن.';
 
   @override
   String get supplierEditingNotAvailable => 'التعديل غير متاح';
@@ -3112,7 +3347,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierMaterialNotFound => 'المادة غير موجودة';
 
   @override
-  String get supplierThisListingMayHaveBeenRemoved => 'ربما أُزيل هذا الإدراج أو لم يعد متاحاً.';
+  String get supplierThisListingMayHaveBeenRemoved =>
+      'ربما أُزيل هذا الإدراج أو لم يعد متاحاً.';
 
   @override
   String get supplierBackToMyMaterials => 'العودة إلى موادي';
@@ -3162,7 +3398,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get supplierTrackYourMaterialsRespondToRequests => 'تتبع موادك، رد على الطلبات، ونمِّ أثر إعادة الاستخدام.';
+  String get supplierTrackYourMaterialsRespondToRequests =>
+      'تتبع موادك، رد على الطلبات، ونمِّ أثر إعادة الاستخدام.';
 
   @override
   String get supplierAddMaterial2 => 'إضافة مادة';
@@ -3222,10 +3459,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierHighDemandMaterials => 'مواد ذات طلب مرتفع';
 
   @override
-  String get supplierMaterialsWithActiveReservationInterest => 'مواد لديها اهتمام حجز نشط.';
+  String get supplierMaterialsWithActiveReservationInterest =>
+      'مواد لديها اهتمام حجز نشط.';
 
   @override
-  String get supplierNoHighDemandMaterialsYet => 'لا توجد مواد ذات طلب مرتفع بعد.';
+  String get supplierNoHighDemandMaterialsYet =>
+      'لا توجد مواد ذات طلب مرتفع بعد.';
 
   @override
   String get supplierViewAllRequests => 'عرض كل الطلبات';
@@ -3237,7 +3476,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierOperationsSnapshot => 'لمحة تشغيلية';
 
   @override
-  String supplierRequesterStatusDateQtyQuantity(String requester, String status, String date, String quantity) {
+  String supplierRequesterStatusDateQtyQuantity(
+    String requester,
+    String status,
+    String date,
+    String quantity,
+  ) {
     return '$requester · $status · $date · الكمية $quantity';
   }
 
@@ -3247,21 +3491,30 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get supplierSelectMaterialConditionBeforeVerifyingThe => 'اختر حالة المادة قبل التحقق من السعر.';
+  String get supplierSelectMaterialConditionBeforeVerifyingThe =>
+      'اختر حالة المادة قبل التحقق من السعر.';
 
   @override
-  String supplierReferenceMaxCurrencysymbolBasemaxConditionConditionlabe(String currencySymbol, String baseMax, String conditionLabel, String adjustedMax) {
+  String supplierReferenceMaxCurrencysymbolBasemaxConditionConditionlabe(
+    String currencySymbol,
+    String baseMax,
+    String conditionLabel,
+    String adjustedMax,
+  ) {
     return 'الحد الأقصى المرجعي: $currencySymbol$baseMax · الحالة: $conditionLabel · الحد المعدّل: $currencySymbol$adjustedMax';
   }
 
   @override
-  String get supplierSomeMaterialsAreGettingStrongDemand => 'بعض المواد تحظى بطلب قوي.';
+  String get supplierSomeMaterialsAreGettingStrongDemand =>
+      'بعض المواد تحظى بطلب قوي.';
 
   @override
-  String get supplierYourMaterialsAreGettingViewsImprove => 'موادك تحصل على مشاهدات. حسّن العناوين/الصور لزيادة التفاعل.';
+  String get supplierYourMaterialsAreGettingViewsImprove =>
+      'موادك تحصل على مشاهدات. حسّن العناوين/الصور لزيادة التفاعل.';
 
   @override
-  String get supplierAddYourFirstMaterialToStart => 'أضف أول مادة لك لتبدأ في تلقي الطلبات.';
+  String get supplierAddYourFirstMaterialToStart =>
+      'أضف أول مادة لك لتبدأ في تلقي الطلبات.';
 
   @override
   String get supplierReservationStatus => 'حالة الحجوزات';
@@ -3273,7 +3526,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierRecentActivity => 'النشاط الأخير';
 
   @override
-  String get supplierCuratedHighlightsFromYourLatestOperations => 'أبرز ما حدث في عملياتك الأخيرة';
+  String get supplierCuratedHighlightsFromYourLatestOperations =>
+      'أبرز ما حدث في عملياتك الأخيرة';
 
   @override
   String get supplierViewAllActivity => 'عرض كل النشاط';
@@ -3282,7 +3536,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierActionableInsights => 'رؤى قابلة للتنفيذ';
 
   @override
-  String get supplierRecommendedNextStepsBasedOnYour => 'الخطوات التالية الموصى بها بناءً على نشاطك الحالي.';
+  String get supplierRecommendedNextStepsBasedOnYour =>
+      'الخطوات التالية الموصى بها بناءً على نشاطك الحالي.';
 
   @override
   String get supplierRequestsNeedAttention => 'الطلبات تحتاج انتباهك';
@@ -3297,13 +3552,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierPickupReadiness => 'جاهزية الاستلام';
 
   @override
-  String get supplierPickupLocationIsSetSelfPickup => 'موقع الاستلام محدد. الاستلام الذاتي مفعّل.';
+  String get supplierPickupLocationIsSetSelfPickup =>
+      'موقع الاستلام محدد. الاستلام الذاتي مفعّل.';
 
   @override
-  String get supplierAddOrConfirmYourPickupLocation => 'أضف أو أكّد موقع الاستلام ليعرف المتعلمون مكان الاستلام.';
+  String get supplierAddOrConfirmYourPickupLocation =>
+      'أضف أو أكّد موقع الاستلام ليعرف المتعلمون مكان الاستلام.';
 
   @override
-  String get supplierCompleteYourSupplierProfileAndPickup => 'أكمل ملف المورد وموقع الاستلام لبدء قبول الطلبات.';
+  String get supplierCompleteYourSupplierProfileAndPickup =>
+      'أكمل ملف المورد وموقع الاستلام لبدء قبول الطلبات.';
 
   @override
   String get supplierUpdateProfile => 'تحديث الملف';
@@ -3312,19 +3570,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierGrowReuse => 'نمِّ إعادة الاستخدام';
 
   @override
-  String get supplierYouHaveActiveListingsReadyFor => 'لديك قوائم نشطة جاهزة للمتعلمين. الاستلام المكتمل يزيد أثر إعادة الاستخدام.';
+  String get supplierYouHaveActiveListingsReadyFor =>
+      'لديك قوائم نشطة جاهزة للمتعلمين. الاستلام المكتمل يزيد أثر إعادة الاستخدام.';
 
   @override
-  String get supplierReuseActivityIsStartingKeepMaterials => 'بدأ نشاط إعادة الاستخدام. حدّث المواد لتحسين الطلبات.';
+  String get supplierReuseActivityIsStartingKeepMaterials =>
+      'بدأ نشاط إعادة الاستخدام. حدّث المواد لتحسين الطلبات.';
 
   @override
-  String get supplierListMaterialsToStartBuildingReuse => 'أدرج مواد لبدء بناء أثر إعادة الاستخدام عند اكتمال الاستلام.';
+  String get supplierListMaterialsToStartBuildingReuse =>
+      'أدرج مواد لبدء بناء أثر إعادة الاستخدام عند اكتمال الاستلام.';
 
   @override
   String get supplierViewMaterials => 'عرض المواد';
 
   @override
-  String get supplierAllCaughtUpNewLearnerRequests => 'كل شيء محدّث. ستظهر طلبات المتعلمين وتحديثات الاستلام هنا.';
+  String get supplierAllCaughtUpNewLearnerRequests =>
+      'كل شيء محدّث. ستظهر طلبات المتعلمين وتحديثات الاستلام هنا.';
 
   @override
   String get supplierNoRecentActivityYet => 'لا يوجد نشاط حديث بعد.';
@@ -3342,7 +3604,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierSupplierHub => 'مركز المورد';
 
   @override
-  String get supplierShareUnusedPartsReduceWasteAnd => 'شارك القطع غير المستخدمة، قلّل الهدر، وساعد المتعلمين على البناء أسرع.';
+  String get supplierShareUnusedPartsReduceWasteAnd =>
+      'شارك القطع غير المستخدمة، قلّل الهدر، وساعد المتعلمين على البناء أسرع.';
 
   @override
   String supplierPickupCity(String city) {
@@ -3358,22 +3621,26 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierNoMaterialsListedYet => 'لا توجد مواد مدرجة بعد';
 
   @override
-  String get supplierStartBySharingUnusedPartsProject => 'ابدأ بمشاركة القطع غير المستخدمة أو مخلفات المشاريع أو المكونات الفائضة.';
+  String get supplierStartBySharingUnusedPartsProject =>
+      'ابدأ بمشاركة القطع غير المستخدمة أو مخلفات المشاريع أو المكونات الفائضة.';
 
   @override
   String get supplierCompleteYourSupplierProfile => 'أكمل ملف المورد';
 
   @override
-  String get supplierAddYourPublicSupplierNameAnd => 'أضف اسم المورد العام وموقع الاستلام قبل إدراج المواد.';
+  String get supplierAddYourPublicSupplierNameAnd =>
+      'أضف اسم المورد العام وموقع الاستلام قبل إدراج المواد.';
 
   @override
   String get supplierCompleteProfile => 'إكمال الملف';
 
   @override
-  String get supplierWeCouldNotLoadYourSupplier => 'تعذّر تحميل لوحة تحكم المورد.';
+  String get supplierWeCouldNotLoadYourSupplier =>
+      'تعذّر تحميل لوحة تحكم المورد.';
 
   @override
-  String get supplierPleaseCheckYourConnectionAndTry => 'يرجى التحقق من الاتصال والمحاولة مجدداً.';
+  String get supplierPleaseCheckYourConnectionAndTry =>
+      'يرجى التحقق من الاتصال والمحاولة مجدداً.';
 
   @override
   String get supplierReuseImpact => 'أثر إعادة الاستخدام';
@@ -3384,16 +3651,19 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get supplierImpactIsCalculatedFromCompletedReuse => 'يُحسب الأثر من بيانات إعادة الاستخدام المكتملة.';
+  String get supplierImpactIsCalculatedFromCompletedReuse =>
+      'يُحسب الأثر من بيانات إعادة الاستخدام المكتملة.';
 
   @override
   String get supplierProjectImpact => 'أثر المشاريع';
 
   @override
-  String get supplierYourMaterialsHelpedLearnersCompleteReal => 'ساعدت موادك المتعلمين على إكمال مكوّنات مشاريع حقيقية.';
+  String get supplierYourMaterialsHelpedLearnersCompleteReal =>
+      'ساعدت موادك المتعلمين على إكمال مكوّنات مشاريع حقيقية.';
 
   @override
-  String get supplierYourCompletedProjectImpactWillAppear => 'سيظهر أثر مشاريعك المكتمل هنا عندما ينهي المتعلمون المكوّنات باستخدام موادك.';
+  String get supplierYourCompletedProjectImpactWillAppear =>
+      'سيظهر أثر مشاريعك المكتمل هنا عندما ينهي المتعلمون المكوّنات باستخدام موادك.';
 
   @override
   String get supplierProjectsSupported => 'مشاريع مدعومة';
@@ -3439,10 +3709,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierWeCouldNotLoadNotifications => 'تعذّر تحميل الإشعارات.';
 
   @override
-  String get supplierNoActionAvailableForThisItem => 'لا يوجد إجراء متاح لهذا العنصر.';
+  String get supplierNoActionAvailableForThisItem =>
+      'لا يوجد إجراء متاح لهذا العنصر.';
 
   @override
-  String get supplierCouldNotOpenListingTryAgain => 'تعذّر فتح الإدراج. حاول مجدداً من الإشعارات.';
+  String get supplierCouldNotOpenListingTryAgain =>
+      'تعذّر فتح الإدراج. حاول مجدداً من الإشعارات.';
 
   @override
   String get supplierApproved => 'موافق عليه';
@@ -3480,10 +3752,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierNisListings => 'إدراجات بالشيكل';
 
   @override
-  String get supplierPendingAcceptedAndCompletedRequests => 'الطلبات المعلقة والمقبولة والمكتملة';
+  String get supplierPendingAcceptedAndCompletedRequests =>
+      'الطلبات المعلقة والمقبولة والمكتملة';
 
   @override
-  String get supplierInventoryBreakdownAcrossLifecycleStates => 'تفصيل المخزون عبر حالات دورة الحياة';
+  String get supplierInventoryBreakdownAcrossLifecycleStates =>
+      'تفصيل المخزون عبر حالات دورة الحياة';
 
   @override
   String get supplierAcceptedPickups => 'عمليات الاستلام المقبولة';
@@ -3495,13 +3769,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierAcceptedHandovers => 'التسليمات المقبولة';
 
   @override
-  String get supplierReservationActivityWillAppearHereOnce => 'سيظهر نشاط الحجوزات هنا عند وصول الطلبات.';
+  String get supplierReservationActivityWillAppearHereOnce =>
+      'سيظهر نشاط الحجوزات هنا عند وصول الطلبات.';
 
   @override
   String get supplierReservedPending => 'محجوزة / معلقة';
 
   @override
-  String get supplierMaterialStatusBreakdownWillAppearAfter => 'سيظهر تفصيل حالة المواد بعد أول إدراج.';
+  String get supplierMaterialStatusBreakdownWillAppearAfter =>
+      'سيظهر تفصيل حالة المواد بعد أول إدراج.';
 
   @override
   String get supplierPendingRequestWaiting => 'طلب معلق بانتظار الرد';
@@ -3539,25 +3815,32 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierPriceReviewRequestFailed => 'فشل طلب مراجعة السعر.';
 
   @override
-  String get supplierSavedListingDraftWasNotFound => 'لم تُعثر على مسودة الإدراج المحفوظة.';
+  String get supplierSavedListingDraftWasNotFound =>
+      'لم تُعثر على مسودة الإدراج المحفوظة.';
 
   @override
-  String get supplierCategoryApprovedContinueYourListing => 'تمت الموافقة على الفئة. تابع إدراجك.';
+  String get supplierCategoryApprovedContinueYourListing =>
+      'تمت الموافقة على الفئة. تابع إدراجك.';
 
   @override
-  String get supplierContinueEditingYourSavedListingDraft => 'تابع تعديل مسودة الإدراج المحفوظة.';
+  String get supplierContinueEditingYourSavedListingDraft =>
+      'تابع تعديل مسودة الإدراج المحفوظة.';
 
   @override
-  String get supplierContinueYourListingFromWhereYou => 'تابع إدراجك من حيث توقفت.';
+  String get supplierContinueYourListingFromWhereYou =>
+      'تابع إدراجك من حيث توقفت.';
 
   @override
-  String get supplierCategoryRequestSubmittedYourListingDraft => 'تم إرسال طلب الفئة. حُفظت مسودة الإدراج. يمكنك المتابعة بعد موافقة المسؤول.';
+  String get supplierCategoryRequestSubmittedYourListingDraft =>
+      'تم إرسال طلب الفئة. حُفظت مسودة الإدراج. يمكنك المتابعة بعد موافقة المسؤول.';
 
   @override
-  String get supplierCategoryRequestSubmittedYourListingDraft2 => 'تم إرسال طلب الفئة. حُفظت مسودة الإدراج.';
+  String get supplierCategoryRequestSubmittedYourListingDraft2 =>
+      'تم إرسال طلب الفئة. حُفظت مسودة الإدراج.';
 
   @override
-  String get supplierPriceReviewSubmittedAGeminiAssisted => 'تم إرسال مراجعة السعر. تم إنشاء اقتراح سعر بمساعدة Gemini لمراجعة المسؤول.';
+  String get supplierPriceReviewSubmittedAGeminiAssisted =>
+      'تم إرسال مراجعة السعر. تم إنشاء اقتراح سعر بمساعدة Gemini لمراجعة المسؤول.';
 
   @override
   String supplierPriceVerificationFailedError(String error) {
@@ -3579,12 +3862,19 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String supplierMaximumAllowedUnitPriceSymbolPrice(String symbol, String price) {
+  String supplierMaximumAllowedUnitPriceSymbolPrice(
+    String symbol,
+    String price,
+  ) {
     return 'الحد الأقصى لسعر الوحدة: $symbol$price';
   }
 
   @override
-  String supplierMaximumAllowedUnitPriceSymbolPrice2(String symbol, String price, String unit) {
+  String supplierMaximumAllowedUnitPriceSymbolPrice2(
+    String symbol,
+    String price,
+    String unit,
+  ) {
     return 'الحد الأقصى لسعر الوحدة: $symbol$price لكل $unit';
   }
 
@@ -3594,10 +3884,12 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get supplierPriceReviewIsRequiredBeforePaid => 'مراجعة السعر مطلوبة قبل النشر المدفوع. سيُنشأ اقتراح سعر بمساعدة Gemini لمراجعة المسؤول.';
+  String get supplierPriceReviewIsRequiredBeforePaid =>
+      'مراجعة السعر مطلوبة قبل النشر المدفوع. سيُنشأ اقتراح سعر بمساعدة Gemini لمراجعة المسؤول.';
 
   @override
-  String get supplierPriceIsAboveTheAllowedLimit => 'السعر أعلى من الحد المسموح';
+  String get supplierPriceIsAboveTheAllowedLimit =>
+      'السعر أعلى من الحد المسموح';
 
   @override
   String get supplierPriceBlocked => 'السعر محظور';
@@ -3651,7 +3943,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierPickupMarkedAsCompleted => 'تم تحديد الاستلام كمكتمل.';
 
   @override
-  String get supplierCouldNotMarkPickupAsCompleted => 'تعذّر تحديد الاستلام كمكتمل.';
+  String get supplierCouldNotMarkPickupAsCompleted =>
+      'تعذّر تحديد الاستلام كمكتمل.';
 
   @override
   String get supplierNeedsLearnerConfirmation => 'بحاجة إلى تأكيد المتعلم';
@@ -3666,31 +3959,38 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierNoRequestsYet => 'لا توجد طلبات بعد.';
 
   @override
-  String get supplierNoRequestsMatchThisFilter => 'لا توجد طلبات تطابق هذا الفلتر.';
+  String get supplierNoRequestsMatchThisFilter =>
+      'لا توجد طلبات تطابق هذا الفلتر.';
 
   @override
   String get supplierNoPendingRequests => 'لا توجد طلبات معلقة';
 
   @override
-  String get supplierNoAcceptedPickupsYet => 'لا توجد عمليات استلام مقبولة بعد.';
+  String get supplierNoAcceptedPickupsYet =>
+      'لا توجد عمليات استلام مقبولة بعد.';
 
   @override
   String get supplierNoDeclinedRequests => 'لا توجد طلبات مرفوضة.';
 
   @override
-  String get supplierNoCompletedPickupsYet => 'لا توجد عمليات استلام مكتملة بعد.';
+  String get supplierNoCompletedPickupsYet =>
+      'لا توجد عمليات استلام مكتملة بعد.';
 
   @override
-  String get supplierNewLearnerRequestsWillAppearHere => 'ستظهر طلبات المتعلمين الجديدة هنا.';
+  String get supplierNewLearnerRequestsWillAppearHere =>
+      'ستظهر طلبات المتعلمين الجديدة هنا.';
 
   @override
-  String get supplierAcceptedRequestsWithPickupWindowsWill => 'ستظهر الطلبات المقبولة مع مواعيد الاستلام هنا.';
+  String get supplierAcceptedRequestsWithPickupWindowsWill =>
+      'ستظهر الطلبات المقبولة مع مواعيد الاستلام هنا.';
 
   @override
-  String get supplierRequestsYouDeclineWillBeListed => 'ستُدرج الطلبات التي ترفضها هنا.';
+  String get supplierRequestsYouDeclineWillBeListed =>
+      'ستُدرج الطلبات التي ترفضها هنا.';
 
   @override
-  String get supplierFinishedPickupsWillAppearHere => 'ستظهر عمليات الاستلام المنتهية هنا.';
+  String get supplierFinishedPickupsWillAppearHere =>
+      'ستظهر عمليات الاستلام المنتهية هنا.';
 
   @override
   String get supplierNoLearnerNote => 'لا توجد ملاحظة من المتعلم.';
@@ -3704,16 +4004,19 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get supplierNoRequestsWaitingForLearner => 'لا توجد طلبات بانتظار المتعلم';
+  String get supplierNoRequestsWaitingForLearner =>
+      'لا توجد طلبات بانتظار المتعلم';
 
   @override
   String get supplierNoCancelledRequests => 'لا توجد طلبات ملغاة';
 
   @override
-  String get supplierReservationsAwaitingLearnerConfirmationAppearHere => 'تظهر الحجوزات التي تنتظر تأكيد المتعلم هنا.';
+  String get supplierReservationsAwaitingLearnerConfirmationAppearHere =>
+      'تظهر الحجوزات التي تنتظر تأكيد المتعلم هنا.';
 
   @override
-  String get supplierCancelledReservationsWillAppearHere => 'ستظهر الحجوزات الملغاة هنا.';
+  String get supplierCancelledReservationsWillAppearHere =>
+      'ستظهر الحجوزات الملغاة هنا.';
 
   @override
   String get supplierWaitingForSupplier => 'بانتظار المورد';
@@ -3722,13 +4025,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierLoadingPickupSchedule => 'جاري تحميل جدول الاستلام…';
 
   @override
-  String get supplierWeCouldNotLoadPickupSchedule => 'تعذّر تحميل جدول الاستلام.';
+  String get supplierWeCouldNotLoadPickupSchedule =>
+      'تعذّر تحميل جدول الاستلام.';
 
   @override
-  String get supplierNoPickupsScheduledYet => 'لا توجد عمليات استلام مجدولة بعد.';
+  String get supplierNoPickupsScheduledYet =>
+      'لا توجد عمليات استلام مجدولة بعد.';
 
   @override
-  String get supplierNoPickupsMatchThisFilter => 'لا توجد عمليات استلام تطابق هذا الفلتر.';
+  String get supplierNoPickupsMatchThisFilter =>
+      'لا توجد عمليات استلام تطابق هذا الفلتر.';
 
   @override
   String get supplierMarkCompleted => 'تحديد كمكتمل';
@@ -3746,7 +4052,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierDone => 'منتهٍ';
 
   @override
-  String get supplierNoPickupsScheduledForToday => 'لا توجد عمليات استلام مجدولة اليوم.';
+  String get supplierNoPickupsScheduledForToday =>
+      'لا توجد عمليات استلام مجدولة اليوم.';
 
   @override
   String get supplierNoUpcomingPickups => 'لا توجد عمليات استلام قادمة.';
@@ -3758,16 +4065,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierCreateYourProfile => 'أنشئ ملفك';
 
   @override
-  String get supplierUpdateYourPublicIdentityAndPickup => 'حدّث هويتك العامة وإعدادات الاستلام.';
+  String get supplierUpdateYourPublicIdentityAndPickup =>
+      'حدّث هويتك العامة وإعدادات الاستلام.';
 
   @override
-  String get supplierUpdateHowLearnersDiscoverYouAnd => 'حدّث كيف يكتشفك المتعلمون وأين يمكن جمع المواد.';
+  String get supplierUpdateHowLearnersDiscoverYouAnd =>
+      'حدّث كيف يكتشفك المتعلمون وأين يمكن جمع المواد.';
 
   @override
   String get supplierPublicSupplierDetails => 'تفاصيل المورد العامة';
 
   @override
-  String get supplierTheseDetailsAppearOnYourPublic => 'تظهر هذه التفاصيل في ملف المورد العام.';
+  String get supplierTheseDetailsAppearOnYourPublic =>
+      'تظهر هذه التفاصيل في ملف المورد العام.';
 
   @override
   String get supplierPublicSupplierName => 'اسم المورد العام';
@@ -3779,22 +4089,26 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierAboutYourMaterials => 'عن موادك';
 
   @override
-  String get supplierShareTheMaterialTypesYouUsually => 'شارك أنواع المواد التي تقدمها عادة.';
+  String get supplierShareTheMaterialTypesYouUsually =>
+      'شارك أنواع المواد التي تقدمها عادة.';
 
   @override
   String get supplierDefaultPickupArea => 'منطقة الاستلام الافتراضية';
 
   @override
-  String get supplierUseAGeneralPickupAreaExact => 'استخدم منطقة استلام عامة. العناوين الدقيقة تبقى مخفية حتى الحاجة.';
+  String get supplierUseAGeneralPickupAreaExact =>
+      'استخدم منطقة استلام عامة. العناوين الدقيقة تبقى مخفية حتى الحاجة.';
 
   @override
   String get supplierChooseManually => 'اختيار يدوي';
 
   @override
-  String get supplierPickupLocationSelectionMethod => 'طريقة تحديد موقع الاستلام';
+  String get supplierPickupLocationSelectionMethod =>
+      'طريقة تحديد موقع الاستلام';
 
   @override
-  String get supplierEnterTheAddressDetailsOrMove => 'أدخل تفاصيل العنوان أو حرّك دبوس الخريطة لاختيار موقع الاستلام الدقيق.';
+  String get supplierEnterTheAddressDetailsOrMove =>
+      'أدخل تفاصيل العنوان أو حرّك دبوس الخريطة لاختيار موقع الاستلام الدقيق.';
 
   @override
   String get supplierLocationSelected => 'تم تحديد الموقع';
@@ -3809,7 +4123,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierOptionalAddressDetails => 'تفاصيل العنوان (اختياري)';
 
   @override
-  String get supplierCoordinatesAreTheSourceOfTruth => 'الإحداثيات هي المرجع. هذه الحقول تساعد المتعلمين في العثور عليك.';
+  String get supplierCoordinatesAreTheSourceOfTruth =>
+      'الإحداثيات هي المرجع. هذه الحقول تساعد المتعلمين في العثور عليك.';
 
   @override
   String get supplierPalestine => 'فلسطين';
@@ -3821,13 +4136,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierAddressLine => 'سطر العنوان';
 
   @override
-  String get supplierStreetOrBuildingKeptPrivate => 'الشارع أو المبنى (يُحفظ بسرية)';
+  String get supplierStreetOrBuildingKeptPrivate =>
+      'الشارع أو المبنى (يُحفظ بسرية)';
 
   @override
   String get supplierLocationPrivacy => 'خصوصية الموقع';
 
   @override
-  String get supplierSetYourExactPickupLocationYour => 'حدّد موقع الاستلام الدقيق. تتحكم إعدادات الظهور بما يمكن للمتعلمين رؤيته.';
+  String get supplierSetYourExactPickupLocationYour =>
+      'حدّد موقع الاستلام الدقيق. تتحكم إعدادات الظهور بما يمكن للمتعلمين رؤيته.';
 
   @override
   String get supplierLocationVisibility => 'ظهور الموقع';
@@ -3845,19 +4162,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierShowAsApproximate => 'عرض كموقع تقريبي';
 
   @override
-  String get supplierLearnersSeeAGeneralAreaNot => 'يرى المتعلمون منطقة عامة وليس موقعاً دقيقاً.';
+  String get supplierLearnersSeeAGeneralAreaNot =>
+      'يرى المتعلمون منطقة عامة وليس موقعاً دقيقاً.';
 
   @override
   String get supplierOrganizationDetails => 'تفاصيل المؤسسة';
 
   @override
-  String get supplierForWorkshopsFactoriesAndEducationalInstitutions => 'للورش والمصانع والمؤسسات التعليمية فقط.';
+  String get supplierForWorkshopsFactoriesAndEducationalInstitutions =>
+      'للورش والمصانع والمؤسسات التعليمية فقط.';
 
   @override
   String get supplierOrganizationName => 'اسم المؤسسة';
 
   @override
-  String get supplierLegalOrPublicOrganizationName => 'الاسم القانوني أو العام للمؤسسة';
+  String get supplierLegalOrPublicOrganizationName =>
+      'الاسم القانوني أو العام للمؤسسة';
 
   @override
   String get supplierContactPerson => 'شخص الاتصال';
@@ -3875,10 +4195,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierDiscardChanges => 'تجاهل التغييرات';
 
   @override
-  String get supplierKeepYourPublicSupplierDetailsAccurate => 'حافظ على تفاصيل موردك العامة دقيقة وموثوقة وسهلة الفهم للمتعلمين.';
+  String get supplierKeepYourPublicSupplierDetailsAccurate =>
+      'حافظ على تفاصيل موردك العامة دقيقة وموثوقة وسهلة الفهم للمتعلمين.';
 
   @override
-  String get supplierCreateYourSupplierProfileSoLearners => 'أنشئ ملف المورد ليعرف المتعلمون أين وكيف يجمعون المواد.';
+  String get supplierCreateYourSupplierProfileSoLearners =>
+      'أنشئ ملف المورد ليعرف المتعلمون أين وكيف يجمعون المواد.';
 
   @override
   String get supplierProfileUnavailable => 'الملف غير متاح';
@@ -3890,22 +4212,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierSupplierProfileUpdated => 'تم تحديث ملف المورد';
 
   @override
-  String get supplierPleaseCaptureYourCurrentLocationBefore => 'يرجى تحديد موقعك الحالي قبل الحفظ.';
+  String get supplierPleaseCaptureYourCurrentLocationBefore =>
+      'يرجى تحديد موقعك الحالي قبل الحفظ.';
 
   @override
-  String get supplierCouldNotGetCurrentLocationPlease => 'تعذّر تحديد الموقع الحالي. حاول مجدداً أو أدخله يدوياً.';
+  String get supplierCouldNotGetCurrentLocationPlease =>
+      'تعذّر تحديد الموقع الحالي. حاول مجدداً أو أدخله يدوياً.';
 
   @override
   String get supplierCurrentLocation => 'الموقع الحالي';
 
   @override
-  String get supplierWeFoundThisAddressFromYour => 'وجدنا هذا العنوان من موقعك الحالي. راجعه وعدّله إن لزم.';
+  String get supplierWeFoundThisAddressFromYour =>
+      'وجدنا هذا العنوان من موقعك الحالي. راجعه وعدّله إن لزم.';
 
   @override
-  String get supplierCurrentLocationCapturedButAddressLookup => 'تم تحديد الموقع الحالي، لكن فشل البحث عن العنوان. يمكنك إضافة المدينة أو المنطقة يدوياً.';
+  String get supplierCurrentLocationCapturedButAddressLookup =>
+      'تم تحديد الموقع الحالي، لكن فشل البحث عن العنوان. يمكنك إضافة المدينة أو المنطقة يدوياً.';
 
   @override
-  String get supplierCurrentLocationCapturedYouCanOptionally => 'تم تحديد الموقع الحالي. يمكنك إضافة المدينة أو المنطقة أو تفاصيل العنوان اختيارياً.';
+  String get supplierCurrentLocationCapturedYouCanOptionally =>
+      'تم تحديد الموقع الحالي. يمكنك إضافة المدينة أو المنطقة أو تفاصيل العنوان اختيارياً.';
 
   @override
   String get supplierChooseVisibility => 'اختر مستوى الظهور';
@@ -3923,10 +4250,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierOpenUntil => 'يغلق عند';
 
   @override
-  String get supplierUseASeparateOrganizationAddress => 'استخدام عنوان مؤسسة منفصل';
+  String get supplierUseASeparateOrganizationAddress =>
+      'استخدام عنوان مؤسسة منفصل';
 
   @override
-  String get supplierEnableThisWhenYourOrganizationAddress => 'فعّل هذا الخيار عندما يختلف عنوان المؤسسة عن موقع الاستلام الافتراضي.';
+  String get supplierEnableThisWhenYourOrganizationAddress =>
+      'فعّل هذا الخيار عندما يختلف عنوان المؤسسة عن موقع الاستلام الافتراضي.';
 
   @override
   String get supplierBusinessCountry => 'بلد العمل';
@@ -3953,61 +4282,74 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierAddressLineOptional => 'سطر العنوان (اختياري)';
 
   @override
-  String get supplierOptionalNeighborhoodOrDistrict => 'الحي أو المنطقة (اختياري)';
+  String get supplierOptionalNeighborhoodOrDistrict =>
+      'الحي أو المنطقة (اختياري)';
 
   @override
   String get supplierOptionalStreetOrBuilding => 'الشارع أو المبنى (اختياري)';
 
   @override
-  String get supplierCompleteYourSupplierProfileFirst => 'أكمل ملف المورد أولاً.';
+  String get supplierCompleteYourSupplierProfileFirst =>
+      'أكمل ملف المورد أولاً.';
 
   @override
-  String get supplierSupplierDetailsAreRequiredBeforeYou => 'تفاصيل المورد مطلوبة قبل نشر المواد القابلة لإعادة الاستخدام.';
+  String get supplierSupplierDetailsAreRequiredBeforeYou =>
+      'تفاصيل المورد مطلوبة قبل نشر المواد القابلة لإعادة الاستخدام.';
 
   @override
   String get supplierGoToSupplierProfile => 'الذهاب لملف المورد';
 
   @override
-  String get supplierSetYourPickupLocationBeforeListing => 'حدد موقع الاستلام قبل إدراج المواد.';
+  String get supplierSetYourPickupLocationBeforeListing =>
+      'حدد موقع الاستلام قبل إدراج المواد.';
 
   @override
-  String get supplierPickupLocationComesFromYourSupplier => 'موقع الاستلام يأتي من ملف المورد ويُستخدم لكل مادة في هذه الخطوة.';
+  String get supplierPickupLocationComesFromYourSupplier =>
+      'موقع الاستلام يأتي من ملف المورد ويُستخدم لكل مادة في هذه الخطوة.';
 
   @override
   String get supplierEditSupplierProfile => 'تعديل ملف المورد';
 
   @override
-  String get supplierMaterialCategoriesAreUnavailable => 'فئات المواد غير متاحة.';
+  String get supplierMaterialCategoriesAreUnavailable =>
+      'فئات المواد غير متاحة.';
 
   @override
-  String get supplierPleaseTryAgainAfterTheBackend => 'يرجى المحاولة مجدداً عند توفر الخادم.';
+  String get supplierPleaseTryAgainAfterTheBackend =>
+      'يرجى المحاولة مجدداً عند توفر الخادم.';
 
   @override
   String get supplierSupplierProfileCouldNotLoad => 'تعذّر تحميل ملف المورد.';
 
   @override
-  String get supplierPleaseRefreshOrCompleteYourProfile => 'يرجى التحديث أو إكمال ملفك أولاً.';
+  String get supplierPleaseRefreshOrCompleteYourProfile =>
+      'يرجى التحديث أو إكمال ملفك أولاً.';
 
   @override
   String get supplierWhatAreYouListing => 'ماذا تدرج؟';
 
   @override
-  String get supplierDescribeTheSurplusMaterialClearly => 'صف المادة الفائضة بوضوح.';
+  String get supplierDescribeTheSurplusMaterialClearly =>
+      'صف المادة الفائضة بوضوح.';
 
   @override
   String get supplierMaterialTypeName => 'نوع/اسم المادة';
 
   @override
-  String get supplierWaxMoldsArduinoUnoFabricScraps => 'قوالب شمع، Arduino Uno، بقايا قماش...';
+  String get supplierWaxMoldsArduinoUnoFabricScraps =>
+      'قوالب شمع، Arduino Uno، بقايا قماش...';
 
   @override
-  String get supplierUseTheCommonMaterialTypeOr => 'استخدم نوع المادة الشائع أو الاسم البديل. نستخدمه للمطابقة والتحقق من الأسعار المدفوعة.';
+  String get supplierUseTheCommonMaterialTypeOr =>
+      'استخدم نوع المادة الشائع أو الاسم البديل. نستخدمه للمطابقة والتحقق من الأسعار المدفوعة.';
 
   @override
-  String get supplierChooseACategoryFirstToSearch => 'اختر فئة أولاً للبحث في أنواع المواد المراجعة.';
+  String get supplierChooseACategoryFirstToSearch =>
+      'اختر فئة أولاً للبحث في أنواع المواد المراجعة.';
 
   @override
-  String get supplierNoReviewedMaterialTypesFoundFree => 'لم يتم العثور على أنواع مواد مراجعة. يمكن للإدراجات المجانية المتابعة بهذا الاسم.';
+  String get supplierNoReviewedMaterialTypesFoundFree =>
+      'لم يتم العثور على أنواع مواد مراجعة. يمكن للإدراجات المجانية المتابعة بهذا الاسم.';
 
   @override
   String get supplierReviewedPriceAvailable => 'سعر مراجع متاح';
@@ -4016,7 +4358,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierNoReviewedPrice => 'لا يوجد سعر مراجع';
 
   @override
-  String get supplierPaidListingsNeedAReviewedMaterial => 'تحتاج الإدراجات المدفوعة إلى نوع مادة مراجع مع قاعدة سعر نشطة.';
+  String get supplierPaidListingsNeedAReviewedMaterial =>
+      'تحتاج الإدراجات المدفوعة إلى نوع مادة مراجع مع قاعدة سعر نشطة.';
 
   @override
   String supplierAliasesAliases(String aliases) {
@@ -4033,7 +4376,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierDescription => 'الوصف';
 
   @override
-  String get supplierDescribeConditionQuantityAndWhatIs => 'صف الحالة والكمية وما يشمله العرض.';
+  String get supplierDescribeConditionQuantityAndWhatIs =>
+      'صف الحالة والكمية وما يشمله العرض.';
 
   @override
   String get supplierChooseSource => 'اختر المصدر';
@@ -4048,7 +4392,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierSuggestedUses => 'الاستخدامات المقترحة';
 
   @override
-  String get supplierCandlesResinCastingCraftProjects => 'شموع، صب راتنج، مشاريع حرفية.';
+  String get supplierCandlesResinCastingCraftProjects =>
+      'شموع، صب راتنج، مشاريع حرفية.';
 
   @override
   String get supplierChooseTheClosestBroadCategory => 'اختر أقرب فئة عامة.';
@@ -4078,7 +4423,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierCategoryRequest => 'طلب فئة';
 
   @override
-  String get supplierSendThisCategoryNameToAdmin => 'أرسل اسم الفئة للمسؤول للموافقة. سيُحفظ نموذج الإدراج الحالي لتكمل لاحقاً.';
+  String get supplierSendThisCategoryNameToAdmin =>
+      'أرسل اسم الفئة للمسؤول للموافقة. سيُحفظ نموذج الإدراج الحالي لتكمل لاحقاً.';
 
   @override
   String get supplierRequestedCategoryName => 'اسم الفئة المطلوبة';
@@ -4093,16 +4439,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierSendCategoryRequest => 'إرسال طلب الفئة';
 
   @override
-  String get supplierFreeListingsMayUseOtherWhen => 'يمكن للإدراجات المجانية استخدام «أخرى» عندما لا تناسب فئة مراجعة.';
+  String get supplierFreeListingsMayUseOtherWhen =>
+      'يمكن للإدراجات المجانية استخدام «أخرى» عندما لا تناسب فئة مراجعة.';
 
   @override
-  String get supplierPaidListingsCannotUseOtherUse => 'لا يمكن للإدراجات المدفوعة استخدام «أخرى». استخدم «لا تجد فئتك؟» لطلب فئة مراجعة أولاً.';
+  String get supplierPaidListingsCannotUseOtherUse =>
+      'لا يمكن للإدراجات المدفوعة استخدام «أخرى». استخدم «لا تجد فئتك؟» لطلب فئة مراجعة أولاً.';
 
   @override
   String get supplierQuantityAndPricing => 'الكمية والتسعير';
 
   @override
-  String get supplierEnterThePriceForOneUnit => 'أدخل سعر الوحدة الواحدة. تُعالج الكمية بشكل منفصل.';
+  String get supplierEnterThePriceForOneUnit =>
+      'أدخل سعر الوحدة الواحدة. تُعالج الكمية بشكل منفصل.';
 
   @override
   String get supplierQuantity => 'الكمية';
@@ -4125,43 +4474,52 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get supplierPickupLocationComesFromYourSupplier2 => 'موقع الاستلام يأتي من ملف المورد.';
+  String get supplierPickupLocationComesFromYourSupplier2 =>
+      'موقع الاستلام يأتي من ملف المورد.';
 
   @override
-  String get supplierOrganizationListingsUseYourProfilePickup => 'تستخدم إدراجات المؤسسة موقع الاستلام من ملفك.';
+  String get supplierOrganizationListingsUseYourProfilePickup =>
+      'تستخدم إدراجات المؤسسة موقع الاستلام من ملفك.';
 
   @override
-  String get supplierThisFixedPickupLocationFromYour => 'يُستخدم موقع الاستلام الثابت من ملفك لكل إدراج. حدّثه في ملف المورد إذا تغيّر عنوان الورشة أو المنشأة.';
+  String get supplierThisFixedPickupLocationFromYour =>
+      'يُستخدم موقع الاستلام الثابت من ملفك لكل إدراج. حدّثه في ملف المورد إذا تغيّر عنوان الورشة أو المنشأة.';
 
   @override
   String get supplierEditPickupInProfile => 'تعديل الاستلام في الملف';
 
   @override
-  String get supplierUseProfilePickupLocation => 'استخدام موقع الاستلام من الملف';
+  String get supplierUseProfilePickupLocation =>
+      'استخدام موقع الاستلام من الملف';
 
   @override
-  String get supplierUseYourDefaultPickupAreaOr => 'استخدم منطقة الاستلام الافتراضية، أو حدّد نقطة استلام مختلفة لهذه المادة فقط.';
+  String get supplierUseYourDefaultPickupAreaOr =>
+      'استخدم منطقة الاستلام الافتراضية، أو حدّد نقطة استلام مختلفة لهذه المادة فقط.';
 
   @override
   String get supplierMaterialPickupLocation => 'موقع استلام المادة';
 
   @override
-  String get supplierSetWhereLearnersShouldPickUp => 'حدد المكان الذي يجب على المتعلمين استلام هذه المادة منه.';
+  String get supplierSetWhereLearnersShouldPickUp =>
+      'حدد المكان الذي يجب على المتعلمين استلام هذه المادة منه.';
 
   @override
-  String get supplierEnterACityOrCaptureYour => 'أدخل مدينة أو التقط موقعك الحالي للاستلام.';
+  String get supplierEnterACityOrCaptureYour =>
+      'أدخل مدينة أو التقط موقعك الحالي للاستلام.';
 
   @override
   String get supplierPickupAllowed => 'الاستلام مسموح';
 
   @override
-  String get supplierLearnersCanRequestSelfPickupFor => 'يمكن للمتعلمين طلب الاستلام الذاتي لهذه المادة.';
+  String get supplierLearnersCanRequestSelfPickupFor =>
+      'يمكن للمتعلمين طلب الاستلام الذاتي لهذه المادة.';
 
   @override
   String get supplierDeliveryAllowed => 'التوصيل مسموح';
 
   @override
-  String get supplierLearnersCanRequestInternalDeliveryAfter => 'يمكن للمتعلمين طلب التوصيل الداخلي بعد قبولك للحجز.';
+  String get supplierLearnersCanRequestInternalDeliveryAfter =>
+      'يمكن للمتعلمين طلب التوصيل الداخلي بعد قبولك للحجز.';
 
   @override
   String get supplierYes => 'نعم';
@@ -4176,10 +4534,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierPickupNearCampus => 'الاستلام قرب الحرم الجامعي.';
 
   @override
-  String get supplierPaidListingsCannotUseOther => 'لا يمكن للإدراجات المدفوعة استخدام «أخرى».';
+  String get supplierPaidListingsCannotUseOther =>
+      'لا يمكن للإدراجات المدفوعة استخدام «أخرى».';
 
   @override
-  String get supplierPaidListingsMustPassPriceVerification => 'يجب أن تجتاز الإدراجات المدفوعة التحقق من السعر قبل النشر.';
+  String get supplierPaidListingsMustPassPriceVerification =>
+      'يجب أن تجتاز الإدراجات المدفوعة التحقق من السعر قبل النشر.';
 
   @override
   String get supplierNisOnly => 'شيكل فقط';
@@ -4188,10 +4548,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierFreeOtherAllowed => '«أخرى» مجانية مسموحة';
 
   @override
-  String get supplierPaidNeedsPriceVerification => 'المدفوع يحتاج تحققاً من السعر';
+  String get supplierPaidNeedsPriceVerification =>
+      'المدفوع يحتاج تحققاً من السعر';
 
   @override
-  String get supplierCouldNotRestoreListingDraft => 'تعذّر استعادة مسودة الإدراج';
+  String get supplierCouldNotRestoreListingDraft =>
+      'تعذّر استعادة مسودة الإدراج';
 
   @override
   String get supplierBackToNotifications => 'العودة للإشعارات';
@@ -4203,7 +4565,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierAddAnotherMaterial => 'إضافة مادة أخرى';
 
   @override
-  String supplierTitleCategoryPrice(String title, String category, String price) {
+  String supplierTitleCategoryPrice(
+    String title,
+    String category,
+    String price,
+  ) {
     return '$title • $category • $price';
   }
 
@@ -4284,7 +4650,10 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String supplierCompleteOfTotalEssentialsComplete(String complete, String total) {
+  String supplierCompleteOfTotalEssentialsComplete(
+    String complete,
+    String total,
+  ) {
     return '$complete من $total أساسيات مكتملة';
   }
 
@@ -4292,13 +4661,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierLearnerPreview => 'معاينة المتعلم';
 
   @override
-  String get supplierHowLearnersMayDiscoverYourSupplier => 'كيف قد يكتشف المتعلمون ملف موردك لاحقاً.';
+  String get supplierHowLearnersMayDiscoverYourSupplier =>
+      'كيف قد يكتشف المتعلمون ملف موردك لاحقاً.';
 
   @override
   String get supplierPickupAreaNotSet => 'منطقة الاستلام غير محددة';
 
   @override
-  String get supplierSharesReusableMaterialsForStudentAnd => 'يشارك مواداً قابلة لإعادة الاستخدام لمشاريع الطلاب والصناع.';
+  String get supplierSharesReusableMaterialsForStudentAnd =>
+      'يشارك مواداً قابلة لإعادة الاستخدام لمشاريع الطلاب والصناع.';
 
   @override
   String supplierLocationVisibilityVisibility(String visibility) {
@@ -4317,7 +4688,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierVerification => 'التحقق';
 
   @override
-  String get supplierVerificationIsReadOnlyForNow => 'التحقق للقراءة فقط حالياً. ستُضاف لاحقاً عمليات رفع المستندات والمراجعة.';
+  String get supplierVerificationIsReadOnlyForNow =>
+      'التحقق للقراءة فقط حالياً. ستُضاف لاحقاً عمليات رفع المستندات والمراجعة.';
 
   @override
   String get supplierAccountSecurity => 'أمان الحساب';
@@ -4329,7 +4701,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierChangePassword => 'تغيير كلمة المرور';
 
   @override
-  String get supplierEnterYourCurrentPasswordThenChoose => 'أدخل كلمة المرور الحالية، ثم اختر كلمة مرور جديدة.';
+  String get supplierEnterYourCurrentPasswordThenChoose =>
+      'أدخل كلمة المرور الحالية، ثم اختر كلمة مرور جديدة.';
 
   @override
   String get supplierCurrentPassword => 'كلمة المرور الحالية';
@@ -4341,19 +4714,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierUpdatePassword => 'تحديث كلمة المرور';
 
   @override
-  String get supplierPasswordUpdatedSuccessfully => 'تم تحديث كلمة المرور بنجاح.';
+  String get supplierPasswordUpdatedSuccessfully =>
+      'تم تحديث كلمة المرور بنجاح.';
 
   @override
-  String get supplierPasswordCouldNotBeUpdatedPlease => 'تعذّر تحديث كلمة المرور. يرجى المحاولة مجدداً.';
+  String get supplierPasswordCouldNotBeUpdatedPlease =>
+      'تعذّر تحديث كلمة المرور. يرجى المحاولة مجدداً.';
 
   @override
   String get supplierThisFieldIsRequired => 'هذا الحقل مطلوب';
 
   @override
-  String get supplierPasswordMustBeAtLeast8 => 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.';
+  String get supplierPasswordMustBeAtLeast8 =>
+      'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.';
 
   @override
-  String get supplierNewPasswordMustBeDifferentFrom => 'يجب أن تختلف كلمة المرور الجديدة عن الحالية.';
+  String get supplierNewPasswordMustBeDifferentFrom =>
+      'يجب أن تختلف كلمة المرور الجديدة عن الحالية.';
 
   @override
   String get supplierPasswordsDoNotMatch => 'كلمتا المرور غير متطابقتين.';
@@ -4368,10 +4745,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierMaterialPhotos => 'صور المادة';
 
   @override
-  String get supplierAdd1To5PhotosJpg => 'أضف من صورة إلى 5 صور. JPG أو PNG أو WebP.';
+  String get supplierAdd1To5PhotosJpg =>
+      'أضف من صورة إلى 5 صور. JPG أو PNG أو WebP.';
 
   @override
-  String get supplierAddAtLeastOneMaterialPhoto => 'أضف صورة واحدة على الأقل للمادة قبل النشر.';
+  String get supplierAddAtLeastOneMaterialPhoto =>
+      'أضف صورة واحدة على الأقل للمادة قبل النشر.';
 
   @override
   String get supplierSelectedPhotos => 'الصور المحددة';
@@ -4394,7 +4773,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierSendMessage => 'إرسال رسالة';
 
   @override
-  String get supplierPickupWindowPassedChooseAFollow => 'انتهت نافذة الاستلام. اختر إجراء متابعة.';
+  String get supplierPickupWindowPassedChooseAFollow =>
+      'انتهت نافذة الاستلام. اختر إجراء متابعة.';
 
   @override
   String get supplierReschedulePickup => 'إعادة جدولة الاستلام';
@@ -4403,7 +4783,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierReportNoShow => 'الإبلاغ عن عدم حضور';
 
   @override
-  String get supplierNoShowReportAlreadySubmittedFor => 'تم إرسال بلاغ عدم الحضور لهذا الحجز بالفعل.';
+  String get supplierNoShowReportAlreadySubmittedFor =>
+      'تم إرسال بلاغ عدم الحضور لهذا الحجز بالفعل.';
 
   @override
   String get supplierFollowUpMessages => 'رسائل المتابعة';
@@ -4427,16 +4808,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierOverdue => 'متأخر';
 
   @override
-  String get supplierThisWillCancelTheReservationAnd => 'سيؤدي هذا إلى إلغاء الحجز وإتاحة المادة.';
+  String get supplierThisWillCancelTheReservationAnd =>
+      'سيؤدي هذا إلى إلغاء الحجز وإتاحة المادة.';
 
   @override
-  String get supplierSubmitANoShowReportFor => 'أرسل بلاغ عدم حضور لمراجعة المسؤول. هذا لا يؤدي إلى تعليق حساب المتعلم تلقائياً.';
+  String get supplierSubmitANoShowReportFor =>
+      'أرسل بلاغ عدم حضور لمراجعة المسؤول. هذا لا يؤدي إلى تعليق حساب المتعلم تلقائياً.';
 
   @override
   String get supplierMarkPickupAsCompleted => 'تحديد الاستلام كمكتمل؟';
 
   @override
-  String get supplierThisWillMoveTheReservationTo => 'سينقل هذا الحجز إلى مكتمل ويحدد المادة كمعاد استخدامها.';
+  String get supplierThisWillMoveTheReservationTo =>
+      'سينقل هذا الحجز إلى مكتمل ويحدد المادة كمعاد استخدامها.';
 
   @override
   String get supplierAcceptRequest => 'قبول الطلب';
@@ -4448,7 +4832,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierDeclineRequest => 'رفض الطلب';
 
   @override
-  String get supplierYouCanAddAnOptionalReason => 'يمكنك إضافة سبب اختياري للمتعلم.';
+  String get supplierYouCanAddAnOptionalReason =>
+      'يمكنك إضافة سبب اختياري للمتعلم.';
 
   @override
   String get supplierReasonOptional => 'السبب (اختياري)';
@@ -4457,13 +4842,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierPickupDate => 'تاريخ الاستلام';
 
   @override
-  String get supplierDriverPickupWindowFromSupplier => 'نافذة استلام السائق من المورد';
+  String get supplierDriverPickupWindowFromSupplier =>
+      'نافذة استلام السائق من المورد';
 
   @override
-  String get supplierByAcceptingYouAgreeToHand => 'بالقبول، توافق على تسليم المادة للسائق خلال نافذة الاستلام هذه. سنتحقق من ذلك مقابل نوافذ التوصيل المفضلة للمتعلم.';
+  String get supplierByAcceptingYouAgreeToHand =>
+      'بالقبول، توافق على تسليم المادة للسائق خلال نافذة الاستلام هذه. سنتحقق من ذلك مقابل نوافذ التوصيل المفضلة للمتعلم.';
 
   @override
-  String get supplierWeWillCheckThisAgainstThe => 'سنتحقق من ذلك مقابل نوافذ التوصيل المفضلة للمتعلم.';
+  String get supplierWeWillCheckThisAgainstThe =>
+      'سنتحقق من ذلك مقابل نوافذ التوصيل المفضلة للمتعلم.';
 
   @override
   String supplierEarliestDeliveryAfterPickupTime(String time) {
@@ -4476,52 +4864,65 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get supplierNoFeasibleLearnerDeliveryWindowThis => 'لا توجد نافذة توصيل مناسبة للمتعلم. سينتظر هذا تأكيد المتعلم.';
+  String get supplierNoFeasibleLearnerDeliveryWindowThis =>
+      'لا توجد نافذة توصيل مناسبة للمتعلم. سينتظر هذا تأكيد المتعلم.';
 
   @override
-  String get supplierThisScheduleCanBeAcceptedDirectly => 'يمكن قبول هذا الجدول مباشرة.';
+  String get supplierThisScheduleCanBeAcceptedDirectly =>
+      'يمكن قبول هذا الجدول مباشرة.';
 
   @override
-  String get supplierThisDeliveryWindowIsNotFeasible => 'نافذة التوصيل هذه غير مناسبة بعد استلام المورد وفترة السفر. سيلزم تأكيد المتعلم.';
+  String get supplierThisDeliveryWindowIsNotFeasible =>
+      'نافذة التوصيل هذه غير مناسبة بعد استلام المورد وفترة السفر. سيلزم تأكيد المتعلم.';
 
   @override
-  String get supplierSelectedLearnerPreferredWindow => 'تم اختيار نافذة الاستلام المفضلة للمتعلم';
+  String get supplierSelectedLearnerPreferredWindow =>
+      'تم اختيار نافذة الاستلام المفضلة للمتعلم';
 
   @override
   String get supplierCustomProposedWindow => 'نافذة مقترحة مخصصة';
 
   @override
-  String get supplierLearnerPreferredPickupWindows => 'نوافذ الاستلام المفضلة للمتعلم';
+  String get supplierLearnerPreferredPickupWindows =>
+      'نوافذ الاستلام المفضلة للمتعلم';
 
   @override
-  String get supplierLearnerPreferredDeliveryWindows => 'نوافذ التوصيل المفضلة للمتعلم';
+  String get supplierLearnerPreferredDeliveryWindows =>
+      'نوافذ التوصيل المفضلة للمتعلم';
 
   @override
   String get supplierDeliveryNote => 'ملاحظة التوصيل';
 
   @override
-  String get supplierSelectedLearnerDeliveryWindowWillBe => 'سيتم استخدام نافذة التوصيل المفضلة للمتعلم عندما تكون ممكنة.';
+  String get supplierSelectedLearnerDeliveryWindowWillBe =>
+      'سيتم استخدام نافذة التوصيل المفضلة للمتعلم عندما تكون ممكنة.';
 
   @override
   String get supplierProposeCustomDeliveryWindow => 'اقتراح نافذة توصيل مخصصة';
 
   @override
-  String get supplierFlexibleLearnerNeedsDeliveryProposal => 'ترك المتعلّم توقيت التوصيل مفتوحًا. اقترح نافذة توصيل للقبول — ستُعتمد تلقائيًا إذا كانت مناسبة بعد الاستلام.';
+  String get supplierFlexibleLearnerNeedsDeliveryProposal =>
+      'ترك المتعلّم توقيت التوصيل مفتوحًا. اقترح نافذة توصيل للقبول — ستُعتمد تلقائيًا إذا كانت مناسبة بعد الاستلام.';
 
   @override
-  String get supplierProposedLearnerDeliveryWindow => 'نافذة التوصيل المقترحة للمتعلم';
+  String get supplierProposedLearnerDeliveryWindow =>
+      'نافذة التوصيل المقترحة للمتعلم';
 
   @override
-  String get supplierChooseTheProposedDeliveryDateAnd => 'اختر تاريخ ووقت التوصيل المقترح.';
+  String get supplierChooseTheProposedDeliveryDateAnd =>
+      'اختر تاريخ ووقت التوصيل المقترح.';
 
   @override
-  String get supplierProposedPickupTimeWaitingForLearner => 'وقت الاستلام المقترح — في انتظار تأكيد المتعلم';
+  String get supplierProposedPickupTimeWaitingForLearner =>
+      'وقت الاستلام المقترح — في انتظار تأكيد المتعلم';
 
   @override
-  String get supplierSchedulingConflictWaitingForLearnerConfirmation => 'تعارض في الجدولة — في انتظار تأكيد المتعلم';
+  String get supplierSchedulingConflictWaitingForLearnerConfirmation =>
+      'تعارض في الجدولة — في انتظار تأكيد المتعلم';
 
   @override
-  String get supplierRequestSubmittedAwaitingLearnerConfirmation => 'تم إرسال الطلب — في انتظار تأكيد المتعلم';
+  String get supplierRequestSubmittedAwaitingLearnerConfirmation =>
+      'تم إرسال الطلب — في انتظار تأكيد المتعلم';
 
   @override
   String get supplierStartTime => 'وقت البداية';
@@ -4545,7 +4946,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierPriceVerificationRequired => 'التحقق من السعر مطلوب';
 
   @override
-  String get supplierWithinApprovedCapVerifyPriceTo => 'ضمن الحد المعتمد — تحقق من السعر للنشر';
+  String get supplierWithinApprovedCapVerifyPriceTo =>
+      'ضمن الحد المعتمد — تحقق من السعر للنشر';
 
   @override
   String get supplierCategoryRequests => 'طلبات الفئات';
@@ -4579,7 +4981,11 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String supplierTodayTodayUpcomingUpcomingCompletedCompleted(String today, String upcoming, String completed) {
+  String supplierTodayTodayUpcomingUpcomingCompletedCompleted(
+    String today,
+    String upcoming,
+    String completed,
+  ) {
     return 'اليوم: $today   قادمة: $upcoming   مكتملة: $completed';
   }
 
@@ -4594,19 +5000,23 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get supplierChooseAPickupDateAndTime => 'اختر تاريخ استلام ونافذة زمنية.';
+  String get supplierChooseAPickupDateAndTime =>
+      'اختر تاريخ استلام ونافذة زمنية.';
 
   @override
   String get supplierSchedulePending => 'الجدول معلق';
 
   @override
-  String get supplierAcceptedReservationsWithPickupWindowsWill => 'ستظهر الحجوزات المقبولة مع نوافذ الاستلام هنا.';
+  String get supplierAcceptedReservationsWithPickupWindowsWill =>
+      'ستظهر الحجوزات المقبولة مع نوافذ الاستلام هنا.';
 
   @override
-  String get supplierRecentListingsWillAppearHereAfter => 'ستظهر الإدراجات الأخيرة هنا بعد إضافة مواد قابلة لإعادة الاستخدام.';
+  String get supplierRecentListingsWillAppearHereAfter =>
+      'ستظهر الإدراجات الأخيرة هنا بعد إضافة مواد قابلة لإعادة الاستخدام.';
 
   @override
-  String get supplierActivityFromReservationsAndNotificationsWill => 'سيجتمع هنا النشاط من الحجوزات والإشعارات.';
+  String get supplierActivityFromReservationsAndNotificationsWill =>
+      'سيجتمع هنا النشاط من الحجوزات والإشعارات.';
 
   @override
   String get supplierOrganizationProfile => 'ملف المؤسسة';
@@ -4638,13 +5048,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierListingPolicyUnavailable => 'سياسة الإدراج غير متاحة.';
 
   @override
-  String get supplierUseYourCurrentLocationOrEnter => 'استخدم موقعك الحالي أو أدخل تفاصيل الاستلام يدوياً.';
+  String get supplierUseYourCurrentLocationOrEnter =>
+      'استخدم موقعك الحالي أو أدخل تفاصيل الاستلام يدوياً.';
 
   @override
-  String get supplierTapTheMapToPlaceThe => 'اضغط على الخريطة لوضع دبوس الاستلام';
+  String get supplierTapTheMapToPlaceThe =>
+      'اضغط على الخريطة لوضع دبوس الاستلام';
 
   @override
-  String get supplierPickupPinSelectedOnMap => 'تم تحديد دبوس الاستلام على الخريطة';
+  String get supplierPickupPinSelectedOnMap =>
+      'تم تحديد دبوس الاستلام على الخريطة';
 
   @override
   String get supplierPickupType => 'نوع الاستلام';
@@ -4673,7 +5086,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierNoDeclineReasonProvided => 'لم يُقدَّم سبب للرفض.';
 
   @override
-  String get supplierThisRequestExpiredBecauseYouDid => 'انتهت صلاحية هذا الطلب لأنك لم تقبل أو ترفض في الوقت المحدد.';
+  String get supplierThisRequestExpiredBecauseYouDid =>
+      'انتهت صلاحية هذا الطلب لأنك لم تقبل أو ترفض في الوقت المحدد.';
 
   @override
   String get supplierSupplierNote => 'ملاحظة المورد';
@@ -4688,16 +5102,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierDismiss => 'إغلاق';
 
   @override
-  String get supplierAccountApprovedBanner => 'تمت الموافقة على حساب المورد. يمكنك الآن نشر المواد.';
+  String get supplierAccountApprovedBanner =>
+      'تمت الموافقة على حساب المورد. يمكنك الآن نشر المواد.';
 
   @override
-  String get supplierWaitingForAdminApprovalPublish => 'حساب المورد بانتظار موافقة الإدارة. يمكنك نشر المواد بعد الموافقة.';
+  String get supplierWaitingForAdminApprovalPublish =>
+      'حساب المورد بانتظار موافقة الإدارة. يمكنك نشر المواد بعد الموافقة.';
 
   @override
   String get supplierCommonSupplierTasks => 'مهام المورد الشائعة';
 
   @override
-  String get supplierActivityWillAppearAsLearners => 'سيظهر النشاط هنا عندما يطلب المتعلمون موادك ويجمعونها.';
+  String get supplierActivityWillAppearAsLearners =>
+      'سيظهر النشاط هنا عندما يطلب المتعلمون موادك ويجمعونها.';
 
   @override
   String supplierPendingReservationsWaitingResponse(int count) {
@@ -4745,13 +5162,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierBasicInformation => 'المعلومات الأساسية';
 
   @override
-  String get supplierTellLearnersWhatMaterial => 'أخبر المتعلمين عن المادة التي تقدمها.';
+  String get supplierTellLearnersWhatMaterial =>
+      'أخبر المتعلمين عن المادة التي تقدمها.';
 
   @override
-  String get supplierWhyExistingCategoriesDoNotFit => 'لماذا لا تناسب الفئات الحالية';
+  String get supplierWhyExistingCategoriesDoNotFit =>
+      'لماذا لا تناسب الفئات الحالية';
 
   @override
-  String get supplierExplainMaterialKindAndWhy => 'اشرح نوع المادة ولماذا لا تناسب أي من الفئات الحالية.';
+  String get supplierExplainMaterialKindAndWhy =>
+      'اشرح نوع المادة ولماذا لا تناسب أي من الفئات الحالية.';
 
   @override
   String get supplierMaterialTypeSlashName => 'نوع / اسم المادة';
@@ -4760,10 +5180,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierSearchOrTypeMaterialName => 'ابحث أو اكتب اسم المادة';
 
   @override
-  String get supplierClearSpecificTitlesHelp => 'العناوين الواضحة والمحددة تساعد المتعلمين على فهم العنصر.';
+  String get supplierClearSpecificTitlesHelp =>
+      'العناوين الواضحة والمحددة تساعد المتعلمين على فهم العنصر.';
 
   @override
-  String get supplierIncludeDetailsHelpLearners => 'أضف تفاصيل تساعد المتعلمين على معرفة ما إذا كانت المادة مناسبة لمشروعهم.';
+  String get supplierIncludeDetailsHelpLearners =>
+      'أضف تفاصيل تساعد المتعلمين على معرفة ما إذا كانت المادة مناسبة لمشروعهم.';
 
   @override
   String get supplierSetQuantityAndPrice => 'حدد الكمية المتاحة والسعر.';
@@ -4772,10 +5194,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierPickupAndDelivery => 'الاستلام والتوصيل';
 
   @override
-  String get supplierSetHowLearnersReceive => 'حدد كيف يمكن للمتعلمين استلام هذه المادة.';
+  String get supplierSetHowLearnersReceive =>
+      'حدد كيف يمكن للمتعلمين استلام هذه المادة.';
 
   @override
-  String get supplierPhotosSectionSubtitle => 'أضف صورًا لمساعدة المتعلمين على رؤية المادة بوضوح.';
+  String get supplierPhotosSectionSubtitle =>
+      'أضف صورًا لمساعدة المتعلمين على رؤية المادة بوضوح.';
 
   @override
   String get supplierChecklist => 'قائمة التحقق';
@@ -4802,13 +5226,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierAddQuantityUnitChecklist => 'أضف الكمية والوحدة';
 
   @override
-  String get supplierSelectFreeOrPriceChecklist => 'اختر مجاني أو أدخل سعرًا صالحًا';
+  String get supplierSelectFreeOrPriceChecklist =>
+      'اختر مجاني أو أدخل سعرًا صالحًا';
 
   @override
-  String get supplierVerifyPaidPriceChecklist => 'تحقق من السعر للمواد المدفوعة';
+  String get supplierVerifyPaidPriceChecklist =>
+      'تحقق من السعر للمواد المدفوعة';
 
   @override
-  String get supplierChooseFulfillmentChecklist => 'اختر خيار تسليم واحدًا على الأقل';
+  String get supplierChooseFulfillmentChecklist =>
+      'اختر خيار تسليم واحدًا على الأقل';
 
   @override
   String get supplierAddPhotoChecklist => 'أضف صورة واحدة على الأقل';
@@ -4820,37 +5247,46 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierImageUploadFailed => 'فشل رفع الصورة';
 
   @override
-  String get supplierEnterMaterialNameBeforeCategory => 'أدخل اسم المادة قبل طلب فئة جديدة.';
+  String get supplierEnterMaterialNameBeforeCategory =>
+      'أدخل اسم المادة قبل طلب فئة جديدة.';
 
   @override
-  String get supplierDescribeMaterialForCategory => 'صف المادة حتى تتمكن الإدارة من مراجعة طلب الفئة.';
+  String get supplierDescribeMaterialForCategory =>
+      'صف المادة حتى تتمكن الإدارة من مراجعة طلب الفئة.';
 
   @override
   String get supplierEnterRequestedCategoryName => 'أدخل اسم الفئة المطلوبة.';
 
   @override
-  String get supplierExplainWhyCategoriesDoNotFit => 'اشرح لماذا لا تناسب الفئات الحالية.';
+  String get supplierExplainWhyCategoriesDoNotFit =>
+      'اشرح لماذا لا تناسب الفئات الحالية.';
 
   @override
-  String get supplierEnterValidQuantityForMaterial => 'أدخل كمية صالحة لهذه المادة.';
+  String get supplierEnterValidQuantityForMaterial =>
+      'أدخل كمية صالحة لهذه المادة.';
 
   @override
   String get supplierEnterUnitForMaterial => 'أدخل وحدة هذه المادة.';
 
   @override
-  String get supplierCouldNotUploadImages => 'تعذر رفع الصور. يرجى المحاولة مرة أخرى.';
+  String get supplierCouldNotUploadImages =>
+      'تعذر رفع الصور. يرجى المحاولة مرة أخرى.';
 
   @override
-  String get supplierCategoryStillPendingReview => 'طلب الفئة ما زال بانتظار مراجعة الإدارة.';
+  String get supplierCategoryStillPendingReview =>
+      'طلب الفئة ما زال بانتظار مراجعة الإدارة.';
 
   @override
-  String get supplierCategoryNoLongerAvailable => 'الفئة المحددة غير متاحة الآن. حدّث الفئات واختر مرة أخرى.';
+  String get supplierCategoryNoLongerAvailable =>
+      'الفئة المحددة غير متاحة الآن. حدّث الفئات واختر مرة أخرى.';
 
   @override
-  String get supplierDetailsNotSavedComplete => 'لم تُحفظ بعض تفاصيل المادة. يرجى إكمال الحقول الناقصة.';
+  String get supplierDetailsNotSavedComplete =>
+      'لم تُحفظ بعض تفاصيل المادة. يرجى إكمال الحقول الناقصة.';
 
   @override
-  String get supplierCouldNotLoadSavedDraft => 'تعذر تحميل مسودة الإعلان المحفوظة. يرجى المحاولة مرة أخرى.';
+  String get supplierCouldNotLoadSavedDraft =>
+      'تعذر تحميل مسودة الإعلان المحفوظة. يرجى المحاولة مرة أخرى.';
 
   @override
   String supplierUseForListing(String name) {
@@ -4863,28 +5299,36 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get supplierCategoryRejectedChooseExisting => 'تم رفض طلب الفئة. اختر فئة موجودة وتابع.';
+  String get supplierCategoryRejectedChooseExisting =>
+      'تم رفض طلب الفئة. اختر فئة موجودة وتابع.';
 
   @override
-  String get supplierResolveCategoryBeforePriceReview => 'أنهِ طلب الفئة قبل إرسال مراجعة السعر.';
+  String get supplierResolveCategoryBeforePriceReview =>
+      'أنهِ طلب الفئة قبل إرسال مراجعة السعر.';
 
   @override
-  String get supplierSelectValidCategoryBeforePriceReview => 'يرجى اختيار فئة صالحة قبل إرسال مراجعة السعر.';
+  String get supplierSelectValidCategoryBeforePriceReview =>
+      'يرجى اختيار فئة صالحة قبل إرسال مراجعة السعر.';
 
   @override
-  String get supplierEnterMaterialNameBeforePriceReview => 'أدخل اسم المادة قبل إرسال مراجعة السعر.';
+  String get supplierEnterMaterialNameBeforePriceReview =>
+      'أدخل اسم المادة قبل إرسال مراجعة السعر.';
 
   @override
-  String get supplierEnterDescriptionBeforePriceReview => 'أدخل وصف المادة قبل إرسال مراجعة السعر.';
+  String get supplierEnterDescriptionBeforePriceReview =>
+      'أدخل وصف المادة قبل إرسال مراجعة السعر.';
 
   @override
-  String get supplierQuantityUnitRequiredBeforePriceReview => 'الكمية والوحدة مطلوبتان قبل إرسال مراجعة السعر.';
+  String get supplierQuantityUnitRequiredBeforePriceReview =>
+      'الكمية والوحدة مطلوبتان قبل إرسال مراجعة السعر.';
 
   @override
-  String get supplierEnterValidPaidPriceBeforePriceReview => 'أدخل سعرًا مدفوعًا صالحًا قبل إرسال مراجعة السعر.';
+  String get supplierEnterValidPaidPriceBeforePriceReview =>
+      'أدخل سعرًا مدفوعًا صالحًا قبل إرسال مراجعة السعر.';
 
   @override
-  String get supplierEnterMaterialNameBeforePriceReview2 => 'أدخل اسم المادة قبل إرسال مراجعة السعر.';
+  String get supplierEnterMaterialNameBeforePriceReview2 =>
+      'أدخل اسم المادة قبل إرسال مراجعة السعر.';
 
   @override
   String supplierPriceAcceptedMaxAllowed(String max) {
@@ -4902,16 +5346,20 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get supplierPaidMaterialNeedsPriceReview => 'تحتاج هذه المادة المدفوعة إلى مراجعة سعر من الإدارة قبل النشر.';
+  String get supplierPaidMaterialNeedsPriceReview =>
+      'تحتاج هذه المادة المدفوعة إلى مراجعة سعر من الإدارة قبل النشر.';
 
   @override
-  String get supplierMaterialBeingPublished => 'جاري نشر هذه المادة. يرجى الانتظار قليلًا.';
+  String get supplierMaterialBeingPublished =>
+      'جاري نشر هذه المادة. يرجى الانتظار قليلًا.';
 
   @override
-  String get supplierPublishAttemptMismatch => 'محاولة النشر لا تطابق الطلب المحفوظ. أعد تعيين النموذج أو ابدأ من صفحة إضافة مادة جديدة.';
+  String get supplierPublishAttemptMismatch =>
+      'محاولة النشر لا تطابق الطلب المحفوظ. أعد تعيين النموذج أو ابدأ من صفحة إضافة مادة جديدة.';
 
   @override
-  String get supplierSelectValidCategoryBeforePublishing => 'يرجى اختيار فئة صالحة قبل النشر.';
+  String get supplierSelectValidCategoryBeforePublishing =>
+      'يرجى اختيار فئة صالحة قبل النشر.';
 
   @override
   String get supplierEnterNumberGreaterThanZero => 'أدخل رقمًا أكبر من صفر';
@@ -4922,13 +5370,15 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get supplierListingTitleHintExample => 'مثال: مجموعات Breadboard نصف الحجم (دفعة احتياطية)';
+  String get supplierListingTitleHintExample =>
+      'مثال: مجموعات Breadboard نصف الحجم (دفعة احتياطية)';
 
   @override
   String get supplierInventoryOverview => 'نظرة عامة على المخزون';
 
   @override
-  String get supplierMonitorMaterialAvailability => 'راقب توفر المواد والطلبات وحالة الإعلانات.';
+  String get supplierMonitorMaterialAvailability =>
+      'راقب توفر المواد والطلبات وحالة الإعلانات.';
 
   @override
   String get supplierClearSearch => 'مسح البحث';
@@ -4957,7 +5407,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierMaterialTitlePlaceholder => 'سيظهر عنوان المادة هنا';
 
   @override
-  String get supplierShortDescriptionPlaceholder => 'سيظهر وصف قصير لمادتك هنا.';
+  String get supplierShortDescriptionPlaceholder =>
+      'سيظهر وصف قصير لمادتك هنا.';
 
   @override
   String get supplierQuantityPlaceholder => 'ستظهر الكمية هنا';
@@ -5018,7 +5469,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get supplierReuseHistoryWillAppear => 'سيظهر سجل إعادة الاستخدام هنا بعد اكتمال الحجوزات.';
+  String get supplierReuseHistoryWillAppear =>
+      'سيظهر سجل إعادة الاستخدام هنا بعد اكتمال الحجوزات.';
 
   @override
   String supplierAvailableOfTotal(String available, String total, String unit) {
@@ -5029,13 +5481,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierAccessDenied => 'الوصول مرفوض';
 
   @override
-  String get supplierYouNeedASupplierAccountTo => 'تحتاج حساب مورد للوصول إلى هذه المنطقة.';
+  String get supplierYouNeedASupplierAccountTo =>
+      'تحتاج حساب مورد للوصول إلى هذه المنطقة.';
 
   @override
   String get supplierSupplierAccessRequired => 'مطلوب وصول المورد';
 
   @override
-  String get supplierYouNeedASupplierRoleTo => 'تحتاج دور المورد للوصول إلى بوابة المورد.';
+  String get supplierYouNeedASupplierRoleTo =>
+      'تحتاج دور المورد للوصول إلى بوابة المورد.';
 
   @override
   String get supplierGoToHome => 'الذهاب للرئيسية';
@@ -5157,7 +5611,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierActionReportDriverNoShow => 'الإبلاغ عن عدم حضور السائق';
 
   @override
-  String get supplierActionSubmitRecoveryWindow => 'إرسال نافذة استلام للاستعادة';
+  String get supplierActionSubmitRecoveryWindow =>
+      'إرسال نافذة استلام للاستعادة';
 
   @override
   String get supplierConfirmPickup => 'تأكيد الاستلام';
@@ -5303,13 +5758,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierAdminRecoveryInProgress => 'استعادة إدارية قيد التنفيذ';
 
   @override
-  String get supplierDeliveryHandledByDriver => 'يُدار هذا الحجز عبر التوصيل. السائق سيُعلّمه مكتملًا.';
+  String get supplierDeliveryHandledByDriver =>
+      'يُدار هذا الحجز عبر التوصيل. السائق سيُعلّمه مكتملًا.';
 
   @override
-  String get supplierMessagesWorkspaceNote => 'ستبقى رسائل الطلب متاحة في مساحة عمل الطلب.';
+  String get supplierMessagesWorkspaceNote =>
+      'ستبقى رسائل الطلب متاحة في مساحة عمل الطلب.';
 
   @override
-  String get supplierNoFurtherActionRequired => 'لا يلزم أي إجراء إضافي لهذا الطلب.';
+  String get supplierNoFurtherActionRequired =>
+      'لا يلزم أي إجراء إضافي لهذا الطلب.';
 
   @override
   String get supplierRequestDetails => 'تفاصيل الطلب';
@@ -5327,7 +5785,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierMarkLearnerNoShowTitle => 'تسجيل عدم حضور المتعلم؟';
 
   @override
-  String get supplierMarkLearnerNoShowMessage => 'سيُسجّل عدم حضور المتعلم لهذا الحجز.';
+  String get supplierMarkLearnerNoShowMessage =>
+      'سيُسجّل عدم حضور المتعلم لهذا الحجز.';
 
   @override
   String get supplierMarkLearnerNoShowConfirm => 'تسجيل عدم الحضور';
@@ -5373,7 +5832,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierPendingReschedule => 'إعادة جدولة معلقة';
 
   @override
-  String get supplierNoWindowProposed => 'لا توجد نافذة استلام أو توصيل مقترحة حاليًا.';
+  String get supplierNoWindowProposed =>
+      'لا توجد نافذة استلام أو توصيل مقترحة حاليًا.';
 
   @override
   String get supplierSchedulingContext => 'سياق الجدولة';
@@ -5384,7 +5844,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get supplierNoWindowConfirmedPickup => 'لم تُؤكَّد نافذة استلام أو توصيل لهذا الطلب.';
+  String get supplierNoWindowConfirmedPickup =>
+      'لم تُؤكَّد نافذة استلام أو توصيل لهذا الطلب.';
 
   @override
   String supplierNoWindowConfirmedBeforeTerminal(String verb) {
@@ -5404,13 +5865,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierFailureRecovery => 'فشل / استعادة';
 
   @override
-  String get supplierDeliveryNotCreated => 'لم يُختَر التوصيل أو يُنشأ لهذا الحجز.';
+  String get supplierDeliveryNotCreated =>
+      'لم يُختَر التوصيل أو يُنشأ لهذا الحجز.';
 
   @override
   String get supplierAttentionTitle => 'الانتباه';
 
   @override
-  String get supplierAwaitingAdminResolution => 'هذا الطلب بانتظار حل إداري. عناصر تحكم المورد للقراءة فقط ما لم يُتاح إجراء.';
+  String get supplierAwaitingAdminResolution =>
+      'هذا الطلب بانتظار حل إداري. عناصر تحكم المورد للقراءة فقط ما لم يُتاح إجراء.';
 
   @override
   String get supplierIncidentAdminReview => 'حادثة / مراجعة إدارية';
@@ -5477,7 +5940,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierCouldNotLoadRequestTitle => 'تعذّر تحميل الطلب';
 
   @override
-  String get supplierCouldNotLoadRequest => 'تعذّر تحميل هذا الطلب. حاول مرة أخرى.';
+  String get supplierCouldNotLoadRequest =>
+      'تعذّر تحميل هذا الطلب. حاول مرة أخرى.';
 
   @override
   String get supplierFulfillmentLabel => 'التنفيذ';
@@ -5510,7 +5974,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierConfirmedDeliveryWindow => 'موعد التوصيل المؤكد';
 
   @override
-  String get supplierSupplierDeliveryPickupWindow => 'موعد استلام المورّد للتوصيل';
+  String get supplierSupplierDeliveryPickupWindow =>
+      'موعد استلام المورّد للتوصيل';
 
   @override
   String get supplierNewWindowAwaiting => 'موعد جديد بانتظار الرد التالي.';
@@ -5538,22 +6003,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierHistoryEventDeclinedBySupplier => 'رفض المورد الحجز';
 
   @override
-  String get supplierHistoryEventPickupCompletedBySupplier => 'أكمل المورد الاستلام';
+  String get supplierHistoryEventPickupCompletedBySupplier =>
+      'أكمل المورد الاستلام';
 
   @override
-  String get supplierHistoryEventSupplierRequestedReschedule => 'طلب المورد إعادة جدولة';
+  String get supplierHistoryEventSupplierRequestedReschedule =>
+      'طلب المورد إعادة جدولة';
 
   @override
-  String get supplierHistoryEventSupplierAcceptedLearnerReschedule => 'قبل المورد اقتراح إعادة الجدولة من المتعلم';
+  String get supplierHistoryEventSupplierAcceptedLearnerReschedule =>
+      'قبل المورد اقتراح إعادة الجدولة من المتعلم';
 
   @override
   String get supplierHistoryEventSupplierCancelled => 'ألغى المورد الحجز';
 
   @override
-  String get supplierHistoryEventSupplierCancelledPendingReschedule => 'ألغى المورد الحجز بعد طلب إعادة الجدولة';
+  String get supplierHistoryEventSupplierCancelledPendingReschedule =>
+      'ألغى المورد الحجز بعد طلب إعادة الجدولة';
 
   @override
-  String get supplierHistoryEventReportedAfterMissedPickup => 'أُبلغ للمشرف بعد فوات نافذة الاستلام';
+  String get supplierHistoryEventReportedAfterMissedPickup =>
+      'أُبلغ للمشرف بعد فوات نافذة الاستلام';
 
   @override
   String get supplierHistoryEventRequestedByLearner => 'طلب المتعلم الحجز';
@@ -5562,88 +6032,116 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierHistoryEventCancelledByLearner => 'ألغى المتعلم الحجز';
 
   @override
-  String get supplierHistoryEventCancelledByLearnerAwaitingConfirmation => 'ألغى المتعلم الحجز أثناء انتظار التأكيد';
+  String get supplierHistoryEventCancelledByLearnerAwaitingConfirmation =>
+      'ألغى المتعلم الحجز أثناء انتظار التأكيد';
 
   @override
-  String get supplierHistoryEventLearnerAcceptedSupplierPickupWindow => 'قبل المتعلم نافذة الاستلام المقترحة من المورد';
+  String get supplierHistoryEventLearnerAcceptedSupplierPickupWindow =>
+      'قبل المتعلم نافذة الاستلام المقترحة من المورد';
 
   @override
-  String get supplierHistoryEventLearnerConfirmedDeliveryWindow => 'أكد المتعلم نافذة التوصيل المناسبة';
+  String get supplierHistoryEventLearnerConfirmedDeliveryWindow =>
+      'أكد المتعلم نافذة التوصيل المناسبة';
 
   @override
-  String get supplierHistoryEventLearnerRequestedReschedule => 'طلب المتعلم إعادة جدولة';
+  String get supplierHistoryEventLearnerRequestedReschedule =>
+      'طلب المتعلم إعادة جدولة';
 
   @override
-  String get supplierHistoryEventLearnerCancelledAfterReschedule => 'ألغى المتعلم الحجز بعد طلب إعادة الجدولة';
+  String get supplierHistoryEventLearnerCancelledAfterReschedule =>
+      'ألغى المتعلم الحجز بعد طلب إعادة الجدولة';
 
   @override
-  String get supplierHistoryEventLearnerNoShowAfterPickup => 'لم يحضر المتعلم بعد نافذة الاستلام';
+  String get supplierHistoryEventLearnerNoShowAfterPickup =>
+      'لم يحضر المتعلم بعد نافذة الاستلام';
 
   @override
-  String get supplierHistoryEventLearnerReportedSupplierIssue => 'أبلغ المتعلم عن مشكلة مع المورد بعد نافذة الاستلام';
+  String get supplierHistoryEventLearnerReportedSupplierIssue =>
+      'أبلغ المتعلم عن مشكلة مع المورد بعد نافذة الاستلام';
 
   @override
-  String get supplierHistoryEventPendingExpiredAfterPreferredWindow => 'انتهت صلاحية الحجز بعد مرور آخر نافذة جدولة مفضلة دون رد من المورد';
+  String get supplierHistoryEventPendingExpiredAfterPreferredWindow =>
+      'انتهت صلاحية الحجز بعد مرور آخر نافذة جدولة مفضلة دون رد من المورد';
 
   @override
-  String get supplierHistoryEventPendingExpiredAfterTimeout => 'انتهت صلاحية الحجز بعد انتهاء المهلة دون رد من المورد';
+  String get supplierHistoryEventPendingExpiredAfterTimeout =>
+      'انتهت صلاحية الحجز بعد انتهاء المهلة دون رد من المورد';
 
   @override
-  String get supplierHistoryEventMissedPickupAutoExpired => 'انتهت صلاحية الحجز تلقائيًا بعد فوات نافذة الاستلام';
+  String get supplierHistoryEventMissedPickupAutoExpired =>
+      'انتهت صلاحية الحجز تلقائيًا بعد فوات نافذة الاستلام';
 
   @override
   String get supplierHistoryEventNoDriverAvailable => 'لا يوجد سائق متاح';
 
   @override
-  String get supplierHistoryEventNoDriverAutoEscalated => 'تصعيد تلقائي لعدم توفر سائق';
+  String get supplierHistoryEventNoDriverAutoEscalated =>
+      'تصعيد تلقائي لعدم توفر سائق';
 
   @override
-  String get supplierHistoryEventAssignedDriverPickupAutoEscalated => 'تصعيد تلقائي لتأخر سائق معيّن عند الاستلام';
+  String get supplierHistoryEventAssignedDriverPickupAutoEscalated =>
+      'تصعيد تلقائي لتأخر سائق معيّن عند الاستلام';
 
   @override
-  String get supplierHistoryEventDeliveryPickupWindowExpired => 'انتهت نافذة استلام التوصيل';
+  String get supplierHistoryEventDeliveryPickupWindowExpired =>
+      'انتهت نافذة استلام التوصيل';
 
   @override
-  String get supplierHistoryEventDriverNoShowAtSupplier => 'لم يحضر السائق لاستلام المورد';
+  String get supplierHistoryEventDriverNoShowAtSupplier =>
+      'لم يحضر السائق لاستلام المورد';
 
   @override
-  String get supplierHistoryEventDriverNoShowReportedBySupplier => 'أبلغ المورد عن عدم حضور السائق';
+  String get supplierHistoryEventDriverNoShowReportedBySupplier =>
+      'أبلغ المورد عن عدم حضور السائق';
 
   @override
-  String get supplierHistoryEventSupplierMarkedPickupExpired => 'علّم المورد نافذة الاستلام منتهية';
+  String get supplierHistoryEventSupplierMarkedPickupExpired =>
+      'علّم المورد نافذة الاستلام منتهية';
 
   @override
-  String get supplierHistoryEventSupplierPickupWindowExpiredNoDriver => 'انتهت نافذة استلام المورد دون تعيين سائق';
+  String get supplierHistoryEventSupplierPickupWindowExpiredNoDriver =>
+      'انتهت نافذة استلام المورد دون تعيين سائق';
 
   @override
-  String get supplierHistoryEventDeliveryCompletedByDriver => 'أكمل السائق التوصيل';
+  String get supplierHistoryEventDeliveryCompletedByDriver =>
+      'أكمل السائق التوصيل';
 
   @override
-  String get supplierHistoryEventGroupedDeliveryCompletedByDriver => 'أكمل السائق التوصيل المجمّع';
+  String get supplierHistoryEventGroupedDeliveryCompletedByDriver =>
+      'أكمل السائق التوصيل المجمّع';
 
   @override
-  String get supplierHistoryEventSupplierSubmittedPickupWindowNoDriver => 'قدّم المورد نافذة استلام جديدة بعد عدم توفر سائق';
+  String get supplierHistoryEventSupplierSubmittedPickupWindowNoDriver =>
+      'قدّم المورد نافذة استلام جديدة بعد عدم توفر سائق';
 
   @override
-  String get supplierHistoryEventSupplierSubmittedReplacementPickupWindow => 'قدّم المورد نافذة استلام بديلة بعد استلام جزئي';
+  String get supplierHistoryEventSupplierSubmittedReplacementPickupWindow =>
+      'قدّم المورد نافذة استلام بديلة بعد استلام جزئي';
 
   @override
-  String get supplierHistoryEventSupplierSubmittedPickupWindowAdminRecovery => 'قدّم المورد نافذة استلام جديدة بعد استرداد إداري';
+  String get supplierHistoryEventSupplierSubmittedPickupWindowAdminRecovery =>
+      'قدّم المورد نافذة استلام جديدة بعد استرداد إداري';
 
   @override
-  String get supplierHistoryEventAdminRequestedNewPickupWindowNoDriver => 'طلب المشرف من المورد اختيار نافذة استلام جديدة بعد عدم توفر سائق';
+  String get supplierHistoryEventAdminRequestedNewPickupWindowNoDriver =>
+      'طلب المشرف من المورد اختيار نافذة استلام جديدة بعد عدم توفر سائق';
 
   @override
-  String get supplierHistoryEventAdminRequestedNewPickupWindowPickupIncomplete => 'طلب المشرف من المورد اختيار نافذة استلام جديدة بعد عدم اكتمال الاستلام';
+  String
+  get supplierHistoryEventAdminRequestedNewPickupWindowPickupIncomplete =>
+      'طلب المشرف من المورد اختيار نافذة استلام جديدة بعد عدم اكتمال الاستلام';
 
   @override
-  String get supplierHistoryEventAdminCancelledNoDriver => 'ألغى المشرف الحجز وأفرج عن الحجز بعد عدم توفر سائق';
+  String get supplierHistoryEventAdminCancelledNoDriver =>
+      'ألغى المشرف الحجز وأفرج عن الحجز بعد عدم توفر سائق';
 
   @override
-  String get supplierHistoryEventAdminCancelledPickupIncomplete => 'ألغى المشرف الحجز وأفرج عن الحجز بعد عدم اكتمال الاستلام';
+  String get supplierHistoryEventAdminCancelledPickupIncomplete =>
+      'ألغى المشرف الحجز وأفرج عن الحجز بعد عدم اكتمال الاستلام';
 
   @override
-  String get supplierHistoryEventFulfillmentIssueReported => 'أُبلغ عن مشكلة في التنفيذ';
+  String get supplierHistoryEventFulfillmentIssueReported =>
+      'أُبلغ عن مشكلة في التنفيذ';
 
   @override
   String get supplierWorkflowField => 'سير العمل';
@@ -5658,13 +6156,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierSendRequest => 'إرسال الطلب';
 
   @override
-  String get supplierRescheduleRequestSent => 'أُرسل طلب إعادة الجدولة إلى المتعلم.';
+  String get supplierRescheduleRequestSent =>
+      'أُرسل طلب إعادة الجدولة إلى المتعلم.';
 
   @override
   String get supplierChooseNewPickupWindow => 'اختر نافذة استلام جديدة';
 
   @override
-  String get supplierPickupWindowSubmittedWaiting => 'أُرسلت نافذة الاستلام. بانتظار السائق مجددًا.';
+  String get supplierPickupWindowSubmittedWaiting =>
+      'أُرسلت نافذة الاستلام. بانتظار السائق مجددًا.';
 
   @override
   String get supplierNewPickupTimeAccepted => 'قُبل وقت الاستلام الجديد.';
@@ -5676,7 +6176,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierReportToAdminTitle => 'الإبلاغ للمشرف';
 
   @override
-  String get supplierReportToAdminMessage => 'أرسل بلاغًا للمراجعة الإدارية. سيُغلق الحجز.';
+  String get supplierReportToAdminMessage =>
+      'أرسل بلاغًا للمراجعة الإدارية. سيُغلق الحجز.';
 
   @override
   String get supplierReportAndClose => 'الإبلاغ والإغلاق';
@@ -5694,19 +6195,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierMarkPickupExpiredTitle => 'تعليم نافذة الاستلام منتهية';
 
   @override
-  String get supplierMarkPickupExpiredMessage => 'لم يقبل أي سائق هذا التوصيل قبل انتهاء نافذة استلام المورد. سيُغلق محاولة التوصيل ويُحال للمراجعة الإدارية.';
+  String get supplierMarkPickupExpiredMessage =>
+      'لم يقبل أي سائق هذا التوصيل قبل انتهاء نافذة استلام المورد. سيُغلق محاولة التوصيل ويُحال للمراجعة الإدارية.';
 
   @override
   String get supplierMarkExpired => 'تعليم منتهيًا';
 
   @override
-  String get supplierPickupExpiredAdminReview => 'عُلّمت نافذة الاستلام منتهية. المراجعة الإدارية قيد التنفيذ.';
+  String get supplierPickupExpiredAdminReview =>
+      'عُلّمت نافذة الاستلام منتهية. المراجعة الإدارية قيد التنفيذ.';
 
   @override
   String get supplierReportNoDriverTitle => 'الإبلاغ عن عدم توفر سائق';
 
   @override
-  String get supplierReportNoDriverHint => 'صف سبب عدم قبول أي سائق لهذا التوصيل';
+  String get supplierReportNoDriverHint =>
+      'صف سبب عدم قبول أي سائق لهذا التوصيل';
 
   @override
   String get supplierNoDriverReported => 'أُبلغ عن حالة عدم توفر سائق للمشرف.';
@@ -5724,13 +6228,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierPickupConfirmationCodeLabel => 'رمز تأكيد الاستلام';
 
   @override
-  String get supplierPickupConfirmationCodeHint => 'أدخل رمز تأكيد الاستلام الذي يعطيك إياه المتعلم عند استلام المادة.';
+  String get supplierPickupConfirmationCodeHint =>
+      'أدخل رمز تأكيد الاستلام الذي يعطيك إياه المتعلم عند استلام المادة.';
 
   @override
-  String get supplierPickupConfirmationCodeError => 'أدخل رمز الاستلام المكوّن من 6 أرقام من المتعلم.';
+  String get supplierPickupConfirmationCodeError =>
+      'أدخل رمز الاستلام المكوّن من 6 أرقام من المتعلم.';
 
   @override
-  String get supplierDeliveryWindowMustStartFuture => 'يجب أن تبدأ نافذة التوصيل في المستقبل.';
+  String get supplierDeliveryWindowMustStartFuture =>
+      'يجب أن تبدأ نافذة التوصيل في المستقبل.';
 
   @override
   String get supplierInboxRefreshFailed => 'تعذّر تحديث الطلبات الواردة.';
@@ -5739,40 +6246,50 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierEmptyAllCaughtUp => 'أنت على اطلاع بكل شيء';
 
   @override
-  String get supplierEmptyNoWaitingLearnerSubtitle => 'لا توجد طلبات تحتاج ردك حاليًا.';
+  String get supplierEmptyNoWaitingLearnerSubtitle =>
+      'لا توجد طلبات تحتاج ردك حاليًا.';
 
   @override
-  String get supplierEmptyNoWaitingLearner => 'لا توجد طلبات بانتظار تأكيد المتعلم.';
+  String get supplierEmptyNoWaitingLearner =>
+      'لا توجد طلبات بانتظار تأكيد المتعلم.';
 
   @override
   String get supplierEmptyNoActiveFulfillment => 'لا استلامات أو توصيلات نشطة.';
 
   @override
-  String get supplierEmptyNoAdminReview => 'لا توجد طلبات قيد المراجعة الإدارية.';
+  String get supplierEmptyNoAdminReview =>
+      'لا توجد طلبات قيد المراجعة الإدارية.';
 
   @override
-  String get supplierEmptyNoTerminalHistory => 'لم يُعثر على طلبات مكتملة أو مغلقة.';
+  String get supplierEmptyNoTerminalHistory =>
+      'لم يُعثر على طلبات مكتملة أو مغلقة.';
 
   @override
-  String get supplierEmptyNoFilterMatch => 'لا توجد طلبات تطابق الفلاتر المحددة.';
+  String get supplierEmptyNoFilterMatch =>
+      'لا توجد طلبات تطابق الفلاتر المحددة.';
 
   @override
-  String get supplierIncidentsDriverNotCompletedPickup => 'لم يُكمل السائق المعيّن الاستلام من المورد بعد انتهاء النافذة. أبلغ عن عدم حضور السائق لمراجعته من المشرف.';
+  String get supplierIncidentsDriverNotCompletedPickup =>
+      'لم يُكمل السائق المعيّن الاستلام من المورد بعد انتهاء النافذة. أبلغ عن عدم حضور السائق لمراجعته من المشرف.';
 
   @override
-  String get supplierIncidentsNoDriverBeforeWindow => 'لم يقبل أي سائق هذا التوصيل قبل انتهاء نافذة استلام المورد. أبلغ لمراجعته من المشرف.';
+  String get supplierIncidentsNoDriverBeforeWindow =>
+      'لم يقبل أي سائق هذا التوصيل قبل انتهاء نافذة استلام المورد. أبلغ لمراجعته من المشرف.';
 
   @override
-  String get supplierIncidentsNoDriverWaitHint => 'لا يوجد سائق بعد. يمكنك الإبلاغ عن عدم توفر سائق بعد 30 دقيقة من انتهاء نافذة الاستلام المجدولة.';
+  String get supplierIncidentsNoDriverWaitHint =>
+      'لا يوجد سائق بعد. يمكنك الإبلاغ عن عدم توفر سائق بعد 30 دقيقة من انتهاء نافذة الاستلام المجدولة.';
 
   @override
   String get supplierIncidentsReportNoDriver => 'الإبلاغ عن عدم توفر سائق';
 
   @override
-  String get supplierIncidentsReportDriverNoShow => 'الإبلاغ عن عدم حضور السائق';
+  String get supplierIncidentsReportDriverNoShow =>
+      'الإبلاغ عن عدم حضور السائق';
 
   @override
-  String get supplierDriverHandoverCodeInstructions => 'أعطِ هذا الرمز للسائق بعد تسليم المادة.';
+  String get supplierDriverHandoverCodeInstructions =>
+      'أعطِ هذا الرمز للسائق بعد تسليم المادة.';
 
   @override
   String get supplierReportedToAdmin => 'أُبلغ للمشرف';
@@ -5813,7 +6330,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get becomeSupplierTitle => 'انضم كمورد';
 
   @override
-  String get becomeSupplierSubtitle => 'احتفظ بوصولك كمتعلّم وأضف ملف مورد على نفس الحساب.';
+  String get becomeSupplierSubtitle =>
+      'احتفظ بوصولك كمتعلّم وأضف ملف مورد على نفس الحساب.';
 
   @override
   String get becomeSupplierOpenSupplierPortal => 'فتح بوابة المورد';
@@ -5842,16 +6360,20 @@ class AppLocalizationsAr extends AppLocalizations {
   String get becomeSupplierAboutDescriptionOptional => 'نبذة / وصف (اختياري)';
 
   @override
-  String get becomeSupplierAboutDescriptionHint => 'ما أنواع المواد التي تشاركها عادةً؟';
+  String get becomeSupplierAboutDescriptionHint =>
+      'ما أنواع المواد التي تشاركها عادةً؟';
 
   @override
-  String get becomeSupplierLocationHelpText => 'تساعد المدينة والمنطقة المتعلّمين على فهم مكان الاستلام المعتاد. يمكن إبقاء تفاصيل الاستلام الدقيقة خاصة حتى يتم قبول الحجز.';
+  String get becomeSupplierLocationHelpText =>
+      'تساعد المدينة والمنطقة المتعلّمين على فهم مكان الاستلام المعتاد. يمكن إبقاء تفاصيل الاستلام الدقيقة خاصة حتى يتم قبول الحجز.';
 
   @override
-  String get becomeSupplierPickupLocationNoteOptional => 'ملاحظة موقع الاستلام (اختياري)';
+  String get becomeSupplierPickupLocationNoteOptional =>
+      'ملاحظة موقع الاستلام (اختياري)';
 
   @override
-  String get becomeSupplierPickupLocationHint => 'قرب بوابة الجامعة، مدخل الورشة، إلخ.';
+  String get becomeSupplierPickupLocationHint =>
+      'قرب بوابة الجامعة، مدخل الورشة، إلخ.';
 
   @override
   String get becomeSupplierWorkingHoursOptional => 'ساعات العمل (اختياري)';
@@ -5860,10 +6382,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get becomeSupplierWorkingHoursHint => 'الإثنين–الجمعة 4م–7م';
 
   @override
-  String get becomeSupplierPickupNotesHint => 'اتصل قبل الاستلام، أحضر بطاقة الطالب، إلخ.';
+  String get becomeSupplierPickupNotesHint =>
+      'اتصل قبل الاستلام، أحضر بطاقة الطالب، إلخ.';
 
   @override
-  String get becomeSupplierWorkshopsVerificationNote => 'الورش والمصانع والمؤسسات تتطلب مسار تحقق منفصل.';
+  String get becomeSupplierWorkshopsVerificationNote =>
+      'الورش والمصانع والمؤسسات تتطلب مسار تحقق منفصل.';
 
   @override
   String becomeSupplierReviewPickupLocation(String location) {
@@ -5881,46 +6405,59 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get becomeSupplierStepSupplierTypeSubtitle => 'اختر كيف ستشارك المواد كمورد.';
+  String get becomeSupplierStepSupplierTypeSubtitle =>
+      'اختر كيف ستشارك المواد كمورد.';
 
   @override
-  String get becomeSupplierStepProfileSubtitle => 'أخبر الآخرين من أنت وما تشاركه عادةً.';
+  String get becomeSupplierStepProfileSubtitle =>
+      'أخبر الآخرين من أنت وما تشاركه عادةً.';
 
   @override
-  String get becomeSupplierStepLocationSubtitle => 'حدّد المدينة والمنطقة حيث يحدث الاستلام عادةً.';
+  String get becomeSupplierStepLocationSubtitle =>
+      'حدّد المدينة والمنطقة حيث يحدث الاستلام عادةً.';
 
   @override
-  String get becomeSupplierStepPickupDetailsSubtitle => 'أضف ساعات استلام وملاحظات اختيارية للمتعلّمين.';
+  String get becomeSupplierStepPickupDetailsSubtitle =>
+      'أضف ساعات استلام وملاحظات اختيارية للمتعلّمين.';
 
   @override
-  String get becomeSupplierStepVerificationSubtitle => 'ارفع إثبات مؤسستك لمراجعة المسؤول.';
+  String get becomeSupplierStepVerificationSubtitle =>
+      'ارفع إثبات مؤسستك لمراجعة المسؤول.';
 
   @override
-  String get becomeSupplierStepReviewSubtitle => 'راجع تفاصيل المورد، ثم افتح بوابة المورد.';
+  String get becomeSupplierStepReviewSubtitle =>
+      'راجع تفاصيل المورد، ثم افتح بوابة المورد.';
 
   @override
-  String get supplierStudentSupplierDescription => 'للطلاب الذين يشاركون قطعاً أو مواد إضافية. لا يلزم مستند تحقق.';
+  String get supplierStudentSupplierDescription =>
+      'للطلاب الذين يشاركون قطعاً أو مواد إضافية. لا يلزم مستند تحقق.';
 
   @override
-  String get supplierIndividualSupplierDescription => 'للمواد الفائضة الشخصية. لا يلزم مستند تحقق.';
+  String get supplierIndividualSupplierDescription =>
+      'للمواد الفائضة الشخصية. لا يلزم مستند تحقق.';
 
   @override
-  String get supplierWorkshopSupplierDescription => 'للورش أو المختبرات. يلزم مستند تحقق.';
+  String get supplierWorkshopSupplierDescription =>
+      'للورش أو المختبرات. يلزم مستند تحقق.';
 
   @override
-  String get supplierFactorySupplierDescription => 'للمصانع أو الشركات. يلزم مستند تحقق.';
+  String get supplierFactorySupplierDescription =>
+      'للمصانع أو الشركات. يلزم مستند تحقق.';
 
   @override
-  String get supplierEducationalInstitutionSupplierDescription => 'للمدارس أو الجامعات أو المراكز. يلزم مستند تحقق.';
+  String get supplierEducationalInstitutionSupplierDescription =>
+      'للمدارس أو الجامعات أو المراكز. يلزم مستند تحقق.';
 
   @override
-  String get supplierChooseSupplierTypeFallback => 'اختر من يملك المواد التي ستشاركها.';
+  String get supplierChooseSupplierTypeFallback =>
+      'اختر من يملك المواد التي ستشاركها.';
 
   @override
   String get completeSupplierProfileTitle => 'أكمل ملف المورد';
 
   @override
-  String get completeSupplierProfileSubtitle => 'أخبر الآخرين بالمواد التي تشاركها وأين يعمل الاستلام.';
+  String get completeSupplierProfileSubtitle =>
+      'أخبر الآخرين بالمواد التي تشاركها وأين يعمل الاستلام.';
 
   @override
   String get selectYourSupplierType => 'اختر نوع المورد';
@@ -5938,13 +6475,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get pickupAreaLocationLabel => 'منطقة / موقع الاستلام';
 
   @override
-  String get organizationSupplierVerificationNote => 'يُعامل موردو المؤسسات كمؤسسات موردين وقد يحتاجون تحققاً قبل إدراج المواد.';
+  String get organizationSupplierVerificationNote =>
+      'يُعامل موردو المؤسسات كمؤسسات موردين وقد يحتاجون تحققاً قبل إدراج المواد.';
 
   @override
-  String get individualSupplierCanSwitchNote => 'يمكن لموردي الطلاب والأفراد العودة إلى وضع المتعلّم بعد الإعداد.';
+  String get individualSupplierCanSwitchNote =>
+      'يمكن لموردي الطلاب والأفراد العودة إلى وضع المتعلّم بعد الإعداد.';
 
   @override
-  String get completeSupplierProfileFooterNote => 'يمكنك البدء كفرد وتحديث تفاصيل المورد لاحقاً.';
+  String get completeSupplierProfileFooterNote =>
+      'يمكنك البدء كفرد وتحديث تفاصيل المورد لاحقاً.';
 
   @override
   String get verificationDocument => 'مستند التحقق';
@@ -5953,16 +6493,20 @@ class AppLocalizationsAr extends AppLocalizations {
   String get verificationDocumentRequired => 'مستند التحقق مطلوب';
 
   @override
-  String get verificationFileSizeLimit => 'يجب أن يكون الملف 5 ميغابايت أو أصغر';
+  String get verificationFileSizeLimit =>
+      'يجب أن يكون الملف 5 ميغابايت أو أصغر';
 
   @override
-  String get verificationAllowedFileTypes => 'أنواع الملفات المسموحة: PDF وPNG وJPG وJPEG';
+  String get verificationAllowedFileTypes =>
+      'أنواع الملفات المسموحة: PDF وPNG وJPG وJPEG';
 
   @override
-  String get verificationDocumentHint => 'PDF أو PNG أو JPG أو JPEG (بحد أقصى 5 ميغابايت)';
+  String get verificationDocumentHint =>
+      'PDF أو PNG أو JPG أو JPEG (بحد أقصى 5 ميغابايت)';
 
   @override
-  String get verificationDocumentUploadHint => 'ارفع مستنداً يثبت هوية مؤسستك، مثل رخصة ورشة أو مستند مصنع أو إثبات جامعة/مؤسسة.';
+  String get verificationDocumentUploadHint =>
+      'ارفع مستنداً يثبت هوية مؤسستك، مثل رخصة ورشة أو مستند مصنع أو إثبات جامعة/مؤسسة.';
 
   @override
   String get noFileSelected => 'لم يتم اختيار ملف';
@@ -5974,7 +6518,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get changeFile => 'تغيير الملف';
 
   @override
-  String get registrationDetailsIncomplete => 'تفاصيل التسجيل غير مكتملة. يرجى البدء من جديد.';
+  String get registrationDetailsIncomplete =>
+      'تفاصيل التسجيل غير مكتملة. يرجى البدء من جديد.';
 
   @override
   String get switchToLearner => 'التبديل إلى المتعلّم';
@@ -5986,7 +6531,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get becomeLearner => 'كن متعلّماً';
 
   @override
-  String get organizationSupplierStaysInSupplierMode => 'حسابات موردي المؤسسات تبقى في وضع المورد.';
+  String get organizationSupplierStaysInSupplierMode =>
+      'حسابات موردي المؤسسات تبقى في وضع المورد.';
 
   @override
   String get learnerMode => 'وضع المتعلّم';
@@ -6019,10 +6565,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierVerifyLoadStatusFailed => 'تعذّر تحميل حالة التحقق.';
 
   @override
-  String get supplierVerifyPendingSubtitle => 'حساب المورد بانتظار موافقة المسؤول. ستتمكن من نشر المواد بعد الموافقة على حسابك.';
+  String get supplierVerifyPendingSubtitle =>
+      'حساب المورد بانتظار موافقة المسؤول. ستتمكن من نشر المواد بعد الموافقة على حسابك.';
 
   @override
-  String get supplierVerifyStillWaitingApproval => 'حساب المورد لا يزال بانتظار موافقة المسؤول.';
+  String get supplierVerifyStillWaitingApproval =>
+      'حساب المورد لا يزال بانتظار موافقة المسؤول.';
 
   @override
   String get supplierVerifyRejectedTitle => 'تم رفض تحقق المورد';
@@ -6034,13 +6582,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierVerifyStatusTitle => 'حالة تحقق المورد';
 
   @override
-  String get supplierVerifyRejectedBody => 'تم رفض تحقق المورد. نشر المواد محظور حتى تتم الموافقة على مؤسستك.';
+  String get supplierVerifyRejectedBody =>
+      'تم رفض تحقق المورد. نشر المواد محظور حتى تتم الموافقة على مؤسستك.';
 
   @override
-  String get supplierVerifyChangesRequestedBody => 'طلب مسؤول تعديلات على طلب التحقق. حدّث المستند وأعد الإرسال للمراجعة.';
+  String get supplierVerifyChangesRequestedBody =>
+      'طلب مسؤول تعديلات على طلب التحقق. حدّث المستند وأعد الإرسال للمراجعة.';
 
   @override
-  String get supplierVerifyStatusBody => 'نشر المواد محظور حتى تتم الموافقة على مؤسستك من قِبل مسؤول.';
+  String get supplierVerifyStatusBody =>
+      'نشر المواد محظور حتى تتم الموافقة على مؤسستك من قِبل مسؤول.';
 
   @override
   String get supplierVerifyStatusRefreshed => 'تم تحديث حالة التحقق.';
@@ -6070,64 +6621,83 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierKeepEditing => 'متابعة التعديل';
 
   @override
-  String get registerSupplierTypeControlsVerification => 'يتحكم هذا في متطلبات التحقق وكيف تُعرَض قوائم المواد على الطالبين.';
+  String get registerSupplierTypeControlsVerification =>
+      'يتحكم هذا في متطلبات التحقق وكيف تُعرَض قوائم المواد على الطالبين.';
 
   @override
-  String get registerSupplierPublicNameHelp => 'يظهر الاسم العام في قوائم المواد ورسائل الحجز. استخدم اسم ورشة أو مؤسسة أو اسماً شخصياً يتعرّف عليه الطالبون.';
+  String get registerSupplierPublicNameHelp =>
+      'يظهر الاسم العام في قوائم المواد ورسائل الحجز. استخدم اسم ورشة أو مؤسسة أو اسماً شخصياً يتعرّف عليه الطالبون.';
 
   @override
   String get registerSupplierDisplayNameOptional => 'اسم عرض المورد (اختياري)';
 
   @override
-  String get registerSupplierUsesFullNameDefault => 'يستخدم اسمك الكامل افتراضياً';
+  String get registerSupplierUsesFullNameDefault =>
+      'يستخدم اسمك الكامل افتراضياً';
 
   @override
-  String get registerSupplierShareMaterialsGoals => 'ماذا تريد أن تحقق بمشاركة المواد؟';
+  String get registerSupplierShareMaterialsGoals =>
+      'ماذا تريد أن تحقق بمشاركة المواد؟';
 
   @override
-  String get registerSupplierBasicsSubtitle => 'اختر ملف المورد الذي يطابق من يملك المواد وكيف يظهر علناً.';
+  String get registerSupplierBasicsSubtitle =>
+      'اختر ملف المورد الذي يطابق من يملك المواد وكيف يظهر علناً.';
 
   @override
-  String get registerSupplierVerificationSubtitle => 'يحتاج موردو المؤسسات مستنداً ليراجع المسؤول الحساب قبل نشر المواد.';
+  String get registerSupplierVerificationSubtitle =>
+      'يحتاج موردو المؤسسات مستنداً ليراجع المسؤول الحساب قبل نشر المواد.';
 
   @override
-  String get registerSupplierReviewSupplierSubtitle => 'راجع حساب المورد ومنطقة الاستلام قبل إنشائه.';
+  String get registerSupplierReviewSupplierSubtitle =>
+      'راجع حساب المورد ومنطقة الاستلام قبل إنشائه.';
 
   @override
-  String get registerSupplierReviewBothSubtitle => 'راجع تفاصيل المتعلّم والمورد قبل إنشاء الحساب.';
+  String get registerSupplierReviewBothSubtitle =>
+      'راجع تفاصيل المتعلّم والمورد قبل إنشاء الحساب.';
 
   @override
-  String get registerSupplierLocationBothSubtitle => 'حدّد منطقة الاستلام العامة للمواد التي تشاركها. تُعالَج تفاصيل توصيل المتعلّم لاحقاً عند الحاجة.';
+  String get registerSupplierLocationBothSubtitle =>
+      'حدّد منطقة الاستلام العامة للمواد التي تشاركها. تُعالَج تفاصيل توصيل المتعلّم لاحقاً عند الحاجة.';
 
   @override
-  String get registerSupplierLocationSubtitle => 'حدّد منطقة الاستلام العامة للمواد التي تشاركها.';
+  String get registerSupplierLocationSubtitle =>
+      'حدّد منطقة الاستلام العامة للمواد التي تشاركها.';
 
   @override
-  String get registerSupplierNoVerificationRequired => 'لا يلزم مستند تحقق لهذا النوع من الموردين.';
+  String get registerSupplierNoVerificationRequired =>
+      'لا يلزم مستند تحقق لهذا النوع من الموردين.';
 
   @override
-  String get registerSupplierNoVerificationBody => 'يمكنك مراجعة تفاصيل حسابك ثم إنشاء الحساب دون رفع ملف.';
+  String get registerSupplierNoVerificationBody =>
+      'يمكنك مراجعة تفاصيل حسابك ثم إنشاء الحساب دون رفع ملف.';
 
   @override
-  String get registerAccountReadyUploadVerification => 'حسابك جاهز. ارفع مستند التحقق للمتابعة.';
+  String get registerAccountReadyUploadVerification =>
+      'حسابك جاهز. ارفع مستند التحقق للمتابعة.';
 
   @override
-  String get registerSupplierSetupDescription => 'ستحدّد أهداف المورد ومنطقة الاستلام ونوع المورد والاسم العام والتحقق عند الحاجة.';
+  String get registerSupplierSetupDescription =>
+      'ستحدّد أهداف المورد ومنطقة الاستلام ونوع المورد والاسم العام والتحقق عند الحاجة.';
 
   @override
-  String get registerBothSupplierSetupDescription => 'ستحدّد اهتمامات المتعلّم ومستوى التعلّم، إضافةً إلى الاستلام وملف المورد.';
+  String get registerBothSupplierSetupDescription =>
+      'ستحدّد اهتمامات المتعلّم ومستوى التعلّم، إضافةً إلى الاستلام وملف المورد.';
 
   @override
-  String get registerSupplierLocationHelperBoth => 'هذه منطقة الاستلام العامة للمواد التي تشاركها. لا تكشف عنواناً دقيقاً علناً، وتبقى تفاصيل توصيل المتعلّم منفصلة.';
+  String get registerSupplierLocationHelperBoth =>
+      'هذه منطقة الاستلام العامة للمواد التي تشاركها. لا تكشف عنواناً دقيقاً علناً، وتبقى تفاصيل توصيل المتعلّم منفصلة.';
 
   @override
-  String get registerSupplierLocationHelper => 'يحتاج الموردون مدينة ومنطقة ليفهم الطالبون جدوى الاستلام. يمكن إبقاء تفاصيل الاستلام الدقيقة خاصة حتى يتم ترتيب حجز أو توصيل.';
+  String get registerSupplierLocationHelper =>
+      'يحتاج الموردون مدينة ومنطقة ليفهم الطالبون جدوى الاستلام. يمكن إبقاء تفاصيل الاستلام الدقيقة خاصة حتى يتم ترتيب حجز أو توصيل.';
 
   @override
-  String get registerSupplierReviewHelper => 'تبقى أهداف المورد في الإعداد فقط. يستقبل الخادم حسابك وملف المورد ومنطقة الاستلام.';
+  String get registerSupplierReviewHelper =>
+      'تبقى أهداف المورد في الإعداد فقط. يستقبل الخادم حسابك وملف المورد ومنطقة الاستلام.';
 
   @override
-  String get registerBothReviewHelper => 'تبقى الأهداف في الإعداد فقط. يستقبل الخادم حسابك وملف المتعلّم وملف المورد ومنطقة الاستلام.';
+  String get registerBothReviewHelper =>
+      'تبقى الأهداف في الإعداد فقط. يستقبل الخادم حسابك وملف المتعلّم وملف المورد ومنطقة الاستلام.';
 
   @override
   String get retryVerification => 'إعادة محاولة التحقق';
@@ -6187,7 +6757,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierHandovers => 'عمليات التسليم';
 
   @override
-  String get supplierSearchScheduleHint => 'ابحث بالمادة أو المتعلم أو رقم الحجز...';
+  String get supplierSearchScheduleHint =>
+      'ابحث بالمادة أو المتعلم أو رقم الحجز...';
 
   @override
   String get supplierDeliveryPickup => 'استلام للتوصيل';
@@ -6265,13 +6836,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierRowsPerPage => 'صفوف لكل صفحة';
 
   @override
-  String get supplierPickupScheduleLoadFailedTitle => 'تعذّر تحميل جدول الاستلام';
+  String get supplierPickupScheduleLoadFailedTitle =>
+      'تعذّر تحميل جدول الاستلام';
 
   @override
   String get supplierPleaseTryAgain => 'يرجى المحاولة مرة أخرى.';
 
   @override
-  String get supplierNoHandoversMatchFilters => 'لا توجد تسليمات تطابق الفلاتر المحددة.';
+  String get supplierNoHandoversMatchFilters =>
+      'لا توجد تسليمات تطابق الفلاتر المحددة.';
 
   @override
   String get supplierNoHandoversToday => 'لا توجد تسليمات مجدولة اليوم.';
@@ -6283,19 +6856,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierNoHandoversOverdue => 'لا توجد تسليمات متأخرة.';
 
   @override
-  String get supplierNoHandoversCompletedPeriod => 'لا توجد تسليمات مكتملة في هذه الفترة.';
+  String get supplierNoHandoversCompletedPeriod =>
+      'لا توجد تسليمات مكتملة في هذه الفترة.';
 
   @override
-  String get supplierNoHandoversClosedPeriod => 'لا توجد تسليمات مغلقة في هذه الفترة.';
+  String get supplierNoHandoversClosedPeriod =>
+      'لا توجد تسليمات مغلقة في هذه الفترة.';
 
   @override
   String get supplierNoHandoversScheduled => 'لا توجد تسليمات مجدولة بعد.';
 
   @override
-  String get supplierResetFiltersToSeeMore => 'جرّب إعادة ضبط الفلاتر لرؤية المزيد من التسليمات.';
+  String get supplierResetFiltersToSeeMore =>
+      'جرّب إعادة ضبط الفلاتر لرؤية المزيد من التسليمات.';
 
   @override
-  String get supplierConfirmedHandoversAppearHere => 'ستظهر هنا مواعيد الاستلام الذاتي واستلام السائق المؤكدة.';
+  String get supplierConfirmedHandoversAppearHere =>
+      'ستظهر هنا مواعيد الاستلام الذاتي واستلام السائق المؤكدة.';
 
   @override
   String get supplierOpenIncomingRequests => 'فتح الطلبات الواردة';
@@ -6373,7 +6950,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierEssentialsCompleteTitle => 'اكتملت الأساسيات';
 
   @override
-  String get supplierEditProfileCompletionDetails => 'تعديل تفاصيل اكتمال ملف المورد';
+  String get supplierEditProfileCompletionDetails =>
+      'تعديل تفاصيل اكتمال ملف المورد';
 
   @override
   String supplierProfileCompletionPercent(String percent) {
@@ -6392,7 +6970,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierWorkingAvailability => 'التوفر للعمل';
 
   @override
-  String get supplierWorkingAvailabilityMissing => 'لم تتم إضافة أوقات التوفر للعمل.';
+  String get supplierWorkingAvailabilityMissing =>
+      'لم تتم إضافة أوقات التوفر للعمل.';
 
   @override
   String get supplierWorkingHours => 'ساعات العمل';
@@ -6419,7 +6998,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierResubmit => 'إعادة الإرسال';
 
   @override
-  String get supplierThanksVerificationCommunity => 'شكراً لمساعدتك في جعل ImpactLoop موثوقاً وآمناً لمجتمعنا.';
+  String get supplierThanksVerificationCommunity =>
+      'شكراً لمساعدتك في جعل ImpactLoop موثوقاً وآمناً لمجتمعنا.';
 
   @override
   String get supplierReviewedDate => 'تاريخ المراجعة';
@@ -6449,7 +7029,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierProfileAwaitingReview => 'ملفك بانتظار المراجعة.';
 
   @override
-  String get supplierChangesRequiredBeforeApproval => 'مطلوب إجراء تعديلات قبل الموافقة.';
+  String get supplierChangesRequiredBeforeApproval =>
+      'مطلوب إجراء تعديلات قبل الموافقة.';
 
   @override
   String get supplierVerificationRejected => 'تم رفض التحقق من ملفك.';
@@ -6470,31 +7051,37 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierPublicAreaApproximateTitle => 'منطقة عامة — موقع تقريبي';
 
   @override
-  String get supplierPublicAreaApproximateExplanation => 'يرى المتعلمون المنطقة العامة قبل القبول. تتم مشاركة عنوان الاستلام الدقيق فقط عندما يسمح مسار العمل بذلك.';
+  String get supplierPublicAreaApproximateExplanation =>
+      'يرى المتعلمون المنطقة العامة قبل القبول. تتم مشاركة عنوان الاستلام الدقيق فقط عندما يسمح مسار العمل بذلك.';
 
   @override
   String get supplierPublicExactLocation => 'موقع عام دقيق';
 
   @override
-  String get supplierPublicExactLocationExplanation => 'موقع الاستلام ظاهر للعامة.';
+  String get supplierPublicExactLocationExplanation =>
+      'موقع الاستلام ظاهر للعامة.';
 
   @override
-  String get supplierSharedAfterAcceptanceTitle => 'تتم المشاركة بعد قبول الحجز';
+  String get supplierSharedAfterAcceptanceTitle =>
+      'تتم المشاركة بعد قبول الحجز';
 
   @override
-  String get supplierSharedAfterAcceptanceExplanation => 'لا يرى المتعلمون عنوان الاستلام الدقيق قبل قبول الحجز.';
+  String get supplierSharedAfterAcceptanceExplanation =>
+      'لا يرى المتعلمون عنوان الاستلام الدقيق قبل قبول الحجز.';
 
   @override
   String get supplierPrivateLocation => 'موقع خاص';
 
   @override
-  String get supplierPrivateLocationExplanation => 'لا يظهر موقع الاستلام للعامة.';
+  String get supplierPrivateLocationExplanation =>
+      'لا يظهر موقع الاستلام للعامة.';
 
   @override
   String get supplierLocationPrivacyUnavailable => 'خصوصية الموقع غير متاحة';
 
   @override
-  String get supplierLocationPrivacyUnavailableExplanation => 'تفاصيل الظهور غير متاحة حالياً.';
+  String get supplierLocationPrivacyUnavailableExplanation =>
+      'تفاصيل الظهور غير متاحة حالياً.';
 
   @override
   String get supplierDaySun => 'الأحد';
@@ -6542,22 +7129,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierOrganizationAvailabilitySection => 'المؤسسة والتوفر';
 
   @override
-  String get supplierOrganizationNameHelp => 'اسم المؤسسة يحدد المؤسسة، وقد يطابق اسم المورد العام.';
+  String get supplierOrganizationNameHelp =>
+      'اسم المؤسسة يحدد المؤسسة، وقد يطابق اسم المورد العام.';
 
   @override
-  String get supplierAvailabilityInformationalHelp => 'التوفر للمعلومات ويساعد المتعلمين على التخطيط للاستلام.';
+  String get supplierAvailabilityInformationalHelp =>
+      'التوفر للمعلومات ويساعد المتعلمين على التخطيط للاستلام.';
 
   @override
   String get supplierSeparateOrganizationAddress => 'عنوان المؤسسة المنفصل';
 
   @override
-  String get supplierVisibilityPublicApproximate => 'يرى المتعلمون المنطقة العامة. يُشارك عنوان الاستلام الدقيق بعد قبول الحجز.';
+  String get supplierVisibilityPublicApproximate =>
+      'يرى المتعلمون المنطقة العامة. يُشارك عنوان الاستلام الدقيق بعد قبول الحجز.';
 
   @override
-  String get supplierVisibilityPublicExact => 'يمكن للمتعلمين رؤية موقع الاستلام المحفوظ وفق إعدادات الظهور العامة.';
+  String get supplierVisibilityPublicExact =>
+      'يمكن للمتعلمين رؤية موقع الاستلام المحفوظ وفق إعدادات الظهور العامة.';
 
   @override
-  String get supplierVisibilityOrderOnly => 'يرى المتعلمون عنوان الاستلام الدقيق فقط بعد قبول الحجز.';
+  String get supplierVisibilityOrderOnly =>
+      'يرى المتعلمون عنوان الاستلام الدقيق فقط بعد قبول الحجز.';
 
   @override
   String get supplierVisibilityPrivate => 'يبقى موقع الاستلام خاصاً.';
@@ -6641,7 +7233,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverJobsTitle => 'مهام السائق';
 
   @override
-  String get driverJobsSubtitle => 'استلم المواد من المورّدين وسلّمها إلى المتعلّمين.';
+  String get driverJobsSubtitle =>
+      'استلم المواد من المورّدين وسلّمها إلى المتعلّمين.';
 
   @override
   String driverActiveDeliveriesCount(int active, int max) {
@@ -6682,7 +7275,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverNoActiveDeliveries => 'لا توجد توصيلات نشطة بعد.';
 
   @override
-  String get driverNoActiveDeliveriesHint => 'يمكنك قبول المهام المتاحة عندما تكون جاهزًا.';
+  String get driverNoActiveDeliveriesHint =>
+      'يمكنك قبول المهام المتاحة عندما تكون جاهزًا.';
 
   @override
   String get driverAvailableNearbyJobs => 'المهام المتاحة القريبة';
@@ -6700,7 +7294,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverLoadingAvailable => 'جارٍ تحميل المهام المتاحة…';
 
   @override
-  String get driverLookingForWaiting => 'جارٍ البحث عن طلبات توصيل بانتظار السائق.';
+  String get driverLookingForWaiting =>
+      'جارٍ البحث عن طلبات توصيل بانتظار السائق.';
 
   @override
   String get driverCouldNotLoadAvailable => 'تعذّر تحميل المهام المتاحة.';
@@ -6797,7 +7392,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get driverLocationUnavailable => 'الموقع غير متاح — عرض كل المهام المتاحة';
+  String get driverLocationUnavailable =>
+      'الموقع غير متاح — عرض كل المهام المتاحة';
 
   @override
   String get driverSearchRadiusAny => 'نطاق البحث: أي مسافة';
@@ -6857,16 +7453,19 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get driverTryAllAreasOrReset => 'جرّب كل المناطق أو إعادة تعيين الفلاتر.';
+  String get driverTryAllAreasOrReset =>
+      'جرّب كل المناطق أو إعادة تعيين الفلاتر.';
 
   @override
   String get driverNoJobsNearby => 'لا توجد مهام متاحة قريبة منك الآن.';
 
   @override
-  String get driverTryChangeFilters => 'جرّب تغيير فلتر المدينة أو المنطقة أو المسافة.';
+  String get driverTryChangeFilters =>
+      'جرّب تغيير فلتر المدينة أو المنطقة أو المسافة.';
 
   @override
-  String get driverCheckingActiveDelivery => 'جارٍ التحقق من التوصيل المعيّن النشط.';
+  String get driverCheckingActiveDelivery =>
+      'جارٍ التحقق من التوصيل المعيّن النشط.';
 
   @override
   String get driverCouldNotLoadDetails => 'تعذّر تحميل تفاصيل التوصيل.';
@@ -6878,7 +7477,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverNoLongerActive => 'التوصيل لم يعد نشطًا';
 
   @override
-  String get driverNoLongerActiveDefault => 'لم يعد هذا التوصيل نشطًا. نُقل إلى مراجعة الإدارة.';
+  String get driverNoLongerActiveDefault =>
+      'لم يعد هذا التوصيل نشطًا. نُقل إلى مراجعة الإدارة.';
 
   @override
   String get driverBackToJobs => 'العودة إلى المهام';
@@ -6887,7 +7487,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverNotAssigned => 'التوصيل غير نشط أو غير معيّن لك';
 
   @override
-  String get driverOpenJobsBoard => 'افتح لوحة المهام لعرض التوصيل المعيّن الحالي.';
+  String get driverOpenJobsBoard =>
+      'افتح لوحة المهام لعرض التوصيل المعيّن الحالي.';
 
   @override
   String get driverActiveDelivery => 'توصيل نشط';
@@ -6905,7 +7506,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverNoNextAction => 'لا يوجد إجراء تالٍ';
 
   @override
-  String get driverCannotAdvance => 'لا يمكن تقدّم هذا التوصيل من حالته الحالية.';
+  String get driverCannotAdvance =>
+      'لا يمكن تقدّم هذا التوصيل من حالته الحالية.';
 
   @override
   String get driverCannotAdvanceFurther => 'لا يمكن تقدّم هذا التوصيل أكثر.';
@@ -6935,7 +7537,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverSupplierHandoverCode => 'رمز تسليم المورّد';
 
   @override
-  String get driverSupplierHandoverCodeMessage => 'أدخل الرمز الذي يعطيك إياه المورّد بعد تسليم المادة.';
+  String get driverSupplierHandoverCodeMessage =>
+      'أدخل الرمز الذي يعطيك إياه المورّد بعد تسليم المادة.';
 
   @override
   String get driverMarkPickedUp => 'تأكيد الاستلام';
@@ -6944,7 +7547,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverLearnerDeliveryCode => 'رمز تسليم المتعلّم';
 
   @override
-  String get driverLearnerDeliveryCodeMessage => 'أدخل الرمز الذي يعطيك إياه المتعلّم عند استلام المادة.';
+  String get driverLearnerDeliveryCodeMessage =>
+      'أدخل الرمز الذي يعطيك إياه المتعلّم عند استلام المادة.';
 
   @override
   String get driverMarkDelivered => 'تأكيد التسليم';
@@ -6968,10 +7572,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverStatusArrivedDropoffSuccess => 'تم الوصول إلى موقع التسليم.';
 
   @override
-  String get driverStatusChangedRefresh => 'تغيّرت حالة التوصيل. حدّث الصفحة وجرّب الإجراء التالي الصالح.';
+  String get driverStatusChangedRefresh =>
+      'تغيّرت حالة التوصيل. حدّث الصفحة وجرّب الإجراء التالي الصالح.';
 
   @override
-  String get driverInvalidConfirmationCode => 'رمز التأكيد غير صحيح. تحقّق من الرمز وحاول مرة أخرى.';
+  String get driverInvalidConfirmationCode =>
+      'رمز التأكيد غير صحيح. تحقّق من الرمز وحاول مرة أخرى.';
 
   @override
   String get driverHandoverWindowNotStarted => 'لم تبدأ نافذة التسليم بعد.';
@@ -6980,13 +7586,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverHandoverWindowExpired => 'انتهت نافذة التسليم بالفعل.';
 
   @override
-  String get driverPartialPickupSelectionInvalid => 'عناصر الاستلام المحددة غير صالحة. حدّث الصفحة وحاول مرة أخرى.';
+  String get driverPartialPickupSelectionInvalid =>
+      'عناصر الاستلام المحددة غير صالحة. حدّث الصفحة وحاول مرة أخرى.';
 
   @override
-  String get driverGroupedDeliverySplitConflict => 'تغيّر هذا التوصيل المجمّع. حدّث الصفحة وحاول مرة أخرى.';
+  String get driverGroupedDeliverySplitConflict =>
+      'تغيّر هذا التوصيل المجمّع. حدّث الصفحة وحاول مرة أخرى.';
 
   @override
-  String get driverAvailableJobsCursorInvalid => 'ترقيم قائمة المهام غير محدّث. حدّث المهام المتاحة.';
+  String get driverAvailableJobsCursorInvalid =>
+      'ترقيم قائمة المهام غير محدّث. حدّث المهام المتاحة.';
 
   @override
   String get driverPartialPickupTitle => 'تأكيد ما تم استلامه';
@@ -7077,13 +7686,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverLocationSharing => 'مشاركة الموقع';
 
   @override
-  String get driverLocationSharingBody => 'شارك موقعك أثناء نشاط هذا التوصيل. يمكن للمتعلّم تتبّعك فقط بعد استلام المادة.';
+  String get driverLocationSharingBody =>
+      'شارك موقعك أثناء نشاط هذا التوصيل. يمكن للمتعلّم تتبّعك فقط بعد استلام المادة.';
 
   @override
   String get driverShareAutomatically => 'المشاركة تلقائيًا';
 
   @override
-  String get driverSharingEvery45Seconds => 'مشاركة كل 45 ثانية طالما هذه الصفحة مفتوحة.';
+  String get driverSharingEvery45Seconds =>
+      'مشاركة كل 45 ثانية طالما هذه الصفحة مفتوحة.';
 
   @override
   String get driverLocationSharingPaused => 'مشاركة الموقع متوقفة';
@@ -7121,22 +7732,28 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get driverSupplierCodeRequired => 'رمز تسليم المورّد مطلوب عند تأكيد الاستلام.';
+  String get driverSupplierCodeRequired =>
+      'رمز تسليم المورّد مطلوب عند تأكيد الاستلام.';
 
   @override
-  String get driverLearnerCodeRequired => 'رمز تسليم المتعلّم مطلوب عند تأكيد التسليم.';
+  String get driverLearnerCodeRequired =>
+      'رمز تسليم المتعلّم مطلوب عند تأكيد التسليم.';
 
   @override
-  String get driverCompleteArriveBeforePickedUp => 'أكمل \"الوصول لموقع الاستلام\" قبل تأكيد الاستلام.';
+  String get driverCompleteArriveBeforePickedUp =>
+      'أكمل \"الوصول لموقع الاستلام\" قبل تأكيد الاستلام.';
 
   @override
-  String get driverMarkPickedUpBeforeDelivery => 'أكّد الاستلام قبل بدء التوصيل.';
+  String get driverMarkPickedUpBeforeDelivery =>
+      'أكّد الاستلام قبل بدء التوصيل.';
 
   @override
-  String get driverStartDeliveryBeforeArrive => 'ابدأ التوصيل قبل الوصول لموقع التسليم.';
+  String get driverStartDeliveryBeforeArrive =>
+      'ابدأ التوصيل قبل الوصول لموقع التسليم.';
 
   @override
-  String get driverArriveBeforeDelivered => 'صل إلى موقع التسليم قبل تأكيد التسليم.';
+  String get driverArriveBeforeDelivered =>
+      'صل إلى موقع التسليم قبل تأكيد التسليم.';
 
   @override
   String get driverActionNotAvailable => 'هذا الإجراء غير متاح بعد.';
@@ -7145,7 +7762,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverNotSet => 'غير محدد';
 
   @override
-  String get driverApproximateAddress => 'عنوان تقريبي — تأكد مع المتعلّم عند الحاجة.';
+  String get driverApproximateAddress =>
+      'عنوان تقريبي — تأكد مع المتعلّم عند الحاجة.';
 
   @override
   String get driverExactCoordinatesMissing => 'الإحداثيات الدقيقة غير متوفرة.';
@@ -7228,7 +7846,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverDeliveryWindowNotSet => 'موعد تأكيد التوصيل غير محدد';
 
   @override
-  String get driverLearnerMustConfirmWindow => 'يجب على المتعلّم تأكيد موعد التوصيل قبل أن تتمكن من تأكيد التسليم.';
+  String get driverLearnerMustConfirmWindow =>
+      'يجب على المتعلّم تأكيد موعد التوصيل قبل أن تتمكن من تأكيد التسليم.';
 
   @override
   String get driverDeliveryNotAvailableYet => 'تأكيد التوصيل غير متاح بعد';
@@ -7289,7 +7908,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverStartDeliveryOnTheWay => 'بدء التوصيل / في الطريق';
 
   @override
-  String get driverStartDeliveryReq1 => 'يجب أن تكون المادة قد استُلمت من المورّد.';
+  String get driverStartDeliveryReq1 =>
+      'يجب أن تكون المادة قد استُلمت من المورّد.';
 
   @override
   String get driverStartDeliveryReq2 => 'لا يلزم رمز تأكيد لهذه الخطوة.';
@@ -7390,16 +8010,22 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get notificationDriverMovedToAdminTitle => 'نُقل التوصيل إلى مراجعة الإدارة';
+  String get notificationDriverMovedToAdminTitle =>
+      'نُقل التوصيل إلى مراجعة الإدارة';
 
   @override
-  String get notificationDriverMovedToAdminBody => 'نُقل التوصيل إلى مراجعة الإدارة لأن الاستلام لم يُكتمل ضمن موعد الاستلام.';
+  String get notificationDriverMovedToAdminBody =>
+      'نُقل التوصيل إلى مراجعة الإدارة لأن الاستلام لم يُكتمل ضمن موعد الاستلام.';
 
   @override
   String get driverToday => 'اليوم';
 
   @override
-  String driverPickupStartsInHours(int hours, String dateLabel, String timeRange) {
+  String driverPickupStartsInHours(
+    int hours,
+    String dateLabel,
+    String timeRange,
+  ) {
     String _temp0 = intl.Intl.pluralLogic(
       hours,
       locale: localeName,
@@ -7410,7 +8036,11 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String driverPickupStartsInMinutes(int minutes, String dateLabel, String timeRange) {
+  String driverPickupStartsInMinutes(
+    int minutes,
+    String dateLabel,
+    String timeRange,
+  ) {
     String _temp0 = intl.Intl.pluralLogic(
       minutes,
       locale: localeName,
@@ -7464,7 +8094,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get inviteInvalidOrExpired => 'رابط الدعوة هذا غير صالح أو منتهٍ أو ملغى أو مستخدم بالفعل.';
+  String get inviteInvalidOrExpired =>
+      'رابط الدعوة هذا غير صالح أو منتهٍ أو ملغى أو مستخدم بالفعل.';
 
   @override
   String get inviteCompleteRegistration => 'إكمال التسجيل';
@@ -7503,22 +8134,27 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get driverCouldNotShareLocation => 'تعذّر مشاركة الموقع. حاول مرة أخرى أو استخدم إرسال موقعي.';
+  String get driverCouldNotShareLocation =>
+      'تعذّر مشاركة الموقع. حاول مرة أخرى أو استخدم إرسال موقعي.';
 
   @override
-  String get driverLocationPermissionDenied => 'تم رفض إذن الموقع. فعّل إذن الموقع أو حاول مرة أخرى.';
+  String get driverLocationPermissionDenied =>
+      'تم رفض إذن الموقع. فعّل إذن الموقع أو حاول مرة أخرى.';
 
   @override
-  String get driverLocationServicesDisabled => 'خدمات الموقع معطّلة. شغّل خدمات الموقع وحاول مرة أخرى.';
+  String get driverLocationServicesDisabled =>
+      'خدمات الموقع معطّلة. شغّل خدمات الموقع وحاول مرة أخرى.';
 
   @override
-  String get driverCurrentLocationFailed => 'تعذّر الحصول على موقعك الحالي. يُرجى المحاولة مرة أخرى.';
+  String get driverCurrentLocationFailed =>
+      'تعذّر الحصول على موقعك الحالي. يُرجى المحاولة مرة أخرى.';
 
   @override
   String get driverHistoryTitle => 'السجل والبلاغات';
 
   @override
-  String get driverHistorySubtitle => 'راجع عمليات التوصيل السابقة وتابع البلاغات التي قدّمتها.';
+  String get driverHistorySubtitle =>
+      'راجع عمليات التوصيل السابقة وتابع البلاغات التي قدّمتها.';
 
   @override
   String get driverDeliveriesTab => 'التوصيلات';
@@ -7536,7 +8172,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverArchiveLoadFailed => 'تعذّر تحميل هذا السجل.';
 
   @override
-  String get driverArchiveMoreFailed => 'تعذّر تحميل عناصر أقدم. ما زالت النتائج الحالية ظاهرة.';
+  String get driverArchiveMoreFailed =>
+      'تعذّر تحميل عناصر أقدم. ما زالت النتائج الحالية ظاهرة.';
 
   @override
   String get driverOpenHistoricalDelivery => 'فتح التوصيل السابق';
@@ -7566,7 +8203,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverItemAudit => 'سجل المواد';
 
   @override
-  String get driverLegacyItemAuditWarning => 'لا تحتوي عملية التوصيل القديمة هذه على لقطة استلام؛ تظهر سجلات الحجز الحالية.';
+  String get driverLegacyItemAuditWarning =>
+      'لا تحتوي عملية التوصيل القديمة هذه على لقطة استلام؛ تظهر سجلات الحجز الحالية.';
 
   @override
   String get driverFailureReason => 'سبب التعذّر';
@@ -7623,7 +8261,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverOutcomeRegrouped => 'أُعيد تجميع الحجز';
 
   @override
-  String get driverOutcomeCancelledExpired => 'أُلغي الحجز أو انتهت صلاحيته ورُفع الحجز';
+  String get driverOutcomeCancelledExpired =>
+      'أُلغي الحجز أو انتهت صلاحيته ورُفع الحجز';
 
   @override
   String get driverOutcomePendingRecovery => 'إجراء المعالجة ما زال معلقًا';
@@ -7638,7 +8277,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverNotPickedUpTitle => 'لم يتم استلامها';
 
   @override
-  String get driverArchiveCursorExpired => 'تغيّرت صفحة السجل هذه أو انتهت صلاحيتها. ابدأ مجددًا من أحدث النتائج.';
+  String get driverArchiveCursorExpired =>
+      'تغيّرت صفحة السجل هذه أو انتهت صلاحيتها. ابدأ مجددًا من أحدث النتائج.';
 
   @override
   String get driverRestartArchive => 'البدء من الأحدث';
@@ -7650,7 +8290,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverProfileTitle => 'الملف التشغيلي للسائق';
 
   @override
-  String get driverProfileSubtitle => 'أدر تفاصيل العمل المستخدمة في التوصيل وتحكّم في استقبال عروض توصيل جديدة.';
+  String get driverProfileSubtitle =>
+      'أدر تفاصيل العمل المستخدمة في التوصيل وتحكّم في استقبال عروض توصيل جديدة.';
 
   @override
   String get driverAdministrativeProfileStatus => 'حالة الملف';
@@ -7674,13 +8315,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverProfileActiveExplanation => 'ملف السائق نشط.';
 
   @override
-  String get driverProfileInactiveExplanation => 'ملف السائق غير نشط. لا يمكن تعديل الملف أو استقبال وظائف جديدة.';
+  String get driverProfileInactiveExplanation =>
+      'ملف السائق غير نشط. لا يمكن تعديل الملف أو استقبال وظائف جديدة.';
 
   @override
-  String get driverProfileSuspendedExplanation => 'ملف السائق موقوف. تواصل مع الدعم إذا احتجت إلى المساعدة.';
+  String get driverProfileSuspendedExplanation =>
+      'ملف السائق موقوف. تواصل مع الدعم إذا احتجت إلى المساعدة.';
 
   @override
-  String get driverProfileUnknownExplanation => 'تعذّر تأكيد حالة ملف السائق. حدّث الصفحة قبل تغيير التوفر.';
+  String get driverProfileUnknownExplanation =>
+      'تعذّر تأكيد حالة ملف السائق. حدّث الصفحة قبل تغيير التوفر.';
 
   @override
   String get driverAvailabilityAvailable => 'متاح';
@@ -7695,7 +8339,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverAvailabilityUnknown => 'الحالة غير متاحة';
 
   @override
-  String get driverAvailabilityUnknownExplanation => 'يدير النظام حالتك التشغيلية، وهي غير متاحة حاليًا.';
+  String get driverAvailabilityUnknownExplanation =>
+      'يدير النظام حالتك التشغيلية، وهي غير متاحة حاليًا.';
 
   @override
   String get driverSystemManagedState => 'حالة تشغيلية يديرها النظام';
@@ -7710,13 +8355,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverAcceptingNewJobsOff => 'عروض التوصيل الجديدة متوقفة مؤقتًا.';
 
   @override
-  String get driverActiveDeliveriesContinueNoOffers => 'تستمر توصيلاتك النشطة، ولن تستقبل عروض وظائف جديدة.';
+  String get driverActiveDeliveriesContinueNoOffers =>
+      'تستمر توصيلاتك النشطة، ولن تستقبل عروض وظائف جديدة.';
 
   @override
-  String get driverOnDeliveryAcceptingExplanation => 'أنت تنفّذ توصيلات نشطة ويمكنك قبول عمل إضافي ضمن الحد الحالي.';
+  String get driverOnDeliveryAcceptingExplanation =>
+      'أنت تنفّذ توصيلات نشطة ويمكنك قبول عمل إضافي ضمن الحد الحالي.';
 
   @override
-  String get driverAvailableExplanation => 'يمكنك تصفح وظائف التوصيل الجديدة وقبولها.';
+  String get driverAvailableExplanation =>
+      'يمكنك تصفح وظائف التوصيل الجديدة وقبولها.';
 
   @override
   String get driverOfflineExplanation => 'لا تستقبل عروض توصيل جديدة.';
@@ -7728,10 +8376,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverActiveDeliveryCountLabel => 'التوصيلات النشطة';
 
   @override
-  String get driverPauseNewJobsConfirmationTitle => 'إيقاف عروض الوظائف الجديدة؟';
+  String get driverPauseNewJobsConfirmationTitle =>
+      'إيقاف عروض الوظائف الجديدة؟';
 
   @override
-  String get driverPauseNewJobsConfirmationBody => 'ستستمر التوصيلات المسندة والتذكيرات والإشعارات التشغيلية. سيتوقف استقبال عروض الوظائف الجديدة فقط.';
+  String get driverPauseNewJobsConfirmationBody =>
+      'ستستمر التوصيلات المسندة والتذكيرات والإشعارات التشغيلية. سيتوقف استقبال عروض الوظائف الجديدة فقط.';
 
   @override
   String get driverPauseNewJobsAction => 'إيقاف الوظائف الجديدة';
@@ -7776,7 +8426,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverCapacityNotes => 'ملاحظات السعة';
 
   @override
-  String get driverCapacityNotesHint => 'معلومات اختيارية عن حجم المواد أو سعة الحمل';
+  String get driverCapacityNotesHint =>
+      'معلومات اختيارية عن حجم المواد أو سعة الحمل';
 
   @override
   String get driverOptionalField => 'اختياري';
@@ -7791,13 +8442,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverTransportationValidation => 'اختر وسيلة نقل مدعومة.';
 
   @override
-  String get driverVehicleLabelValidation => 'يجب ألا يتجاوز وصف المركبة 120 حرفًا.';
+  String get driverVehicleLabelValidation =>
+      'يجب ألا يتجاوز وصف المركبة 120 حرفًا.';
 
   @override
-  String get driverVehiclePlateValidation => 'يجب ألا تتجاوز لوحة المركبة 32 حرفًا.';
+  String get driverVehiclePlateValidation =>
+      'يجب ألا تتجاوز لوحة المركبة 32 حرفًا.';
 
   @override
-  String get driverCapacityNotesValidation => 'يجب ألا تتجاوز ملاحظات السعة 500 حرف.';
+  String get driverCapacityNotesValidation =>
+      'يجب ألا تتجاوز ملاحظات السعة 500 حرف.';
 
   @override
   String get driverSaveProfile => 'حفظ الملف';
@@ -7815,7 +8469,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverAccountSettingsTitle => 'إعدادات الحساب';
 
   @override
-  String get driverAccountSettingsExplanation => 'تتم إدارة الاسم ورقم الهاتف من إعدادات الحساب.';
+  String get driverAccountSettingsExplanation =>
+      'تتم إدارة الاسم ورقم الهاتف من إعدادات الحساب.';
 
   @override
   String get driverOpenAccountSettings => 'فتح إعدادات الحساب';
@@ -7836,7 +8491,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverJobsPausedTitle => 'عروض الوظائف الجديدة متوقفة';
 
   @override
-  String get driverJobsPausedExplanation => 'فعّل استقبال الوظائف الجديدة لتصفح التوصيلات المتاحة مجددًا.';
+  String get driverJobsPausedExplanation =>
+      'فعّل استقبال الوظائف الجديدة لتصفح التوصيلات المتاحة مجددًا.';
 
   @override
   String get driverJobsInactiveTitle => 'ملف السائق غير نشط';
@@ -7848,10 +8504,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverJobsUnavailableTitle => 'الوظائف المتاحة غير متوفرة';
 
   @override
-  String get driverAssignedDeliveriesContinue => 'تبقى التوصيلات المسندة والتذكيرات والبلاغات وسجل الإشعارات متاحة.';
+  String get driverAssignedDeliveriesContinue =>
+      'تبقى التوصيلات المسندة والتذكيرات والبلاغات وسجل الإشعارات متاحة.';
 
   @override
-  String get driverNotAcceptingNewJobsError => 'استأنف استقبال الوظائف الجديدة قبل قبول هذا التوصيل.';
+  String get driverNotAcceptingNewJobsError =>
+      'استأنف استقبال الوظائف الجديدة قبل قبول هذا التوصيل.';
 
   @override
   String get driverCancelAction => 'إلغاء';
@@ -7947,13 +8605,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverEditFilters => 'تعديل الفلاتر';
 
   @override
-  String get driverPartialPickupSelectAtLeastOne => 'اختر عنصرًا واحدًا على الأقل الذي سلّمه المورّد الآن.';
+  String get driverPartialPickupSelectAtLeastOne =>
+      'اختر عنصرًا واحدًا على الأقل الذي سلّمه المورّد الآن.';
 
   @override
   String get driverEmptyActiveTitle => 'لا توجد توصيلات نشطة';
 
   @override
-  String get driverEmptyActiveBody => 'عند قبول مهمة، ستظهر هنا حتى يكتمل التسليم.';
+  String get driverEmptyActiveBody =>
+      'عند قبول مهمة، ستظهر هنا حتى يكتمل التسليم.';
 
   @override
   String get driverEmptyActiveCta => 'تصفّح الوظائف المتاحة';
@@ -8249,7 +8909,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get notificationDriverPickupStartingSoonTitle => 'الاستلام يبدأ قريبًا';
+  String get notificationDriverPickupStartingSoonTitle =>
+      'الاستلام يبدأ قريبًا';
 
   @override
   String notificationDriverPickupStartingSoonBody(String materialTitle) {
@@ -8281,7 +8942,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get notificationDriverDropoffStartingSoonTitle => 'التسليم يبدأ قريبًا';
+  String get notificationDriverDropoffStartingSoonTitle =>
+      'التسليم يبدأ قريبًا';
 
   @override
   String notificationDriverDropoffStartingSoonBody(String materialTitle) {
@@ -8321,7 +8983,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get notificationDriverDeliveryNextStepTitle => 'الخطوة التالية للتوصيل';
+  String get notificationDriverDeliveryNextStepTitle =>
+      'الخطوة التالية للتوصيل';
 
   @override
   String notificationDriverDeliveryNextStepBody(String materialTitle) {
@@ -8520,7 +9183,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminNavSupplierVerification => 'التحقق من المورد';
 
   @override
-  String get adminAccessDeniedBody => 'ليس لديك صلاحية للوصول إلى بوابة الإدارة.';
+  String get adminAccessDeniedBody =>
+      'ليس لديك صلاحية للوصول إلى بوابة الإدارة.';
 
   @override
   String get adminOverviewPageSubtitle => 'لوحة تحكم المنصة';
@@ -8531,7 +9195,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get adminWelcomeSubtitle => 'إليك نشاط المنصة اليوم والموافقات وأثر إعادة الاستخدام والصحة التشغيلية.';
+  String get adminWelcomeSubtitle =>
+      'إليك نشاط المنصة اليوم والموافقات وأثر إعادة الاستخدام والصحة التشغيلية.';
 
   @override
   String get adminBannerOverviewLabel => 'نظرة عامة على المنصة';
@@ -8540,7 +9205,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminPlatformDistributionTitle => 'توزيع حسابات المنصة';
 
   @override
-  String get adminPlatformDistributionSubtitle => 'المستخدمون والموردون والسائقون النشطون على ImpactLoop';
+  String get adminPlatformDistributionSubtitle =>
+      'المستخدمون والموردون والسائقون النشطون على ImpactLoop';
 
   @override
   String get adminCo2RingCenterLabel => 'المواد المدرجة المعاد استخدامها';
@@ -8549,19 +9215,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminControlCenterTitle => 'مركز التحكم بالمنصة';
 
   @override
-  String get adminControlCenterSubtitle => 'راقب نشاط المنصة والموافقات والدعوات والتحقق من الموردين وأثر إعادة الاستخدام من مكان واحد.';
+  String get adminControlCenterSubtitle =>
+      'راقب نشاط المنصة والموافقات والدعوات والتحقق من الموردين وأثر إعادة الاستخدام من مكان واحد.';
 
   @override
   String get adminChartsAnalyticsTitle => 'الرسوم البيانية والتحليلات';
 
   @override
-  String get adminChartsAnalyticsSubtitle => 'اتجاهات إعادة الاستخدام وتوزيع الفئات والحجوزات وقوائم الموافقات.';
+  String get adminChartsAnalyticsSubtitle =>
+      'اتجاهات إعادة الاستخدام وتوزيع الفئات والحجوزات وقوائم الموافقات.';
 
   @override
-  String get adminPlatformMetricsSubtitle => 'أعداد مباشرة للمستخدمين والقوائم والموافقات والعمليات.';
+  String get adminPlatformMetricsSubtitle =>
+      'أعداد مباشرة للمستخدمين والقوائم والموافقات والعمليات.';
 
   @override
-  String get adminAdminOperationsSubtitle => 'انتقل إلى كل وحدة إدارية من لوحة التحكم.';
+  String get adminAdminOperationsSubtitle =>
+      'انتقل إلى كل وحدة إدارية من لوحة التحكم.';
 
   @override
   String get adminStatAvailableMaterials => 'المواد المتاحة';
@@ -8576,7 +9246,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminEstimatedCo2Avoided => 'تقدير تجنب CO₂';
 
   @override
-  String get adminEstimatedCo2Helper => 'تقدير من المواد المعاد استخدامها وعوامل إعادة الاستخدام حسب الفئة.';
+  String get adminEstimatedCo2Helper =>
+      'تقدير من المواد المعاد استخدامها وعوامل إعادة الاستخدام حسب الفئة.';
 
   @override
   String get adminEstimatedCo2ShortHelper => 'تقدير من المواد المعاد استخدامها';
@@ -8597,10 +9268,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminHintAvailableMaterials => 'المواد المتاحة للحجز حالياً';
 
   @override
-  String get adminHintPendingApprovals => 'طلبات الموردين والفئات والأسعار المعلّقة';
+  String get adminHintPendingApprovals =>
+      'طلبات الموردين والفئات والأسعار المعلّقة';
 
   @override
-  String get adminHintActiveInvitations => 'دعوات السائق والمشرف والإدارة المفتوحة';
+  String get adminHintActiveInvitations =>
+      'دعوات السائق والمشرف والإدارة المفتوحة';
 
   @override
   String get adminHintCompletedReuse => 'المواد المعلّمة كمعاد استخدامها';
@@ -8612,25 +9285,29 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminReuseActivityTitle => 'نشاط إعادة الاستخدام عبر الزمن';
 
   @override
-  String get adminReuseActivitySubtitle => 'إعادة الاستخدام المكتملة شهرياً عبر المنصة';
+  String get adminReuseActivitySubtitle =>
+      'إعادة الاستخدام المكتملة شهرياً عبر المنصة';
 
   @override
   String get adminMaterialsByCategoryTitle => 'المواد حسب الفئة';
 
   @override
-  String get adminMaterialsByCategorySubtitle => 'توزيع المواد المدرجة عبر الفئات';
+  String get adminMaterialsByCategorySubtitle =>
+      'توزيع المواد المدرجة عبر الفئات';
 
   @override
   String get adminReservationStatusTitle => 'نظرة عامة على حالات الحجز';
 
   @override
-  String get adminReservationStatusSubtitle => 'مسار الحجوزات الحالي حسب الحالة';
+  String get adminReservationStatusSubtitle =>
+      'مسار الحجوزات الحالي حسب الحالة';
 
   @override
   String get adminPendingActionsTitle => 'تفصيل قائمة الموافقات';
 
   @override
-  String get adminPendingActionsSubtitle => 'مراجعات الموردين والفئات والأسعار والبلاغات المعلّقة';
+  String get adminPendingActionsSubtitle =>
+      'مراجعات الموردين والفئات والأسعار والبلاغات المعلّقة';
 
   @override
   String get adminRecentInvitationsTitle => 'الدعوات الأخيرة';
@@ -8648,16 +9325,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminSupplierVerificationQueueTitle => 'قائمة التحقق من الموردين';
 
   @override
-  String get adminReviewQueuesSubtitle => 'التحقق من الموردين والدعوات والنشاط الإداري';
+  String get adminReviewQueuesSubtitle =>
+      'التحقق من الموردين والدعوات والنشاط الإداري';
 
   @override
-  String get adminSupplierVerificationFutureNote => 'ستظهر عملية التحقق من الموردين بعد تفعيل مستندات التحقق للمؤسسات.';
+  String get adminSupplierVerificationFutureNote =>
+      'ستظهر عملية التحقق من الموردين بعد تفعيل مستندات التحقق للمؤسسات.';
 
   @override
   String get adminImpactSnapshotTitle => 'لقطة أثر إعادة الاستخدام';
 
   @override
-  String get adminImpactSnapshotSubtitle => 'نتائج إعادة الاستخدام من الحجوزات والمواد المكتملة';
+  String get adminImpactSnapshotSubtitle =>
+      'نتائج إعادة الاستخدام من الحجوزات والمواد المكتملة';
 
   @override
   String get adminImpactReusedMaterials => 'مواد أُعيد استخدامها';
@@ -8678,28 +9358,34 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminImpactTopCategoryEmpty => 'أعلى فئة معاد استخدامها: —';
 
   @override
-  String get adminImpactEnvironmentalNote => 'يتم حساب الأثر البيئي التقديري باستخدام عوامل إعادة الاستخدام حسب الفئة والكميات المتاحة. القيم تقريبية.';
+  String get adminImpactEnvironmentalNote =>
+      'يتم حساب الأثر البيئي التقديري باستخدام عوامل إعادة الاستخدام حسب الفئة والكميات المتاحة. القيم تقريبية.';
 
   @override
-  String get adminEmptyNoInvitations => 'أنشئ دعوات الأدوار من صفحة الدعوات عند تفعيلها.';
+  String get adminEmptyNoInvitations =>
+      'أنشئ دعوات الأدوار من صفحة الدعوات عند تفعيلها.';
 
   @override
   String get adminEmptyNoInvitationsTitle => 'لا توجد دعوات نشطة';
 
   @override
-  String get adminEmptyNoInvitationsHint => 'افتح وحدة الدعوات لإنشاء دعوات سائق أو مشرف أو إدارة.';
+  String get adminEmptyNoInvitationsHint =>
+      'افتح وحدة الدعوات لإنشاء دعوات سائق أو مشرف أو إدارة.';
 
   @override
   String get adminEmptyNoActivity => 'لا يوجد نشاط إداري بعد';
 
   @override
-  String get adminEmptyNoActivityHint => 'ستظهر أحداث التدقيق بعد تفعيل إجراءات الإدارة.';
+  String get adminEmptyNoActivityHint =>
+      'ستظهر أحداث التدقيق بعد تفعيل إجراءات الإدارة.';
 
   @override
-  String get adminEmptyNoSupplierVerifications => 'لا توجد طلبات تحقق من الموردين حالياً.';
+  String get adminEmptyNoSupplierVerifications =>
+      'لا توجد طلبات تحقق من الموردين حالياً.';
 
   @override
-  String get adminEmptyNoPendingApprovals => 'لا توجد مراجعات موردين أو فئات أو أسعار أو بلاغات معلّقة.';
+  String get adminEmptyNoPendingApprovals =>
+      'لا توجد مراجعات موردين أو فئات أو أسعار أو بلاغات معلّقة.';
 
   @override
   String get adminPendingSupplierVerifications => 'تحقق المورد';
@@ -8711,7 +9397,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminOpSuppliersDesc => 'مراجعة حسابات وملفات الموردين';
 
   @override
-  String get adminOpSupplierVerificationDesc => 'معالجة طلبات التحقق من الموردين';
+  String get adminOpSupplierVerificationDesc =>
+      'معالجة طلبات التحقق من الموردين';
 
   @override
   String get adminOpMaterialsDesc => 'مراجعة وإدارة قوائم المواد';
@@ -8735,10 +9422,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminUseExistingCategory => 'استخدام فئة حالية';
 
   @override
-  String get adminUseExistingGuidance => 'يوصى به عندما تغطي فئة حالية هذه المادة بالفعل.';
+  String get adminUseExistingGuidance =>
+      'يوصى به عندما تغطي فئة حالية هذه المادة بالفعل.';
 
   @override
-  String get adminCreateNewGuidance => 'أنشئ فئة جديدة فقط عندما لا تمثل الفئات الحالية هذا الطلب بدقة.';
+  String get adminCreateNewGuidance =>
+      'أنشئ فئة جديدة فقط عندما لا تمثل الفئات الحالية هذا الطلب بدقة.';
 
   @override
   String get adminSuggestedExistingCategory => 'الفئة الحالية المقترحة';
@@ -8762,7 +9451,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminFailedCategories => 'تعذر تحميل الفئات الحالية.';
 
   @override
-  String get adminNoCategoriesAvailable => 'لا توجد فئات مواد نشطة ومحددة الملكية متاحة.';
+  String get adminNoCategoriesAvailable =>
+      'لا توجد فئات مواد نشطة ومحددة الملكية متاحة.';
 
   @override
   String get adminApproveWithExisting => 'الموافقة باستخدام فئة حالية';
@@ -8774,10 +9464,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminCreateJustification => 'لماذا يلزم إنشاء فئة منفصلة؟';
 
   @override
-  String get adminCreateJustificationHelper => 'اشرح بإيجاز لماذا لا تناسب الفئة المقترحة هذا الطلب.';
+  String get adminCreateJustificationHelper =>
+      'اشرح بإيجاز لماذا لا تناسب الفئة المقترحة هذا الطلب.';
 
   @override
-  String get adminCreateJustificationRequired => 'أدخل 10 أحرف على الأقل لتوضيح سبب الحاجة إلى فئة جديدة.';
+  String get adminCreateJustificationRequired =>
+      'أدخل 10 أحرف على الأقل لتوضيح سبب الحاجة إلى فئة جديدة.';
 
   @override
   String get adminExistingNameConflict => 'هذه الفئة موجودة بالفعل';
@@ -8798,58 +9490,74 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminFinalCategoryNameAr => 'اسم الفئة النهائي بالعربية';
 
   @override
-  String get adminBilingualNamesHelper => 'راجع اسمي المتجر النهائيين. سيظهر للمستخدم الاسم الموافق للغة التطبيق. تكشف الفحوصات الآلية المشكلات الواضحة في البنية وموضع اللغة فقط، ولا تتحقق من القواعد أو الترجمة.';
+  String get adminBilingualNamesHelper =>
+      'راجع اسمي المتجر النهائيين. سيظهر للمستخدم الاسم الموافق للغة التطبيق. تكشف الفحوصات الآلية المشكلات الواضحة في البنية وموضع اللغة فقط، ولا تتحقق من القواعد أو الترجمة.';
 
   @override
-  String get adminNamingGuidance => 'استخدم اسم فئة مختصرًا وواضحًا للمتجر، وتجنب أسماء المواد المحددة والوصف الطويل والعبارات العامة.';
+  String get adminNamingGuidance =>
+      'استخدم اسم فئة مختصرًا وواضحًا للمتجر، وتجنب أسماء المواد المحددة والوصف الطويل والعبارات العامة.';
 
   @override
-  String get adminEnglishNameRequired => 'أدخل اسم الفئة بالإنجليزية بين حرفين و120 حرفًا.';
+  String get adminEnglishNameRequired =>
+      'أدخل اسم الفئة بالإنجليزية بين حرفين و120 حرفًا.';
 
   @override
-  String get adminArabicNameRequired => 'أدخل اسم الفئة بالعربية بين حرفين و120 حرفًا.';
+  String get adminArabicNameRequired =>
+      'أدخل اسم الفئة بالعربية بين حرفين و120 حرفًا.';
 
   @override
-  String get adminEnglishNameWrongScript => 'يبدو أن اسم الفئة الإنجليزي يحتوي على نص عربي.';
+  String get adminEnglishNameWrongScript =>
+      'يبدو أن اسم الفئة الإنجليزي يحتوي على نص عربي.';
 
   @override
-  String get adminArabicNameWrongScript => 'يبدو أن اسم الفئة العربي يحتوي على نص إنجليزي فقط.';
+  String get adminArabicNameWrongScript =>
+      'يبدو أن اسم الفئة العربي يحتوي على نص إنجليزي فقط.';
 
   @override
-  String get adminNameControlCharacters => 'لا يمكن أن تحتوي أسماء الفئات على محارف تحكم.';
+  String get adminNameControlCharacters =>
+      'لا يمكن أن تحتوي أسماء الفئات على محارف تحكم.';
 
   @override
-  String get adminNamePunctuationBoundary => 'لا يمكن أن يبدأ اسم الفئة أو ينتهي بعلامة ترقيم.';
+  String get adminNamePunctuationBoundary =>
+      'لا يمكن أن يبدأ اسم الفئة أو ينتهي بعلامة ترقيم.';
 
   @override
   String get adminNameRepeatedWords => 'تجنب تكرار الكلمة نفسها بشكل متتالٍ.';
 
   @override
-  String get adminNameDescriptionLike => 'يبدو هذا وصفًا كاملاً وليس اسم فئة مختصرًا.';
+  String get adminNameDescriptionLike =>
+      'يبدو هذا وصفًا كاملاً وليس اسم فئة مختصرًا.';
 
   @override
-  String get adminNamesAppearIdentical => 'الاسمان متطابقان. تأكد أن هذا المصطلح يُستخدم بالشكل نفسه في اللغتين.';
+  String get adminNamesAppearIdentical =>
+      'الاسمان متطابقان. تأكد أن هذا المصطلح يُستخدم بالشكل نفسه في اللغتين.';
 
   @override
-  String get adminConfirmSharedTechnicalTerm => 'أؤكد أن استخدام هذا المصطلح التقني نفسه في اللغتين مقصود.';
+  String get adminConfirmSharedTechnicalTerm =>
+      'أؤكد أن استخدام هذا المصطلح التقني نفسه في اللغتين مقصود.';
 
   @override
-  String get adminSharedNameAcknowledgementRequired => 'أكد أن هذا المصطلح التقني يُستخدم عن قصد بالشكل نفسه في اللغتين.';
+  String get adminSharedNameAcknowledgementRequired =>
+      'أكد أن هذا المصطلح التقني يُستخدم عن قصد بالشكل نفسه في اللغتين.';
 
   @override
   String get adminNameUnusuallyLong => 'هذا الاسم طويل بشكل غير معتاد لفئة.';
 
   @override
-  String get adminEnglishNameCasingWarning => 'راجع كتابة الأحرف الكبيرة في الاسم الإنجليزي؛ تستخدم فئات المتجر عادةً نمط العناوين.';
+  String get adminEnglishNameCasingWarning =>
+      'راجع كتابة الأحرف الكبيرة في الاسم الإنجليزي؛ تستخدم فئات المتجر عادةً نمط العناوين.';
 
   @override
-  String get adminRepeatedWhitespaceWarning => 'سيتم حفظ المسافات المتكررة كمسافة عادية واحدة.';
+  String get adminRepeatedWhitespaceWarning =>
+      'سيتم حفظ المسافات المتكررة كمسافة عادية واحدة.';
 
   @override
-  String get adminMaterialTitleWarning => 'يبدو هذا اسم مادة محددة وليس اسم فئة قابلة لإعادة الاستخدام.';
+  String get adminMaterialTitleWarning =>
+      'يبدو هذا اسم مادة محددة وليس اسم فئة قابلة لإعادة الاستخدام.';
 
   @override
-  String get adminSimilarWordingWarning => 'هذه الصياغة مشابهة جدًا لفئة موجودة.';
+  String get adminSimilarWordingWarning =>
+      'هذه الصياغة مشابهة جدًا لفئة موجودة.';
 
   @override
   String get adminAssignMaterialFamily => 'تعيين عائلة المادة';
@@ -8876,19 +9584,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminMaterialFamilyInactive => 'عائلة المادة المحددة غير نشطة.';
 
   @override
-  String get adminTaxonomyConceptWrongType => 'مفهوم التصنيف المحدد ليس عائلة مادة.';
+  String get adminTaxonomyConceptWrongType =>
+      'مفهوم التصنيف المحدد ليس عائلة مادة.';
 
   @override
-  String get adminMaterialFamilyNotFound => 'عائلة المادة المحددة لم تعد متاحة.';
+  String get adminMaterialFamilyNotFound =>
+      'عائلة المادة المحددة لم تعد متاحة.';
 
   @override
-  String get adminOwnershipHelper => 'اختر عائلة المادة المرجعية التي تمثل هذه الفئة الجديدة بأفضل شكل.';
+  String get adminOwnershipHelper =>
+      'اختر عائلة المادة المرجعية التي تمثل هذه الفئة الجديدة بأفضل شكل.';
 
   @override
-  String get adminOwnershipExplanation => 'يربط هذا التعيين الفئة بنظام التصنيف والتوصيات.';
+  String get adminOwnershipExplanation =>
+      'يربط هذا التعيين الفئة بنظام التصنيف والتوصيات.';
 
   @override
-  String get adminOwnershipGuidance => 'راجع الفئات المشابهة ثم اختر عائلة المادة المناسبة قبل الموافقة.';
+  String get adminOwnershipGuidance =>
+      'راجع الفئات المشابهة ثم اختر عائلة المادة المناسبة قبل الموافقة.';
 
   @override
   String get adminApprovalSucceeded => 'تمت الموافقة على طلب الفئة.';
@@ -8956,13 +9669,15 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get adminSuspendAccountBody => 'سيمنع ذلك المستخدم من تنفيذ الإجراءات المهمة، لكن بياناته وسجله سيبقيان محفوظين.';
+  String get adminSuspendAccountBody =>
+      'سيمنع ذلك المستخدم من تنفيذ الإجراءات المهمة، لكن بياناته وسجله سيبقيان محفوظين.';
 
   @override
   String get adminReasonRequired => 'السبب (مطلوب)';
 
   @override
-  String get adminSuspensionReasonMinLength => 'يلزم سبب تعليق لا يقل عن 3 أحرف.';
+  String get adminSuspensionReasonMinLength =>
+      'يلزم سبب تعليق لا يقل عن 3 أحرف.';
 
   @override
   String get adminAccountSuspended => 'تم تعليق الحساب.';
@@ -8979,19 +9694,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminExportWebOnly => 'التصدير متاح على واجهة الإدارة للويب فقط.';
 
   @override
-  String get adminNoUsersMatchFilters => 'لا يوجد مستخدمون يطابقون الفلاتر الحالية.';
+  String get adminNoUsersMatchFilters =>
+      'لا يوجد مستخدمون يطابقون الفلاتر الحالية.';
 
   @override
   String get adminExportUsers => 'تصدير المستخدمين';
 
   @override
-  String get adminNoProjectBuildsWithLearningData => 'لا توجد مشاريع بناء مع بيانات تعلم.';
+  String get adminNoProjectBuildsWithLearningData =>
+      'لا توجد مشاريع بناء مع بيانات تعلم.';
 
   @override
   String get adminExportReservations => 'تصدير الحجوزات';
 
   @override
-  String get adminNoReservationsMatchFilters => 'لا توجد حجوزات تطابق الفلاتر الحالية.';
+  String get adminNoReservationsMatchFilters =>
+      'لا توجد حجوزات تطابق الفلاتر الحالية.';
 
   @override
   String get adminReservationDetails => 'تفاصيل الحجز';
@@ -9006,7 +9724,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminExportIncidentReports => 'تصدير بلاغات الحوادث';
 
   @override
-  String get adminNoIncidentReportsMatchFilters => 'لا توجد بلاغات حوادث تطابق الفلاتر الحالية.';
+  String get adminNoIncidentReportsMatchFilters =>
+      'لا توجد بلاغات حوادث تطابق الفلاتر الحالية.';
 
   @override
   String get adminCouldNotLoadIncidentReports => 'تعذر تحميل بلاغات الحوادث.';
@@ -9015,55 +9734,64 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminExportMaterials => 'تصدير المواد';
 
   @override
-  String get adminNoMaterialsMatchFilters => 'لا توجد مواد تطابق الفلاتر الحالية.';
+  String get adminNoMaterialsMatchFilters =>
+      'لا توجد مواد تطابق الفلاتر الحالية.';
 
   @override
   String get adminExportMaterialReports => 'تصدير بلاغات المواد';
 
   @override
-  String get adminNoMaterialReportsMatchFilters => 'لا توجد بلاغات مواد تطابق الفلاتر الحالية.';
+  String get adminNoMaterialReportsMatchFilters =>
+      'لا توجد بلاغات مواد تطابق الفلاتر الحالية.';
 
   @override
   String get adminSupplierVerificationDetails => 'تفاصيل التحقق من المورد';
 
   @override
-  String get adminApproveSupplierVerificationQuestion => 'الموافقة على التحقق من المورد؟';
+  String get adminApproveSupplierVerificationQuestion =>
+      'الموافقة على التحقق من المورد؟';
 
   @override
   String get adminRequestChanges => 'طلب تعديلات';
 
   @override
-  String get adminApproveSupplierVerification => 'الموافقة على التحقق من المورد';
+  String get adminApproveSupplierVerification =>
+      'الموافقة على التحقق من المورد';
 
   @override
   String get sectionLearningSpotlightTitle => 'أضواء التعلم';
 
   @override
-  String get sectionLearningSpotlightSubtitle => 'ابدأ بأدلة مشاريع مبنية من مواد قابلة لإعادة الاستخدام.';
+  String get sectionLearningSpotlightSubtitle =>
+      'ابدأ بأدلة مشاريع مبنية من مواد قابلة لإعادة الاستخدام.';
 
   @override
   String get sectionLearningSpotlightEmpty => 'لا توجد مشاريع تعلم منشورة بعد';
 
   @override
-  String get sectionLearningSpotlightEmptyDescription => 'عند نشر مشاريع التعلم، ستظهر الأدلة المميزة هنا.';
+  String get sectionLearningSpotlightEmptyDescription =>
+      'عند نشر مشاريع التعلم، ستظهر الأدلة المميزة هنا.';
 
   @override
   String get sectionHomeSuggestedMaterialsTitle => 'مواد مقترحة';
 
   @override
-  String get sectionHomeSuggestedMaterialsSubtitle => 'بعض المواد المدرجة حالياً لمساعدتك على البدء.';
+  String get sectionHomeSuggestedMaterialsSubtitle =>
+      'بعض المواد المدرجة حالياً لمساعدتك على البدء.';
 
   @override
   String get sectionHomeSuggestedMaterialsEmpty => 'لا توجد مواد متاحة بعد';
 
   @override
-  String get sectionHomeSuggestedMaterialsEmptyDescription => 'عندما يدرج الموردون مواداً قابلة لإعادة الاستخدام، ستظهر مجموعة صغيرة هنا.';
+  String get sectionHomeSuggestedMaterialsEmptyDescription =>
+      'عندما يدرج الموردون مواداً قابلة لإعادة الاستخدام، ستظهر مجموعة صغيرة هنا.';
 
   @override
   String get completeLearnerProfileTitle => 'أكمل ملف المتعلم';
 
   @override
-  String get completeLearnerProfileSubtitle => 'ساعدنا في تخصيص المشاريع وتوصيات المواد.';
+  String get completeLearnerProfileSubtitle =>
+      'ساعدنا في تخصيص المشاريع وتوصيات المواد.';
 
   @override
   String get registerLearnerProfileTitle => 'ملف المتعلم';
@@ -9072,7 +9800,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get registerSupplierProfileTitle => 'ملف المورد';
 
   @override
-  String get registerBothProfilesHint => 'ستكمل تفاصيل المتعلم والمورد في الخطوات التالية.';
+  String get registerBothProfilesHint =>
+      'ستكمل تفاصيل المتعلم والمورد في الخطوات التالية.';
 
   @override
   String get registerFullNameLabel => 'الاسم الكامل';
@@ -9147,7 +9876,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get registerBioHint => 'أخبر الآخرين قليلاً عن أهدافك التعليمية';
 
   @override
-  String get registerSupplierNextHint => 'بعد ذلك، سنساعدك في إعداد ملف المورد أيضاً.';
+  String get registerSupplierNextHint =>
+      'بعد ذلك، سنساعدك في إعداد ملف المورد أيضاً.';
 
   @override
   String get authLearnLabel => 'تعلّم';
@@ -9168,7 +9898,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get authRegistrationMovedTitle => 'تم نقل التسجيل';
 
   @override
-  String get authRegistrationMovedSubtitle => 'يكمل ImpactLoop التسجيل الآن في مكان واحد. جارٍ توجيهك إلى معالج التسجيل…';
+  String get authRegistrationMovedSubtitle =>
+      'يكمل ImpactLoop التسجيل الآن في مكان واحد. جارٍ توجيهك إلى معالج التسجيل…';
 
   @override
   String get authBrandTitle => 'ImpactLoop';
@@ -9177,11 +9908,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeSuggestedMaterialsLoadError => 'تعذر تحميل المواد المقترحة';
 
   @override
-  String get homeSuggestedMaterialsLoadErrorSubtitle => 'الصفحة الرئيسية ما زالت متاحة. أعد المحاولة عندما يعمل واجهة برمجة المواد.';
+  String get homeSuggestedMaterialsLoadErrorSubtitle =>
+      'الصفحة الرئيسية ما زالت متاحة. أعد المحاولة عندما يعمل واجهة برمجة المواد.';
 
   @override
   String get homeLearningSpotlightLoadError => 'تعذر تحميل مشاريع التعلم';
 
   @override
-  String get homeLearningSpotlightLoadErrorSubtitle => 'الصفحة الرئيسية ما زالت متاحة. أعد المحاولة عندما يعمل واجهة برمجة مركز التعلم.';
+  String get homeLearningSpotlightLoadErrorSubtitle =>
+      'الصفحة الرئيسية ما زالت متاحة. أعد المحاولة عندما يعمل واجهة برمجة مركز التعلم.';
 }

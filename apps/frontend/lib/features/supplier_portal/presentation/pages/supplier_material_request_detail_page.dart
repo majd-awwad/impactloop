@@ -6,6 +6,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../application/supplier_material_requests_providers.dart';
 import '../../data/models/supplier_material_request.dart';
 import '../theme/supplier_theme_extension.dart';
@@ -38,11 +39,8 @@ class SupplierMaterialRequestDetailPage extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  IconButton(
-                    onPressed: () =>
-                        context.canPop() ? context.pop() : context.go('/supplier/material-requests'),
-                    icon: const Icon(Icons.arrow_back_rounded),
-                    tooltip: context.s.back,
+                  const AppBackAction(
+                    fallbackLocation: '/supplier/material-requests',
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(

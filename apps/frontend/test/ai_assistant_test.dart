@@ -32,6 +32,7 @@ import 'package:frontend/features/learning_hub/presentation/pages/learning_proje
 import 'package:frontend/features/learning_hub/presentation/pages/learning_project_build_page.dart';
 import 'package:frontend/features/materials/data/models/category.dart';
 import 'package:frontend/shared/models/localized_text.dart';
+import 'package:frontend/shared/widgets/app_back_action.dart';
 
 void main() {
   group('ImpactLoop Assistant', () {
@@ -866,7 +867,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(LearningProjectBuildGuidePage), findsOneWidget);
 
-      await tester.tap(find.byType(BackButton));
+      await tester.tap(find.byType(AppBackAction));
       await tester.pumpAndSettle();
 
       expect(find.text('Ask AI'), findsOneWidget);
@@ -1504,6 +1505,9 @@ class _BuildGuideHubRepository implements LearningProjectRepository {
   int guideCalls = 0;
 
   ProjectBuild get buildRecord => _build;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 
   @override
   Future<BuildGuideConversationResult> getOrCreateBuildGuideConversation(

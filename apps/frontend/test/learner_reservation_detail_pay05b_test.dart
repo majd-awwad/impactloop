@@ -377,7 +377,11 @@ void main() {
         size: const Size(1440, 900),
       );
 
-      expect(find.text('تفاصيل الحجز'), findsOneWidget);
+      expect(find.text('تفاصيل الحجز'), findsNWidgets(2));
+      expect(
+        find.byKey(const ValueKey('app-back-breadcrumb-current')),
+        findsOneWidget,
+      );
       expect(find.text('ملخص الحجز'), findsOneWidget);
       expect(find.text('أكمل الدفع لفتح رمز الاستلام.'), findsOneWidget);
       expect(find.text('Complete payment to unlock your pickup code.'), findsNothing);

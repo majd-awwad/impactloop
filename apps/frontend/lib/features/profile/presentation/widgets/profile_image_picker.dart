@@ -1,13 +1,13 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/notification_bell_button.dart';
 import '../../data/models/uploaded_profile_image.dart';
 import 'profile_edit_widgets.dart';
@@ -189,7 +189,6 @@ class ProfileSubpageScaffold extends StatelessWidget {
     required this.title,
     required this.child,
     this.backFallbackRoute = '/profile',
-    this.backTooltip = 'Back',
     this.headerAction,
     this.showNotificationBell = true,
   });
@@ -197,7 +196,6 @@ class ProfileSubpageScaffold extends StatelessWidget {
   final String title;
   final Widget child;
   final String backFallbackRoute;
-  final String backTooltip;
   final Widget? headerAction;
   final bool showNotificationBell;
 
@@ -223,11 +221,7 @@ class ProfileSubpageScaffold extends StatelessWidget {
                   constraints: const BoxConstraints(maxWidth: 720),
                   child: Row(
                     children: [
-                      IconButton(
-                        onPressed: () => context.popOrGo(backFallbackRoute),
-                        icon: const Icon(Icons.arrow_back_rounded),
-                        tooltip: backTooltip,
-                      ),
+                      AppBackAction(fallbackLocation: backFallbackRoute),
                       Expanded(
                         child: Text(
                           title,

@@ -412,7 +412,6 @@ void main() {
         tester,
         ProfileFamilyPageScaffold(
           title: 'Account',
-          backTooltip: 'Back',
           backFallbackRoute: '/profile',
           child: const Text('Account body'),
         ),
@@ -906,7 +905,6 @@ Future<_Harness> _pumpShell(
         path: '/profile/account',
         builder: (context, state) => ProfileFamilyPageScaffold(
           title: 'Account',
-          backTooltip: 'Back',
           backFallbackRoute: '/profile',
           child: const Text('Account body'),
         ),

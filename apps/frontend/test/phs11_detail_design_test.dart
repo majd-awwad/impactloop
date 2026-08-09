@@ -234,7 +234,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Back to help sessions'), findsOneWidget);
+      expect(find.text('Back'), findsOneWidget);
       expect(find.text('Back to project'), findsOneWidget);
       expect(find.text('Attempt #1'), findsOneWidget);
       expect(find.text('30 min'), findsOneWidget);
@@ -296,7 +296,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('العودة إلى جلسات المساعدة'), findsOneWidget);
+      expect(find.text('رجوع'), findsOneWidget);
       expect(find.text('المشكلة'), findsOneWidget);
     });
   });

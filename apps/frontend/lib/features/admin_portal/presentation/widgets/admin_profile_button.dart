@@ -47,9 +47,13 @@ class AdminProfileButton extends ConsumerWidget {
         final decorations = context.adminDecorations;
         final palette = context.adminPalette;
 
-        void navigate(String route) {
+        void navigate(String route, {bool push = false}) {
           Navigator.of(menuContext).pop();
-          context.go(route);
+          if (push) {
+            context.push(route);
+          } else {
+            context.go(route);
+          }
         }
 
         return AppAccountMenuPanel(
@@ -82,7 +86,7 @@ class AdminProfileButton extends ConsumerWidget {
               action: AppAccountMenuAction(
                 label: AccountSettingsL10n.of(context).pageTitle,
                 icon: Icons.manage_accounts_outlined,
-                onTap: () => navigate(accountSettingsRoute),
+                onTap: () => navigate(accountSettingsRoute, push: true),
               ),
             ),
           ],

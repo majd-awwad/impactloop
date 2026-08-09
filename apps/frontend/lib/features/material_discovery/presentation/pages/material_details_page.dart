@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../l10n/l10n.dart';
 
-import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -16,6 +15,7 @@ import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/polling/lifecycle_polling_controller.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -953,14 +953,7 @@ class _DetailsPageHeader extends StatelessWidget {
 
     return Row(
       children: [
-        IconButton.outlined(
-          onPressed: () => context.popOrGo('/materials'),
-          style: IconButton.styleFrom(
-            foregroundColor: palette.textPrimary,
-            side: BorderSide(color: palette.borderStrong),
-          ),
-          icon: const Icon(Icons.arrow_back_rounded),
-        ),
+        const AppBackAction(fallbackLocation: '/materials'),
         const Spacer(),
         Container(
           padding: const EdgeInsetsDirectional.symmetric(

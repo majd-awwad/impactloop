@@ -6,6 +6,8 @@ import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/app_back_action.dart';
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../data/admin_deliveries_api.dart';
 import '../../data/models/admin_deliveries_models.dart';
@@ -34,13 +36,7 @@ class _AdminDeliveryDetailPageState
   String _tab = 'Overview';
   var _isReopening = false;
 
-  void _back() {
-    if (context.canPop()) {
-      context.pop();
-    } else {
-      context.go('/admin/deliveries');
-    }
-  }
+  void _back() => context.popOrGo('/admin/deliveries');
 
   Future<void> _reopen(AdminDeliveryDetail detail) async {
     if (_isReopening) return;
@@ -255,17 +251,7 @@ class _Header extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextButton.icon(
-              onPressed: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/admin/deliveries');
-                }
-              },
-              icon: const Icon(Icons.arrow_back, size: 18),
-              label: const Text('Back to Deliveries'),
-            ),
+            const AppBackAction(fallbackLocation: '/admin/deliveries'),
             const SizedBox(height: 8),
             if (constraints.maxWidth >= 1080)
               Row(

@@ -11,6 +11,7 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../../core/polling/lifecycle_polling_controller.dart';
@@ -188,6 +189,17 @@ class _ReservationsContentState extends ConsumerState<_ReservationsContent>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                AppBackBreadcrumb(
+                  fallbackLocation: '/home',
+                  ancestors: [
+                    AppBackBreadcrumbItem(
+                      label: context.l10n.home,
+                      location: '/home',
+                    ),
+                  ],
+                  currentLabel: context.l10n.myReservations,
+                ),
+                const SizedBox(height: AppSpacing.md),
                 _PageHeader(
                   compact: compact,
                   onRefresh: _refreshReservations,

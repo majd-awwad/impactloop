@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../../core/polling/lifecycle_polling_controller.dart';
 import '../../../../core/polling/lifecycle_polling_host.dart';
@@ -250,18 +250,15 @@ class _ReservationDetailContentState
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              TextButton.icon(
-                                onPressed: () =>
-                                    context.popOrGo('/learner/reservations'),
-                                style: AppStatusButtonStyle.text(
-                                  context,
-                                  AppStatusTone.neutral,
-                                ),
-                                icon: const Icon(
-                                  Icons.arrow_back_rounded,
-                                  size: 18,
-                                ),
-                                label: Text(l10n.allReservations),
+                              AppBackBreadcrumb(
+                                fallbackLocation: '/learner/reservations',
+                                ancestors: [
+                                  AppBackBreadcrumbItem(
+                                    label: l10n.myReservations,
+                                    location: '/learner/reservations',
+                                  ),
+                                ],
+                                currentLabel: l10n.reservationDetailsTitle,
                               ),
                               const SizedBox(height: AppSpacing.xs),
                               Text(

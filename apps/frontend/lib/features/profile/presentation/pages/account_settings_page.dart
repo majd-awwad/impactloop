@@ -8,6 +8,7 @@ import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_route_helpers.dart';
+import '../../../auth/application/portal_navigation.dart';
 import '../../../auth/data/models/user.dart';
 import '../../../auth/presentation/widgets/portal_switch_menu.dart';
 import '../../../notifications/application/notifications_routes.dart';
@@ -114,8 +115,9 @@ class _AccountSettingsPageState extends ConsumerState<AccountSettingsPage> {
 
     return ProfileFamilyPageScaffold(
       title: l10n.pageTitle,
-      backTooltip: l10n.back,
-      backFallbackRoute: profileRoute,
+      backFallbackRoute: user == null
+          ? profileRoute
+          : profileRouteForActiveRole(user),
       child: user == null
           ? AppEmptyStateCard(
               icon: Icons.manage_accounts_outlined,

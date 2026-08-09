@@ -17,6 +17,7 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/format/localized_formatters.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../data/deliveries_repository.dart';
 import '../../data/models/learner_delivery_tracking.dart';
@@ -208,6 +209,20 @@ class _LearnerDeliveryTrackingPageState
               showSignIn: false,
               showCreateAccount: false,
               homeRoute: '/home',
+            ),
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                0,
+              ),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: AppBackAction(
+                  fallbackLocation: '/learner/deliveries/${widget.deliveryId}',
+                ),
+              ),
             ),
             Expanded(
               child: _initialLoading

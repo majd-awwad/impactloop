@@ -50,9 +50,15 @@ String learnerBuildNotebookRoute(String buildId, {String? pageId}) {
 }
 
 extension AppNavigationExtensions on BuildContext {
-  void popOrGo(String fallbackLocation) {
-    if (canPop()) {
-      pop();
+  /// Requests a normal Navigator pop and uses [fallbackLocation] only when the
+  /// request bubbles because there is no route in the app stack to pop.
+  ///
+  /// `Navigator.maybePop` returns `true` both when a route pops and when a
+  /// [PopScope] handles/vetoes the request. Awaiting that result before deciding
+  /// about the fallback prevents a guard from being bypassed.
+  Future<void> popOrGo(String fallbackLocation) async {
+    final handled = await Navigator.of(this).maybePop();
+    if (handled || !mounted) {
       return;
     }
 

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -10,6 +9,7 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../home/application/learner_home_provider.dart';
 import '../../../learning_hub/application/project_build_refresh.dart';
@@ -58,11 +58,8 @@ class LearnerMaterialRequestDetailPage extends ConsumerWidget {
                       children: [
                         Row(
                           children: [
-                            IconButton(
-                              onPressed: () =>
-                                  context.popOrGo('/learner/material-requests'),
-                              icon: const Icon(Icons.arrow_back_rounded),
-                              tooltip: 'Back',
+                            const AppBackAction(
+                              fallbackLocation: '/learner/material-requests',
                             ),
                             const SizedBox(width: AppSpacing.xs),
                             Expanded(

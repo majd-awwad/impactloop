@@ -11,6 +11,7 @@ import '../../../../shared/widgets/app_password_field.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../auth/application/auth_route_helpers.dart';
 import '../l10n/account_settings_l10n.dart';
 import '../widgets/profile_image_picker.dart';
 
@@ -69,7 +70,7 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
       _confirmPasswordController.clear();
 
       showInfoSnackBar(context, l10n.passwordUpdated);
-      context.popOrGo('/profile');
+      context.popOrGo(accountSettingsRoute);
     } on ApiException catch (error) {
       if (!mounted) {
         return;
@@ -133,7 +134,7 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
     final l10n = AccountSettingsL10n.of(context);
     return ProfileSubpageScaffold(
       title: l10n.security,
-      backTooltip: l10n.back,
+      backFallbackRoute: accountSettingsRoute,
       child: ProfileEditCard(
         child: Form(
           key: _formKey,

@@ -13,6 +13,7 @@ import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../ai/application/ai_assistant_shell_provider.dart';
 import '../../../ai/application/ai_chat_controller.dart';
 import '../../../ai/presentation/widgets/ai_assistant_shell.dart';
@@ -1694,11 +1695,7 @@ class _BuildHeader extends StatelessWidget {
             runSpacing: AppSpacing.xs,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              TextButton.icon(
-                onPressed: () => context.go('/learning/$projectId'),
-                icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                label: Text(ProjectBuildPageL10n.backToProject.resolve(context)),
-              ),
+              AppBackAction(fallbackLocation: '/learning/$projectId'),
               TextButton(
                 onPressed: () => context.go(learnerBuildsRoute),
                 child: Text(ProjectBuildPageL10n.myBuilds.resolve(context)),

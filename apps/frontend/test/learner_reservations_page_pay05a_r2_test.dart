@@ -255,7 +255,11 @@ void main() {
       size: const Size(390, 844),
     );
 
-    expect(find.text('حجوزاتي'), findsOneWidget);
+    expect(find.text('حجوزاتي'), findsNWidgets(2));
+    expect(
+      find.byKey(const ValueKey('app-back-breadcrumb-current')),
+      findsOneWidget,
+    );
     expect(find.text('المبلغ المطلوب'), findsOneWidget);
     expect(find.textContaining('16.00'), findsOneWidget);
     expect(find.text('قطعة واحدة'), findsOneWidget);

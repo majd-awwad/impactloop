@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
@@ -9,6 +8,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/project_notebook_controller.dart';
 import '../../domain/models/project_build_notebook.dart';
@@ -374,7 +374,6 @@ class _NotebookWorkspace extends StatelessWidget {
                 saveErrorKind: state.saveErrorKind,
                 exportingPdf: exportingPdf,
                 compact: isCompact,
-                onBack: () => context.pop(),
                 onRetrySave: controller.retrySave,
                 onExportPdf: onExportPdf,
               ),
@@ -448,7 +447,6 @@ class _NotebookHeader extends StatelessWidget {
     required this.saveErrorKind,
     required this.exportingPdf,
     required this.compact,
-    required this.onBack,
     required this.onRetrySave,
     required this.onExportPdf,
   });
@@ -459,7 +457,6 @@ class _NotebookHeader extends StatelessWidget {
   final NotebookSaveErrorKind saveErrorKind;
   final bool exportingPdf;
   final bool compact;
-  final VoidCallback onBack;
   final VoidCallback onRetrySave;
   final VoidCallback onExportPdf;
 
@@ -479,11 +476,7 @@ class _NotebookHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              TextButton.icon(
-                onPressed: onBack,
-                icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                label: Text(ProjectNotebookL10n.backToBuild.resolve(context)),
-              ),
+              const AppBackAction(fallbackLocation: learnerBuildsRoute),
               const Spacer(),
               if (compact)
                 IconButton(

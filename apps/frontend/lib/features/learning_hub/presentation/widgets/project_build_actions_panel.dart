@@ -39,7 +39,7 @@ class _ProjectBuildActionsPanelState
     final destination = '/learning/$projectId/build';
 
     if (hasBuild) {
-      context.go(destination, extra: widget.recommendationImpressionId);
+      context.push(destination, extra: widget.recommendationImpressionId);
       return;
     }
 
@@ -64,7 +64,7 @@ class _ProjectBuildActionsPanelState
           );
       ref.invalidate(projectBuildProvider(projectId));
       if (mounted) {
-        context.go(destination, extra: widget.recommendationImpressionId);
+        context.push(destination, extra: widget.recommendationImpressionId);
       }
     } catch (error) {
       if (mounted) {
@@ -82,7 +82,7 @@ class _ProjectBuildActionsPanelState
     try {
       await resumeLearnerBuild(ref, build.id);
       if (mounted) {
-        context.go('/learning/${build.projectId}/build');
+        context.push('/learning/${build.projectId}/build');
       }
     } catch (error) {
       if (mounted) {
@@ -100,7 +100,7 @@ class _ProjectBuildActionsPanelState
     try {
       await buildProjectAgain(ref, build.projectId);
       if (mounted) {
-        context.go('/learning/${build.projectId}/build');
+        context.push('/learning/${build.projectId}/build');
       }
     } catch (error) {
       if (mounted) {
@@ -118,7 +118,7 @@ class _ProjectBuildActionsPanelState
   }
 
   void _openBuild(ProjectBuild build) {
-    context.go('/learning/${build.projectId}/build');
+    context.push('/learning/${build.projectId}/build');
   }
 
   @override

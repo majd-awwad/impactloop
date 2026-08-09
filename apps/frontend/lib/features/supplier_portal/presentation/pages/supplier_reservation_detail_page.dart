@@ -8,6 +8,7 @@ import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_section_card.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../controllers/supplier_requests_providers.dart';
@@ -449,51 +450,15 @@ class _HeaderCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final items = [
-              IconButton(
-                onPressed: onBack,
-                icon: const Icon(
-                  Icons.arrow_back,
-                ),
-                tooltip: l.backToIncomingRequests,
-              ),
-              Text(
-                l.incomingRequestsTitle,
-                style: context.supplierBody().copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsetsDirectional.symmetric(
-                  horizontal: AppSpacing.sm,
-                ),
-                child: Icon(
-                  Icons.chevron_right,
-                  color: colors.textMuted,
-                ),
-              ),
-              Text(l.requestDetails, style: context.supplierLabel()),
-            ];
-            final backButton = OutlinedButton.icon(
-              onPressed: onBack,
-              icon: const Icon(
-                Icons.arrow_back,
-                size: 17,
-              ),
-              label: Text(l.back),
-            );
-            if (constraints.maxWidth < 560) {
-              return Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: AppSpacing.xs,
-                runSpacing: AppSpacing.xs,
-                children: [...items, backButton],
-              );
-            }
-            return Row(children: [...items, const Spacer(), backButton]);
-          },
+        AppBackBreadcrumb(
+          onBack: onBack,
+          ancestors: [
+            AppBackBreadcrumbItem(
+              label: l.incomingRequestsTitle,
+              location: '/supplier/reservations',
+            ),
+          ],
+          currentLabel: l.requestDetails,
         ),
         const SizedBox(height: AppSpacing.sm),
         AppSectionCard(

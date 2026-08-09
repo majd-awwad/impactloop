@@ -15,6 +15,7 @@ import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/learning_project_status_presentation.dart';
@@ -112,7 +113,7 @@ void _showSubmissionIncompleteFeedback(
 
   if (requiresImage) {
     if (navigateToImages) {
-      context.go(_submissionDetailsPath(submissionId, focusImages: true));
+      context.push(_submissionDetailsPath(submissionId, focusImages: true));
       return;
     }
     if (imagesSectionKey != null) {
@@ -504,7 +505,8 @@ class _SubmissionDetailContentState extends ConsumerState<_SubmissionDetailConte
         error,
         imagesSectionKey: _imagesSectionKey,
         submissionId: submission.id,
-        onEdit: () => context.go('/learning/submissions/${submission.id}/edit'),
+        onEdit: () =>
+            context.push('/learning/submissions/${submission.id}/edit'),
       );
       setState(() {
         _isSubmitting = false;
@@ -540,14 +542,8 @@ class _SubmissionDetailContentState extends ConsumerState<_SubmissionDetailConte
             children: [
               Align(
                 alignment: AlignmentDirectional.centerStart,
-                child: TextButton.icon(
-                  onPressed: () => context.popOrGo('/learning/submissions'),
-                  style: AppStatusButtonStyle.text(
-                    context,
-                    AppStatusTone.neutral,
-                  ),
-                  icon: const Icon(Icons.arrow_back_rounded),
-                  label: const Text('Back to submissions'),
+                child: const AppBackAction(
+                  fallbackLocation: '/learning/submissions',
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -1757,7 +1753,8 @@ class _SubmissionActionsState extends ConsumerState<_SubmissionActions> {
         error,
         submissionId: submission.id,
         navigateToImages: projectSubmissionIncompleteRequiresImage(error),
-        onEdit: () => context.go('/learning/submissions/${submission.id}/edit'),
+        onEdit: () =>
+            context.push('/learning/submissions/${submission.id}/edit'),
       );
       setState(() {
         _isSubmitting = false;
@@ -1778,7 +1775,7 @@ class _SubmissionActionsState extends ConsumerState<_SubmissionActions> {
   Widget build(BuildContext context) {
     final secondaryActions = <Widget>[
       OutlinedButton(
-        onPressed: () => context.go('/learning/submissions/${submission.id}'),
+        onPressed: () => context.push('/learning/submissions/${submission.id}'),
         style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
         child: const Text('View'),
       ),
@@ -1794,7 +1791,7 @@ class _SubmissionActionsState extends ConsumerState<_SubmissionActions> {
       if (submission.availableActions.canEdit)
         OutlinedButton.icon(
           onPressed: () =>
-              context.go('/learning/submissions/${submission.id}/edit'),
+              context.push('/learning/submissions/${submission.id}/edit'),
           style: AppStatusButtonStyle.outlined(context, AppStatusTone.primary),
           icon: const Icon(Icons.edit_outlined),
           label: Text(
@@ -1805,7 +1802,7 @@ class _SubmissionActionsState extends ConsumerState<_SubmissionActions> {
         ),
       if (submission.availableActions.canViewPublic)
         OutlinedButton.icon(
-          onPressed: () => context.go('/learning/${submission.id}'),
+          onPressed: () => context.push('/learning/${submission.id}'),
           style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
           icon: const Icon(Icons.open_in_new_rounded),
           label: const Text('View public project'),
@@ -1847,7 +1844,7 @@ class _SubmissionActionsState extends ConsumerState<_SubmissionActions> {
           AppPrimaryButton(
             label: 'Resubmit for review',
             onPressed: () =>
-                context.go('/learning/submissions/${submission.id}/edit'),
+                context.push('/learning/submissions/${submission.id}/edit'),
           ),
           const SizedBox(height: AppSpacing.sm),
           Wrap(

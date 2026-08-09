@@ -199,7 +199,7 @@ class _HistoryCard extends StatelessWidget {
       button: true,
       label: l10n.driverOpenHistoricalDelivery,
       child: InkWell(
-        onTap: () => context.go('/driver/history/${delivery.id}'),
+        onTap: () => context.push('/driver/history/${delivery.id}'),
         borderRadius: AppRadius.lgAll,
         child: Container(
           padding: const EdgeInsetsDirectional.all(AppSpacing.md),
@@ -338,7 +338,7 @@ class _IncidentCard extends StatelessWidget {
           if (incident.relatedDeliveryId != null) ...[
             const SizedBox(height: AppSpacing.sm),
             TextButton.icon(
-              onPressed: () => context.go(
+              onPressed: () => context.push(
                 incident.relatedDeliveryIsHistorical
                     ? '/driver/history/${incident.relatedDeliveryId}'
                     : '/driver/deliveries/${incident.relatedDeliveryId}',
@@ -350,7 +350,7 @@ class _IncidentCard extends StatelessWidget {
           if (incident.recoveryDeliveryId != null) ...[
             const SizedBox(height: AppSpacing.sm),
             TextButton.icon(
-              onPressed: () => context.go(
+              onPressed: () => context.push(
                 incident.recoveryDeliveryIsHistorical
                     ? '/driver/history/${incident.recoveryDeliveryId}'
                     : '/driver/deliveries/${incident.recoveryDeliveryId}',

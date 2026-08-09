@@ -2191,7 +2191,9 @@ class _ReservationDetailBody extends StatelessWidget {
                 final reportId = report.id;
                 Navigator.pop(context);
                 if (reportId.isNotEmpty) {
-                  context.push('/admin/no-show-reports?open=$reportId');
+                  context.push(
+                    '/admin/no-show-reports/${Uri.encodeComponent(reportId)}',
+                  );
                 } else {
                   context.push('/admin/no-show-reports');
                 }
@@ -2233,7 +2235,9 @@ class _ReservationDetailBody extends StatelessWidget {
                 final deliveryId = delivery.id;
                 Navigator.pop(context);
                 if (deliveryId.isNotEmpty) {
-                  context.push('/admin/deliveries?open=$deliveryId');
+                  context.push(
+                    '/admin/deliveries/${Uri.encodeComponent(deliveryId)}',
+                  );
                 } else {
                   context.push('/admin/deliveries');
                 }

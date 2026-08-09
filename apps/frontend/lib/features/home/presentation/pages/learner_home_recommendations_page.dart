@@ -9,6 +9,7 @@ import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/learner_home_provider.dart';
 import '../../domain/learner_home_models.dart';
@@ -127,15 +128,7 @@ class _LearnerHomeRecommendationsPageState
               ),
               child: Align(
                 alignment: AlignmentDirectional.centerStart,
-                child: TextButton.icon(
-                  onPressed: () => context.go('/home'),
-                  style: AppStatusButtonStyle.text(
-                    context,
-                    AppStatusTone.neutral,
-                  ),
-                  icon: const BackButtonIcon(),
-                  label: Text(context.l10n.backToHome),
-                ),
+                child: const AppBackAction(fallbackLocation: '/home'),
               ),
             ),
             const EntryNavBar(

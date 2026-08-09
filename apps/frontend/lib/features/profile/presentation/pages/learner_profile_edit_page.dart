@@ -218,7 +218,6 @@ class _LearnerProfileEditPageState
       return ProfileSubpageScaffold(
         title: l10n.editLearningProfile,
         backFallbackRoute: learningProfileRoute,
-        backTooltip: l10n.back,
         child: ProfileEditCard(child: Text(l10n.learnerOnlyEditMessage)),
       );
     }
@@ -226,7 +225,6 @@ class _LearnerProfileEditPageState
     return ProfileSubpageScaffold(
       title: l10n.editLearningProfile,
       backFallbackRoute: learningProfileRoute,
-      backTooltip: l10n.back,
       child: ProfileEditCard(
         child: optionsAsync.when(
           loading: () => Semantics(

@@ -151,7 +151,7 @@ class _MaterialSection extends StatelessWidget {
           subtitle: materials.isEmpty ? copy.empty : copy.subtitle,
           action: HomeSectionActionButton(
             onPressed: () =>
-                context.go(LearnerHomeBrowseRoutes.forSection(section.key)),
+                context.push(LearnerHomeBrowseRoutes.forSection(section.key)),
             icon: const Icon(Icons.arrow_forward_rounded),
             label: context.l10n.browseAll,
           ),
@@ -164,7 +164,7 @@ class _MaterialSection extends StatelessWidget {
             description: copy.empty,
             actionLabel: context.l10n.openMaterials,
             onAction: () =>
-                context.go(LearnerHomeBrowseRoutes.forSection(section.key)),
+                context.push(LearnerHomeBrowseRoutes.forSection(section.key)),
           )
         else
           HomeMaterialRecommendationGrid(items: materials, maxItems: 4),
@@ -193,7 +193,7 @@ class _ProjectSection extends StatelessWidget {
           subtitle: projects.isEmpty ? copy.empty : copy.subtitle,
           action: HomeSectionActionButton(
             onPressed: () =>
-                context.go(LearnerHomeBrowseRoutes.forSection(section.key)),
+                context.push(LearnerHomeBrowseRoutes.forSection(section.key)),
             icon: const Icon(Icons.arrow_forward_rounded),
             label: context.l10n.browseAll,
           ),
@@ -206,7 +206,7 @@ class _ProjectSection extends StatelessWidget {
             description: copy.empty,
             actionLabel: context.l10n.openLearningHub,
             onAction: () =>
-                context.go(LearnerHomeBrowseRoutes.forSection(section.key)),
+                context.push(LearnerHomeBrowseRoutes.forSection(section.key)),
           )
         else
           LayoutBuilder(
@@ -257,7 +257,7 @@ class _ContinueProjectsSection extends StatelessWidget {
           subtitle: builds.isNotEmpty ? copy.subtitle : copy.empty,
           action: HomeSectionActionButton(
             onPressed: () =>
-                context.go(LearnerHomeBrowseRoutes.forSection(section.key)),
+                context.push(LearnerHomeBrowseRoutes.forSection(section.key)),
             icon: const Icon(Icons.arrow_forward_rounded),
             label: context.l10n.browseProjects,
           ),

@@ -9,6 +9,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../comments/domain/comment_models.dart';
 import '../../../comments/presentation/comments_section.dart';
@@ -236,7 +237,7 @@ class _DetailsHero extends StatelessWidget {
             ),
             PositionedDirectional(
               top: 40,
-              start: 24,
+              end: 24,
               child: Container(
                 padding: const EdgeInsetsDirectional.symmetric(
                   horizontal: AppSpacing.sm,
@@ -259,17 +260,8 @@ class _DetailsHero extends StatelessWidget {
             ),
             PositionedDirectional(
               top: 52,
-              end: 36,
-              child: IconButton.filled(
-                onPressed: () => context.popOrGo('/learning'),
-                style: IconButton.styleFrom(
-                  backgroundColor: palette.cardSurface.withValues(
-                    alpha: isDark ? 0.74 : 0.9,
-                  ),
-                  foregroundColor: palette.textPrimary,
-                ),
-                icon: const Icon(Icons.arrow_forward_rounded),
-              ),
+              start: 36,
+              child: const AppBackAction(fallbackLocation: '/learning'),
             ),
             if (!hasImage)
               PositionedDirectional(

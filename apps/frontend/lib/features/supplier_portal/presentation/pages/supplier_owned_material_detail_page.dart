@@ -10,6 +10,7 @@ import '../../../../core/errors/api_exception.dart';
 import '../../../../core/format/localized_formatters.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
@@ -151,7 +152,7 @@ class _MaterialWorkspaceState extends ConsumerState<_MaterialWorkspace> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _Breadcrumb(onBack: _goBack),
+                    _Breadcrumb(onBack: _goBack, currentLabel: material.title),
                     const SizedBox(height: AppSpacing.md),
                     _MaterialHero(material: material, desktop: desktop),
                     const SizedBox(height: AppSpacing.md),
@@ -170,7 +171,6 @@ class _MaterialWorkspaceState extends ConsumerState<_MaterialWorkspace> {
               statusSubmitting: _statusSubmitting,
               deleteBlockedMessage: deleteBlockedMessage,
               editBlockedMessage: editBlockedMessage,
-              onBack: _goBack,
               onEdit: () =>
                   context.push('/supplier/materials/${material.id}/edit'),
               onDelete: () => handleSupplierMaterialDelete(
@@ -191,45 +191,22 @@ class _MaterialWorkspaceState extends ConsumerState<_MaterialWorkspace> {
 }
 
 class _Breadcrumb extends StatelessWidget {
-  const _Breadcrumb({required this.onBack});
+  const _Breadcrumb({required this.onBack, required this.currentLabel});
 
   final VoidCallback onBack;
+  final String currentLabel;
 
   @override
   Widget build(BuildContext context) {
-    final l = context.s;
-    final style = context.supplierBody();
-
-    return LayoutBuilder(
-      builder: (context, constraints) => Semantics(
-        label: l.backToMyMaterials,
-        child: constraints.maxWidth < 600
-            ? TextButton.icon(
-                onPressed: onBack,
-                icon: const BackButtonIcon(),
-                label: Text(l.backToMyMaterials),
-              )
-            : Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: AppSpacing.xs,
-                children: [
-                  TextButton.icon(
-                    onPressed: onBack,
-                    icon: const BackButtonIcon(),
-                    label: Text(l.navMyMaterials),
-                  ),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    size: 18,
-                    color: context.supplierColors.textMuted,
-                  ),
-                  Text(
-                    l.manageMaterial,
-                    style: style.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
-      ),
+    return AppBackBreadcrumb(
+      onBack: onBack,
+      ancestors: [
+        AppBackBreadcrumbItem(
+          label: context.s.navMyMaterials,
+          location: '/supplier/materials',
+        ),
+      ],
+      currentLabel: currentLabel,
     );
   }
 }
@@ -991,7 +968,6 @@ class _ActionFooter extends StatelessWidget {
     required this.statusSubmitting,
     required this.deleteBlockedMessage,
     required this.editBlockedMessage,
-    required this.onBack,
     required this.onEdit,
     required this.onDelete,
     required this.onMarkUnavailable,
@@ -1002,7 +978,6 @@ class _ActionFooter extends StatelessWidget {
   final bool statusSubmitting;
   final String deleteBlockedMessage;
   final String editBlockedMessage;
-  final VoidCallback onBack;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onMarkUnavailable;
@@ -1040,11 +1015,6 @@ class _ActionFooter extends StatelessWidget {
                 runSpacing: AppSpacing.sm,
                 spacing: AppSpacing.sm,
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: onBack,
-                    icon: const BackButtonIcon(),
-                    label: Text(l.backToMyMaterials),
-                  ),
                   Wrap(
                     spacing: AppSpacing.sm,
                     runSpacing: AppSpacing.sm,

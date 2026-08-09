@@ -47,7 +47,11 @@ class SupplierProfileButton extends ConsumerWidget {
           },
           onNavigate: (route) {
             Navigator.of(menuContext).pop();
-            context.go(route);
+            if (route == accountSettingsRoute) {
+              context.push(route);
+            } else {
+              context.go(route);
+            }
           },
           onLogout: () async {
             Navigator.of(menuContext).pop();

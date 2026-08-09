@@ -6,7 +6,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -15,6 +14,7 @@ import '../../../../core/errors/api_exception.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/app_section_card.dart';
 import '../../../../shared/widgets/materials/app_material_card.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
@@ -384,10 +384,7 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
                 ),
                 child: Row(
                   children: [
-                    IconButton(
-                      onPressed: () => context.popOrGo('/materials'),
-                      icon: const BackButtonIcon(),
-                    ),
+                    const AppBackAction.compact(fallbackLocation: '/materials'),
                     Expanded(
                       child: Text(
                         supplier?.displayName ?? context.l10n.supplierProfile,
@@ -440,9 +437,11 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
                                         Align(
                                           alignment:
                                               AlignmentDirectional.centerStart,
-                                          child: _PublicSupplierBackButton(
-                                            onPressed: () =>
-                                                context.popOrGo('/materials'),
+                                          child: const AppBackAction.pageLevel(
+                                            key: ValueKey(
+                                              'public-supplier-desktop-back',
+                                            ),
+                                            fallbackLocation: '/materials',
                                           ),
                                         ),
                                         const SizedBox(height: AppSpacing.sm),
@@ -602,7 +601,7 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
                                           ? AppMaterialCardVariant
                                                 .desktopCompact
                                           : AppMaterialCardVariant.standard,
-                                      onMaterialTap: (material) => context.go(
+                                      onMaterialTap: (material) => context.push(
                                         '/materials/${material.id}',
                                       ),
                                       showSupplierAttribution: false,
@@ -788,35 +787,6 @@ class _OverviewInfoChip extends StatelessWidget {
             ).copyWith(color: palette.textSecondary),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PublicSupplierBackButton extends StatelessWidget {
-  const _PublicSupplierBackButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-    final label = context.l10n.notificationsBack;
-
-    return Tooltip(
-      message: label,
-      child: OutlinedButton.icon(
-        key: const ValueKey('public-supplier-desktop-back'),
-        onPressed: onPressed,
-        icon: const BackButtonIcon(),
-        label: Text(label),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: palette.textSecondary,
-          minimumSize: const Size(0, 44),
-          padding: const EdgeInsetsDirectional.symmetric(horizontal: 14),
-          side: BorderSide(color: palette.borderSubtle),
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-        ),
       ),
     );
   }

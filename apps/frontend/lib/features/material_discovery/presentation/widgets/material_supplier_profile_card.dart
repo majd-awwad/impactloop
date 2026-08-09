@@ -156,7 +156,7 @@ class _MaterialSupplierProfileCardState
   void _openSupplierProfile() {
     final supplierProfileId = _supplierProfileId;
     if (supplierProfileId != null) {
-      context.go('/suppliers/$supplierProfileId');
+      context.push('/suppliers/$supplierProfileId');
     }
   }
 

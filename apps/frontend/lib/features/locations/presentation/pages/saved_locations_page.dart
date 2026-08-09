@@ -255,8 +255,7 @@ class _SavedLocationsPageState extends ConsumerState<SavedLocationsPage> {
 
     return ProfileFamilyPageScaffold(
       title: l10n.pageTitle,
-      backTooltip: l10n.back,
-      backFallbackRoute: profileRoute,
+      backFallbackRoute: accountSettingsRoute,
       headerAction: isWide
           ? _AddLocationHeaderAction(
               label: l10n.addNewLocation,

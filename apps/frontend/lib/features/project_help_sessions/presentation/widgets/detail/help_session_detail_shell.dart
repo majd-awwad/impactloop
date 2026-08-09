@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../../app/theme/app_spacing.dart';
 import '../../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../../../shared/widgets/app_back_action.dart';
 import '../../l10n/project_help_sessions_l10n.dart';
 
 class HelpSessionDetailShell extends StatelessWidget {
@@ -112,17 +113,7 @@ class _TopNavRow extends StatelessWidget {
         runSpacing: AppSpacing.xs,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Semantics(
-            button: true,
-            label: ProjectHelpSessionsL10n.backToSessions.resolve(context),
-            child: TextButton.icon(
-              onPressed: () => context.go(backRoute),
-              icon: const Icon(Icons.arrow_back_rounded, size: 18),
-              label: Text(
-                ProjectHelpSessionsL10n.backToSessions.resolve(context),
-              ),
-            ),
-          ),
+          AppBackAction(fallbackLocation: backRoute),
           if (buildRoute != null && buildRouteLabel != null)
             TextButton(
               onPressed: () => context.go(buildRoute!),

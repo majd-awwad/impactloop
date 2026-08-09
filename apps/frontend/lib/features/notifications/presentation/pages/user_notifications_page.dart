@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -14,6 +13,7 @@ import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/format/localized_formatters.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -83,7 +83,7 @@ class UserNotificationsPage extends ConsumerWidget {
       return '/driver';
     }
     if (user.isSupplierMode && user.hasRole('SUPPLIER')) {
-      return '/supplier/dashboard';
+      return supplierOverviewRoute;
     }
     return '/home';
   }
@@ -199,7 +199,7 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
     final categoryFilter = ref.watch(notificationCategoryFilterProvider);
     final viewportWidth = MediaQuery.sizeOf(context).width;
     final isCompactMobile = viewportWidth < 820;
-    final showPageBack = !widget.embeddedInShell && viewportWidth < 900;
+    final showPageBack = !widget.embeddedInShell;
     final safeBottom = MediaQuery.paddingOf(context).bottom;
     final bottomPadding = widget.embeddedInShell && isCompactMobile
         ? kBottomNavigationBarHeight + safeBottom + AppSpacing.xl
@@ -226,18 +226,9 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
                   if (showPageBack) ...[
                     Align(
                       alignment: AlignmentDirectional.centerStart,
-                      child: TextButton.icon(
+                      child: AppBackAction(
                         key: const Key('notifications-back-button'),
-                        onPressed: () => context.popOrGo(widget.homeRoute),
-                        icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                        label: Text(l10n.notificationsBack),
-                        style: TextButton.styleFrom(
-                          minimumSize: const Size(44, 44),
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: AppSpacing.sm,
-                          ),
-                          visualDensity: VisualDensity.compact,
-                        ),
+                        fallbackLocation: widget.homeRoute,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -468,7 +459,7 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
             if (!context.mounted) {
               return;
             }
-            if (_isDriverDeliveryRoute(route)) {
+            if (_isDriverRootRoute(route)) {
               context.go(route);
               return;
             }
@@ -491,7 +482,7 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
 
       _prepareHelpSessionDestination(ref, route);
 
-      if (_isDriverDeliveryRoute(route)) {
+      if (_isDriverRootRoute(route)) {
         context.go(route);
       } else {
         context.push(route);
@@ -521,8 +512,16 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
   }
 }
 
-bool _isDriverDeliveryRoute(String route) {
-  return route == '/driver' || route.startsWith('/driver/');
+bool _isDriverRootRoute(String route) {
+  return const {
+    '/driver',
+    '/driver/active',
+    '/driver/jobs',
+    '/driver/profile',
+    '/driver/history',
+    '/driver/incidents',
+    '/driver/notifications',
+  }.contains(Uri.parse(route).path);
 }
 
 void _prepareHelpSessionDestination(WidgetRef ref, String route) {

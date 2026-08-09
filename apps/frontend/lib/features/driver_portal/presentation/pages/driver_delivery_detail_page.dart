@@ -18,6 +18,7 @@ import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/bidi_text.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
@@ -53,40 +54,52 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1040),
-          child: deliveryAsync.when(
-            skipLoadingOnReload: true,
-            loading: () => _StatePanel(
-              icon: Icons.route_outlined,
-              title: l10n.loadingDelivery,
-              subtitle: l10n.driverCheckingActiveDelivery,
-            ),
-            error: (_, _) => _StatePanel(
-              icon: Icons.cloud_off_outlined,
-              title: l10n.driverCouldNotLoadDetails,
-              subtitle: l10n.tryAgain,
-              actionLabel: l10n.retry,
-              actionTone: AppStatusTone.primary,
-              onAction: () => refreshActiveDriverDelivery(ref, deliveryId),
-            ),
-            data: (state) {
-              return switch (state) {
-                DriverDeliveryDetailActive(:final delivery) => _DeliveryContent(
-                  delivery: delivery,
-                  onRefresh: () => refreshActiveDriverDelivery(ref, deliveryId),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: AppBackAction(fallbackLocation: '/driver/jobs'),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              deliveryAsync.when(
+                skipLoadingOnReload: true,
+                loading: () => _StatePanel(
+                  icon: Icons.route_outlined,
+                  title: l10n.loadingDelivery,
+                  subtitle: l10n.driverCheckingActiveDelivery,
                 ),
-                DriverDeliveryDetailInactive(delivery: final delivery) =>
-                  DriverHistoricalDeliveryContent(delivery: delivery),
-                DriverDeliveryDetailNotFound() => _StatePanel(
-                  icon: Icons.lock_outline,
-                  title: l10n.driverNotAssigned,
-                  subtitle: l10n.driverOpenJobsBoard,
-                  actionLabel: l10n.driverBackToJobs,
-                  actionTone: AppStatusTone.neutral,
-                  actionProminent: false,
-                  onAction: () => context.popOrGo('/driver/jobs'),
+                error: (_, _) => _StatePanel(
+                  icon: Icons.cloud_off_outlined,
+                  title: l10n.driverCouldNotLoadDetails,
+                  subtitle: l10n.tryAgain,
+                  actionLabel: l10n.retry,
+                  actionTone: AppStatusTone.primary,
+                  onAction: () => refreshActiveDriverDelivery(ref, deliveryId),
                 ),
-              };
-            },
+                data: (state) {
+                  return switch (state) {
+                    DriverDeliveryDetailActive(:final delivery) =>
+                      _DeliveryContent(
+                        delivery: delivery,
+                        onRefresh: () =>
+                            refreshActiveDriverDelivery(ref, deliveryId),
+                      ),
+                    DriverDeliveryDetailInactive(delivery: final delivery) =>
+                      DriverHistoricalDeliveryContent(delivery: delivery),
+                    DriverDeliveryDetailNotFound() => _StatePanel(
+                      icon: Icons.lock_outline,
+                      title: l10n.driverNotAssigned,
+                      subtitle: l10n.driverOpenJobsBoard,
+                      actionLabel: l10n.driverBackToJobs,
+                      actionTone: AppStatusTone.neutral,
+                      actionProminent: false,
+                      onAction: () => context.popOrGo('/driver/jobs'),
+                    ),
+                  };
+                },
+              ),
+            ],
           ),
         ),
       ),

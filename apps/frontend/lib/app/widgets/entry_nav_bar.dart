@@ -820,7 +820,7 @@ class _AccountMenu extends StatelessWidget {
             action: AppAccountMenuAction(
               label: AccountSettingsL10n.of(context).pageTitle,
               icon: Icons.manage_accounts_outlined,
-              onTap: () => navigate(accountSettingsRoute),
+              onTap: () => navigate(accountSettingsRoute, push: true),
             ),
           ),
           if (_showLearnerActions) ...[
@@ -837,7 +837,7 @@ class _AccountMenu extends StatelessWidget {
               action: AppAccountMenuAction(
                 label: l10n.materialRequestsNav,
                 icon: Icons.playlist_add_check_outlined,
-                onTap: () => navigate('/learner/material-requests'),
+                onTap: () => navigate('/learner/material-requests', push: true),
               ),
             ),
             AppAccountMenuActionTile(
