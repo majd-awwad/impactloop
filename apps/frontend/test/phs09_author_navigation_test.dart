@@ -20,8 +20,12 @@ import 'package:frontend/features/notifications/data/models/app_notification.dar
 import 'package:frontend/features/notifications/data/notifications_api.dart';
 import 'package:frontend/features/notifications/presentation/pages/user_notifications_page.dart';
 import 'package:frontend/features/profile/presentation/widgets/learner_profile_dashboard_widgets.dart';
+import 'package:frontend/core/errors/api_exception.dart';
+import 'package:frontend/core/errors/common_api_error_codes.dart';
+import 'package:frontend/features/project_help_sessions/application/help_session_mutation_feedback.dart';
 import 'package:frontend/features/project_help_sessions/application/project_help_sessions_providers.dart';
 import 'package:frontend/features/project_help_sessions/data/models/project_help_session_models.dart';
+import 'package:frontend/features/project_help_sessions/data/project_help_sessions_api.dart';
 import 'package:frontend/features/project_help_sessions/presentation/l10n/project_help_sessions_l10n.dart';
 import 'package:frontend/features/project_help_sessions/presentation/pages/creator_help_session_detail_page.dart';
 import 'package:frontend/features/project_help_sessions/presentation/pages/creator_help_sessions_page.dart';
@@ -91,6 +95,24 @@ void main() {
         projectHelpSessionNotificationRoute(notification),
         creatorHelpSessionDetailRoute('session-1'),
       );
+    });
+
+    test('missing author session deep-link resolves to creator list', () async {
+      final resolved = await resolveHelpSessionNotificationOpenRoute(
+        api: _MissingAuthorSessionApi(),
+        route: creatorHelpSessionDetailRoute('missing-session'),
+      );
+      expect(resolved.route, creatorHelpSessionsRoute);
+      expect(resolved.targetMissing, isTrue);
+    });
+
+    test('living author session deep-link keeps creator detail', () async {
+      final resolved = await resolveHelpSessionNotificationOpenRoute(
+        api: _LivingAuthorSessionApi(),
+        route: creatorHelpSessionDetailRoute('session-1'),
+      );
+      expect(resolved.route, creatorHelpSessionDetailRoute('session-1'));
+      expect(resolved.targetMissing, isFalse);
     });
 
     test('learner notification still resolves to learner detail', () {
@@ -260,9 +282,17 @@ void main() {
                 },
               ),
             ),
+            projectHelpSessionsApiProvider.overrideWithValue(
+              _LivingAuthorSessionApi(),
+            ),
+            authorHelpSessionDetailProvider('session-author-1').overrideWith(
+              (ref) async => _LivingAuthorSessionApi()
+                  .fetchAuthorSession('session-author-1'),
+            ),
           ],
           child: MaterialApp.router(
             theme: AppTheme.light,
+            locale: const Locale('en'),
             localizationsDelegates: const [
               AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,
@@ -296,6 +326,11 @@ void main() {
     });
 
     testWidgets('clicking Open navigates to creator detail', (tester) async {
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       await pumpNotifications(tester);
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
@@ -346,9 +381,17 @@ void main() {
             notificationsApiProvider.overrideWithValue(
               _MarkReadTrackingApi(onMarkRead: () {}),
             ),
+            projectHelpSessionsApiProvider.overrideWithValue(
+              _LivingAuthorSessionApi(),
+            ),
+            authorHelpSessionDetailProvider('session-author-1').overrideWith(
+              (ref) async => _LivingAuthorSessionApi()
+                  .fetchAuthorSession('session-author-1'),
+            ),
           ],
           child: MaterialApp.router(
             theme: AppTheme.light,
+            locale: const Locale('en'),
             localizationsDelegates: const [
               AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,
@@ -378,6 +421,84 @@ void main() {
       await tester.tap(find.text('New help session request'));
       await tester.pumpAndSettle();
       expect(find.byType(CreatorHelpSessionDetailPage), findsOneWidget);
+    });
+
+    testWidgets('missing session notification opens creator list', (
+      tester,
+    ) async {
+      late final GoRouter orphanRouter;
+      orphanRouter = GoRouter(
+        initialLocation: '/notifications',
+        routes: [
+          GoRoute(
+            path: '/notifications',
+            builder: (context, state) => const UserNotificationsPage(),
+          ),
+          GoRoute(
+            path: '/creator/help-sessions',
+            builder: (context, state) => const CreatorHelpSessionsPage(),
+          ),
+          GoRoute(
+            path: '/creator/help-sessions/:sessionId',
+            builder: (context, state) => CreatorHelpSessionDetailPage(
+              sessionId: state.pathParameters['sessionId']!,
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(_AuthorAuth.new),
+            notificationsListProvider.overrideWith(
+              () => _SingleNotificationListNotifier(authorNotification()),
+            ),
+            myNotificationUnreadCountProvider.overrideWith(
+              () => _FixedUnreadCountNotifier(1),
+            ),
+            notificationReadFilterProvider.overrideWith(
+              NotificationReadFilterNotifier.new,
+            ),
+            notificationsApiProvider.overrideWithValue(
+              _MarkReadTrackingApi(onMarkRead: () {}),
+            ),
+            projectHelpSessionsApiProvider.overrideWithValue(
+              _MissingAuthorSessionApi(),
+            ),
+            authorHelpSessionsProvider.overrideWith(
+              (ref) async => const ProjectHelpSessionListResult(
+                items: [],
+                page: 1,
+                limit: 20,
+                total: 0,
+                totalPages: 0,
+              ),
+            ),
+          ],
+          child: MaterialApp.router(
+            theme: AppTheme.light,
+            locale: const Locale('en'),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: orphanRouter,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('New help session request'));
+      await tester.pumpAndSettle();
+      expect(orphanRouter.state.uri.path, '/creator/help-sessions');
+      expect(find.byType(CreatorHelpSessionDetailPage), findsNothing);
+      expect(
+        find.text('The help session could not be found.'),
+        findsOneWidget,
+      );
     });
   });
 
@@ -690,6 +811,56 @@ class _MarkReadTrackingApi extends NotificationsApi {
       body: 'Body',
       isRead: true,
       createdAt: DateTime.utc(2026),
+    );
+  }
+}
+
+class _MissingAuthorSessionApi extends ProjectHelpSessionsApi {
+  _MissingAuthorSessionApi() : super(Dio());
+
+  @override
+  Future<ProjectHelpSession> fetchAuthorSession(String sessionId) {
+    throw const ApiException(
+      message: 'Help session not found.',
+      code: CommonApiErrorCodes.notFound,
+      statusCode: 404,
+    );
+  }
+}
+
+class _LivingAuthorSessionApi extends ProjectHelpSessionsApi {
+  _LivingAuthorSessionApi() : super(Dio());
+
+  @override
+  Future<ProjectHelpSession> fetchAuthorSession(String sessionId) async {
+    return ProjectHelpSession(
+      id: sessionId,
+      status: ProjectHelpSessionStatus.pending,
+      project: const ProjectHelpSessionProjectSummary(
+        id: 'project-1',
+        title: 'LED Dice',
+      ),
+      build: const ProjectHelpSessionBuildSummary(
+        id: 'build-1',
+        attemptNumber: 1,
+      ),
+      learner: const ProjectHelpSessionUserSummary(
+        id: 'learner-1',
+        displayName: 'Learner',
+      ),
+      author: const ProjectHelpSessionUserSummary(
+        id: 'author-1',
+        displayName: 'Author',
+      ),
+      problemDescription: 'Need help with wiring.',
+      durationMinutes: 15,
+      learnerTimeZone: 'Asia/Hebron',
+      timeOptions: const [],
+      learnerAllowedActions: ProjectHelpSessionLearnerAllowedActions.empty,
+      authorAllowedActions: ProjectHelpSessionAuthorAllowedActions.empty,
+      createdAt: DateTime.utc(2026),
+      updatedAt: DateTime.utc(2026),
+      meetingReady: false,
     );
   }
 }

@@ -20,12 +20,14 @@ import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_route_helpers.dart';
 import '../../../auth/data/models/user.dart';
 import '../../application/notification_display.dart';
+import '../../../../core/errors/common_api_error_codes.dart';
 import '../../../../core/polling/lifecycle_polling_controller.dart';
 import '../../../../core/polling/lifecycle_polling_host.dart';
 import '../../application/notifications_provider.dart';
 import '../../application/payment_notification_presentation.dart';
 import '../../data/models/app_notification.dart';
 import '../../../project_help_sessions/application/help_session_mutation_feedback.dart';
+import '../../../project_help_sessions/application/project_help_sessions_providers.dart';
 import '../../../project_help_sessions/presentation/l10n/project_help_sessions_l10n.dart';
 import '../notification_visual_presentation.dart';
 import '../notification_visuals.dart';
@@ -430,9 +432,9 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
         if (isProjectHelpSessionNotification(notification)) {
           showErrorSnackBar(
             context,
-            ProjectHelpSessionsL10n.notificationOpenUnavailable.resolve(
-              context,
-            ),
+            'PROJECT_HELP_SESSION_OPEN_UNAVAILABLE',
+            message: ProjectHelpSessionsL10n.notificationOpenUnavailable
+                .resolve(context),
           );
         }
         return;
@@ -480,12 +482,41 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
         return;
       }
 
-      _prepareHelpSessionDestination(ref, route);
+      var destination = route;
+      var helpSessionTargetMissing = false;
+      if (isProjectHelpSessionNotification(notification)) {
+        try {
+          final resolved = await resolveHelpSessionNotificationOpenRoute(
+            api: ref.read(projectHelpSessionsApiProvider),
+            route: route,
+          );
+          destination = resolved.route;
+          helpSessionTargetMissing = resolved.targetMissing;
+        } catch (_) {
+          // Keep the original deep-link when preflight cannot run (e.g. offline).
+        }
+        if (!context.mounted) {
+          return;
+        }
+        if (helpSessionTargetMissing) {
+          showErrorSnackBar(
+            context,
+            CommonApiErrorCodes.notFound,
+            message: ProjectHelpSessionsL10n.localizedError(
+              CommonApiErrorCodes.notFound,
+            ).resolve(context),
+          );
+        }
+      }
 
-      if (_isDriverRootRoute(route)) {
-        context.go(route);
+      _prepareHelpSessionDestination(ref, destination);
+
+      if (_isDriverRootRoute(destination)) {
+        context.go(destination);
+      } else if (helpSessionTargetMissing) {
+        context.go(destination);
       } else {
-        context.push(route);
+        context.push(destination);
       }
     } finally {
       if (_openingNotificationId == notification.id) {

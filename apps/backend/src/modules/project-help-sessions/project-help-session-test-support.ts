@@ -1,5 +1,6 @@
 import { prisma } from '../../database/prisma.js';
 import { hashPassword } from '../../utils/password.js';
+import { NOTIFICATION_ENTITY_TYPES } from '../notifications/notification-identifiers.js';
 import { upsertAuthorHelpSessionSettings } from './project-help-session-offering.js';
 import { startProjectBuildById } from '../learning-projects/learning-projects.service.js';
 
@@ -153,10 +154,47 @@ export function validProblemDescription() {
   return 'I need help wiring the sensor circuit correctly for this project step.';
 }
 
-export async function cleanupNegotiationTests() {
+export async function deleteProjectHelpSessionNotifications(
+  sessionIds: string[],
+) {
+  if (sessionIds.length === 0) {
+    return;
+  }
   await prisma.notification.deleteMany({
-    where: { userId: { in: ids.users } },
+    where: {
+      OR: [
+        {
+          relatedEntityType: NOTIFICATION_ENTITY_TYPES.PROJECT_HELP_SESSION,
+          relatedEntityId: { in: sessionIds },
+        },
+        {
+          entityType: NOTIFICATION_ENTITY_TYPES.PROJECT_HELP_SESSION,
+          entityId: { in: sessionIds },
+        },
+      ],
+    },
   });
+}
+
+export async function cleanupNegotiationTests() {
+  const sessionIds = new Set<string>(ids.sessions);
+  if (ids.projects.length > 0) {
+    const projectSessions = await prisma.projectHelpSession.findMany({
+      where: { projectId: { in: ids.projects } },
+      select: { id: true },
+    });
+    for (const session of projectSessions) {
+      sessionIds.add(session.id);
+    }
+  }
+
+  await deleteProjectHelpSessionNotifications([...sessionIds]);
+
+  if (ids.users.length > 0) {
+    await prisma.notification.deleteMany({
+      where: { userId: { in: ids.users } },
+    });
+  }
 
   if (ids.projects.length > 0) {
     await prisma.projectHelpSessionStatusHistory.deleteMany({

@@ -2,9 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/router/navigation_extensions.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/errors/common_api_error_codes.dart';
 import '../../../shared/widgets/app_feedback.dart';
 import '../data/models/project_help_session_models.dart';
+import '../data/project_help_sessions_api.dart';
 import '../presentation/l10n/project_help_sessions_l10n.dart';
 import 'project_help_session_canonical_cache.dart';
 import 'project_help_session_mutation_sync.dart';
@@ -21,6 +24,59 @@ bool isActiveHelpSessionAlreadyExistsError(Object error) {
     }
   }
   return false;
+}
+
+bool isHelpSessionNotFoundError(Object error) {
+  if (error is! ApiException) {
+    return false;
+  }
+  if (error.code == 'PROJECT_HELP_SESSION_NOT_FOUND' ||
+      error.code == CommonApiErrorCodes.notFound) {
+    return true;
+  }
+  return error.statusCode == 404;
+}
+
+/// Verifies a help-session detail deep-link target still exists.
+///
+/// When the session is missing, returns the role list route so callers can
+/// avoid opening a broken detail page.
+Future<({String route, bool targetMissing})>
+    resolveHelpSessionNotificationOpenRoute({
+  required ProjectHelpSessionsApi api,
+  required String route,
+}) async {
+  final learnerMatch =
+      RegExp(r'^/learner/help-sessions/([^/]+)$').firstMatch(route);
+  if (learnerMatch != null) {
+    final sessionId = learnerMatch.group(1)!;
+    try {
+      await api.fetchSession(sessionId);
+      return (route: route, targetMissing: false);
+    } catch (error) {
+      if (isHelpSessionNotFoundError(error)) {
+        return (route: learnerHelpSessionsRoute, targetMissing: true);
+      }
+      return (route: route, targetMissing: false);
+    }
+  }
+
+  final authorMatch =
+      RegExp(r'^/creator/help-sessions/([^/]+)$').firstMatch(route);
+  if (authorMatch != null) {
+    final sessionId = authorMatch.group(1)!;
+    try {
+      await api.fetchAuthorSession(sessionId);
+      return (route: route, targetMissing: false);
+    } catch (error) {
+      if (isHelpSessionNotFoundError(error)) {
+        return (route: creatorHelpSessionsRoute, targetMissing: true);
+      }
+      return (route: route, targetMissing: false);
+    }
+  }
+
+  return (route: route, targetMissing: false);
 }
 
 /// Best-effort success feedback from a stable host context (never the modal).
