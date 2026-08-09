@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import type { ZodType } from 'zod';
 
+import { COMMON_ERROR_CODES } from '../contracts/errors/common-error-codes.js';
 import { AppError } from '../utils/app-error.js';
 
 type RequestSource = 'body' | 'query' | 'params';
@@ -17,7 +18,7 @@ const mapValidationIssueCode = (path: string) => {
     case 'alternativeKeywords':
       return 'INVALID_KEYWORDS';
     default:
-      return 'VALIDATION_ERROR';
+      return COMMON_ERROR_CODES.validationError;
   }
 };
 
@@ -35,13 +36,18 @@ export const validate =
 
     if (!result.success) {
       next(
-        new AppError('Validation failed', 400, 'VALIDATION_ERROR', {
-          issues: result.error.issues.map((issue) => ({
-            path: issue.path.join('.'),
-            message: issue.message,
-            code: mapValidationIssueCode(issue.path.join('.')),
-          })),
-        }),
+        new AppError(
+          'Validation failed',
+          400,
+          COMMON_ERROR_CODES.validationError,
+          {
+            issues: result.error.issues.map((issue) => ({
+              path: issue.path.join('.'),
+              message: issue.message,
+              code: mapValidationIssueCode(issue.path.join('.')),
+            })),
+          },
+        ),
       );
       return;
     }

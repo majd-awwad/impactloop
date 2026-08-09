@@ -1,0 +1,12 @@
+{
+  "contractId": "impactloop-common-error-codes-v1",
+  "codes": {
+    "notFound": "NOT_FOUND",
+    "validationError": "VALIDATION_ERROR",
+    "conflict": "CONFLICT",
+    "forbidden": "FORBIDDEN",
+    "unauthenticated": "UNAUTHENTICATED",
+    "internalError": "INTERNAL_ERROR",
+    "rateLimited": "RATE_LIMITED"
+  }
+}

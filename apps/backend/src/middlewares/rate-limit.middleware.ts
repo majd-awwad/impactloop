@@ -1,6 +1,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
 import { env } from '../config/env.js';
+import { COMMON_ERROR_CODES } from '../contracts/errors/common-error-codes.js';
 import { AppError } from '../utils/app-error.js';
 
 export type RateLimitPolicy = {
@@ -119,7 +120,7 @@ class BoundedRateLimitStore {
       throw new AppError(
         'Too many requests. Please try again later.',
         429,
-        'RATE_LIMITED',
+        COMMON_ERROR_CODES.rateLimited,
       );
     }
 

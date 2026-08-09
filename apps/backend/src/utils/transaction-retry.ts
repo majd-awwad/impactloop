@@ -1,4 +1,5 @@
 import { Prisma } from '../generated/prisma/client.js';
+import { COMMON_ERROR_CODES } from '../contracts/errors/common-error-codes.js';
 import { prisma } from '../database/prisma.js';
 import { AppError } from '../utils/app-error.js';
 
@@ -115,5 +116,9 @@ export const runSerializableTransaction = async <T>(
     }
   }
 
-  throw new AppError('Unable to complete transaction.', 500, 'INTERNAL_ERROR');
+  throw new AppError(
+    'Unable to complete transaction.',
+    500,
+    COMMON_ERROR_CODES.internalError,
+  );
 };

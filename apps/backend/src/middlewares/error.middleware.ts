@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 
 import type { Response } from 'express';
 
+import { COMMON_ERROR_CODES } from '../contracts/errors/common-error-codes.js';
 import type { LogContext } from '../observability/log-types.js';
 import { logger } from '../observability/logger.js';
 import { mapUnhandledPrismaError } from '../observability/prisma-error-mapper.js';
@@ -93,7 +94,7 @@ export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) =>
     res.status(400).json(
       errorResponse(
         'Validation failed',
-        'VALIDATION_ERROR',
+        COMMON_ERROR_CODES.validationError,
         {
           issues: error.issues.map((issue) => ({
             path: issue.path.join('.'),
@@ -124,14 +125,19 @@ export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) =>
 
   logServerError(res, {
     statusCode: 500,
-    code: 'INTERNAL_ERROR',
+    code: COMMON_ERROR_CODES.internalError,
     error,
   });
 
   res
     .status(500)
     .json(
-      errorResponse(INTERNAL_ERROR_MESSAGE, 'INTERNAL_ERROR', undefined, requestId),
+      errorResponse(
+        INTERNAL_ERROR_MESSAGE,
+        COMMON_ERROR_CODES.internalError,
+        undefined,
+        requestId,
+      ),
     );
 };
 

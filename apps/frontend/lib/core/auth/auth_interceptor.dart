@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../errors/api_exception.dart';
+import '../errors/common_api_error_codes.dart';
 import 'auth_session_refresh.dart';
 
 class AuthInterceptor extends Interceptor {
@@ -109,8 +110,8 @@ class AuthInterceptor extends Interceptor {
   bool _isSessionExpiredRefreshFailure(ApiException error) {
     return error.statusCode == 401 ||
         error.statusCode == 403 ||
-        error.code == 'UNAUTHENTICATED' ||
-        error.code == 'FORBIDDEN';
+        error.code == CommonApiErrorCodes.unauthenticated ||
+        error.code == CommonApiErrorCodes.forbidden;
   }
 
   String _refreshFailureReason(ApiException error) {

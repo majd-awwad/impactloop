@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import { COMMON_ERROR_CODES } from '../contracts/errors/common-error-codes.js';
 import { prisma } from '../database/prisma.js';
 import { updateRequestContext } from '../observability/request-context.js';
 import { AppError } from '../utils/app-error.js';
@@ -18,7 +19,11 @@ const assertActiveAccount = async (userId: string): Promise<void> => {
   });
 
   if (!user) {
-    throw new AppError('Authentication required', 401, 'UNAUTHENTICATED');
+    throw new AppError(
+      'Authentication required',
+      401,
+      COMMON_ERROR_CODES.unauthenticated,
+    );
   }
 
   if (user.accountStatus === 'SUSPENDED' || user.accountStatus === 'DISABLED') {
@@ -34,14 +39,26 @@ export const authMiddleware = async (
   const authorization = req.headers.authorization;
 
   if (!authorization?.startsWith('Bearer ')) {
-    next(new AppError('Authentication required', 401, 'UNAUTHENTICATED'));
+    next(
+      new AppError(
+        'Authentication required',
+        401,
+        COMMON_ERROR_CODES.unauthenticated,
+      ),
+    );
     return;
   }
 
   const token = authorization.slice('Bearer '.length).trim();
 
   if (!token) {
-    next(new AppError('Authentication required', 401, 'UNAUTHENTICATED'));
+    next(
+      new AppError(
+        'Authentication required',
+        401,
+        COMMON_ERROR_CODES.unauthenticated,
+      ),
+    );
     return;
   }
 
@@ -56,7 +73,13 @@ export const authMiddleware = async (
       return;
     }
 
-    next(new AppError('Invalid or expired token', 401, 'UNAUTHENTICATED'));
+    next(
+      new AppError(
+        'Invalid or expired token',
+        401,
+        COMMON_ERROR_CODES.unauthenticated,
+      ),
+    );
   }
 };
 

@@ -1,5 +1,6 @@
 import { Prisma } from '../generated/prisma/client.js';
 
+import { COMMON_ERROR_CODES } from '../contracts/errors/common-error-codes.js';
 import { AppError } from '../utils/app-error.js';
 
 const extractConstraintMetadata = (
@@ -40,7 +41,7 @@ export const mapUnhandledPrismaError = (error: unknown): AppError | null => {
       return new AppError(
         'The request conflicts with existing data.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
         undefined,
         {
           cause: error,
@@ -48,10 +49,16 @@ export const mapUnhandledPrismaError = (error: unknown): AppError | null => {
         },
       );
     case 'P2025':
-      return new AppError('Resource not found.', 404, 'NOT_FOUND', undefined, {
-        cause: error,
-        context: constraintMetadata,
-      });
+      return new AppError(
+        'Resource not found.',
+        404,
+        COMMON_ERROR_CODES.notFound,
+        undefined,
+        {
+          cause: error,
+          context: constraintMetadata,
+        },
+      );
     default:
       return null;
   }

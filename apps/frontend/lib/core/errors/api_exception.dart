@@ -1,4 +1,5 @@
 import '../../l10n/app_localizations.dart';
+import 'common_api_error_codes.dart';
 
 class ApiFieldIssue {
   const ApiFieldIssue({required this.path, required this.message});
@@ -50,11 +51,11 @@ class ApiException implements Exception {
         return 'We could not reach the server. Check your connection and make sure the backend is running.';
       case 'TIMEOUT':
         return 'The server took too long to respond. Please try again.';
-      case 'CONFLICT':
+      case CommonApiErrorCodes.conflict:
         return message.isNotEmpty
             ? message
             : 'This request conflicts with the current state. Please refresh and try again.';
-      case 'VALIDATION_ERROR':
+      case CommonApiErrorCodes.validationError:
         final firstIssue = fieldIssues.isNotEmpty
             ? fieldIssues.first.message
             : null;
@@ -64,9 +65,9 @@ class ApiException implements Exception {
         return message;
       case 'PROJECT_SUBMISSION_INCOMPLETE':
         return formatProjectSubmissionIncompleteMessage(this);
-      case 'UNAUTHENTICATED':
+      case CommonApiErrorCodes.unauthenticated:
         return 'Your session has expired. Please sign in again.';
-      case 'FORBIDDEN':
+      case CommonApiErrorCodes.forbidden:
         return message.isNotEmpty
             ? message
             : 'You do not have permission to complete this action.';
@@ -112,7 +113,7 @@ String localizedApiErrorMessage(
       return l10n.networkError;
     case 'TIMEOUT':
       return l10n.timeoutError;
-    case 'CONFLICT':
+    case CommonApiErrorCodes.conflict:
       return l10n.conflictError;
     case 'DRIVER_ACTIVE_LIMIT_REACHED':
       return l10n.driverReachedActiveLimit;
@@ -144,13 +145,13 @@ String localizedApiErrorMessage(
       return l10n.driverGroupedDeliverySplitConflict;
     case 'DRIVER_AVAILABLE_JOBS_CURSOR_INVALID':
       return l10n.driverAvailableJobsCursorInvalid;
-    case 'VALIDATION_ERROR':
+    case CommonApiErrorCodes.validationError:
       return l10n.validationError;
     case 'PROJECT_SUBMISSION_INCOMPLETE':
       return localizedProjectSubmissionIncompleteMessage(error, l10n);
-    case 'UNAUTHENTICATED':
+    case CommonApiErrorCodes.unauthenticated:
       return l10n.sessionExpired;
-    case 'FORBIDDEN':
+    case CommonApiErrorCodes.forbidden:
       return l10n.forbiddenError;
     case 'ACCOUNT_SUSPENDED':
       return l10n.accountSuspended;
