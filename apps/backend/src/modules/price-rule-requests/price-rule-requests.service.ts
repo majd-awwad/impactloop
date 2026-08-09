@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 import { normalizeSearchText } from '../../utils/normalize-search-text.js';
 import { isAiProviderOperational } from '../../config/env.js';
@@ -143,7 +144,11 @@ const submitKnownMaterialPriceRuleRequest = async (
   );
 
   if (!materialType || !materialType.isActive) {
-    throw new AppError('Material reference not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Material reference not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   const activeRule = await materialTypesRepository.findActivePriceRuleForMaterialType(
@@ -231,7 +236,7 @@ const assertSelectableCategory = async (categoryId: string) => {
     throw new AppError(
       'Selected category is not available. Please refresh categories and choose again.',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -239,7 +244,7 @@ const assertSelectableCategory = async (categoryId: string) => {
     throw new AppError(
       'Selected category is not available. Please refresh categories and choose again.',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -261,7 +266,7 @@ const submitUnknownMaterialPriceRuleRequest = async (
     throw new AppError(
       'Choose a reviewed category or submit a category request before price review.',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -335,7 +340,7 @@ export const submitPriceRuleRequest = async (
     throw new AppError(
       'Please select a valid category before submitting price review.',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -428,14 +433,18 @@ export const getPriceRuleRequestDraft = async (userId: string, id: string) => {
   );
 
   if (!request) {
-    throw new AppError('Price rule request not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Price rule request not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   if (request.publishedMaterialId) {
     throw new AppError(
       'This listing was already completed.',
       409,
-      'CONFLICT',
+      COMMON_ERROR_CODES.conflict,
     );
   }
 
