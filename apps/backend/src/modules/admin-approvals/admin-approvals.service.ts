@@ -4,6 +4,7 @@ import {
   applyConditionPriceMultiplier,
   conditionPriceMultiplier,
 } from '../../constants/material-condition-factors.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 import { prisma } from '../../database/prisma.js';
 import { decimalToNumber } from '../../utils/decimal.js';
@@ -334,7 +335,11 @@ export const createCategoryRequestApprover = (
     return dependencies.runTransaction(async (tx) => {
       const existing = await dependencies.findRequest(tx, id);
       if (!existing) {
-        throw new AppError('Category request not found', 404, 'NOT_FOUND');
+        throw new AppError(
+          'Category request not found',
+          404,
+          COMMON_ERROR_CODES.notFound,
+        );
       }
       if (existing.status !== 'PENDING') {
         throw new AppError(
@@ -595,11 +600,19 @@ export const rejectCategoryRequest = async (
 ) => {
   const existing = await repository.findCategoryRequestByIdForAdmin(id);
   if (!existing) {
-    throw new AppError('Category request not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Category request not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   if (existing.status !== 'PENDING') {
-    throw new AppError('Only pending requests can be rejected', 409, 'CONFLICT');
+    throw new AppError(
+      'Only pending requests can be rejected',
+      409,
+      COMMON_ERROR_CODES.conflict,
+    );
   }
 
   const suggestedCategoryId = input.suggestedCategoryId?.trim() || null;
@@ -611,7 +624,7 @@ export const rejectCategoryRequest = async (
     throw new AppError(
       'Suggested existing category is required when categories are available.',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -792,14 +805,26 @@ export const listPriceRequestsForAdmin = async (query: ApprovalsListQuery) => {
 const ensurePendingPriceRequest = async (id: string) => {
   const existing = await repository.findPriceRuleRequestByIdForAdmin(id);
   if (!existing) {
-    throw new AppError('Price request not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Price request not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
   const requesterId = existing.requestedByUserId;
   if (!requesterId) {
-    throw new AppError('Price request is missing a requester', 409, 'CONFLICT');
+    throw new AppError(
+      'Price request is missing a requester',
+      409,
+      COMMON_ERROR_CODES.conflict,
+    );
   }
   if (existing.status !== 'PENDING') {
-    throw new AppError('Only pending requests can be reviewed', 409, 'CONFLICT');
+    throw new AppError(
+      'Only pending requests can be reviewed',
+      409,
+      COMMON_ERROR_CODES.conflict,
+    );
   }
   return { ...existing, requestedByUserId: requesterId };
 };
