@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import * as repository from './admin-materials.repository.js';
@@ -55,21 +56,24 @@ export const assertCanHideMaterial = async (
   status: string,
 ) => {
   if (MODERATION_LOCKED_STATUSES.includes(status as ModerationLockedStatus)) {
-    throw new AppError(hideBlockedMessage, 409, 'CONFLICT', {
+    throw new AppError(hideBlockedMessage, 409, COMMON_ERROR_CODES.conflict, {
       reason: 'MODERATION_LOCKED',
       status,
     });
   }
 
   if (status !== 'AVAILABLE') {
-    throw new AppError('Only available materials can be hidden.', 400, 'VALIDATION_ERROR', {
-      status,
-    });
+    throw new AppError(
+      'Only available materials can be hidden.',
+      400,
+      COMMON_ERROR_CODES.validationError,
+      { status },
+    );
   }
 
   const activeCount = await repository.countActiveReservations(materialId);
   if (activeCount > 0) {
-    throw new AppError(hideBlockedMessage, 409, 'CONFLICT', {
+    throw new AppError(hideBlockedMessage, 409, COMMON_ERROR_CODES.conflict, {
       reason: 'ACTIVE_RESERVATION',
       status,
     });
@@ -81,41 +85,54 @@ export const assertCanMarkMaterialUnavailable = async (
   status: string,
 ) => {
   if (MODERATION_LOCKED_STATUSES.includes(status as ModerationLockedStatus)) {
-    throw new AppError(markUnavailableBlockedMessage, 409, 'CONFLICT', {
-      reason: 'MODERATION_LOCKED',
-      status,
-    });
+    throw new AppError(
+      markUnavailableBlockedMessage,
+      409,
+      COMMON_ERROR_CODES.conflict,
+      {
+        reason: 'MODERATION_LOCKED',
+        status,
+      },
+    );
   }
 
   if (status !== 'AVAILABLE') {
     throw new AppError(
       'Only available materials can be marked unavailable.',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
       { status },
     );
   }
 
   const activeCount = await repository.countActiveReservations(materialId);
   if (activeCount > 0) {
-    throw new AppError(markUnavailableBlockedMessage, 409, 'CONFLICT', {
-      reason: 'ACTIVE_RESERVATION',
-      status,
-    });
+    throw new AppError(
+      markUnavailableBlockedMessage,
+      409,
+      COMMON_ERROR_CODES.conflict,
+      {
+        reason: 'ACTIVE_RESERVATION',
+        status,
+      },
+    );
   }
 };
 
 export const assertCanRestoreMaterial = (status: string) => {
   if (MODERATION_LOCKED_STATUSES.includes(status as ModerationLockedStatus)) {
-    throw new AppError(restoreBlockedMessage, 409, 'CONFLICT', {
+    throw new AppError(restoreBlockedMessage, 409, COMMON_ERROR_CODES.conflict, {
       reason: 'MODERATION_LOCKED',
       status,
     });
   }
 
   if (status !== 'UNAVAILABLE') {
-    throw new AppError('Only unavailable materials can be restored.', 400, 'VALIDATION_ERROR', {
-      status,
-    });
+    throw new AppError(
+      'Only unavailable materials can be restored.',
+      400,
+      COMMON_ERROR_CODES.validationError,
+      { status },
+    );
   }
 };

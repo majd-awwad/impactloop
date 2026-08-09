@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 import { decimalToNumber } from '../../utils/decimal.js';
 
@@ -84,7 +85,7 @@ export const listAdminMaterials = async (query: AdminMaterialsListQuery) => {
 export const getAdminMaterialById = async (id: string) => {
   const material = await repository.findMaterialByIdForAdmin(id);
   if (!material) {
-    throw new AppError('Material not found', 404, 'NOT_FOUND');
+    throw new AppError('Material not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   const pendingReportCount = material.reports.filter(
@@ -186,7 +187,7 @@ export const hideAdminMaterial = async (
 ) => {
   const material = await repository.findMaterialById(materialId);
   if (!material) {
-    throw new AppError('Material not found', 404, 'NOT_FOUND');
+    throw new AppError('Material not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   await assertCanHideMaterial(materialId, material.status);
@@ -233,7 +234,7 @@ export const markAdminMaterialUnavailable = async (
 ) => {
   const material = await repository.findMaterialById(materialId);
   if (!material) {
-    throw new AppError('Material not found', 404, 'NOT_FOUND');
+    throw new AppError('Material not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   await assertCanMarkMaterialUnavailable(materialId, material.status);
@@ -281,7 +282,7 @@ export const restoreAdminMaterial = async (
 ) => {
   const material = await repository.findMaterialById(materialId);
   if (!material) {
-    throw new AppError('Material not found', 404, 'NOT_FOUND');
+    throw new AppError('Material not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   assertCanRestoreMaterial(material.status);
@@ -353,7 +354,7 @@ export const listAdminMaterialReports = async (
 export const getAdminMaterialReportById = async (id: string) => {
   const report = await repository.findMaterialReportByIdForAdmin(id);
   if (!report) {
-    throw new AppError('Report not found', 404, 'NOT_FOUND');
+    throw new AppError('Report not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   return {
@@ -405,7 +406,11 @@ const assertPendingReport = (
   report: NonNullable<Awaited<ReturnType<typeof repository.findMaterialReportByIdForAdmin>>>,
 ) => {
   if (report.status !== 'PENDING') {
-    throw new AppError('This report was already reviewed.', 409, 'CONFLICT');
+    throw new AppError(
+      'This report was already reviewed.',
+      409,
+      COMMON_ERROR_CODES.conflict,
+    );
   }
 };
 
@@ -416,7 +421,7 @@ export const resolveAdminMaterialReport = async (
 ) => {
   const report = await repository.findMaterialReportByIdForAdmin(reportId);
   if (!report) {
-    throw new AppError('Report not found', 404, 'NOT_FOUND');
+    throw new AppError('Report not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   assertPendingReport(report);
@@ -454,7 +459,7 @@ export const rejectAdminMaterialReport = async (
 ) => {
   const report = await repository.findMaterialReportByIdForAdmin(reportId);
   if (!report) {
-    throw new AppError('Report not found', 404, 'NOT_FOUND');
+    throw new AppError('Report not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   assertPendingReport(report);
@@ -501,7 +506,7 @@ export const hideMaterialFromAdminReport = async (
 ) => {
   const report = await repository.findMaterialReportByIdForAdmin(reportId);
   if (!report) {
-    throw new AppError('Report not found', 404, 'NOT_FOUND');
+    throw new AppError('Report not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   assertPendingReport(report);
@@ -555,11 +560,15 @@ export const submitMaterialReport = async (
 ) => {
   const material = await repository.findReportableMaterial(materialId);
   if (!material) {
-    throw new AppError('Material not found', 404, 'NOT_FOUND');
+    throw new AppError('Material not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   if (material.ownerId === reporterId) {
-    throw new AppError('You cannot report your own material.', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'You cannot report your own material.',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   const existing = await repository.findPendingReportByReporter({
@@ -570,7 +579,7 @@ export const submitMaterialReport = async (
     throw new AppError(
       'You already reported this material. Admin will review it.',
       409,
-      'CONFLICT',
+      COMMON_ERROR_CODES.conflict,
       { reason: 'DUPLICATE_PENDING_REPORT' },
     );
   }
