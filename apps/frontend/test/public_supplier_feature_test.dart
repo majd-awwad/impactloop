@@ -1,11 +1,13 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:frontend/core/errors/api_exception.dart';
-import 'package:frontend/core/network/api_response.dart';
 import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/material_discovery/application/material_discovery_providers.dart';
@@ -17,21 +19,23 @@ import 'package:frontend/features/material_discovery/domain/material_discovery_r
 import 'package:frontend/features/material_discovery/domain/material_engagement.dart';
 import 'package:frontend/features/material_discovery/data/material_discovery_api_mapper.dart';
 import 'package:frontend/features/material_discovery/presentation/pages/public_supplier_page.dart';
-import 'package:frontend/features/material_discovery/presentation/widgets/materials_discovery_results_grid.dart';
-import 'package:frontend/shared/widgets/materials/app_material_card.dart';
+import 'package:frontend/features/material_discovery/presentation/widgets/public_supplier_profile_widgets.dart';
+import 'package:frontend/l10n/app_localizations.dart';
+import 'package:frontend/shared/widgets/materials/materials_ui_palette.dart';
 
 class _FakeSupplierRepository implements MaterialDiscoveryRepository {
   _FakeSupplierRepository({
     required this.supplier,
     this.materials = const [],
     this.followShouldFail = false,
-    this.unfollowShouldFail = false,
+    this.followGate,
   });
 
   PublicSupplier supplier;
   final List<DiscoveryMaterial> materials;
   final bool followShouldFail;
-  final bool unfollowShouldFail;
+  final Completer<void>? followGate;
+  int followCalls = 0;
 
   @override
   Future<MaterialDiscoveryResult> fetchMaterials(
@@ -93,6 +97,8 @@ class _FakeSupplierRepository implements MaterialDiscoveryRepository {
 
   @override
   Future<SupplierFollowStatus> followSupplier(String supplierProfileId) async {
+    followCalls += 1;
+    await followGate?.future;
     if (followShouldFail) {
       throw const ApiException(message: 'Follow failed', statusCode: 500);
     }
@@ -113,10 +119,6 @@ class _FakeSupplierRepository implements MaterialDiscoveryRepository {
   Future<SupplierFollowStatus> unfollowSupplier(
     String supplierProfileId,
   ) async {
-    if (unfollowShouldFail) {
-      throw const ApiException(message: 'Unfollow failed', statusCode: 500);
-    }
-
     supplier = supplier.copyWith(
       followersCount: supplier.followersCount > 0
           ? supplier.followersCount - 1
@@ -154,13 +156,46 @@ class _LearnerAuthController extends AuthController {
 Widget _supplierTestApp({
   required Widget child,
   required MaterialDiscoveryRepository repository,
+  Locale locale = const Locale('en'),
 }) {
   return ProviderScope(
     overrides: [
       materialDiscoveryRepositoryProvider.overrideWithValue(repository),
       authControllerProvider.overrideWith(_LearnerAuthController.new),
     ],
-    child: MaterialApp(locale: const Locale('en'), home: child),
+    child: MaterialApp(
+      locale: locale,
+      supportedLocales: const [Locale('en'), Locale('ar')],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: child,
+    ),
+  );
+}
+
+Widget _supplierRouterTestApp({
+  required MaterialDiscoveryRepository repository,
+  required GoRouter router,
+}) {
+  return ProviderScope(
+    overrides: [
+      materialDiscoveryRepositoryProvider.overrideWithValue(repository),
+      authControllerProvider.overrideWith(_LearnerAuthController.new),
+    ],
+    child: MaterialApp.router(
+      routerConfig: router,
+      supportedLocales: const [Locale('en'), Locale('ar')],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+    ),
   );
 }
 
@@ -335,6 +370,126 @@ void main() {
     expect(find.text('4'), findsWidgets);
   });
 
+  testWidgets('desktop follow states and success feedback are distinct', (
+    tester,
+  ) async {
+    final repository = _FakeSupplierRepository(
+      supplier: const PublicSupplier(
+        id: 'sp-desktop-follow',
+        displayName: 'Desktop Follow Supplier',
+        followersCount: 2,
+        isFollowedByViewer: false,
+      ),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _supplierTestApp(
+        repository: repository,
+        child: const PublicSupplierPage(supplierProfileId: 'sp-desktop-follow'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    const buttonKey = ValueKey('public-supplier-desktop-follow-button');
+    final buttonFinder = find.byKey(buttonKey);
+    final palette = MaterialsUiPalette.of(tester.element(buttonFinder));
+    final initialButton = tester.widget<FilledButton>(buttonFinder);
+    final initialBackground = initialButton.style?.backgroundColor?.resolve({});
+    expect(initialBackground, palette.mint);
+
+    await tester.tap(buttonFinder);
+    await tester.pumpAndSettle();
+
+    final followingButton = tester.widget<FilledButton>(buttonFinder);
+    final followingBackground = followingButton.style?.backgroundColor?.resolve(
+      {},
+    );
+    final followingForeground = followingButton.style?.foregroundColor?.resolve(
+      {},
+    );
+    expect(followingBackground, isNot(initialBackground));
+    expect(followingForeground, palette.mint);
+    expect(find.text('Following'), findsOneWidget);
+    expect(find.text('3'), findsWidgets);
+    expect(find.text('Supplier followed successfully'), findsOneWidget);
+
+    final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+    final snackContext = tester.element(find.byType(SnackBar));
+    expect(snackBar.width, 420);
+    expect(
+      snackBar.backgroundColor,
+      Theme.of(snackContext).colorScheme.surface,
+    );
+    expect(snackBar.shape, isA<RoundedRectangleBorder>());
+    expect(find.byIcon(Icons.check_circle_outline_rounded), findsOneWidget);
+    final feedbackText = tester.widget<Text>(
+      find.text('Supplier followed successfully'),
+    );
+    expect(
+      feedbackText.style?.color,
+      Theme.of(snackContext).colorScheme.onSurface,
+    );
+
+    await tester
+        .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+        .onRefresh();
+    await tester.pumpAndSettle();
+    expect(find.text('Following'), findsOneWidget);
+    expect(find.text('3'), findsWidgets);
+
+    await tester.tap(buttonFinder);
+    await tester.pumpAndSettle();
+
+    final followButton = tester.widget<FilledButton>(buttonFinder);
+    expect(followButton.style?.backgroundColor?.resolve({}), initialBackground);
+    expect(find.text('Follow'), findsOneWidget);
+    expect(find.text('2'), findsWidgets);
+    expect(find.text('Supplier unfollowed'), findsOneWidget);
+  });
+
+  testWidgets('follow mutation disables repeated desktop clicks', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final repository = _FakeSupplierRepository(
+      supplier: const PublicSupplier(
+        id: 'sp-follow-gate',
+        displayName: 'Protected Follow Supplier',
+      ),
+      followGate: gate,
+    );
+
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _supplierTestApp(
+        repository: repository,
+        child: const PublicSupplierPage(supplierProfileId: 'sp-follow-gate'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    const buttonKey = ValueKey('public-supplier-desktop-follow-button');
+    await tester.tap(find.byKey(buttonKey));
+    await tester.pump();
+
+    expect(repository.followCalls, 1);
+    expect(
+      tester.widget<FilledButton>(find.byKey(buttonKey)).onPressed,
+      isNull,
+    );
+
+    gate.complete();
+    await tester.pumpAndSettle();
+
+    expect(repository.followCalls, 1);
+    expect(find.text('Following'), findsOneWidget);
+  });
+
   testWidgets('restores authoritative follow state after failed mutation', (
     tester,
   ) async {
@@ -447,6 +602,222 @@ void main() {
     expect(find.text('Material 3'), findsOneWidget);
   });
 
+  testWidgets('uses the dedicated desktop hero and tabs at wide widths', (
+    tester,
+  ) async {
+    final repository = _FakeSupplierRepository(
+      supplier: const PublicSupplier(
+        id: 'sp-desktop',
+        displayName: 'Desktop Supplier',
+        description: 'A purpose-built desktop profile.',
+        materialsCount: 12,
+        followersCount: 7,
+      ),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _supplierTestApp(
+        repository: repository,
+        child: const PublicSupplierPage(supplierProfileId: 'sp-desktop'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('public-supplier-desktop-hero')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('public-supplier-desktop-tabs')),
+      findsOneWidget,
+    );
+    expect(find.byType(PublicSupplierProfileHeader), findsNothing);
+    expect(
+      find.byKey(const ValueKey('public-supplier-desktop-back')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('desktop back pops history and falls back for direct entry', (
+    tester,
+  ) async {
+    final repository = _FakeSupplierRepository(
+      supplier: const PublicSupplier(
+        id: 'sp-back',
+        displayName: 'Back Supplier',
+      ),
+    );
+    late GoRouter router;
+    router = GoRouter(
+      initialLocation: '/previous',
+      routes: [
+        GoRoute(
+          path: '/previous',
+          builder: (_, _) => const Scaffold(body: Text('Previous page')),
+        ),
+        GoRoute(
+          path: '/materials',
+          builder: (_, _) => const Scaffold(body: Text('Materials fallback')),
+        ),
+        GoRoute(
+          path: '/suppliers/:supplierId',
+          builder: (_, state) => PublicSupplierPage(
+            supplierProfileId: state.pathParameters['supplierId']!,
+            repository: repository,
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _supplierRouterTestApp(repository: repository, router: router),
+    );
+    await tester.pumpAndSettle();
+
+    router.push('/suppliers/sp-back');
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('public-supplier-desktop-back')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Previous page'), findsOneWidget);
+
+    router.go('/suppliers/sp-back');
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('public-supplier-desktop-back')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Materials fallback'), findsOneWidget);
+  });
+
+  testWidgets('preserves the approved mobile supplier composition', (
+    tester,
+  ) async {
+    final repository = _FakeSupplierRepository(
+      supplier: const PublicSupplier(
+        id: 'sp-mobile',
+        displayName: 'Mobile Supplier',
+        materialsCount: 2,
+        followersCount: 3,
+      ),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(430, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _supplierTestApp(
+        repository: repository,
+        child: const PublicSupplierPage(supplierProfileId: 'sp-mobile'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PublicSupplierProfileHeader), findsOneWidget);
+    expect(find.byType(PublicSupplierStatsBar), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('public-supplier-desktop-hero')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('public-supplier-desktop-tabs')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('public-supplier-desktop-back')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('uses three material columns at medium desktop width', (
+    tester,
+  ) async {
+    final materials = List.generate(
+      3,
+      (index) => MaterialDiscoveryApiMapper.fromJson({
+        'id': 'medium-$index',
+        'title': 'Medium material $index',
+        'description': 'Description $index',
+        'status': 'AVAILABLE',
+        'quantity': 1,
+        'unit': 'piece',
+        'condition': 'GOOD',
+        'isFree': true,
+        'deliveryAvailable': false,
+        'category': {'nameEn': 'Electronics', 'nameAr': 'إلكترونيات'},
+      }),
+    );
+    final repository = _FakeSupplierRepository(
+      supplier: const PublicSupplier(
+        id: 'sp-medium',
+        displayName: 'Medium Supplier',
+        materialsCount: 3,
+      ),
+      materials: materials,
+    );
+
+    await tester.binding.setSurfaceSize(const Size(1000, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _supplierTestApp(
+        repository: repository,
+        child: const PublicSupplierPage(supplierProfileId: 'sp-medium'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final grid = tester.widget<SliverGrid>(find.byType(SliverGrid));
+    final delegate =
+        grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+    expect(delegate.crossAxisCount, 3);
+  });
+
+  testWidgets('desktop layout mirrors in Arabic', (tester) async {
+    final repository = _FakeSupplierRepository(
+      supplier: const PublicSupplier(
+        id: 'sp-arabic',
+        displayName: 'ورشة إعادة الاستخدام',
+        supplierType: 'WORKSHOP',
+        city: 'الخليل',
+        materialsCount: 4,
+      ),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _supplierTestApp(
+        repository: repository,
+        locale: const Locale('ar'),
+        child: const PublicSupplierPage(supplierProfileId: 'sp-arabic'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final hero = find.byKey(const ValueKey('public-supplier-desktop-hero'));
+    expect(hero, findsOneWidget);
+    expect(Directionality.of(tester.element(hero)), TextDirection.rtl);
+    expect(find.text('رجوع'), findsOneWidget);
+    expect(find.text('المواد المتاحة'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('public-supplier-desktop-follow-button')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('متابَع'), findsOneWidget);
+    expect(find.text('تمت المتابعة بنجاح'), findsOneWidget);
+  });
+
   testWidgets('overview tab shows about content', (tester) async {
     final repository = _FakeSupplierRepository(
       supplier: const PublicSupplier(
@@ -471,9 +842,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('About this supplier'), findsOneWidget);
-    expect(
-      find.textContaining('Browse public materials from this supplier'),
-      findsOneWidget,
-    );
+    expect(find.text('Overview copy'), findsNWidgets(2));
   });
 }

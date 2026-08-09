@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../models/localized_text.dart';
 import 'material_condition_badge.dart';
 import 'material_price_badge.dart';
 import 'material_status_badge.dart';
 import 'materials_ui_palette.dart';
 import '../supplier/supplier_identity_widgets.dart';
 
-enum AppMaterialCardVariant { standard, compact }
+enum AppMaterialCardVariant { standard, compact, desktopCompact }
 
 class AppMaterialCard extends StatelessWidget {
   const AppMaterialCard({
@@ -200,9 +201,10 @@ class ImpactMaterialGridCard extends StatefulWidget {
     AppMaterialCardVariant variant = AppMaterialCardVariant.standard,
     bool includesSupplierAttribution = false,
   }) {
-    final imageHeight = width * 0.75;
-    final compact = variant == AppMaterialCardVariant.compact || width < 260;
-    final contentHeight = compact ? 188.0 : 190.0;
+    final desktopCompact = variant == AppMaterialCardVariant.desktopCompact;
+    final imageHeight = desktopCompact ? width / 1.72 : width * 0.75;
+    final compact = variant != AppMaterialCardVariant.standard || width < 260;
+    final contentHeight = desktopCompact ? 168.0 : (compact ? 188.0 : 190.0);
     final supplierBand = includesSupplierAttribution
         ? supplierAttributionBandHeight
         : 0.0;
@@ -653,7 +655,9 @@ class _ImpactMaterialGridCardState extends State<ImpactMaterialGridCard> {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final compact = widget.variant == AppMaterialCardVariant.compact;
+    final compact = widget.variant != AppMaterialCardVariant.standard;
+    final mediaAspectRatio =
+        widget.variant == AppMaterialCardVariant.desktopCompact ? 1.72 : 4 / 3;
     final borderColor = _hovered
         ? palette.mint.withValues(alpha: 0.46)
         : palette.borderSubtle;
@@ -709,6 +713,7 @@ class _ImpactMaterialGridCardState extends State<ImpactMaterialGridCard> {
                                   viewsCount: widget.viewsCount,
                                   likesCount: widget.likesCount,
                                   isLiked: widget.isLiked,
+                                  aspectRatio: mediaAspectRatio,
                                 ),
                                 Expanded(
                                   child: _GridCardContent(
@@ -767,6 +772,7 @@ class _GridCardMedia extends StatefulWidget {
     required this.viewsCount,
     required this.likesCount,
     required this.isLiked,
+    required this.aspectRatio,
   });
 
   final String category;
@@ -779,6 +785,7 @@ class _GridCardMedia extends StatefulWidget {
   final int viewsCount;
   final int likesCount;
   final bool isLiked;
+  final double aspectRatio;
 
   @override
   State<_GridCardMedia> createState() => _GridCardMediaState();
@@ -806,7 +813,7 @@ class _GridCardMediaState extends State<_GridCardMedia> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return AspectRatio(
-      aspectRatio: 4 / 3,
+      aspectRatio: widget.aspectRatio,
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -1013,7 +1020,10 @@ class _GridCardContent extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               Text(
-                'Details',
+                const LocalizedText(
+                  en: 'Details',
+                  ar: 'التفاصيل',
+                ).resolve(context),
                 style: textTheme.labelMedium?.copyWith(
                   color: palette.mint,
                   fontSize: compact ? 12 : 13,

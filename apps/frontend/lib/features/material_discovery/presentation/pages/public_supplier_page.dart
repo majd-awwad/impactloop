@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
@@ -7,12 +8,15 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_section_card.dart';
+import '../../../../shared/widgets/materials/app_material_card.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/material_discovery_providers.dart';
@@ -333,6 +337,7 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final desktopViewport = MediaQuery.sizeOf(context).width >= 900;
     final sourceSupplier = _supplier;
     final auth = ref.watch(authControllerProvider);
     final followStates = ref.watch(supplierFollowControllerProvider);
@@ -369,32 +374,33 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
               showCreateAccount: true,
               homeRoute: '/',
             ),
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                0,
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => context.popOrGo('/materials'),
-                    icon: const BackButtonIcon(),
-                  ),
-                  Expanded(
-                    child: Text(
-                      supplier?.displayName ?? context.l10n.supplierProfile,
-                      style: AppTextStyles.title(
-                        context,
-                      ).copyWith(color: palette.textPrimary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+            if (!desktopViewport)
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                  AppSpacing.md,
+                  0,
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => context.popOrGo('/materials'),
+                      icon: const BackButtonIcon(),
                     ),
-                  ),
-                ],
+                    Expanded(
+                      child: Text(
+                        supplier?.displayName ?? context.l10n.supplierProfile,
+                        style: AppTextStyles.title(
+                          context,
+                        ).copyWith(color: palette.textPrimary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
             Expanded(
               child: supplier == null && _isProfileLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -409,72 +415,149 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
                       onRefresh: _load,
                       child: LayoutBuilder(
                         builder: (context, constraints) {
-                          final isWide = constraints.maxWidth >= 1024;
+                          final isDesktop = constraints.maxWidth >= 900;
+                          final horizontalInset = isDesktop
+                              ? math.max(
+                                  32.0,
+                                  (constraints.maxWidth - 1500) / 2,
+                                )
+                              : AppSpacing.md;
                           return CustomScrollView(
                             controller: _scrollController,
                             physics: const AlwaysScrollableScrollPhysics(),
                             slivers: [
                               SliverPadding(
-                                padding: const EdgeInsetsDirectional.fromSTEB(
-                                  AppSpacing.md,
-                                  AppSpacing.md,
-                                  AppSpacing.md,
+                                padding: EdgeInsetsDirectional.fromSTEB(
+                                  horizontalInset,
+                                  isDesktop ? 20 : AppSpacing.md,
+                                  horizontalInset,
                                   0,
                                 ),
                                 sliver: SliverToBoxAdapter(
                                   child: Column(
                                     children: [
-                                      PublicSupplierProfileHeader(
-                                        supplier: supplier,
-                                        isUpdatingFollow:
-                                            followState?.isUpdating ?? false,
-                                        onToggleFollow: _toggleFollow,
-                                      ),
-                                      const SizedBox(height: AppSpacing.md),
-                                      PublicSupplierStatsBar(
-                                        materialsCount: supplier.materialsCount,
-                                        followersCount: supplier.followersCount,
-                                        isWide: isWide,
-                                      ),
-                                      const SizedBox(height: AppSpacing.sm),
-                                      PublicSupplierTabBar(
-                                        selectedIndex: _selectedTabIndex,
-                                        onSelected: (index) => setState(
-                                          () => _selectedTabIndex = index,
+                                      if (isDesktop) ...[
+                                        Align(
+                                          alignment:
+                                              AlignmentDirectional.centerStart,
+                                          child: _PublicSupplierBackButton(
+                                            onPressed: () =>
+                                                context.popOrGo('/materials'),
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: AppSpacing.md),
+                                        const SizedBox(height: AppSpacing.sm),
+                                        PublicSupplierDesktopHero(
+                                          supplier: supplier,
+                                          isUpdatingFollow:
+                                              followState?.isUpdating ?? false,
+                                          onToggleFollow: _toggleFollow,
+                                        ),
+                                        PublicSupplierTabBar(
+                                          desktop: true,
+                                          selectedIndex: _selectedTabIndex,
+                                          onSelected: (index) => setState(
+                                            () => _selectedTabIndex = index,
+                                          ),
+                                        ),
+                                        const SizedBox(height: AppSpacing.lg),
+                                      ] else ...[
+                                        PublicSupplierProfileHeader(
+                                          supplier: supplier,
+                                          isUpdatingFollow:
+                                              followState?.isUpdating ?? false,
+                                          onToggleFollow: _toggleFollow,
+                                        ),
+                                        const SizedBox(height: AppSpacing.md),
+                                        PublicSupplierStatsBar(
+                                          materialsCount:
+                                              supplier.materialsCount,
+                                          followersCount:
+                                              supplier.followersCount,
+                                          isWide: false,
+                                        ),
+                                        const SizedBox(height: AppSpacing.sm),
+                                        PublicSupplierTabBar(
+                                          selectedIndex: _selectedTabIndex,
+                                          onSelected: (index) => setState(
+                                            () => _selectedTabIndex = index,
+                                          ),
+                                        ),
+                                        const SizedBox(height: AppSpacing.md),
+                                      ],
                                     ],
                                   ),
                                 ),
                               ),
                               if (_selectedTabIndex == 0)
                                 SliverPadding(
-                                  padding: const EdgeInsetsDirectional.fromSTEB(
-                                    AppSpacing.md,
+                                  padding: EdgeInsetsDirectional.fromSTEB(
+                                    horizontalInset,
                                     0,
-                                    AppSpacing.md,
+                                    horizontalInset,
                                     AppSpacing.xl,
                                   ),
                                   sliver: SliverToBoxAdapter(
-                                    child: _OverviewSection(supplier: supplier),
+                                    child: _OverviewSection(
+                                      supplier: supplier,
+                                      desktop: isDesktop,
+                                    ),
                                   ),
                                 )
                               else ...[
                                 SliverPadding(
-                                  padding: const EdgeInsetsDirectional.fromSTEB(
-                                    AppSpacing.md,
+                                  padding: EdgeInsetsDirectional.fromSTEB(
+                                    horizontalInset,
                                     0,
-                                    AppSpacing.md,
+                                    horizontalInset,
                                     AppSpacing.md,
                                   ),
                                   sliver: SliverToBoxAdapter(
-                                    child: Text(
-                                      context.l10n.publicMaterialsCount(_total),
-                                      style: AppTextStyles.subtitle(
-                                        context,
-                                      ).copyWith(color: palette.textSecondary),
-                                    ),
+                                    child: isDesktop
+                                        ? Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                const LocalizedText(
+                                                  en: 'Available materials',
+                                                  ar: 'المواد المتاحة',
+                                                ).resolve(context),
+                                                style:
+                                                    AppTextStyles.title(
+                                                      context,
+                                                    ).copyWith(
+                                                      color:
+                                                          palette.textPrimary,
+                                                      fontSize: 20,
+                                                    ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                context.l10n
+                                                    .publicMaterialsCount(
+                                                      _total,
+                                                    ),
+                                                style:
+                                                    AppTextStyles.body(
+                                                      context,
+                                                    ).copyWith(
+                                                      color:
+                                                          palette.textSecondary,
+                                                    ),
+                                              ),
+                                            ],
+                                          )
+                                        : Text(
+                                            context.l10n.publicMaterialsCount(
+                                              _total,
+                                            ),
+                                            style:
+                                                AppTextStyles.subtitle(
+                                                  context,
+                                                ).copyWith(
+                                                  color: palette.textSecondary,
+                                                ),
+                                          ),
                                   ),
                                 ),
                                 if (_isMaterialsLoading && _materials.isEmpty)
@@ -507,15 +590,18 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
                                   )
                                 else
                                   SliverPadding(
-                                    padding:
-                                        const EdgeInsetsDirectional.fromSTEB(
-                                          AppSpacing.md,
-                                          0,
-                                          AppSpacing.md,
-                                          AppSpacing.md,
-                                        ),
+                                    padding: EdgeInsetsDirectional.fromSTEB(
+                                      horizontalInset,
+                                      0,
+                                      horizontalInset,
+                                      AppSpacing.md,
+                                    ),
                                     sliver: SliverMaterialsDiscoveryResultsGrid(
                                       materials: _materials,
+                                      cardVariant: isDesktop
+                                          ? AppMaterialCardVariant
+                                                .desktopCompact
+                                          : AppMaterialCardVariant.standard,
                                       onMaterialTap: (material) => context.go(
                                         '/materials/${material.id}',
                                       ),
@@ -563,9 +649,10 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
 }
 
 class _OverviewSection extends StatelessWidget {
-  const _OverviewSection({required this.supplier});
+  const _OverviewSection({required this.supplier, required this.desktop});
 
   final PublicSupplier supplier;
+  final bool desktop;
 
   @override
   Widget build(BuildContext context) {
@@ -574,6 +661,62 @@ class _OverviewSection extends StatelessWidget {
       supplier.city,
       supplier.area,
     ].whereType<String>().where((value) => value.trim().isNotEmpty).join(', ');
+    final description = supplier.description?.trim();
+    final typeLabel = DiscoveryMaterial.supplierTypeLabelFor(
+      supplier.supplierType,
+    )?.resolve(context);
+
+    if (desktop) {
+      return Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 920),
+          child: AppSectionCard(
+            padding: const EdgeInsetsDirectional.all(28),
+            borderRadius: AppRadius.xlAll,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.aboutSupplier,
+                  style: AppTextStyles.title(
+                    context,
+                  ).copyWith(color: palette.textPrimary, fontSize: 20),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  description != null && description.isNotEmpty
+                      ? description
+                      : context.l10n.aboutSupplierDescription,
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textSecondary, height: 1.6),
+                ),
+                if (location.isNotEmpty || typeLabel != null) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      if (location.isNotEmpty)
+                        _OverviewInfoChip(
+                          icon: Icons.location_on_outlined,
+                          label: location,
+                        ),
+                      if (typeLabel != null)
+                        _OverviewInfoChip(
+                          icon: Icons.storefront_outlined,
+                          label: typeLabel,
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -609,6 +752,72 @@ class _OverviewSection extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _OverviewInfoChip extends StatelessWidget {
+  const _OverviewInfoChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: palette.cardSurfaceAlt,
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: palette.mint),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            label,
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PublicSupplierBackButton extends StatelessWidget {
+  const _PublicSupplierBackButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final label = context.l10n.notificationsBack;
+
+    return Tooltip(
+      message: label,
+      child: OutlinedButton.icon(
+        key: const ValueKey('public-supplier-desktop-back'),
+        onPressed: onPressed,
+        icon: const BackButtonIcon(),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: palette.textSecondary,
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsetsDirectional.symmetric(horizontal: 14),
+          side: BorderSide(color: palette.borderSubtle),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+        ),
+      ),
     );
   }
 }

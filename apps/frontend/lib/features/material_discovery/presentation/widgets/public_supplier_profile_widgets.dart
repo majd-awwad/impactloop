@@ -211,6 +211,394 @@ class PublicSupplierProfileHeader extends StatelessWidget {
   }
 }
 
+class PublicSupplierDesktopHero extends StatelessWidget {
+  const PublicSupplierDesktopHero({
+    super.key,
+    required this.supplier,
+    required this.isUpdatingFollow,
+    required this.onToggleFollow,
+  });
+
+  final PublicSupplier supplier;
+  final bool isUpdatingFollow;
+  final VoidCallback onToggleFollow;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final location = [
+      supplier.city,
+      supplier.area,
+    ].whereType<String>().where((value) => value.trim().isNotEmpty).join(', ');
+    final typeLabel = DiscoveryMaterial.supplierTypeLabelFor(
+      supplier.supplierType,
+    )?.resolve(context);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 1100;
+        final statsWidth = compact ? 252.0 : 300.0;
+        final isFollowing = supplier.isFollowedByViewer;
+        final followingStyle = AppStatusStyle.of(
+          context,
+          AppStatusTone.primary,
+        );
+
+        return Container(
+          key: const ValueKey('public-supplier-desktop-hero'),
+          height: compact ? 320 : 304,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: palette.cardSurface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.xl),
+            ),
+            border: Border.all(color: palette.borderSubtle),
+            boxShadow: [
+              BoxShadow(
+                color: palette.cardShadow.withValues(alpha: 0.08),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              _PublicSupplierDesktopBackdrop(
+                coverImageUrl: supplier.coverImageUrl,
+              ),
+              Padding(
+                padding: EdgeInsetsDirectional.symmetric(
+                  horizontal: compact ? 24 : 40,
+                  vertical: compact ? 24 : 30,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          SupplierIdentityAvatar(
+                            displayName: supplier.displayName,
+                            avatarUrl: supplier.avatarUrl,
+                            radius: compact ? 50 : 58,
+                            borderColor: Colors.white.withValues(alpha: 0.9),
+                            borderWidth: 4,
+                          ),
+                          SizedBox(width: compact ? 18 : 28),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  supplier.displayName,
+                                  style: AppTextStyles.title(context).copyWith(
+                                    color: palette.textPrimary,
+                                    fontSize: compact ? 26 : 30,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.12,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (location.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.location_on_outlined,
+                                        size: 17,
+                                        color: palette.textMuted,
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Flexible(
+                                        child: Text(
+                                          location,
+                                          style: AppTextStyles.body(context)
+                                              .copyWith(
+                                                color: palette.textSecondary,
+                                              ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                                const SizedBox(height: 12),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    if (typeLabel != null)
+                                      _PublicSupplierHeaderChip(
+                                        label: typeLabel,
+                                        icon: Icons.storefront_outlined,
+                                      ),
+                                    if (supplier.isVerified)
+                                      _PublicSupplierHeaderChip(
+                                        label: const LocalizedText(
+                                          en: 'Verified supplier',
+                                          ar: 'مورد موثّق',
+                                        ).resolve(context),
+                                        icon: Icons.verified_rounded,
+                                      ),
+                                  ],
+                                ),
+                                if (supplier.description != null &&
+                                    supplier.description!
+                                        .trim()
+                                        .isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    supplier.description!.trim(),
+                                    style: AppTextStyles.body(context).copyWith(
+                                      color: palette.textSecondary,
+                                      height: 1.45,
+                                    ),
+                                    maxLines: compact ? 2 : 3,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  width: compact ? 190 : 210,
+                                  height: 44,
+                                  child: FilledButton(
+                                    key: const ValueKey(
+                                      'public-supplier-desktop-follow-button',
+                                    ),
+                                    onPressed: isUpdatingFollow
+                                        ? null
+                                        : onToggleFollow,
+                                    style: isFollowing
+                                        ? FilledButton.styleFrom(
+                                            backgroundColor:
+                                                followingStyle.background,
+                                            foregroundColor:
+                                                followingStyle.foreground,
+                                            disabledBackgroundColor:
+                                                followingStyle.background,
+                                            disabledForegroundColor:
+                                                followingStyle.foreground,
+                                            side: BorderSide(
+                                              color: followingStyle.border,
+                                            ),
+                                          )
+                                        : AppStatusButtonStyle.filled(
+                                            context,
+                                            AppStatusTone.primary,
+                                          ),
+                                    child: isUpdatingFollow
+                                        ? SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: isFollowing
+                                                  ? followingStyle.foreground
+                                                  : palette.ctaForeground,
+                                            ),
+                                          )
+                                        : Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                supplier.isFollowedByViewer
+                                                    ? Icons.check_rounded
+                                                    : Icons.person_add_outlined,
+                                                size: 19,
+                                              ),
+                                              const SizedBox(
+                                                width: AppSpacing.sm,
+                                              ),
+                                              Text(
+                                                supplier.isFollowedByViewer
+                                                    ? const LocalizedText(
+                                                        en: 'Following',
+                                                        ar: 'متابَع',
+                                                      ).resolve(context)
+                                                    : const LocalizedText(
+                                                        en: 'Follow',
+                                                        ar: 'متابعة',
+                                                      ).resolve(context),
+                                              ),
+                                            ],
+                                          ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(width: compact ? 24 : 44),
+                    SizedBox(
+                      width: statsWidth,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _PublicSupplierDesktopStat(
+                              icon: Icons.inventory_2_outlined,
+                              label: const LocalizedText(
+                                en: 'Materials',
+                                ar: 'المواد',
+                              ).resolve(context),
+                              value: supplier.materialsCount,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _PublicSupplierDesktopStat(
+                              icon: Icons.people_outline,
+                              label: const LocalizedText(
+                                en: 'Followers',
+                                ar: 'المتابعون',
+                              ).resolve(context),
+                              value: supplier.followersCount,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PublicSupplierDesktopBackdrop extends StatelessWidget {
+  const _PublicSupplierDesktopBackdrop({required this.coverImageUrl});
+
+  final String? coverImageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final cover = coverImageUrl?.trim();
+    final resolvedCover = cover == null || cover.isEmpty
+        ? null
+        : ApiConfig.resolveMediaUrl(cover);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: AlignmentDirectional.topStart,
+              end: AlignmentDirectional.bottomEnd,
+              colors: [
+                palette.mint.withValues(alpha: 0.22),
+                palette.cardSurface.withValues(alpha: 0.94),
+                palette.mint.withValues(alpha: 0.08),
+              ],
+            ),
+          ),
+        ),
+        if (resolvedCover != null)
+          Opacity(
+            opacity: 0.13,
+            child: Image.network(
+              resolvedCover,
+              fit: BoxFit.cover,
+              cacheWidth: 1800,
+              filterQuality: FilterQuality.low,
+              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+            ),
+          ),
+        PositionedDirectional(
+          start: 22,
+          top: 18,
+          child: Icon(
+            Icons.memory_rounded,
+            size: 104,
+            color: palette.mint.withValues(alpha: 0.07),
+          ),
+        ),
+        PositionedDirectional(
+          start: 128,
+          bottom: 12,
+          child: Icon(
+            Icons.recycling_rounded,
+            size: 84,
+            color: palette.mint.withValues(alpha: 0.06),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PublicSupplierDesktopStat extends StatelessWidget {
+  const _PublicSupplierDesktopStat({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Container(
+      height: 116,
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 12,
+        vertical: 14,
+      ),
+      decoration: BoxDecoration(
+        color: palette.cardSurface.withValues(alpha: 0.86),
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderSubtle),
+        boxShadow: [
+          BoxShadow(
+            color: palette.cardShadow.withValues(alpha: 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 20, color: palette.textMuted),
+          const SizedBox(height: 7),
+          Text(
+            '$value',
+            style: AppTextStyles.title(context).copyWith(
+              color: palette.textPrimary,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PublicSupplierCoverFallback extends StatelessWidget {
   const _PublicSupplierCoverFallback();
 
@@ -393,10 +781,12 @@ class PublicSupplierTabBar extends StatelessWidget {
     super.key,
     required this.selectedIndex,
     required this.onSelected,
+    this.desktop = false,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onSelected;
+  final bool desktop;
 
   @override
   Widget build(BuildContext context) {
@@ -405,6 +795,68 @@ class PublicSupplierTabBar extends StatelessWidget {
       const LocalizedText(en: 'Overview', ar: 'نظرة عامة'),
       const LocalizedText(en: 'Materials', ar: 'المواد'),
     ];
+
+    if (desktop) {
+      return Container(
+        key: const ValueKey('public-supplier-desktop-tabs'),
+        height: 58,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: palette.cardSurface,
+          border: Border(
+            left: BorderSide(color: palette.borderSubtle),
+            right: BorderSide(color: palette.borderSubtle),
+            bottom: BorderSide(color: palette.borderSubtle),
+          ),
+          borderRadius: const BorderRadius.vertical(
+            bottom: Radius.circular(AppRadius.xl),
+          ),
+        ),
+        child: Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: SizedBox(
+            width: 288,
+            child: Row(
+              children: List.generate(tabs.length, (index) {
+                final selected = index == selectedIndex;
+
+                return Expanded(
+                  child: InkWell(
+                    key: ValueKey('public-supplier-tab-$index'),
+                    onTap: () => onSelected(index),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              tabs[index].resolve(context),
+                              style: AppTextStyles.label(context).copyWith(
+                                color: selected
+                                    ? palette.mint
+                                    : palette.textSecondary,
+                                fontWeight: selected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          height: 3,
+                          color: selected ? palette.mint : Colors.transparent,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsetsDirectional.symmetric(vertical: 6),

@@ -120,10 +120,7 @@ void main() {
 
     expect(find.text('Build actions'), findsNothing);
     expect(find.byTooltip('Build actions'), findsOneWidget);
-    expect(
-      find.bySemanticsLabel('Build actions'),
-      findsOneWidget,
-    );
+    expect(find.bySemanticsLabel('Build actions'), findsOneWidget);
   });
 
   testWidgets('Back to project opens the correct Project ID', (tester) async {
@@ -255,10 +252,7 @@ void main() {
     await tester.tap(find.text('Confirm'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text(ProjectBuildPageL10n.errorPauseBuild.en),
-      findsOneWidget,
-    );
+    expect(find.text(ProjectBuildPageL10n.errorPauseBuild.en), findsOneWidget);
     expect(find.text('Request failed'), findsNothing);
   });
 
@@ -278,10 +272,7 @@ void main() {
     await tester.tap(find.text('Resume build').first);
     await tester.pumpAndSettle();
 
-    expect(
-      find.text(ProjectBuildPageL10n.errorResumeBuild.en),
-      findsOneWidget,
-    );
+    expect(find.text(ProjectBuildPageL10n.errorResumeBuild.en), findsOneWidget);
     expect(find.text('Request failed'), findsNothing);
   });
 
@@ -379,7 +370,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-    expect(snackBar.width, 480);
+    expect(snackBar.width, 420);
     expect(snackBar.behavior, SnackBarBehavior.floating);
   });
 
@@ -506,10 +497,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Project completed!'), findsOneWidget);
-    expect(
-      find.text('Great work — learning check completed!'),
-      findsNothing,
-    );
+    expect(find.text('Great work — learning check completed!'), findsNothing);
   });
 
   testWidgets('already completed build does not replay celebration dialog', (
@@ -530,7 +518,9 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
   });
 
-  testWidgets('COMPLETED build renders completed-review header', (tester) async {
+  testWidgets('COMPLETED build renders completed-review header', (
+    tester,
+  ) async {
     await _pumpBuildPage(
       tester,
       build: _sampleBuild(
@@ -602,7 +592,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('check review shows skipped and incorrect labels', (tester) async {
+  testWidgets('check review shows skipped and incorrect labels', (
+    tester,
+  ) async {
     await _pumpBuildPage(
       tester,
       build: _sampleBuild(status: ProjectBuildStatus.completed),
@@ -641,22 +633,23 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('COMPLETED build with remaining final shows Continue final check', (
-    tester,
-  ) async {
-    await _pumpBuildPage(
-      tester,
-      build: _sampleBuild(
-        status: ProjectBuildStatus.completed,
-        stepsCompleted: 2,
-      ),
-      sessionBundle: _sampleSessionBundleWithRemainingFinal(),
-      viewport: const Size(1024, 3000),
-    );
+  testWidgets(
+    'COMPLETED build with remaining final shows Continue final check',
+    (tester) async {
+      await _pumpBuildPage(
+        tester,
+        build: _sampleBuild(
+          status: ProjectBuildStatus.completed,
+          stepsCompleted: 2,
+        ),
+        sessionBundle: _sampleSessionBundleWithRemainingFinal(),
+        viewport: const Size(1024, 3000),
+      );
 
-    expect(find.text('Continue final check'), findsOneWidget);
-    expect(find.text('Start final check'), findsNothing);
-  });
+      expect(find.text('Continue final check'), findsOneWidget);
+      expect(find.text('Start final check'), findsNothing);
+    },
+  );
 
   testWidgets('pressing Continue final check opens existing Final Check UI', (
     tester,
@@ -800,20 +793,21 @@ void main() {
     expect(find.text('Continue final check'), findsNothing);
   });
 
-  testWidgets('ARCHIVED build shows review only without final mutation action', (
-    tester,
-  ) async {
-    await _pumpBuildPage(
-      tester,
-      build: _sampleBuild(status: ProjectBuildStatus.archived),
-      sessionBundle: _sampleSessionBundleWithRemainingFinal(),
-      viewport: const Size(1024, 1400),
-    );
+  testWidgets(
+    'ARCHIVED build shows review only without final mutation action',
+    (tester) async {
+      await _pumpBuildPage(
+        tester,
+        build: _sampleBuild(status: ProjectBuildStatus.archived),
+        sessionBundle: _sampleSessionBundleWithRemainingFinal(),
+        viewport: const Size(1024, 1400),
+      );
 
-    expect(find.text('Review final check'), findsOneWidget);
-    expect(find.text('Continue final check'), findsNothing);
-    expect(find.text('Start final check'), findsNothing);
-  });
+      expect(find.text('Review final check'), findsOneWidget);
+      expect(find.text('Continue final check'), findsNothing);
+      expect(find.text('Start final check'), findsNothing);
+    },
+  );
 
   testWidgets('mobile completed review final action has no overflow', (
     tester,
@@ -894,9 +888,8 @@ Future<GoRouter> _pumpBuildPage(
       ),
       GoRoute(
         path: '/learning/:id/build',
-        builder: (context, state) => LearningProjectBuildPage(
-          projectId: state.pathParameters['id']!,
-        ),
+        builder: (context, state) =>
+            LearningProjectBuildPage(projectId: state.pathParameters['id']!),
       ),
       ...extraRoutes,
     ],
@@ -925,13 +918,13 @@ Future<GoRouter> _pumpBuildPage(
           ),
         ),
         if (sessionHolder != null)
-          buildLearningSessionProvider('project-1').overrideWith(
-            (ref) async => sessionHolder.bundle,
-          )
+          buildLearningSessionProvider(
+            'project-1',
+          ).overrideWith((ref) async => sessionHolder.bundle)
         else if (sessionBundle != null)
-          buildLearningSessionProvider('project-1').overrideWith(
-            (ref) async => sessionBundle,
-          ),
+          buildLearningSessionProvider(
+            'project-1',
+          ).overrideWith((ref) async => sessionBundle),
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -1385,7 +1378,7 @@ class _TestAuthController extends AuthController {
 
 class _CompletingBuildRepository implements LearningProjectRepository {
   _CompletingBuildRepository(this._inProgress, this._completed)
-      : _current = _inProgress;
+    : _current = _inProgress;
 
   final ProjectBuild _inProgress;
   final ProjectBuild _completed;
@@ -1395,7 +1388,10 @@ class _CompletingBuildRepository implements LearningProjectRepository {
   Future<ProjectBuild?> fetchMyBuild(String projectId) async => _current;
 
   @override
-  Future<ProjectBuild> completeBuildStep(String projectId, String stepId) async {
+  Future<ProjectBuild> completeBuildStep(
+    String projectId,
+    String stepId,
+  ) async {
     _current = _completed;
     return _completed;
   }
@@ -1404,8 +1400,7 @@ class _CompletingBuildRepository implements LearningProjectRepository {
   Future<StepLearningCheck?> fetchStepLearningCheck(
     String projectId,
     String stepId,
-  ) async =>
-      null;
+  ) async => null;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -1419,7 +1414,10 @@ class _FailingCompleteBuildRepository implements LearningProjectRepository {
       _buildWithLastStepRemaining();
 
   @override
-  Future<ProjectBuild> completeBuildStep(String projectId, String stepId) async {
+  Future<ProjectBuild> completeBuildStep(
+    String projectId,
+    String stepId,
+  ) async {
     throw const ApiException(message: 'Complete failed', code: 'UNKNOWN');
   }
 
@@ -1467,11 +1465,7 @@ class _NoopLearnerBuildsApi implements LearnerBuildsApi {
 }
 
 class _UpdatingBuildRepository implements LearningProjectRepository {
-  _UpdatingBuildRepository(
-    this._current, {
-    required this.paused,
-    this.resumed,
-  });
+  _UpdatingBuildRepository(this._current, {required this.paused, this.resumed});
 
   ProjectBuild _current;
   final ProjectBuild paused;

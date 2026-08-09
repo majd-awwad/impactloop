@@ -89,7 +89,10 @@ class MaterialsDiscoveryResultsGrid extends StatelessWidget {
 
         final columns = materialDiscoveryGridColumnCount(width);
         final itemWidth = (width - ((columns - 1) * AppSpacing.md)) / columns;
-        final effectiveCardVariant = itemWidth < 400
+        final effectiveCardVariant =
+            cardVariant == AppMaterialCardVariant.desktopCompact
+            ? cardVariant
+            : itemWidth < 400
             ? AppMaterialCardVariant.compact
             : cardVariant;
         final includesSupplierAttribution =
@@ -245,7 +248,10 @@ class SliverMaterialsDiscoveryResultsGrid extends StatelessWidget {
 
         final columns = materialDiscoveryGridColumnCount(width);
         final itemWidth = (width - ((columns - 1) * AppSpacing.md)) / columns;
-        final effectiveCardVariant = itemWidth < 400
+        final effectiveCardVariant =
+            cardVariant == AppMaterialCardVariant.desktopCompact
+            ? cardVariant
+            : itemWidth < 400
             ? AppMaterialCardVariant.compact
             : cardVariant;
         final includesSupplierAttribution =
