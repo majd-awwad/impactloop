@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import { getAuthenticatedUser, type UserSummary } from '../auth/auth.service.js';
@@ -32,7 +33,7 @@ export const updateProfileForUser = async (
   const existing = await profileRepository.findUserProfileContext(userId);
 
   if (!existing) {
-    throw new AppError('User not found', 404, 'NOT_FOUND');
+    throw new AppError('User not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   const nextPhone =
@@ -46,7 +47,7 @@ export const updateProfileForUser = async (
       throw new AppError(
         'Phone number is already registered',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     }
   }
@@ -79,7 +80,7 @@ export const updateLearnerProfileForUser = async (
   const existing = await profileRepository.findUserProfileContext(userId);
 
   if (!existing) {
-    throw new AppError('User not found', 404, 'NOT_FOUND');
+    throw new AppError('User not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   const hasLearnerRole = existing.roles.some(
@@ -90,7 +91,7 @@ export const updateLearnerProfileForUser = async (
     throw new AppError(
       'Learner profile updates require the LEARNER role',
       403,
-      'FORBIDDEN',
+      COMMON_ERROR_CODES.forbidden,
     );
   }
 

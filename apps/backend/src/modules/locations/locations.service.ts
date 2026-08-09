@@ -2,6 +2,7 @@ import {
   forwardGeocodeLocation as forwardGeocodeLocationWithProvider,
   reverseGeocodeCoordinates,
 } from '../../services/reverse-geocoding.service.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { decimalToNumber } from '../../utils/decimal.js';
@@ -111,7 +112,11 @@ export const updateUserSavedLocation = async (
     );
 
     if (!existing) {
-      throw new AppError('Saved location not found', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Saved location not found',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     }
 
     if (input.isDefault) {
@@ -162,7 +167,11 @@ export const updateUserSavedLocation = async (
   });
 
   if (!savedLocation) {
-    throw new AppError('Saved location not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Saved location not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   if (
@@ -189,7 +198,11 @@ export const deleteUserSavedLocation = async (userId: string, id: string) => {
     );
 
     if (!existing) {
-      throw new AppError('Saved location not found', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Saved location not found',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     }
 
     const deleted = await locationsRepository.deleteSavedLocation(id, tx);
@@ -226,7 +239,11 @@ export const resolveSavedLocationCoordinates = async (
   );
 
   if (!savedLocation) {
-    throw new AppError('Saved location not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Saved location not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   const latitude = toNullableNumber(savedLocation.location.latitude);
@@ -236,7 +253,7 @@ export const resolveSavedLocationCoordinates = async (
     throw new AppError(
       'Saved location does not have coordinates',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
       { reason: 'SAVED_LOCATION_COORDINATES_REQUIRED' },
     );
   }
