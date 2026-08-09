@@ -1,6 +1,10 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { ALLOWED_DRIVER_NOTIFICATION_TYPES } from './driver-delivery-notification-types.js';
+import type {
+  NotificationActionType,
+  NotificationEntityType,
+} from './notification-identifiers.js';
 
 const visibleNotificationWhere = (
   userId: string,
@@ -14,16 +18,17 @@ const visibleNotificationWhere = (
   ],
 });
 
-export type CreateNotificationInput = {  userId: string;
+export type CreateNotificationInput = {
+  userId: string;
   notificationType: string;
   title: string;
   body: string;
-  relatedEntityType?: string | null;
+  relatedEntityType?: NotificationEntityType | null;
   relatedEntityId?: string | null;
   eventKey?: string | null;
-  entityType?: string | null;
+  entityType?: NotificationEntityType | null;
   entityId?: string | null;
-  actionType?: string | null;
+  actionType?: NotificationActionType | null;
   metadata?: Prisma.InputJsonValue | null;
   resolvedAt?: Date | null;
   actorId?: string | null;

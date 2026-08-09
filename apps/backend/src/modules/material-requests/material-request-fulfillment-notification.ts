@@ -1,4 +1,7 @@
-import { createNotificationIfMissing } from '../notifications/notifications.repository.js';
+import {
+  createNotificationIfMissing,
+  type CreateNotificationInput,
+} from '../notifications/notifications.repository.js';
 
 export type MaterialRequestFulfillmentNotificationInput = {
   requestId: string;
@@ -8,7 +11,7 @@ export type MaterialRequestFulfillmentNotificationInput = {
 
 export const buildMaterialRequestFulfilledNotification = (
   input: MaterialRequestFulfillmentNotificationInput,
-) => ({
+): CreateNotificationInput => ({
   userId: input.learnerId,
   notificationType: 'MATERIAL_REQUEST_FULFILLED',
   title: 'Material request fulfilled',

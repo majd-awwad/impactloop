@@ -1,4 +1,5 @@
 import { isSupplierVerificationAwaitingAdminReview } from '../supplier/supplier-verification.status.js';
+import type { NotificationActionType } from '../notifications/notification-identifiers.js';
 
 export const SUPPLIER_NOTIFICATION_CATEGORIES = [
   'RESERVATION',
@@ -27,7 +28,7 @@ export const SUPPLIER_NOTIFICATION_ACTIONS = [
   'OPEN_PROFILE',
   'NONE',
   'UNKNOWN',
-] as const;
+] as const satisfies readonly (NotificationActionType | 'UNKNOWN')[];
 
 export type SupplierNotificationCategory =
   (typeof SUPPLIER_NOTIFICATION_CATEGORIES)[number];

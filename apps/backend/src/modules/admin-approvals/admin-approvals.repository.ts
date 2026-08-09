@@ -1,6 +1,10 @@
 import type { Prisma } from '../../generated/prisma/index.js';
 
 import { prisma } from '../../database/prisma.js';
+import {
+  NOTIFICATION_ACTION_TYPES,
+  NOTIFICATION_ENTITY_TYPES,
+} from '../notifications/notification-identifiers.js';
 import { normalizeCategoryNameForComparison } from './admin-approvals.validation.js';
 
 export const countApprovalsSummary = async () => {
@@ -306,12 +310,12 @@ export const createCategoryApprovalNotification = async (
         input.resolutionMode === 'USE_EXISTING_CATEGORY'
           ? `Your category request "${input.requestedName}" was approved using the existing marketplace category "${input.categoryNameEn}" / "${input.categoryNameAr}".`
           : `Your category request "${input.requestedName}" was approved and the new marketplace category "${input.categoryNameEn}" / "${input.categoryNameAr}" was created.`,
-      relatedEntityType: 'CATEGORY_REQUEST',
+      relatedEntityType: NOTIFICATION_ENTITY_TYPES.CATEGORY_REQUEST,
       relatedEntityId: input.requestId,
       eventKey: `material-review:category:${input.requestId}:APPROVED`,
-      entityType: 'CATEGORY_REQUEST',
+      entityType: NOTIFICATION_ENTITY_TYPES.CATEGORY_REQUEST,
       entityId: input.requestId,
-      actionType: 'CONTINUE_LISTING',
+      actionType: NOTIFICATION_ACTION_TYPES.CONTINUE_LISTING,
       actorId: input.adminId,
     },
     update: {},

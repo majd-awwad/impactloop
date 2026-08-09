@@ -3,6 +3,10 @@ import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
+import {
+  NOTIFICATION_ACTION_TYPES,
+  NOTIFICATION_ENTITY_TYPES,
+} from '../notifications/notification-identifiers.js';
 
 import type {
   AdminAiReviewContent,
@@ -282,9 +286,9 @@ export const createLearningProjectAuthorNotification = async (input: {
       notificationType: 'LEARNING_PROJECT_MODERATION',
       title: input.title,
       body: input.body,
-      relatedEntityType: 'LEARNING_PROJECT',
+      relatedEntityType: NOTIFICATION_ENTITY_TYPES.LEARNING_PROJECT,
       relatedEntityId: input.projectId,
-      actionType: 'OPEN_LEARNING_PROJECT_SUBMISSION',
+      actionType: NOTIFICATION_ACTION_TYPES.OPEN_LEARNING_PROJECT_SUBMISSION,
       metadata: {
         projectTitle: input.projectTitle,
         moderationEvent: input.moderationEvent,
