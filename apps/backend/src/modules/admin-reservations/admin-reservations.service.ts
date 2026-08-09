@@ -1,6 +1,9 @@
 import { AppError } from '../../utils/app-error.js';
 
 import * as repository from './admin-reservations.repository.js';
+import {
+  ADMIN_FILTERABLE_RESERVATION_STATUSES,
+} from './admin-reservations.status.js';
 import type { AdminReservationsListQuery } from './admin-reservations.validation.js';
 
 type OwnerWithSupplier = {
@@ -181,14 +184,7 @@ export const listAdminReservations = async (query: AdminReservationsListQuery) =
       totalPages,
     },
     filterOptions: {
-      statuses: [
-        'PENDING',
-        'ACCEPTED',
-        'REJECTED',
-        'CANCELLED',
-        'COMPLETED',
-        'EXPIRED',
-      ],
+      statuses: ADMIN_FILTERABLE_RESERVATION_STATUSES,
     },
   };
 };

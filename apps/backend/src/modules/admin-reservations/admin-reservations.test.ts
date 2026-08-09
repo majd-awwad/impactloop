@@ -14,6 +14,9 @@ import {
   getAdminReservationById,
   listAdminReservations,
 } from '../admin-reservations/admin-reservations.service.js';
+import {
+  ADMIN_FILTERABLE_RESERVATION_STATUSES,
+} from './admin-reservations.status.js';
 
 const TEST_MARKER = '[test-admin-reservations-deliveries]';
 
@@ -302,6 +305,10 @@ describe('admin reservations and deliveries monitoring', () => {
     assert.ok(item.supplier.displayName);
     assert.equal(item.hasDelivery, true);
     assert.ok(item.delivery);
+    assert.deepEqual(
+      result.filterOptions.statuses,
+      ADMIN_FILTERABLE_RESERVATION_STATUSES,
+    );
   });
 
   test('admin reservation details returns linked delivery summary when exists', async () => {

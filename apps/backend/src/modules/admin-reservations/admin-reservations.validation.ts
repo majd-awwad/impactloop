@@ -4,15 +4,11 @@ import { paginationQuerySchema } from '../../utils/zod-helpers.js';
 import {
   adminExportFormatSchema,
 } from '../admin-export/admin-export.validation.js';
+import {
+  ADMIN_FILTERABLE_RESERVATION_STATUSES,
+} from './admin-reservations.status.js';
 
-const reservationStatusSchema = z.enum([
-  'PENDING',
-  'ACCEPTED',
-  'REJECTED',
-  'CANCELLED',
-  'COMPLETED',
-  'EXPIRED',
-]);
+const reservationStatusSchema = z.enum(ADMIN_FILTERABLE_RESERVATION_STATUSES);
 
 export const adminReservationsListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().max(200).optional(),
