@@ -1,4 +1,5 @@
 import type { LearningProjectStatus, Prisma } from '../../generated/prisma/client.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
@@ -408,7 +409,11 @@ export const persistAdminLearningProjectAiReviewGuarded = async (
     });
 
     if (!project) {
-      throw new AppError('Learning project not found.', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Learning project not found.',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     }
 
     const currentFingerprint = buildAdminReviewContentFingerprint(project);

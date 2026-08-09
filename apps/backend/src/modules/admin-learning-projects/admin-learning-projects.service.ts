@@ -1,4 +1,5 @@
 import type { LearningProjectStatus, Prisma } from '../../generated/prisma/client.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 import { prisma } from '../../database/prisma.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
@@ -284,7 +285,11 @@ const assertTransition = (
 const loadProjectOrThrow = async (id: string) => {
   const project = await repository.findAdminLearningProjectById(id);
   if (!project) {
-    throw new AppError('Learning project not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Learning project not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
   return project;
 };
@@ -724,7 +729,11 @@ export const updateAdminLearningProjectComponent = async (
 
   const component = project.requiredComponents.find((item) => item.id === componentId);
   if (!component) {
-    throw new AppError('Project component not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Project component not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   if (input.componentName !== undefined) {
@@ -748,7 +757,11 @@ export const updateAdminLearningProjectComponent = async (
   });
 
   if (!updatedComponent) {
-    throw new AppError('Project component not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Project component not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   const refreshed = await loadProjectOrThrow(projectId);
