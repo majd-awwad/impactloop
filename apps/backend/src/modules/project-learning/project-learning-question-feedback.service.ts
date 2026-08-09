@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 
@@ -19,7 +20,11 @@ const loadOwnedAssignmentForFeedback = async (input: {
     input.learnerId,
   );
   if (!assignment) {
-    throw new AppError('Learning assignment not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Learning assignment not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   const buildStatus = assignment.session.build.status;

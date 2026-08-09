@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import multer, { type FileFilterCallback } from 'multer';
 
 import { MATERIAL_UPLOAD_MAX_BYTES } from '../../constants/material-upload.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import {
@@ -38,7 +39,7 @@ const fileFilter = (
       new AppError(
         'Only JPG, PNG, and WebP images are allowed.',
         400,
-        'VALIDATION_ERROR',
+        COMMON_ERROR_CODES.validationError,
       ),
     );
     return;
@@ -68,13 +69,19 @@ export const buildCompletionPhotoUploadMiddleware = (
           new AppError(
             'Image exceeds the maximum allowed size.',
             400,
-            'VALIDATION_ERROR',
+            COMMON_ERROR_CODES.validationError,
           ),
         );
         return;
       }
 
-      next(new AppError(error.message, 400, 'VALIDATION_ERROR'));
+      next(
+        new AppError(
+          error.message,
+          400,
+          COMMON_ERROR_CODES.validationError,
+        ),
+      );
       return;
     }
 

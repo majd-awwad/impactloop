@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { readValidatedParams, readValidatedQuery } from '../../middlewares/validate.middleware.js';
 import { successResponse } from '../../utils/api-response.js';
 
@@ -106,7 +107,10 @@ export const uploadCompletionPhotoHandler = async (req: Request, res: Response) 
     res.status(400).json({
       success: false,
       message: 'Select an image to upload.',
-      error: { code: 'VALIDATION_ERROR', requestId: 'unknown' },
+      error: {
+        code: COMMON_ERROR_CODES.validationError,
+        requestId: 'unknown',
+      },
     });
     return;
   }

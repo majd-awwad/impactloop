@@ -1,6 +1,7 @@
 import type { RoleInvitationTargetRole } from '../../generated/prisma/client.js';
 
 import { env, getAppPublicBaseUrl, getResolvedEmailProvider, isAppPublicBaseUrlConfigured } from '../../config/env.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 import { hashPassword } from '../../utils/password.js';
 import { generateOpaqueToken, hashToken } from '../../utils/token.js';
@@ -138,7 +139,7 @@ export const getInvitationForAdmin = async (
     await invitationsRepository.findInvitationRecordById(invitationId);
 
   if (!invitation) {
-    throw new AppError('Invitation not found', 404, 'NOT_FOUND');
+    throw new AppError('Invitation not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   return toAdminDto(invitation);
@@ -151,14 +152,14 @@ export const issueInvitationLinkForAdmin = async (
     await invitationsRepository.findInvitationRecordById(invitationId);
 
   if (!invitation) {
-    throw new AppError('Invitation not found', 404, 'NOT_FOUND');
+    throw new AppError('Invitation not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   if (!isActivePendingInvitation(invitation)) {
     throw new AppError(
       'This invitation is no longer active.',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -276,15 +277,23 @@ export const resendEmailInvitation = async (
   const invitation = await invitationsRepository.findInvitationRecordById(invitationId);
 
   if (!invitation) {
-    throw new AppError('Invitation not found', 404, 'NOT_FOUND');
+    throw new AppError('Invitation not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   if (!isInvitationActionable(invitation)) {
-    throw new AppError('Invitation cannot be resent', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Invitation cannot be resent',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   if (!invitation.targetEmail) {
-    throw new AppError('Invitation has no recipient email', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Invitation has no recipient email',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   const rawToken = generateOpaqueToken();
@@ -336,15 +345,23 @@ export const revokeInvitation = async (
   const invitation = await invitationsRepository.findInvitationRecordById(invitationId);
 
   if (!invitation) {
-    throw new AppError('Invitation not found', 404, 'NOT_FOUND');
+    throw new AppError('Invitation not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   if (invitation.usedAt) {
-    throw new AppError('Used invitations cannot be revoked', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Used invitations cannot be revoked',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   if (!isInvitationActionable(invitation)) {
-    throw new AppError('Invitation is already revoked', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Invitation is already revoked',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   const revoked = await invitationsRepository.revokeInvitationRecord(invitationId);
@@ -371,19 +388,35 @@ const assertInvitationUsable = async (token: string) => {
   const invitation = await invitationsRepository.findInvitationByTokenHash(hashToken(token));
 
   if (!invitation) {
-    throw new AppError('Invalid invitation', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Invalid invitation',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   if (invitation.usedAt || invitation.status === 'ACCEPTED') {
-    throw new AppError('Invitation already used', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Invitation already used',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   if (invitation.revokedAt || invitation.status === 'REVOKED') {
-    throw new AppError('Invitation revoked', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Invitation revoked',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   if (invitation.expiresAt <= new Date()) {
-    throw new AppError('Invitation expired', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Invitation expired',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   return invitation;
@@ -422,7 +455,7 @@ const validateAcceptPayloadForRole = (
       throw new AppError(
         'Driver invitations require phone, city, area, and transportation type',
         400,
-        'VALIDATION_ERROR',
+        COMMON_ERROR_CODES.validationError,
       );
     }
     return;
@@ -439,14 +472,18 @@ export const acceptInvitation = async (
   const invitation = await assertInvitationUsable(input.token);
 
   if (!invitation.targetEmail) {
-    throw new AppError('Invitation is missing recipient email', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Invitation is missing recipient email',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   if (invitation.targetEmail.toLowerCase() !== input.email.toLowerCase()) {
     throw new AppError(
       'Email does not match the invitation target',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -455,14 +492,22 @@ export const acceptInvitation = async (
   const existingUser = await authRepository.findUserIdByEmail(input.email);
 
   if (existingUser) {
-    throw new AppError('Email is already registered', 409, 'CONFLICT');
+    throw new AppError(
+      'Email is already registered',
+      409,
+      COMMON_ERROR_CODES.conflict,
+    );
   }
 
   if (input.phone) {
     const existingPhone = await authRepository.findUserIdByPhone(input.phone);
 
     if (existingPhone) {
-      throw new AppError('Phone number is already registered', 409, 'CONFLICT');
+      throw new AppError(
+        'Phone number is already registered',
+        409,
+        COMMON_ERROR_CODES.conflict,
+      );
     }
   }
 

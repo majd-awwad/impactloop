@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import { MAX_SAVED_DROPOFF_ADDRESSES } from './saved-dropoff-addresses.constants.js';
@@ -56,7 +57,7 @@ export const createMySavedDropoffAddress = async (
     throw new AppError(
       `You can save up to ${MAX_SAVED_DROPOFF_ADDRESSES} dropoff addresses.`,
       409,
-      'CONFLICT',
+      COMMON_ERROR_CODES.conflict,
     );
   }
 
@@ -82,7 +83,11 @@ export const updateMySavedDropoffAddress = async (
     );
 
   if (!savedAddress) {
-    throw new AppError('Saved dropoff address not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Saved dropoff address not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   return mapSavedDropoffAddress(savedAddress);
@@ -99,7 +104,11 @@ export const deleteMySavedDropoffAddress = async (
     );
 
   if (!savedAddress) {
-    throw new AppError('Saved dropoff address not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Saved dropoff address not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   return {
@@ -118,7 +127,11 @@ export const resolveSavedDropoffAddressForDelivery = async (
     );
 
   if (!savedAddress) {
-    throw new AppError('Saved dropoff address not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Saved dropoff address not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   return savedDropoffAddressesRepository.copySavedDropoffLocationForDelivery(

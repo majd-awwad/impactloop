@@ -6,6 +6,7 @@ import type {
   UserRole,
 } from '../../generated/prisma/client.js';
 
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 
@@ -335,7 +336,7 @@ export const acceptInvitationTransaction = async (input: {
       throw new AppError(
         'Invalid or expired invitation token',
         400,
-        'VALIDATION_ERROR',
+        COMMON_ERROR_CODES.validationError,
       );
     }
 

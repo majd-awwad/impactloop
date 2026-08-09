@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 import {
   deliveryWindowNotExpiredMessage,
@@ -34,7 +35,11 @@ const loadSupplierReservation = async (
     );
 
   if (!reservation) {
-    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Reservation not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   return mapSupplierReservation(reservation);
@@ -47,14 +52,14 @@ const loadDriverDelivery = async (deliveryId: string) => {
   });
 
   if (!delivery) {
-    throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+    throw new AppError('Delivery not found.', 404, COMMON_ERROR_CODES.notFound);
   }
 
   return mapDriverDeliveryForResponse(delivery);
 };
 
 const throwWindowNotExpired = (message: string): never => {
-  throw new AppError(message, 409, 'CONFLICT');
+  throw new AppError(message, 409, COMMON_ERROR_CODES.conflict);
 };
 
 export const markSupplierLearnerNoShow = async (
@@ -71,28 +76,36 @@ export const markSupplierLearnerNoShow = async (
 
   switch (result.outcome) {
     case 'NOT_FOUND':
-      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Reservation not found.',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     case 'INVALID_STATUS':
       throw new AppError(
         'Only accepted reservations can be marked as no-show.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     case 'NOT_PICKUP':
       throw new AppError(
         'Learner no-show applies only to pickup reservations.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     case 'MISSING_WINDOW':
-      throw new AppError('Pickup window is not set.', 409, 'CONFLICT');
+      throw new AppError(
+        'Pickup window is not set.',
+        409,
+        COMMON_ERROR_CODES.conflict,
+      );
     case 'WINDOW_NOT_EXPIRED':
       throwWindowNotExpired(pickupWindowNotExpiredMessage());
     case 'DUPLICATE':
       throw new AppError(
         'This reservation was already marked as a no-show.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     default:
       invalidateLearnerHomeForReservationTransition('ACCEPTED', 'NO_SHOW');
@@ -112,29 +125,41 @@ export const markSupplierDeliveryPickupExpired = async (
 
   switch (result.outcome) {
     case 'NOT_FOUND':
-      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Reservation not found.',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     case 'INVALID_STATUS':
       throw new AppError(
         'Only accepted reservations can be updated.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     case 'NO_DELIVERY':
-      throw new AppError('No delivery found for this reservation.', 404, 'NOT_FOUND');
+      throw new AppError(
+        'No delivery found for this reservation.',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     case 'INVALID_DELIVERY_STATUS':
       throw new AppError(
         'Delivery is not waiting for a driver.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     case 'DRIVER_ASSIGNED':
       throw new AppError(
         'Cannot mark expired while a driver is assigned.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     case 'MISSING_WINDOW':
-      throw new AppError('Supplier pickup window is not set.', 409, 'CONFLICT');
+      throw new AppError(
+        'Supplier pickup window is not set.',
+        409,
+        COMMON_ERROR_CODES.conflict,
+      );
     case 'WINDOW_NOT_EXPIRED':
       throwWindowNotExpired(supplierPickupWindowNotExpiredMessage());
     default:
@@ -167,32 +192,48 @@ export const markSupplierDriverNoShow = async (
 
   switch (result.outcome) {
     case 'NOT_FOUND':
-      throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Delivery not found.',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     case 'FORBIDDEN':
-      throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Delivery not found.',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     case 'INVALID_RESERVATION_STATUS':
       throw new AppError(
         'Only accepted reservations can be updated.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     case 'NOT_ASSIGNED':
-      throw new AppError('Delivery has no assigned driver.', 409, 'CONFLICT');
+      throw new AppError(
+        'Delivery has no assigned driver.',
+        409,
+        COMMON_ERROR_CODES.conflict,
+      );
     case 'INVALID_DELIVERY_STATUS':
       throw new AppError(
         'Driver no-show applies only before pickup.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     case 'MISSING_WINDOW':
-      throw new AppError('Supplier pickup window is not set.', 409, 'CONFLICT');
+      throw new AppError(
+        'Supplier pickup window is not set.',
+        409,
+        COMMON_ERROR_CODES.conflict,
+      );
     case 'WINDOW_NOT_EXPIRED':
       throwWindowNotExpired(supplierPickupWindowNotExpiredMessage());
     default:
       throw new AppError(
         'Unexpected driver no-show result.',
         500,
-        'INTERNAL_ERROR',
+        COMMON_ERROR_CODES.internalError,
       );
   }
 };
@@ -223,7 +264,11 @@ export const markDriverPickupFailed = async (
 
   switch (result.outcome) {
     case 'NOT_FOUND':
-      throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Delivery not found.',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     case 'INVALID_RESERVATION_STATUS':
       throw new AppError(
         'Only active reservations can be updated.',
@@ -248,7 +293,7 @@ export const markDriverPickupFailed = async (
       throw new AppError(
         'Unexpected pickup failed result.',
         500,
-        'INTERNAL_ERROR',
+        COMMON_ERROR_CODES.internalError,
       );
   }
 };
@@ -278,7 +323,11 @@ export const markDriverDeliveryFailed = async (
 
   switch (result.outcome) {
     case 'NOT_FOUND':
-      throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Delivery not found.',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     case 'INVALID_RESERVATION_STATUS':
       throw new AppError(
         'Completed reservations cannot be marked failed.',
@@ -303,7 +352,7 @@ export const markDriverDeliveryFailed = async (
       throw new AppError(
         'Unexpected delivery failed result.',
         500,
-        'INTERNAL_ERROR',
+        COMMON_ERROR_CODES.internalError,
       );
   }
 };
@@ -328,7 +377,11 @@ export const markDriverIssueAfterPickup = async (
 
   switch (result.outcome) {
     case 'NOT_FOUND':
-      throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Delivery not found.',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     case 'INVALID_RESERVATION_STATUS':
       throw new AppError(
         'Completed reservations cannot be updated.',

@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import { filterNotificationsForDisplay } from './driver-notification-validity.js';
@@ -139,7 +140,11 @@ export const markMyNotificationRead = async (
   });
 
   if (result.outcome === 'NOT_FOUND') {
-    throw new AppError('Notification not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Notification not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   return mapNotification(result.notification);

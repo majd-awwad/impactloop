@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import type { Prisma, DeliveryStatus } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
@@ -887,7 +888,7 @@ export const reopenDriverAssignmentForAdmin = async (input: {
       throw new AppError(
         'Driver assignment changed. Refresh and try again.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     }
 
@@ -908,7 +909,7 @@ export const reopenDriverAssignmentForAdmin = async (input: {
         throw new AppError(
           'Grouped delivery state changed. Refresh and try again.',
           409,
-          'CONFLICT',
+          COMMON_ERROR_CODES.conflict,
         );
       }
     }

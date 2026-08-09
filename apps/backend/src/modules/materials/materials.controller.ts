@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import {
   readValidatedParams,
   readValidatedQuery,
@@ -103,7 +104,7 @@ export const recordMaterialViewHandler = async (
     throw new AppError(
       'A valid Idempotency-Key header is required.',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
   const result = await measureRequestStage('materials.record-view', () =>

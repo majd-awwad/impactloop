@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import type { DeliveryStatus } from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
 
@@ -615,7 +616,7 @@ export const listAdminDeliveries = async (query: AdminDeliveriesListQuery) => {
 export const getAdminDeliveryById = async (id: string) => {
   const delivery = await repository.findAdminDeliveryById(id);
   if (!delivery) {
-    throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+    throw new AppError('Delivery not found.', 404, COMMON_ERROR_CODES.notFound);
   }
 
   const primaryIncidents = await repository.findPrimaryIncidentsForDeliveryIds([id]);
@@ -640,7 +641,11 @@ export const reopenAdminDeliveryDriverAssignment = async (
       });
       const delivery = await repository.findAdminDeliveryById(result.deliveryId);
       if (!delivery) {
-        throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+        throw new AppError(
+          'Delivery not found.',
+          404,
+          COMMON_ERROR_CODES.notFound,
+        );
       }
       const primaryIncidents = await repository.findPrimaryIncidentsForDeliveryIds([
         result.deliveryId,
@@ -648,48 +653,52 @@ export const reopenAdminDeliveryDriverAssignment = async (
       return mapDetail(delivery, primaryIncidents.get(result.deliveryId));
     }
     case 'NOT_FOUND':
-      throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Delivery not found.',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     case 'ALREADY_WAITING':
       throw new AppError(
         'Delivery is already waiting for a driver.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     case 'NOT_ASSIGNED':
       throw new AppError(
         'Delivery is not currently assigned to a driver.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     case 'PICKUP_STARTED':
       throw new AppError(
         'Pickup has already started; this delivery cannot be reopened to drivers.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     case 'TERMINAL_OR_FAILED':
       throw new AppError(
         'Terminal, failed, or admin-review deliveries cannot be reopened to drivers.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     case 'GROUP_INCOMPATIBLE':
       throw new AppError(
         'Grouped delivery state is not eligible to reopen to drivers.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     case 'ACTIVE_ASSIGNMENT_MISSING':
       throw new AppError(
         'The current driver assignment is no longer active.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     case 'CONCURRENT_UPDATE':
       throw new AppError(
         'Delivery assignment changed. Refresh and try again.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
   }
 };

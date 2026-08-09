@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import type { LearnerHomeSectionKey } from './learner-home.types.js';
@@ -38,7 +39,11 @@ export const parseLearnerHomeSectionKey = (value: string): LearnerHomeSectionKey
 export const parseLearnerHomeSectionQuery = (query: unknown) => {
   const parsed = sectionQuerySchema.safeParse(query);
   if (!parsed.success) {
-    throw new AppError('Invalid section query.', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Invalid section query.',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   return {

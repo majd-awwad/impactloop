@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 import * as summaryRepository from './learner-profile-summary.repository.js';
 import type {
@@ -77,7 +78,7 @@ export const createLearnerProfileSummaryService = (
 ) => async (userId: string): Promise<LearnerProfileSummary> => {
   const context = await repository.findProfileCompletionContext(userId);
   if (!context) {
-    throw new AppError('User not found', 404, 'NOT_FOUND');
+    throw new AppError('User not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   const [

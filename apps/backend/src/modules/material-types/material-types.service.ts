@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import * as materialTypesRepository from './material-types.repository.js';
@@ -44,7 +45,11 @@ export const getActivePriceRuleForMaterialType = async (materialTypeId: string) 
   const materialType = await materialTypesRepository.findMaterialTypeById(materialTypeId);
 
   if (!materialType) {
-    throw new AppError('Material type not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Material type not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   const rule = await materialTypesRepository.findActivePriceRuleForMaterialType(

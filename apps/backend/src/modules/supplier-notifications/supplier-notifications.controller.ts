@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { successResponse } from '../../utils/api-response.js';
 import { AppError } from '../../utils/app-error.js';
 import { readValidatedQuery } from '../../middlewares/validate.middleware.js';
@@ -30,7 +31,13 @@ export const markSupplierNotificationReadHandler = async (
     userId: req.auth!.sub,
     notificationId: String(req.params.id),
   });
-  if (!updated) throw new AppError('Notification not found.', 404, 'NOT_FOUND');
+  if (!updated) {
+    throw new AppError(
+      'Notification not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
+  }
   res.json(successResponse('Notification marked as read.', { updated: true }));
 };
 

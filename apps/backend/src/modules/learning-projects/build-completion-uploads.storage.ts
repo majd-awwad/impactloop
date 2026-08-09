@@ -6,6 +6,7 @@ import { resolveUploadSubdir } from '../../config/upload-storage.env.js';
 import {
   MATERIAL_UPLOAD_ALLOWED_MIME_TYPES,
 } from '../../constants/material-upload.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 export const BUILD_COMPLETION_UPLOADS_DIR = resolveUploadSubdir(
@@ -91,7 +92,7 @@ const assertPathInsideUploadsDir = (absolutePath: string): void => {
     throw new AppError(
       'Completion photo is not available for download.',
       404,
-      'NOT_FOUND',
+      COMMON_ERROR_CODES.notFound,
     );
   }
 };
@@ -107,7 +108,11 @@ export const resolveLocalBuildCompletionImage = (
   const trimmed = imageUrl?.trim() ?? '';
 
   if (!trimmed) {
-    throw new AppError('Completion photo not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Completion photo not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   const prefix = `${BUILD_COMPLETION_UPLOAD_PUBLIC_PREFIX}/`;
@@ -115,7 +120,7 @@ export const resolveLocalBuildCompletionImage = (
     throw new AppError(
       'Completion photo is not available for download.',
       404,
-      'NOT_FOUND',
+      COMMON_ERROR_CODES.notFound,
     );
   }
 
@@ -124,7 +129,7 @@ export const resolveLocalBuildCompletionImage = (
     throw new AppError(
       'Completion photo is not available for download.',
       404,
-      'NOT_FOUND',
+      COMMON_ERROR_CODES.notFound,
     );
   }
 
@@ -132,7 +137,11 @@ export const resolveLocalBuildCompletionImage = (
   assertPathInsideUploadsDir(absolutePath);
 
   if (!fs.existsSync(absolutePath)) {
-    throw new AppError('Completion photo file not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Completion photo file not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   return {
