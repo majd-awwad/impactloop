@@ -105,13 +105,10 @@ export const UNASSIGNED_CLOSEABLE_DELIVERY_STATUSES = [
   'WAITING_FOR_DRIVER',
 ] as const;
 
-export const TERMINAL_PAYMENT_ORDER_FOR_CYCLE = [
-  'CANCELLED',
-  'REFUNDED',
-] as const;
-
-export const isTerminalPaymentOrderForNewCycle = (status: string): boolean =>
-  (TERMINAL_PAYMENT_ORDER_FOR_CYCLE as readonly string[]).includes(status);
+export {
+  PAYMENT_ORDER_NEW_CYCLE_TERMINAL_STATUSES as TERMINAL_PAYMENT_ORDER_FOR_CYCLE,
+  isTerminalPaymentOrderForNewCycle,
+} from './payments.status-policy.js';
 
 export const LIFECYCLE_REFUND_REASONS = {
   SOURCE_PRE_FULFILLMENT_TERMINAL: 'SOURCE_PRE_FULFILLMENT_TERMINAL',

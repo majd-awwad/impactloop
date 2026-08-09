@@ -16,6 +16,7 @@ import {
   type MaterialRefundEligibility,
 } from './payments.lifecycle.policy.js';
 import { requestFullRefundForPaidOrder } from './payments.refunds.js';
+import { isPayablePaymentOrderStatus } from './payments.status-policy.js';
 
 export type PostCommitRefundTask = {
   orderId: string;
@@ -195,10 +196,7 @@ export const cancelUnpaidPaymentOrder = async (
     );
   }
 
-  if (
-    order.status !== 'REQUIRES_PAYMENT' &&
-    order.status !== 'CHECKOUT_PENDING'
-  ) {
+  if (!isPayablePaymentOrderStatus(order.status)) {
     return { kind: 'NONE', detail: `Unexpected status ${order.status}` };
   }
 
@@ -539,10 +537,7 @@ export const evaluateMaterialRefundEligibility = async (
     };
   }
 
-  if (
-    order.status === 'REQUIRES_PAYMENT' ||
-    order.status === 'CHECKOUT_PENDING'
-  ) {
+  if (isPayablePaymentOrderStatus(order.status)) {
     return {
       eligibility: 'CANCEL_UNPAID',
       orderId: order.id,
@@ -659,10 +654,7 @@ const applyOrderTerminalAction = async (
     select: { id: true, status: true },
   });
 
-  if (
-    latest.status === 'REQUIRES_PAYMENT' ||
-    latest.status === 'CHECKOUT_PENDING'
-  ) {
+  if (isPayablePaymentOrderStatus(latest.status)) {
     try {
       actions.push(
         await cancelUnpaidPaymentOrder(tx, { orderId: latest.id, reason }),
@@ -1002,10 +994,7 @@ export const evaluateDeliveryFeeRefundEligibility = async (
       ? delivery.id
       : null;
 
-  if (
-    feeOrder.status === 'REQUIRES_PAYMENT' ||
-    feeOrder.status === 'CHECKOUT_PENDING'
-  ) {
+  if (isPayablePaymentOrderStatus(feeOrder.status)) {
     return {
       eligibility: 'GROUP_EMPTY_CANCEL_UNPAID',
       feeOrderId: feeOrder.id,

@@ -1,6 +1,7 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 
 import { PROVIDER_EVENT_TYPES } from './payments.constants.js';
+import { isPayablePaymentOrderStatus } from './payments.status-policy.js';
 import {
   isSourceTerminalForLateSuccess,
   prepareLateSuccessAutoRefundInTransaction,
@@ -14,9 +15,6 @@ type MarkFn = (
   eventRowId: string,
   reason?: string,
 ) => Promise<void>;
-
-const isPayableOrderStatus = (status: string): boolean =>
-  status === 'REQUIRES_PAYMENT' || status === 'CHECKOUT_PENDING';
 
 /**
  * Atomic settlement / failure / late-success for a CheckoutSession-owned attempt.
@@ -339,7 +337,7 @@ export const processSessionOwnedPaymentEvent = async (input: {
         continue;
       }
 
-      if (isPayableOrderStatus(order.status)) {
+      if (isPayablePaymentOrderStatus(order.status)) {
         await tx.paymentOrder.update({
           where: { id: order.id },
           data: {

@@ -1,3 +1,4 @@
+import type { PaymentOrderStatus } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { isWithinAllowedHandoverRange } from '../../utils/handover-timing.js';
 
@@ -75,7 +76,7 @@ type OrderRow = {
   reservationId: string | null;
   deliveryGroupId: string | null;
   purpose: string;
-  status: string;
+  status: PaymentOrderStatus;
   amount: { toFixed: (n: number) => string };
   currency: string;
   cycleNumber: number;
@@ -83,9 +84,7 @@ type OrderRow = {
 
 const DISPATCHABLE_DELIVERY_STATUSES = new Set(['WAITING_FOR_DRIVER']);
 
-const unpaidStatuses = new Set(['REQUIRES_PAYMENT', 'CHECKOUT_PENDING']);
-
-const mapOrderReadiness = (status: string): string => {
+const mapOrderReadiness = (status: PaymentOrderStatus): string => {
   switch (status) {
     case 'PAID':
       return 'PAID';
@@ -259,13 +258,13 @@ export const resolvePaymentSummariesByReservations = async (
       materialRequired &&
       (materialOrder == null
         ? reservation.status === 'ACCEPTED'
-        : unpaidStatuses.has(materialOrder.status));
+        : isPayablePaymentOrderStatus(materialOrder.status));
 
     const feeOutstanding =
       feeRequired &&
       (feeOrder == null
         ? reservation.status === 'ACCEPTED'
-        : unpaidStatuses.has(feeOrder.status));
+        : isPayablePaymentOrderStatus(feeOrder.status));
 
     const materialAmount =
       materialOutstanding && materialOrder

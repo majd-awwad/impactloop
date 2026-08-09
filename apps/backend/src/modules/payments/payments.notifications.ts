@@ -7,6 +7,10 @@ import { buildDeliveryDispatchReadyEventKey } from './payments.notification-fing
 import { moneyDecimalToString, toMoneyDecimal } from './payments.money.js';
 import { isElectronicPaymentEnforced } from './payments.policy.js';
 import {
+  PAYABLE_PAYMENT_ORDER_STATUSES,
+  isPayablePaymentOrderStatus,
+} from './payments.status-policy.js';
+import {
   evaluateDeliveryGroupPaymentReadiness,
   evaluatePickupPaymentReadiness,
 } from './payments.readiness.js';
@@ -151,7 +155,7 @@ const countOutstandingMaterialOrders = async (deliveryGroupId: string) =>
         status: 'ACCEPTED',
         fulfillmentMethod: 'DELIVERY',
       },
-      status: { in: ['REQUIRES_PAYMENT', 'CHECKOUT_PENDING'] },
+      status: { in: [...PAYABLE_PAYMENT_ORDER_STATUSES] },
     },
   });
 
@@ -191,7 +195,7 @@ export const notifyPaymentRequiredAfterAcceptance = async (
         where: {
           purpose: 'MATERIAL_SUBTOTAL',
           reservationId: reservation.id,
-          status: { in: ['REQUIRES_PAYMENT', 'CHECKOUT_PENDING'] },
+          status: { in: [...PAYABLE_PAYMENT_ORDER_STATUSES] },
         },
         orderBy: { cycleNumber: 'desc' },
       });
@@ -203,7 +207,7 @@ export const notifyPaymentRequiredAfterAcceptance = async (
               where: {
                 purpose: 'DELIVERY_FEE',
                 deliveryGroupId: reservation.deliveryGroupId,
-                status: { in: ['REQUIRES_PAYMENT', 'CHECKOUT_PENDING'] },
+                status: { in: [...PAYABLE_PAYMENT_ORDER_STATUSES] },
               },
               orderBy: { cycleNumber: 'desc' },
             })
@@ -332,11 +336,7 @@ export const notifyPaymentRequiredForOrder = async (paymentOrderId: string) =>
         },
       });
 
-      if (
-        !order ||
-        (order.status !== 'REQUIRES_PAYMENT' &&
-          order.status !== 'CHECKOUT_PENDING')
-      ) {
+      if (!order || !isPayablePaymentOrderStatus(order.status)) {
         return;
       }
 
@@ -875,11 +875,7 @@ export const notifyNewPaymentCycleRequired = async (paymentOrderId: string) =>
       }
 
       const order = await loadOrderContext(paymentOrderId);
-      if (
-        !order ||
-        (order.status !== 'REQUIRES_PAYMENT' &&
-          order.status !== 'CHECKOUT_PENDING')
-      ) {
+      if (!order || !isPayablePaymentOrderStatus(order.status)) {
         return;
       }
 

@@ -11,6 +11,10 @@ import { AppError } from '../../utils/app-error.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
 import {
+  isPaymentAdminActor,
+  type PaymentActor,
+} from './payments.actor.js';
+import {
   MOCK_CHECKOUT_ACTIONS,
   PAYMENT_CHECKOUT_IDEMPOTENCY_SCOPE,
   isActivePaymentAttemptStatus,
@@ -51,14 +55,14 @@ const isUniqueConstraintError = (error: unknown): boolean =>
 
 const assertPayerOrAdmin = (
   orderPayerUserId: string,
-  actor: { userId: string; roles: string[] },
+  actor: PaymentActor,
   adminAllowed: boolean,
 ) => {
   if (orderPayerUserId === actor.userId) {
     return;
   }
 
-  if (adminAllowed && actor.roles.includes('ADMIN')) {
+  if (adminAllowed && isPaymentAdminActor(actor)) {
     return;
   }
 
@@ -94,7 +98,7 @@ const readCheckoutUrlFromMetadata = (
 
 export const getPaymentOrderForActor = async (
   orderId: string,
-  actor: { userId: string; roles: string[] },
+  actor: PaymentActor,
 ) => {
   const order = await prisma.paymentOrder.findUnique({
     where: { id: orderId },
@@ -703,7 +707,7 @@ export const cancelPaymentAttempt = async (input: {
     let orderStatus = order.status;
     if (
       remainingActive === 0 &&
-      (order.status === 'CHECKOUT_PENDING' || order.status === 'REQUIRES_PAYMENT')
+      isPayablePaymentOrderStatus(order.status)
     ) {
       const updated = await tx.paymentOrder.update({
         where: { id: order.id },

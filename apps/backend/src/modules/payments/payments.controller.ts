@@ -25,8 +25,12 @@ import type {
   PaymentCancelAttemptInput,
   ReservationCheckoutCancelInput,
 } from './payments.validation.js';
+import {
+  isPaymentAdminActor,
+  type PaymentActor,
+} from './payments.actor.js';
 
-const actorFromRequest = (req: Request) => {
+const actorFromRequest = (req: Request): PaymentActor => {
   if (!req.auth) {
     throw new AppError('Authentication required', 401, 'UNAUTHENTICATED');
   }
@@ -152,7 +156,7 @@ export const reconcileExpiredCheckoutSessionsHandler = async (
   // Learners may only reconcile their own reservation scope.
   if (reservationId) {
     await assertReservationPaymentAccess(reservationId, actor);
-  } else if (!actor.roles.includes('ADMIN')) {
+  } else if (!isPaymentAdminActor(actor)) {
     throw new AppError(
       'reservationId is required for non-admin reconcile.',
       400,

@@ -17,6 +17,10 @@ import { AppError } from '../../utils/app-error.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
 import {
+  isPaymentAdminActor,
+  type PaymentActor,
+} from './payments.actor.js';
+import {
   PAYMENT_RESERVATION_CHECKOUT_IDEMPOTENCY_SCOPE,
   PROVIDER_CHECKOUT_CLAIM_LEASE_MS,
   isActivePaymentAttemptStatus,
@@ -181,10 +185,10 @@ const readCheckoutUrlFromMetadata = (
 
 const assertLearnerOwnerOrAdmin = (
   reservationRequesterId: string,
-  actor: { userId: string; roles: string[] },
+  actor: PaymentActor,
 ) => {
   if (reservationRequesterId === actor.userId) return;
-  if (actor.roles.includes('ADMIN')) return;
+  if (isPaymentAdminActor(actor)) return;
   throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
 };
 
@@ -1312,7 +1316,7 @@ export const reconcileExpiredCheckoutSessions = async (input?: {
 
 export const getCheckoutSessionForActor = async (
   checkoutSessionId: string,
-  actor: { userId: string; roles: string[] },
+  actor: PaymentActor,
 ): Promise<ReservationCheckoutSessionDto> => {
   const session = await prisma.paymentCheckoutSession.findUnique({
     where: { id: checkoutSessionId },
@@ -1325,7 +1329,7 @@ export const getCheckoutSessionForActor = async (
 
   if (
     session.payerUserId !== actor.userId &&
-    !actor.roles.includes('ADMIN')
+    !isPaymentAdminActor(actor)
   ) {
     throw new AppError('Checkout session not found.', 404, 'NOT_FOUND');
   }
@@ -1341,7 +1345,7 @@ export const getCheckoutSessionForActor = async (
  */
 export const assertReservationPaymentAccess = async (
   reservationId: string,
-  actor: { userId: string; roles: string[] },
+  actor: PaymentActor,
 ): Promise<{ id: string; requesterId: string }> => {
   const reservation = await prisma.reservation.findUnique({
     where: { id: reservationId },
@@ -1362,7 +1366,7 @@ export const assertReservationPaymentAccess = async (
  */
 export const getRelevantCheckoutSessionForReservation = async (
   reservationId: string,
-  actor: { userId: string; roles: string[] },
+  actor: PaymentActor,
 ): Promise<ReservationCheckoutSessionDto | null> => {
   const reservation = await assertReservationPaymentAccess(reservationId, actor);
 

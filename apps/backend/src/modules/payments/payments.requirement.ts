@@ -1,6 +1,11 @@
+import type { PaymentOrderStatus } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 
+import {
+  isPaymentAdminActor,
+  type PaymentActor,
+} from './payments.actor.js';
 import { isPayablePaymentOrderStatus } from './payments.constants.js';
 import { moneyDecimalToString } from './payments.money.js';
 import { isElectronicPaymentEnforced } from './payments.policy.js';
@@ -54,7 +59,7 @@ export type ReservationPaymentRequirementDto = {
     purpose: 'MATERIAL_SUBTOTAL' | 'DELIVERY_FEE';
     amount: string;
     currency: string;
-    status: string;
+    status: PaymentOrderStatus;
     cycleNumber: number;
     isCurrent: boolean;
     canStartCheckout: boolean;
@@ -87,12 +92,12 @@ const FULFILLMENT_STARTED_STATUSES = new Set([
 
 const assertLearnerOwnerOrAdmin = (
   reservationRequesterId: string,
-  actor: { userId: string; roles: string[] },
+  actor: PaymentActor,
 ) => {
   if (reservationRequesterId === actor.userId) {
     return;
   }
-  if (actor.roles.includes('ADMIN')) {
+  if (isPaymentAdminActor(actor)) {
     return;
   }
   throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
@@ -103,7 +108,7 @@ const mapOrderRows = (
     id: string;
     amount: { toFixed?: (n: number) => string } | unknown;
     currency: string;
-    status: string;
+    status: PaymentOrderStatus;
     cycleNumber: number;
     paidAt: Date | null;
     createdAt: Date;
@@ -113,7 +118,7 @@ const mapOrderRows = (
     id: string;
     amount: { toFixed?: (n: number) => string } | unknown;
     currency: string;
-    status: string;
+    status: PaymentOrderStatus;
     cycleNumber: number;
     paidAt: Date | null;
     createdAt: Date;
@@ -154,7 +159,7 @@ const mapOrderRows = (
 
 export const getReservationPaymentRequirement = async (
   reservationId: string,
-  actor: { userId: string; roles: string[] },
+  actor: PaymentActor,
 ): Promise<ReservationPaymentRequirementDto> => {
   const reservation = await prisma.reservation.findUnique({
     where: { id: reservationId },
@@ -201,7 +206,7 @@ export const getReservationPaymentRequirement = async (
 
   const currentMaterial = materialOrders[0] ?? null;
   const currentFee = feeOrders[0] ?? null;
-  const mapCheckout = (order: { status: string } | null) =>
+  const mapCheckout = (order: { status: PaymentOrderStatus } | null) =>
     order != null && isPayablePaymentOrderStatus(order.status);
 
   const delivery = reservation.deliveryGroupId

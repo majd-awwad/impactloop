@@ -42,15 +42,10 @@ export const MOCK_CHECKOUT_ACTIONS = [
 
 export type MockCheckoutAction = (typeof MOCK_CHECKOUT_ACTIONS)[number];
 
-export const TERMINAL_PAYMENT_ORDER_STATUSES = [
-  'PAID',
-  'REFUND_PENDING',
-  'REFUNDED',
-  'CANCELLED',
-] as const;
-
-export const isPayablePaymentOrderStatus = (status: string): boolean =>
-  status === 'REQUIRES_PAYMENT' || status === 'CHECKOUT_PENDING';
+export {
+  PAYABLE_PAYMENT_ORDER_STATUSES,
+  isPayablePaymentOrderStatus,
+} from './payments.status-policy.js';
 
 export const isActivePaymentAttemptStatus = (status: string): boolean =>
   status === 'CREATED' || status === 'PENDING';
