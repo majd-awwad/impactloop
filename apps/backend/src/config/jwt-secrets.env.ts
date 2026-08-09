@@ -6,7 +6,12 @@
 export const JWT_DEV_ACCESS_FALLBACK = "dev-access-secret-change-me";
 export const JWT_DEV_REFRESH_FALLBACK = "dev-refresh-secret-change-me";
 
-const JWT_MIN_SECRET_LENGTH = 24;
+/**
+ * Minimum length of a JWT secret.
+ * This is a security measure to prevent using weak secrets.
+ * The length is 128 characters to match the recommended length for JWT secrets by the JWT specification.
+ */
+const JWT_MIN_SECRET_LENGTH = 128;
 
 const KNOWN_JWT_PLACEHOLDER_SECRETS = new Set([
   JWT_DEV_ACCESS_FALLBACK,
