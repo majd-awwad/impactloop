@@ -21,8 +21,17 @@ import { prisma } from '../../database/prisma.js';
 import { logger } from '../../observability/logger.js';
 import { getRequestId } from '../../observability/request-context.js';
 import { RECOMMENDATION_SCORER_VERSION } from '../../config/recommendation-scoring-version.js';
-import { computeIdempotencyRequestHash } from '../../services/idempotency.service.js';
+import {
+  claimIdempotencyRecord,
+  computeIdempotencyRequestHash,
+  findIdempotencyRecord,
+  idempotencyKeyReusedError,
+  isIdempotencyClaimConflict,
+  markIdempotencyRecordSucceeded,
+  resolveExistingIdempotencyRecord,
+} from '../../services/idempotency.service.js';
 import { AppError } from '../../utils/app-error.js';
+import { isPrismaCode } from '../../utils/transaction-retry.js';
 import {
   RecommendationEventOriginError,
   resolveRecommendationEventSource,
@@ -576,14 +585,6 @@ const writeFailureContext = (input: {
   ...(input.correlationId ? { requestId: input.correlationId } : {}),
 });
 
-const isUniqueConstraintError = (error: unknown): boolean =>
-  Boolean(
-    error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      error.code === 'P2002',
-  );
-
 const canonicalJson = (value: unknown): string => {
   const normalize = (input: unknown): unknown => {
     if (input === null || typeof input !== 'object') {
@@ -817,7 +818,7 @@ const createOutboxRowIdempotent = async (
     return { outcome: 'created', payload: row.payload };
   } catch (error) {
     await tx.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT ${savepoint}`);
-    if (!isUniqueConstraintError(error)) {
+    if (!isPrismaCode(error, 'P2002')) {
       throw error;
     }
     const existing = await tx.recommendationEventOutbox.findUnique({
@@ -857,20 +858,12 @@ const claimRecommendationIdempotencyRecord = async (
     .slice(0, 24)}`;
   await tx.$executeRawUnsafe(`SAVEPOINT ${savepoint}`);
   try {
-    await tx.idempotencyRecord.create({
-      data: {
-        userId: input.userId,
-        scope: input.scope,
-        key: input.key,
-        requestHash: input.requestHash,
-        status: 'IN_PROGRESS',
-      },
-    });
+    await claimIdempotencyRecord(tx, input);
     await tx.$executeRawUnsafe(`RELEASE SAVEPOINT ${savepoint}`);
     return 'claimed';
   } catch (error) {
     await tx.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT ${savepoint}`);
-    if (!isUniqueConstraintError(error)) {
+    if (!isIdempotencyClaimConflict(error)) {
       throw error;
     }
     return 'exists';
@@ -894,48 +887,24 @@ export const resolveRecommendationSourceOperationId = (input: {
   boundedString(getRequestIdFromContext(), 191);
 };
 
-const throwToggleIdempotencyConflict = (): never => {
-  throw new AppError(
-    'Idempotency key was already used with a different request.',
-    409,
-    IDEMPOTENCY_ERROR_CODES.keyReused,
-    { reason: IDEMPOTENCY_ERROR_CODES.keyReused },
-  );
+const recommendationIdempotencyErrorDetails = {
+  keyReused: { reason: IDEMPOTENCY_ERROR_CODES.keyReused },
+  inProgress: { reason: 'REQUEST_IN_PROGRESS' },
+  previouslyFailed: { reason: IDEMPOTENCY_ERROR_CODES.previouslyFailed },
 };
 
-const resolveExistingToggleIdempotency = <TResponse extends object>(input: {
+const resolveRecommendationIdempotency = <TResponse extends object>(input: {
   requestHash: string;
   existing: {
     requestHash: string;
-    status: string;
+    status: 'IN_PROGRESS' | 'SUCCEEDED' | 'FAILED';
     responseJson: Prisma.JsonValue | null;
   };
-}): { response: TResponse; replayed: true; transitioned: false } => {
-  if (input.existing.requestHash !== input.requestHash) {
-    throwToggleIdempotencyConflict();
-  }
-  if (input.existing.status === 'SUCCEEDED' && input.existing.responseJson) {
-    return {
-      response: input.existing.responseJson as TResponse,
-      replayed: true,
-      transitioned: false,
-    };
-  }
-  if (input.existing.status === 'IN_PROGRESS') {
-    throw new AppError(
-      'Request is already being processed.',
-      409,
-      IDEMPOTENCY_ERROR_CODES.inProgress,
-      { reason: 'REQUEST_IN_PROGRESS' },
-    );
-  }
-  throw new AppError(
-    'Previous request with this idempotency key failed. Start a new request with a new key.',
-    409,
-    IDEMPOTENCY_ERROR_CODES.previouslyFailed,
-    { reason: IDEMPOTENCY_ERROR_CODES.previouslyFailed },
-  );
-};
+}) =>
+  resolveExistingIdempotencyRecord<TResponse>({
+    ...input,
+    details: recommendationIdempotencyErrorDetails,
+  });
 
 export const commitRecommendationToggleTransition = async <
   TResponse extends object,
@@ -999,62 +968,42 @@ export const commitRecommendationToggleTransition = async <
     impressionId,
   });
   const resourceType = input.resourceType ?? `recommendation-toggle:${input.actionType}`;
+  const identity = {
+    userId: input.learnerId,
+    scope: RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
+    key: sourceOperationId,
+  };
 
   return prisma.$transaction(async (tx) => {
-    const existing = await tx.idempotencyRecord.findUnique({
-      where: {
-        userId_scope_key: {
-          userId: input.learnerId,
-          scope: RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
-          key: sourceOperationId,
-        },
-      },
-      select: {
-        requestHash: true,
-        status: true,
-        responseJson: true,
-      },
-    });
+    const existing = await findIdempotencyRecord(tx, identity);
     if (existing) {
-      return resolveExistingToggleIdempotency<TResponse>({
-        requestHash,
-        existing,
-      });
+      return {
+        ...resolveRecommendationIdempotency<TResponse>({
+          requestHash,
+          existing,
+        }),
+        transitioned: false,
+      };
     }
 
     const claim = await claimRecommendationIdempotencyRecord(tx, {
-      userId: input.learnerId,
-      scope: RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
-      key: sourceOperationId,
+      ...identity,
       requestHash,
     });
     if (claim === 'exists') {
-      const raced = await tx.idempotencyRecord.findUnique({
-        where: {
-          userId_scope_key: {
-            userId: input.learnerId,
-            scope: RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
-            key: sourceOperationId,
-          },
-        },
-        select: {
-          requestHash: true,
-          status: true,
-          responseJson: true,
-        },
-      });
+      const raced = await findIdempotencyRecord(tx, identity);
       if (!raced) {
-        throw new AppError(
-          'Idempotency key was already used with a different request.',
-          409,
-          IDEMPOTENCY_ERROR_CODES.keyReused,
-          { reason: IDEMPOTENCY_ERROR_CODES.keyReused },
+        throw idempotencyKeyReusedError(
+          recommendationIdempotencyErrorDetails.keyReused,
         );
       }
-      return resolveExistingToggleIdempotency<TResponse>({
-        requestHash,
-        existing: raced,
-      });
+      return {
+        ...resolveRecommendationIdempotency<TResponse>({
+          requestHash,
+          existing: raced,
+        }),
+        transitioned: false,
+      };
     }
 
     const transitioned = await input.apply(tx);
@@ -1091,57 +1040,15 @@ export const commitRecommendationToggleTransition = async <
       });
     }
 
-    await tx.idempotencyRecord.update({
-      where: {
-        userId_scope_key: {
-          userId: input.learnerId,
-          scope: RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
-          key: sourceOperationId,
-        },
-      },
-      data: {
-        status: 'SUCCEEDED',
-        resourceType,
-        resourceId: input.entityId,
-        responseJson: response,
-      },
+    await markIdempotencyRecordSucceeded(tx, {
+      ...identity,
+      resourceType,
+      resourceId: input.entityId,
+      response,
     });
 
     return { response, replayed: false, transitioned };
   });
-};
-
-const resolveExistingViewIdempotency = <TResponse extends object>(input: {
-  requestHash: string;
-  existing: {
-    requestHash: string;
-    status: string;
-    responseJson: Prisma.JsonValue | null;
-  };
-}): { response: TResponse; replayed: true } => {
-  if (input.existing.requestHash !== input.requestHash) {
-    throwToggleIdempotencyConflict();
-  }
-  if (input.existing.status === 'SUCCEEDED' && input.existing.responseJson) {
-    return {
-      response: input.existing.responseJson as TResponse,
-      replayed: true,
-    };
-  }
-  if (input.existing.status === 'IN_PROGRESS') {
-    throw new AppError(
-      'Request is already being processed.',
-      409,
-      IDEMPOTENCY_ERROR_CODES.inProgress,
-      { reason: 'REQUEST_IN_PROGRESS' },
-    );
-  }
-  throw new AppError(
-    'Previous request with this idempotency key failed. Start a new request with a new key.',
-    409,
-    IDEMPOTENCY_ERROR_CODES.previouslyFailed,
-    { reason: IDEMPOTENCY_ERROR_CODES.previouslyFailed },
-  );
 };
 
 export const recommendationActionDeduplicationKey = (
@@ -1203,47 +1110,33 @@ export const commitRecommendationMaterialView = async <
     sourceOperationId,
     impressionId,
   });
+  const identity = {
+    userId: input.learnerId,
+    scope: RECOMMENDATION_VIEW_IDEMPOTENCY_SCOPE,
+    key: sourceOperationId,
+  };
 
   return prisma.$transaction(async (tx) => {
-    const identity = {
-      userId: input.learnerId,
-      scope: RECOMMENDATION_VIEW_IDEMPOTENCY_SCOPE,
-      key: sourceOperationId,
-    };
-    const existing = await tx.idempotencyRecord.findUnique({
-      where: { userId_scope_key: identity },
-      select: {
-        requestHash: true,
-        status: true,
-        responseJson: true,
-      },
-    });
+    const existing = await findIdempotencyRecord(tx, identity);
     if (existing) {
-      return resolveExistingViewIdempotency<TResponse>({
+      return resolveRecommendationIdempotency<TResponse>({
         requestHash,
         existing,
       });
     }
 
     const claim = await claimRecommendationIdempotencyRecord(tx, {
-      userId: input.learnerId,
-      scope: RECOMMENDATION_VIEW_IDEMPOTENCY_SCOPE,
-      key: sourceOperationId,
+      ...identity,
       requestHash,
     });
     if (claim === 'exists') {
-      const raced = await tx.idempotencyRecord.findUnique({
-        where: { userId_scope_key: identity },
-        select: {
-          requestHash: true,
-          status: true,
-          responseJson: true,
-        },
-      });
+      const raced = await findIdempotencyRecord(tx, identity);
       if (!raced) {
-        return throwToggleIdempotencyConflict();
+        throw idempotencyKeyReusedError(
+          recommendationIdempotencyErrorDetails.keyReused,
+        );
       }
-      return resolveExistingViewIdempotency<TResponse>({
+      return resolveRecommendationIdempotency<TResponse>({
         requestHash,
         existing: raced,
       });
@@ -1279,14 +1172,11 @@ export const commitRecommendationMaterialView = async <
       payload: payload as unknown as Prisma.InputJsonValue,
     });
 
-    await tx.idempotencyRecord.update({
-      where: { userId_scope_key: identity },
-      data: {
-        status: 'SUCCEEDED',
-        resourceType: 'material-view',
-        resourceId: input.materialId,
-        responseJson: response,
-      },
+    await markIdempotencyRecordSucceeded(tx, {
+      ...identity,
+      resourceType: 'material-view',
+      resourceId: input.materialId,
+      response,
     });
 
     return { response, replayed: false };
@@ -1724,7 +1614,7 @@ export const persistRecommendationExposure = async (input: {
         await writeExposureTransaction();
         break;
       } catch (error) {
-        if (!isUniqueConstraintError(error) || attempt === 2) {
+        if (!isPrismaCode(error, 'P2002') || attempt === 2) {
           throw error;
         }
 

@@ -1,14 +1,20 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import {
-  IDEMPOTENCY_ERROR_CODES,
-} from '../../contracts/errors/idempotency-error-codes.js';
-import {
+  claimIdempotencyRecord,
   computeIdempotencyRequestHash,
+  findIdempotencyRecord,
+  isIdempotencyClaimConflict,
+  markIdempotencyRecordFailed,
+  markIdempotencyRecordSucceeded,
+  resolveExistingIdempotencyRecord,
   validateIdempotencyKey,
 } from '../../services/idempotency.service.js';
 import { AppError } from '../../utils/app-error.js';
-import { runSerializableTransaction } from '../../utils/transaction-retry.js';
+import {
+  isPrismaCode,
+  runSerializableTransaction,
+} from '../../utils/transaction-retry.js';
 
 import {
   isPaymentAdminActor,
@@ -46,12 +52,6 @@ const orderDetailInclude = {
   },
   refund: true,
 } satisfies Prisma.PaymentOrderInclude;
-
-const isUniqueConstraintError = (error: unknown): boolean =>
-  typeof error === 'object' &&
-  error !== null &&
-  'code' in error &&
-  (error as { code?: string }).code === 'P2002';
 
 const assertPayerOrAdmin = (
   orderPayerUserId: string,
@@ -271,7 +271,7 @@ const reserveCheckoutAttempt = async (input: {
       };
     });
   } catch (error) {
-    if (!isUniqueConstraintError(error)) {
+    if (!isPrismaCode(error, 'P2002')) {
       throw error;
     }
 
@@ -511,43 +511,6 @@ const finalizeCheckoutWithProvider = async (
   };
 };
 
-const markIdempotencySucceeded = async (input: {
-  userId: string;
-  key: string;
-  response: CheckoutResponseDto;
-}) => {
-  await prisma.idempotencyRecord.update({
-    where: {
-      userId_scope_key: {
-        userId: input.userId,
-        scope: PAYMENT_CHECKOUT_IDEMPOTENCY_SCOPE,
-        key: input.key,
-      },
-    },
-    data: {
-      status: 'SUCCEEDED',
-      resourceType: 'PAYMENT_ATTEMPT',
-      resourceId: input.response.attemptId,
-      responseJson: input.response,
-    },
-  });
-};
-
-const markIdempotencyFailed = async (userId: string, key: string) => {
-  await prisma.idempotencyRecord
-    .update({
-      where: {
-        userId_scope_key: {
-          userId,
-          scope: PAYMENT_CHECKOUT_IDEMPOTENCY_SCOPE,
-          key,
-        },
-      },
-      data: { status: 'FAILED' },
-    })
-    .catch(() => undefined);
-};
-
 export const startPaymentCheckout = async (input: {
   orderId: string;
   payerUserId: string;
@@ -557,62 +520,30 @@ export const startPaymentCheckout = async (input: {
   const requestHash = computeIdempotencyRequestHash({
     orderId: input.orderId,
   });
+  const identity = {
+    userId: input.payerUserId,
+    scope: PAYMENT_CHECKOUT_IDEMPOTENCY_SCOPE,
+    key,
+  };
 
   try {
-    await prisma.idempotencyRecord.create({
-      data: {
-        userId: input.payerUserId,
-        scope: PAYMENT_CHECKOUT_IDEMPOTENCY_SCOPE,
-        key,
-        requestHash,
-        status: 'IN_PROGRESS',
-      },
-    });
+    await claimIdempotencyRecord(prisma, { ...identity, requestHash });
   } catch (error) {
-    if (!isUniqueConstraintError(error)) {
+    if (!isIdempotencyClaimConflict(error)) {
       throw error;
     }
 
-    const existing = await prisma.idempotencyRecord.findUnique({
-      where: {
-        userId_scope_key: {
-          userId: input.payerUserId,
-          scope: PAYMENT_CHECKOUT_IDEMPOTENCY_SCOPE,
-          key,
-        },
-      },
-    });
+    const existing = await findIdempotencyRecord(prisma, identity);
 
     if (!existing) {
       throw error;
     }
 
-    if (existing.requestHash !== requestHash) {
-      throw new AppError(
-        'Idempotency key was already used with a different request.',
-        409,
-        IDEMPOTENCY_ERROR_CODES.keyReused,
-      );
-    }
-
-    if (existing.status === 'SUCCEEDED' && existing.responseJson) {
-      return existing.responseJson as CheckoutResponseDto;
-    }
-
-    if (existing.status === 'IN_PROGRESS') {
-      throw new AppError(
-        'Request is already being processed.',
-        409,
-        IDEMPOTENCY_ERROR_CODES.inProgress,
-        { reason: 'REQUEST_IN_PROGRESS' },
-      );
-    }
-
-    throw new AppError(
-      'Previous request with this idempotency key failed. Start a new request with a new key.',
-      409,
-      IDEMPOTENCY_ERROR_CODES.previouslyFailed,
-    );
+    return resolveExistingIdempotencyRecord<CheckoutResponseDto>({
+      requestHash,
+      existing,
+      details: { inProgress: { reason: 'REQUEST_IN_PROGRESS' } },
+    }).response;
   }
 
   try {
@@ -628,15 +559,16 @@ export const startPaymentCheckout = async (input: {
       input.payerUserId,
     );
 
-    await markIdempotencySucceeded({
-      userId: input.payerUserId,
-      key,
+    await markIdempotencyRecordSucceeded(prisma, {
+      ...identity,
+      resourceType: 'PAYMENT_ATTEMPT',
+      resourceId: response.attemptId,
       response,
     });
 
     return response;
   } catch (error) {
-    await markIdempotencyFailed(input.payerUserId, key);
+    await markIdempotencyRecordFailed(prisma, identity).catch(() => undefined);
     throw error;
   }
 };

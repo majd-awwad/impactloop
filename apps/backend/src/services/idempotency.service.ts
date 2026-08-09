@@ -2,8 +2,9 @@ import { createHash } from "node:crypto";
 
 import { IDEMPOTENCY_ERROR_CODES } from "../contracts/errors/idempotency-error-codes.js";
 import { prisma } from "../database/prisma.js";
-import type { Prisma } from "../generated/prisma/client.js";
+import type { IdempotencyStatus, Prisma } from "../generated/prisma/client.js";
 import { AppError } from "../utils/app-error.js";
+import { isPrismaCode } from "../utils/transaction-retry.js";
 
 export const SUPPLIER_CREATE_MATERIAL_SCOPE = "SUPPLIER_CREATE_MATERIAL";
 export const LEARNING_PROJECT_SUBMIT_SCOPE = "LEARNING_PROJECT_SUBMIT";
@@ -22,13 +23,131 @@ type IdempotentOperationInput<TResponse> = {
   handler: (tx: Prisma.TransactionClient) => Promise<TResponse>;
 };
 
-const isUniqueConstraintError = (error: unknown): boolean => {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: string }).code === "P2002"
+export type IdempotencyRecordIdentity = {
+  userId: string;
+  scope: string;
+  key: string;
+};
+
+type IdempotencyRecordClient = Pick<
+  Prisma.TransactionClient,
+  "idempotencyRecord"
+>;
+
+type ExistingIdempotencyRecord = {
+  requestHash: string;
+  status: IdempotencyStatus;
+  responseJson: Prisma.JsonValue | null;
+};
+
+type IdempotencyErrorDetails = {
+  keyReused?: unknown;
+  inProgress?: unknown;
+  previouslyFailed?: unknown;
+};
+
+const idempotencyRecordWhere = (identity: IdempotencyRecordIdentity) => ({
+  userId_scope_key: identity,
+});
+
+export const isIdempotencyClaimConflict = (error: unknown): boolean =>
+  isPrismaCode(error, "P2002");
+
+export const claimIdempotencyRecord = async (
+  client: IdempotencyRecordClient,
+  input: IdempotencyRecordIdentity & { requestHash: string },
+) =>
+  client.idempotencyRecord.create({
+    data: {
+      ...input,
+      status: "IN_PROGRESS",
+    },
+  });
+
+export const findIdempotencyRecord = async (
+  client: IdempotencyRecordClient,
+  identity: IdempotencyRecordIdentity,
+) =>
+  client.idempotencyRecord.findUnique({
+    where: idempotencyRecordWhere(identity),
+  });
+
+export const markIdempotencyRecordSucceeded = async <TResponse extends object>(
+  client: IdempotencyRecordClient,
+  input: IdempotencyRecordIdentity & {
+    resourceType: string;
+    resourceId: string;
+    response: TResponse;
+  },
+) => {
+  const { response, resourceType, resourceId, ...identity } = input;
+  return client.idempotencyRecord.update({
+    where: idempotencyRecordWhere(identity),
+    data: {
+      status: "SUCCEEDED",
+      resourceType,
+      resourceId,
+      responseJson: response,
+    },
+  });
+};
+
+export const markIdempotencyRecordFailed = async (
+  client: IdempotencyRecordClient,
+  identity: IdempotencyRecordIdentity,
+) =>
+  client.idempotencyRecord.update({
+    where: idempotencyRecordWhere(identity),
+    data: { status: "FAILED" },
+  });
+
+export const idempotencyKeyReusedError = (details?: unknown) =>
+  new AppError(
+    "Idempotency key was already used with a different request.",
+    409,
+    IDEMPOTENCY_ERROR_CODES.keyReused,
+    details,
   );
+
+export const idempotencyInProgressError = (details?: unknown) =>
+  new AppError(
+    "Request is already being processed.",
+    409,
+    IDEMPOTENCY_ERROR_CODES.inProgress,
+    details,
+  );
+
+export const idempotencyPreviouslyFailedError = (details?: unknown) =>
+  new AppError(
+    "Previous request with this idempotency key failed. Start a new request with a new key.",
+    409,
+    IDEMPOTENCY_ERROR_CODES.previouslyFailed,
+    details,
+  );
+
+export const resolveExistingIdempotencyRecord = <TResponse extends object>(
+  input: {
+    requestHash: string;
+    existing: ExistingIdempotencyRecord;
+    details?: IdempotencyErrorDetails;
+  },
+): { response: TResponse; replayed: true } => {
+  if (input.existing.requestHash !== input.requestHash) {
+    throw idempotencyKeyReusedError(input.details?.keyReused);
+  }
+
+  if (input.existing.status === "SUCCEEDED" && input.existing.responseJson) {
+    return {
+      response: input.existing.responseJson as TResponse,
+      replayed: true,
+    };
+  }
+
+  if (input.existing.status === "IN_PROGRESS") {
+    throw idempotencyInProgressError(input.details?.inProgress);
+  }
+
+  throw idempotencyPreviouslyFailedError(input.details?.previouslyFailed);
 };
 
 const stableStringify = (value: unknown): string => {
@@ -88,34 +207,18 @@ export const runIdempotentOperation = async <TResponse extends object>({
   replayed: boolean;
 }> => {
   const requestHash = computeIdempotencyRequestHash(payload);
+  const identity = { userId, scope, key };
 
   try {
     const response = await prisma.$transaction(async (tx) => {
-      await tx.idempotencyRecord.create({
-        data: {
-          userId,
-          scope,
-          key,
-          requestHash,
-          status: "IN_PROGRESS",
-        },
-      });
+      await claimIdempotencyRecord(tx, { ...identity, requestHash });
 
       const operationResponse = await handler(tx);
-      await tx.idempotencyRecord.update({
-        where: {
-          userId_scope_key: {
-            userId,
-            scope,
-            key,
-          },
-        },
-        data: {
-          status: "SUCCEEDED",
-          resourceType,
-          resourceId: getResourceId(operationResponse),
-          responseJson: operationResponse,
-        },
+      await markIdempotencyRecordSucceeded(tx, {
+        ...identity,
+        resourceType,
+        resourceId: getResourceId(operationResponse),
+        response: operationResponse,
       });
 
       return operationResponse;
@@ -123,66 +226,36 @@ export const runIdempotentOperation = async <TResponse extends object>({
 
     return { response, replayed: false };
   } catch (error) {
-    if (!isUniqueConstraintError(error)) {
+    if (!isIdempotencyClaimConflict(error)) {
       throw error;
     }
 
-    const existing = await prisma.idempotencyRecord.findUnique({
-      where: {
-        userId_scope_key: {
-          userId,
-          scope,
-          key,
-        },
-      },
-    });
+    const existing = await findIdempotencyRecord(prisma, identity);
 
     if (!existing) {
       throw error;
     }
 
-    if (existing.requestHash !== requestHash) {
-      throw new AppError(
-        "Idempotency key was already used with a different request.",
-        409,
-        IDEMPOTENCY_ERROR_CODES.keyReused,
-        {
+    return resolveExistingIdempotencyRecord<TResponse>({
+      requestHash,
+      existing,
+      details: {
+        keyReused: {
           reason: IDEMPOTENCY_ERROR_CODES.keyReused,
           resourceType: existing.resourceType,
           resourceId: existing.resourceId,
         },
-      );
-    }
-
-    if (existing.status === "SUCCEEDED" && existing.responseJson) {
-      return {
-        response: existing.responseJson as TResponse,
-        replayed: true,
-      };
-    }
-
-    if (existing.status === "IN_PROGRESS") {
-      throw new AppError(
-        "Request is already being processed.",
-        409,
-        IDEMPOTENCY_ERROR_CODES.inProgress,
-        {
+        inProgress: {
           reason: "REQUEST_IN_PROGRESS",
           resourceType: existing.resourceType,
           resourceId: existing.resourceId,
         },
-      );
-    }
-
-    throw new AppError(
-      "Previous request with this idempotency key failed. Start a new request with a new key.",
-      409,
-      IDEMPOTENCY_ERROR_CODES.previouslyFailed,
-      {
-        reason: IDEMPOTENCY_ERROR_CODES.previouslyFailed,
-        resourceType: existing.resourceType,
-        resourceId: existing.resourceId,
+        previouslyFailed: {
+          reason: IDEMPOTENCY_ERROR_CODES.previouslyFailed,
+          resourceType: existing.resourceType,
+          resourceId: existing.resourceId,
+        },
       },
-    );
+    });
   }
 };

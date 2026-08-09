@@ -7,14 +7,20 @@ import type {
 } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import {
-  IDEMPOTENCY_ERROR_CODES,
-} from '../../contracts/errors/idempotency-error-codes.js';
-import {
+  claimIdempotencyRecord,
   computeIdempotencyRequestHash,
+  findIdempotencyRecord,
+  isIdempotencyClaimConflict,
+  markIdempotencyRecordFailed,
+  markIdempotencyRecordSucceeded,
+  resolveExistingIdempotencyRecord,
   validateIdempotencyKey,
 } from '../../services/idempotency.service.js';
 import { AppError } from '../../utils/app-error.js';
-import { runSerializableTransaction } from '../../utils/transaction-retry.js';
+import {
+  isPrismaCode,
+  runSerializableTransaction,
+} from '../../utils/transaction-retry.js';
 
 import {
   isPaymentAdminActor,
@@ -166,12 +172,6 @@ type PayableOrderRow = {
   reservationId: string | null;
   deliveryGroupId: string | null;
 };
-
-const isUniqueConstraintError = (error: unknown): boolean =>
-  typeof error === 'object' &&
-  error !== null &&
-  'code' in error &&
-  (error as { code?: string }).code === 'P2002';
 
 const readCheckoutUrlFromMetadata = (
   metadata: Prisma.JsonValue | null | undefined,
@@ -831,7 +831,7 @@ const reserveReservationCheckoutSession = async (input: {
       };
     });
   } catch (error) {
-    if (!isUniqueConstraintError(error)) {
+    if (!isPrismaCode(error, 'P2002')) {
       throw error;
     }
     throw new AppError(
@@ -1128,60 +1128,28 @@ export const startReservationCheckout = async (input: {
   const requestHash = computeIdempotencyRequestHash({
     reservationId: input.reservationId,
   });
+  const identity = {
+    userId: input.payerUserId,
+    scope: PAYMENT_RESERVATION_CHECKOUT_IDEMPOTENCY_SCOPE,
+    key,
+  };
 
   try {
-    await prisma.idempotencyRecord.create({
-      data: {
-        userId: input.payerUserId,
-        scope: PAYMENT_RESERVATION_CHECKOUT_IDEMPOTENCY_SCOPE,
-        key,
-        requestHash,
-        status: 'IN_PROGRESS',
-      },
-    });
+    await claimIdempotencyRecord(prisma, { ...identity, requestHash });
   } catch (error) {
-    if (!isUniqueConstraintError(error)) {
+    if (!isIdempotencyClaimConflict(error)) {
       throw error;
     }
 
-    const existing = await prisma.idempotencyRecord.findUnique({
-      where: {
-        userId_scope_key: {
-          userId: input.payerUserId,
-          scope: PAYMENT_RESERVATION_CHECKOUT_IDEMPOTENCY_SCOPE,
-          key,
-        },
-      },
-    });
+    const existing = await findIdempotencyRecord(prisma, identity);
 
     if (!existing) throw error;
 
-    if (existing.requestHash !== requestHash) {
-      throw new AppError(
-        'Idempotency key was already used with a different request.',
-        409,
-        IDEMPOTENCY_ERROR_CODES.keyReused,
-      );
-    }
-
-    if (existing.status === 'SUCCEEDED' && existing.responseJson) {
-      return existing.responseJson as ReservationCheckoutSessionDto;
-    }
-
-    if (existing.status === 'IN_PROGRESS') {
-      throw new AppError(
-        'Request is already being processed.',
-        409,
-        IDEMPOTENCY_ERROR_CODES.inProgress,
-        { reason: 'REQUEST_IN_PROGRESS' },
-      );
-    }
-
-    throw new AppError(
-      'Previous request with this idempotency key failed. Start a new request with a new key.',
-      409,
-      IDEMPOTENCY_ERROR_CODES.previouslyFailed,
-    );
+    return resolveExistingIdempotencyRecord<ReservationCheckoutSessionDto>({
+      requestHash,
+      existing,
+      details: { inProgress: { reason: 'REQUEST_IN_PROGRESS' } },
+    }).response;
   }
 
   try {
@@ -1200,36 +1168,16 @@ export const startReservationCheckout = async (input: {
 
     const response = await finalizeSessionCheckoutWithProvider(reserved);
 
-    await prisma.idempotencyRecord.update({
-      where: {
-        userId_scope_key: {
-          userId: input.payerUserId,
-          scope: PAYMENT_RESERVATION_CHECKOUT_IDEMPOTENCY_SCOPE,
-          key,
-        },
-      },
-      data: {
-        status: 'SUCCEEDED',
-        resourceType: 'PAYMENT_CHECKOUT_SESSION',
-        resourceId: response.checkoutSessionId,
-        responseJson: response,
-      },
+    await markIdempotencyRecordSucceeded(prisma, {
+      ...identity,
+      resourceType: 'PAYMENT_CHECKOUT_SESSION',
+      resourceId: response.checkoutSessionId,
+      response,
     });
 
     return response;
   } catch (error) {
-    await prisma.idempotencyRecord
-      .update({
-        where: {
-          userId_scope_key: {
-            userId: input.payerUserId,
-            scope: PAYMENT_RESERVATION_CHECKOUT_IDEMPOTENCY_SCOPE,
-            key,
-          },
-        },
-        data: { status: 'FAILED' },
-      })
-      .catch(() => undefined);
+    await markIdempotencyRecordFailed(prisma, identity).catch(() => undefined);
     throw error;
   }
 };
