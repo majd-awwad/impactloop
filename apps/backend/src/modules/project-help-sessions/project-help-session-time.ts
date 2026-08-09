@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { containsUnsafeProjectLearningMarkup } from '../project-learning/project-learning-text.js';
 
 export const PROJECT_HELP_SESSION_MIN_PROBLEM_LENGTH = 20;
@@ -35,21 +36,21 @@ export const validateProblemDescription = (value: string) => {
   if (normalized.length < PROJECT_HELP_SESSION_MIN_PROBLEM_LENGTH) {
     return {
       valid: false as const,
-      code: 'VALIDATION_ERROR' as const,
+      code: COMMON_ERROR_CODES.validationError,
       message: `Problem description must be at least ${PROJECT_HELP_SESSION_MIN_PROBLEM_LENGTH} characters.`,
     };
   }
   if (normalized.length > PROJECT_HELP_SESSION_MAX_PROBLEM_LENGTH) {
     return {
       valid: false as const,
-      code: 'VALIDATION_ERROR' as const,
+      code: COMMON_ERROR_CODES.validationError,
       message: `Problem description must be at most ${PROJECT_HELP_SESSION_MAX_PROBLEM_LENGTH} characters.`,
     };
   }
   if (containsUnsafeProjectLearningMarkup(normalized)) {
     return {
       valid: false as const,
-      code: 'VALIDATION_ERROR' as const,
+      code: COMMON_ERROR_CODES.validationError,
       message: 'Problem description must be plain text.',
     };
   }

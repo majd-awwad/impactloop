@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import {
@@ -189,7 +190,11 @@ export const ensureProjectHelpSessionNotebookPage = async (input: {
 
     const parsed = notebookDocumentSchema.safeParse(content);
     if (!parsed.success) {
-      throw new AppError('Invalid notebook document.', 400, 'VALIDATION_ERROR');
+      throw new AppError(
+        'Invalid notebook document.',
+        400,
+        COMMON_ERROR_CODES.validationError,
+      );
     }
 
     if (existingNotebook) {

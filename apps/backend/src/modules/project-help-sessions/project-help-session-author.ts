@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 
@@ -85,7 +86,11 @@ export const resolveProjectHelpSessionAuthor = async (
   });
 
   if (!project) {
-    throw new AppError('Learning project not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Learning project not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   return mapAuthorFromProject(project);
@@ -100,14 +105,14 @@ export const assertCanonicalProjectAuthor = async (
     throw new AppError(
       'Learning project submission not found',
       404,
-      'NOT_FOUND',
+      COMMON_ERROR_CODES.notFound,
     );
   }
   if (author.authorId !== userId) {
     throw new AppError(
       'Learning project submission not found',
       404,
-      'NOT_FOUND',
+      COMMON_ERROR_CODES.notFound,
     );
   }
   return author;

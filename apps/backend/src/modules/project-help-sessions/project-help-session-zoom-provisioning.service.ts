@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
@@ -28,7 +29,11 @@ import { logZoomCleanupFailure } from './zoom/zoom-http-client.js';
 const provisioningFlights = new Map<string, Promise<ProjectHelpSessionDetailRecord>>();
 
 const notFoundHelpSession = () =>
-  new AppError('Help session not found.', 404, 'NOT_FOUND');
+  new AppError(
+    'Help session not found.',
+    404,
+    COMMON_ERROR_CODES.notFound,
+  );
 
 const mapFailureCode = (error: unknown): ZoomErrorCode => {
   if (isZoomError(error)) {
@@ -111,7 +116,11 @@ const persistSchedulingSuccess = async (
 
   const scheduled = await findProjectHelpSessionDetail(session.id);
   if (!scheduled) {
-    throw new AppError('Help session not found.', 500, 'INTERNAL_ERROR');
+    throw new AppError(
+      'Help session not found.',
+      500,
+      COMMON_ERROR_CODES.internalError,
+    );
   }
   if (transitioned && scheduled.status === 'SCHEDULED') {
     await notifyProjectHelpSessionZoomScheduled(scheduled);

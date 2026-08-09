@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import {
@@ -9,7 +10,11 @@ import { getZoomMeetingProvider } from './zoom/zoom-meeting-provider.factory.js'
 import { isZoomError } from './zoom/zoom-errors.js';
 
 const notFoundHelpSession = () =>
-  new AppError('Help session not found.', 404, 'NOT_FOUND');
+  new AppError(
+    'Help session not found.',
+    404,
+    COMMON_ERROR_CODES.notFound,
+  );
 
 const loadScheduledSessionForLearner = async (learnerId: string, sessionId: string) => {
   const session = await findLearnerProjectHelpSessionDetail(sessionId, learnerId);

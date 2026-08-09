@@ -1,4 +1,5 @@
 import type { Prisma, ProjectHelpSessionStatus } from '../../generated/prisma/client.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import {
@@ -31,7 +32,11 @@ export const transitionProjectHelpSessionStatus = async (
   });
 
   if (!session) {
-    throw new AppError('Help session not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Help session not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   if (!input.expectedStatuses.includes(session.status)) {

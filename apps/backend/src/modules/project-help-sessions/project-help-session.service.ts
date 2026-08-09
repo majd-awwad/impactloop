@@ -1,4 +1,5 @@
 import type { Prisma } from '../../generated/prisma/client.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { prisma } from '../../database/prisma.js';
 import { logger } from '../../observability/logger.js';
 import { AppError } from '../../utils/app-error.js';
@@ -52,7 +53,11 @@ import type { CreateProjectHelpSessionRequestInput } from './project-help-sessio
 const ELIGIBLE_BUILD_STATUSES = ['IN_PROGRESS', 'PAUSED'] as const;
 
 const notFoundHelpSession = () =>
-  new AppError('Help session not found.', 404, 'NOT_FOUND');
+  new AppError(
+    'Help session not found.',
+    404,
+    COMMON_ERROR_CODES.notFound,
+  );
 
 export const PROJECT_HELP_SESSION_NOT_FOUND = 'PROJECT_HELP_SESSION_NOT_FOUND';
 export const SESSION_NOT_COMPLETABLE_YET = 'SESSION_NOT_COMPLETABLE_YET';
@@ -64,7 +69,11 @@ const notFoundHelpSessionForCompletion = () =>
 export { setProjectHelpSessionNowForTests };
 
 const notFoundBuild = () =>
-  new AppError('Project build not found.', 404, 'NOT_FOUND');
+  new AppError(
+    'Project build not found.',
+    404,
+    COMMON_ERROR_CODES.notFound,
+  );
 
 const loadEnabledOffering = async (projectId: string) => {
   const stored = await prisma.projectHelpSessionOffering.findUnique({
@@ -179,7 +188,11 @@ const confirmSessionTime = async (
 
   const option = session.timeOptions.find((item) => item.id === input.timeOptionId);
   if (!option || option.sessionId !== input.sessionId) {
-    throw new AppError('Time option not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Time option not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   if (!validateFutureUtcInstant(option.startsAt)) {
@@ -278,7 +291,11 @@ export const createProjectHelpSessionRequest = async (
       select: { id: true },
     });
     if (!step) {
-      throw new AppError('Project step not found.', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Project step not found.',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     }
   }
 
@@ -332,7 +349,11 @@ export const createProjectHelpSessionRequest = async (
 
     const session = await findProjectHelpSessionDetail(sessionId);
     if (!session) {
-      throw new AppError('Help session not found.', 500, 'INTERNAL_ERROR');
+      throw new AppError(
+        'Help session not found.',
+        500,
+        COMMON_ERROR_CODES.internalError,
+      );
     }
     await safeNotifyProjectHelpSessionRequested(session);
     return mapProjectHelpSessionPrivateDto(session, 'learner');
@@ -370,7 +391,11 @@ export const authorAcceptProjectHelpSessionOption = async (
 
   const option = session.timeOptions.find((item) => item.id === timeOptionId);
   if (!option || option.proposalType !== 'LEARNER_PROPOSED') {
-    throw new AppError('Time option not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Time option not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   const offering = await getEffectiveOfferingForProject(session.projectId);
@@ -494,7 +519,11 @@ export const authorDeclineProjectHelpSession = async (
 
   const trimmedReason = reason?.trim() || null;
   if (trimmedReason && trimmedReason.length > PROJECT_HELP_SESSION_MAX_REASON_LENGTH) {
-    throw new AppError('Decline reason is too long.', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Decline reason is too long.',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   await runSerializableTransaction(async (tx) => {
@@ -533,7 +562,11 @@ export const learnerAcceptProjectHelpSessionAlternative = async (
 
   const alternative = getAuthorAlternativeOption(session);
   if (!alternative) {
-    throw new AppError('Alternative time not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Alternative time not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   if (
@@ -642,10 +675,18 @@ export const cancelProjectHelpSession = async (input: {
     session.status === 'SCHEDULING_FAILED' ||
     session.status === 'SCHEDULED';
   if (requiresReason && !trimmedReason) {
-    throw new AppError('Cancellation reason is required.', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Cancellation reason is required.',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
   if (trimmedReason && trimmedReason.length > PROJECT_HELP_SESSION_MAX_REASON_LENGTH) {
-    throw new AppError('Cancellation reason is too long.', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Cancellation reason is too long.',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   if (session.status === 'SCHEDULED' && session.zoomMeetingId) {
