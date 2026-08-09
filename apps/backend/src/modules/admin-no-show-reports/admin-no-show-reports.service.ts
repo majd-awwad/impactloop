@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import { findReservationMessages, mapReservationMessage } from '../reservations/reservation-messages.repository.js';
@@ -87,7 +88,11 @@ export const getAdminNoShowReportById = async (id: string) => {
   const report = await repository.findNoShowReportByIdForAdmin(id);
 
   if (!report) {
-    throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'No-show report not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   const messages = await findReservationMessages(report.reservationId);
@@ -170,7 +175,11 @@ export const verifyAdminNoShowReport = async (
   });
 
   if (!result) {
-    throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'No-show report not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   if (!('report' in result)) {
@@ -202,7 +211,11 @@ export const resolveAdminNoShowReport = async (
   });
 
   if (!result) {
-    throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'No-show report not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   if (!('report' in result)) {
@@ -226,7 +239,11 @@ const mapNoDriverResolutionError = (
   result: PickupRecoveryResolutionError,
 ): never => {
   if (result.outcome === 'NOT_FOUND') {
-    throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'No-show report not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   if (result.outcome === 'ACTION_NOT_AVAILABLE') {
@@ -306,7 +323,11 @@ export const rejectAdminNoShowReport = async (
   });
 
   if (!result) {
-    throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'No-show report not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   if (!('report' in result)) {
