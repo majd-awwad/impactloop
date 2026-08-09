@@ -5,6 +5,11 @@ import type {
   AdminReservationsExportFilters,
   AdminReservationsListQuery,
 } from './admin-reservations.validation.js';
+import {
+  ADMIN_ACCEPTED_ACTIVE_KPI_RESERVATION_STATUSES,
+  ADMIN_COMPLETED_KPI_RESERVATION_STATUSES,
+  ADMIN_PENDING_KPI_RESERVATION_STATUSES,
+} from './admin-reservations.status.js';
 
 const startOfUtcDay = (date: Date) => {
   const copy = new Date(date);
@@ -246,9 +251,21 @@ export const countAdminReservationsSummary = async () => {
   const [total, pending, acceptedActive, completed, withDelivery] =
     await Promise.all([
       prisma.reservation.count(),
-      prisma.reservation.count({ where: { status: 'PENDING' } }),
-      prisma.reservation.count({ where: { status: 'ACCEPTED' } }),
-      prisma.reservation.count({ where: { status: 'COMPLETED' } }),
+      prisma.reservation.count({
+        where: { status: { in: [...ADMIN_PENDING_KPI_RESERVATION_STATUSES] } },
+      }),
+      prisma.reservation.count({
+        where: {
+          status: {
+            in: [...ADMIN_ACCEPTED_ACTIVE_KPI_RESERVATION_STATUSES],
+          },
+        },
+      }),
+      prisma.reservation.count({
+        where: {
+          status: { in: [...ADMIN_COMPLETED_KPI_RESERVATION_STATUSES] },
+        },
+      }),
       prisma.reservation.count({ where: { deliveries: { some: {} } } }),
     ]);
 

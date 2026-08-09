@@ -498,14 +498,14 @@ class _KpiRow extends StatelessWidget {
       (
         'Pending',
         summary.pending.toString(),
-        'Awaiting supplier response',
+        'Awaiting confirmation',
         Icons.hourglass_empty_outlined,
         palette.amber,
       ),
       (
         'Accepted / active',
         summary.acceptedActive.toString(),
-        'Accepted and in progress',
+        'Accepted or under resolution',
         Icons.check_circle_outline,
         palette.green,
       ),

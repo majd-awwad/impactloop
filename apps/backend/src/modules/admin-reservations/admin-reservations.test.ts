@@ -311,6 +311,51 @@ describe('admin reservations and deliveries monitoring', () => {
     );
   });
 
+  test('admin reservation KPIs include confirmation and resolution states', async () => {
+    const before = await listAdminReservations({ page: 1, limit: 20 });
+    const material = await createMaterial(
+      ctx.supplierId,
+      `${TEST_MARKER} KPI lifecycle`,
+    );
+    const statuses = [
+      'PENDING',
+      'AWAITING_LEARNER_CONFIRMATION',
+      'AWAITING_SUPPLIER_CONFIRMATION',
+      'ACCEPTED',
+      'AWAITING_RESOLUTION',
+      'COMPLETED',
+    ] as const;
+
+    for (const status of statuses) {
+      const reservation = await prisma.reservation.create({
+        data: {
+          materialId: material.id,
+          requesterId: ctx.learnerId,
+          ownerId: ctx.supplierId,
+          quantityRequested: 1,
+          status,
+          acceptedAt:
+            status === 'ACCEPTED' || status === 'AWAITING_RESOLUTION'
+              ? new Date()
+              : null,
+          completedAt: status === 'COMPLETED' ? new Date() : null,
+        },
+      });
+      ctx.reservationIds.push(reservation.id);
+    }
+
+    const after = await listAdminReservations({ page: 1, limit: 20 });
+
+    assert.equal(after.summary.total, before.summary.total + statuses.length);
+    assert.equal(after.summary.pending, before.summary.pending + 3);
+    assert.equal(
+      after.summary.acceptedActive,
+      before.summary.acceptedActive + 2,
+    );
+    assert.equal(after.summary.completed, before.summary.completed + 1);
+    assert.equal(after.summary.withDelivery, before.summary.withDelivery);
+  });
+
   test('admin reservation details returns linked delivery summary when exists', async () => {
     const detail = await getAdminReservationById(ctx.reservationWithDeliveryId);
     assert.equal(detail.id, ctx.reservationWithDeliveryId);
