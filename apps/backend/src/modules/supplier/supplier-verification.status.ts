@@ -25,6 +25,17 @@ export const SUPPLIER_VERIFICATION_STATUSES = [
 export type SupplierVerificationStatus =
   (typeof SUPPLIER_VERIFICATION_STATUSES)[number];
 
+export const SUPPLIER_VERIFICATION_REVISION_STATUSES = [
+  'REJECTED',
+  'CHANGES_REQUESTED',
+] as const satisfies readonly SupplierVerificationStatus[];
+
+/** Includes legacy UNVERIFIED organization profiles shown in the admin queue. */
+export const SUPPLIER_VERIFICATION_ADMIN_PENDING_STATUSES = [
+  'PENDING',
+  'UNVERIFIED',
+] as const satisfies readonly SupplierVerificationStatus[];
+
 export const isOrganizationSupplierType = (
   supplierType: string | null | undefined,
 ): supplierType is OrganizationSupplierType => {
@@ -77,6 +88,41 @@ export const requiresOrganizationVerification = (
   supplierType: string | null | undefined,
 ): boolean => isOrganizationSupplierType(supplierType);
 
+export const isSupplierVerificationRevisionRequired = (
+  status: string | null | undefined,
+): boolean =>
+  (
+    SUPPLIER_VERIFICATION_REVISION_STATUSES as readonly SupplierVerificationStatus[]
+  ).includes(normalizeSupplierVerificationStatus(status));
+
+export const isSupplierVerificationAwaitingAdminReview = (
+  status: string | null | undefined,
+): boolean =>
+  (
+    SUPPLIER_VERIFICATION_ADMIN_PENDING_STATUSES as readonly SupplierVerificationStatus[]
+  ).includes(normalizeSupplierVerificationStatus(status));
+
+export type SupplierVerificationEligibility = {
+  canSubmit: boolean;
+  canResubmit: boolean;
+};
+
+export const resolveSupplierVerificationEligibility = (input: {
+  supplierType: string | null | undefined;
+  verificationStatus: string | null | undefined;
+}): SupplierVerificationEligibility => {
+  const requiresVerification = requiresOrganizationVerification(
+    input.supplierType,
+  );
+  const status = normalizeSupplierVerificationStatus(input.verificationStatus);
+
+  return {
+    canSubmit: requiresVerification && status === 'UNVERIFIED',
+    canResubmit:
+      requiresVerification && isSupplierVerificationRevisionRequired(status),
+  };
+};
+
 export const canSupplierPublishMaterials = (input: {
   supplierType: string | null | undefined;
   verificationStatus: string;
@@ -116,7 +162,7 @@ export const supplierVerificationGateRoute = (input: {
     return null;
   }
 
-  if (status === 'REJECTED' || status === 'CHANGES_REQUESTED') {
+  if (isSupplierVerificationRevisionRequired(status)) {
     return '/supplier/verification-status';
   }
 

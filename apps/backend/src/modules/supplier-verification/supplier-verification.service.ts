@@ -4,8 +4,10 @@ import { AppError } from '../../utils/app-error.js';
 import {
   canSupplierPublishMaterials,
   isOrganizationSupplierType,
+  isSupplierVerificationRevisionRequired,
   normalizeSupplierVerificationStatus,
   requiresOrganizationVerification,
+  resolveSupplierVerificationEligibility,
 } from '../supplier/supplier-verification.status.js';
 import { deleteReplacedVerificationUpload } from '../uploads/local-upload-cleanup.js';
 import { resolveLocalSupplierVerificationDocument } from '../uploads/verification-uploads.storage.js';
@@ -35,10 +37,9 @@ const mapStatusDto = (
   >,
 ): SupplierVerificationStatusDto => {
   const status = normalizeSupplierVerificationStatus(profile.verificationStatus);
-  const adminNote =
-    status === 'REJECTED' || status === 'CHANGES_REQUESTED'
-      ? profile.verificationAdminNote
-      : null;
+  const adminNote = isSupplierVerificationRevisionRequired(status)
+    ? profile.verificationAdminNote
+    : null;
 
   return {
     supplierType: profile.supplierType ?? '',
@@ -168,7 +169,12 @@ export const resubmitSupplierVerification = async (
     existing.verificationStatus,
   );
 
-  if (currentStatus !== 'CHANGES_REQUESTED' && currentStatus !== 'REJECTED') {
+  const eligibility = resolveSupplierVerificationEligibility({
+    supplierType: existing.supplierType,
+    verificationStatus: currentStatus,
+  });
+
+  if (!eligibility.canResubmit) {
     throw new AppError(
       'Verification document can only be resubmitted after rejection or changes requested',
       400,
@@ -217,7 +223,7 @@ export const assertSupplierCanPublishMaterials = (input: {
     );
   }
 
-  if (status === 'REJECTED' || status === 'CHANGES_REQUESTED') {
+  if (isSupplierVerificationRevisionRequired(status)) {
     throw new AppError(
       'Your supplier verification must be approved before publishing materials.',
       403,

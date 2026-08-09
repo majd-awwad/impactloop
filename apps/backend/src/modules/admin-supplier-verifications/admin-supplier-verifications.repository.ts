@@ -2,6 +2,7 @@ import type { Prisma } from '../../generated/prisma/index.js';
 
 import { prisma } from '../../database/prisma.js';
 import { createNotification } from '../notifications/notifications.repository.js';
+import { SUPPLIER_VERIFICATION_ADMIN_PENDING_STATUSES } from '../supplier/supplier-verification.status.js';
 
 import {
   mapAdminVerificationStatusToDb,
@@ -65,7 +66,7 @@ const buildListWhere = (
     const dbStatus = mapAdminVerificationStatusToDb(query.status);
     where.verificationStatus =
       dbStatus === 'PENDING'
-        ? { in: ['PENDING', 'UNVERIFIED'] }
+        ? { in: [...SUPPLIER_VERIFICATION_ADMIN_PENDING_STATUSES] }
         : dbStatus;
   }
 
@@ -124,7 +125,9 @@ export const countPendingOrganizationSupplierVerifications = async () => {
     where: {
       supplierType: { in: [...OFFICIAL_SUPPLIER_TYPES] },
       organizationProfile: { isNot: null },
-      verificationStatus: { in: ['PENDING', 'UNVERIFIED'] },
+      verificationStatus: {
+        in: [...SUPPLIER_VERIFICATION_ADMIN_PENDING_STATUSES],
+      },
     },
   });
 };

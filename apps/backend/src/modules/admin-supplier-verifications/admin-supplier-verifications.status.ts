@@ -1,3 +1,5 @@
+import { ORGANIZATION_SUPPLIER_TYPES } from '../supplier/supplier-verification.status.js';
+
 export const ADMIN_SUPPLIER_VERIFICATION_STATUSES = [
   'PENDING',
   'APPROVED',
@@ -8,11 +10,7 @@ export const ADMIN_SUPPLIER_VERIFICATION_STATUSES = [
 export type AdminSupplierVerificationStatus =
   (typeof ADMIN_SUPPLIER_VERIFICATION_STATUSES)[number];
 
-export const OFFICIAL_SUPPLIER_TYPES = [
-  'WORKSHOP',
-  'FACTORY',
-  'EDUCATIONAL_INSTITUTION',
-] as const;
+export const OFFICIAL_SUPPLIER_TYPES = ORGANIZATION_SUPPLIER_TYPES;
 
 export type OfficialSupplierType = (typeof OFFICIAL_SUPPLIER_TYPES)[number];
 

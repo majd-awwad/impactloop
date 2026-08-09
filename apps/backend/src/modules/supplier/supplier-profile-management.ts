@@ -1,6 +1,7 @@
 import {
+  isSupplierVerificationRevisionRequired,
   normalizeSupplierVerificationStatus,
-  requiresOrganizationVerification,
+  resolveSupplierVerificationEligibility,
   type SupplierVerificationStatus,
 } from './supplier-verification.status.js';
 
@@ -108,20 +109,20 @@ export const buildSupplierManagementVerification = (input: {
 }): SupplierManagementVerification => {
   const rawStatus = input.rawStatus?.trim() || 'UNKNOWN';
   const status = normalizeSupplierVerificationStatus(rawStatus);
-  const requiresVerification = requiresOrganizationVerification(input.supplierType);
+  const eligibility = resolveSupplierVerificationEligibility({
+    supplierType: input.supplierType,
+    verificationStatus: status,
+  });
 
   return {
     rawStatus,
     status,
     isVerified: status === 'APPROVED' || status === 'NOT_REQUIRED',
-    canSubmit: status === 'UNVERIFIED' && requiresVerification,
-    canResubmit:
-      requiresVerification &&
-      (status === 'CHANGES_REQUESTED' || status === 'REJECTED'),
-    adminNote:
-      status === 'CHANGES_REQUESTED' || status === 'REJECTED'
-        ? input.adminNote?.trim() || null
-        : null,
+    canSubmit: eligibility.canSubmit,
+    canResubmit: eligibility.canResubmit,
+    adminNote: isSupplierVerificationRevisionRequired(status)
+      ? input.adminNote?.trim() || null
+      : null,
     submittedAt: input.submittedAt?.toISOString() ?? null,
     reviewedAt: input.reviewedAt?.toISOString() ?? null,
   };

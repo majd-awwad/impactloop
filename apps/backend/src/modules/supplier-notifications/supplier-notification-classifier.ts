@@ -1,3 +1,5 @@
+import { isSupplierVerificationAwaitingAdminReview } from '../supplier/supplier-verification.status.js';
+
 export const SUPPLIER_NOTIFICATION_CATEGORIES = [
   'RESERVATION',
   'MATERIAL_REVIEW',
@@ -193,7 +195,11 @@ export const classifySupplierNotification = (input: {
   }
 
   if (category === 'ACCOUNT' && input.target.kind === 'SUPPLIER_PROFILE') {
-    if (['PENDING', 'UNVERIFIED'].includes(input.target.verificationStatus)) {
+    if (
+      isSupplierVerificationAwaitingAdminReview(
+        input.target.verificationStatus,
+      )
+    ) {
       return { category, state: 'WAITING', actionType: 'NONE', waitingOn: 'ADMIN' };
     }
     return { category, state: 'UPDATE', actionType: 'OPEN_PROFILE', waitingOn: null };

@@ -17,6 +17,7 @@ import { decimalToNumber } from "../../utils/decimal.js";
 import { deleteReplacedProfileUpload } from "../uploads/local-upload-cleanup.js";
 import * as supplierRepository from "./supplier.repository.js";
 import { normalizeVerificationStatus } from "./dto/supplier-dashboard.dto.js";
+import { isSupplierVerificationRevisionRequired } from "./supplier-verification.status.js";
 import { resolveSupplierContext } from "./supplier-material-scope.js";
 import type {
   SupplierFollowersQuery,
@@ -115,7 +116,7 @@ const resolveSupplierVerificationAdminNote = (
 ): string | null => {
   const normalized = normalizeVerificationStatus(verificationStatus);
 
-  if (normalized !== "REJECTED" && normalized !== "CHANGES_REQUESTED") {
+  if (!isSupplierVerificationRevisionRequired(normalized)) {
     return null;
   }
 
