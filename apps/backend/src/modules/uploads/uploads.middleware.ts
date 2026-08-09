@@ -5,6 +5,7 @@ import {
   MATERIAL_UPLOAD_MAX_BYTES,
   MATERIAL_UPLOAD_MAX_FILES,
 } from '../../constants/material-upload.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import {
@@ -41,7 +42,7 @@ const fileFilter = (
       new AppError(
         'Only JPG, PNG, and WebP images are allowed.',
         400,
-        'VALIDATION_ERROR',
+        COMMON_ERROR_CODES.validationError,
       ),
     );
     return;
@@ -78,7 +79,9 @@ export const materialImagesUpload = (
             ? 'You can upload up to 5 images per request.'
             : 'Image upload failed.';
 
-      next(new AppError(message, 400, 'VALIDATION_ERROR'));
+      next(
+        new AppError(message, 400, COMMON_ERROR_CODES.validationError),
+      );
       return;
     }
 

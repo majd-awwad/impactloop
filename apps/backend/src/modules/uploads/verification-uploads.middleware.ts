@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import multer from 'multer';
 
 import { SUPPLIER_VERIFICATION_UPLOAD_MAX_BYTES } from '../../constants/supplier-verification-upload.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import {
@@ -35,7 +36,7 @@ const upload = multer({
         new AppError(
           'Verification document must be a PDF, JPG, or PNG file.',
           400,
-          'VALIDATION_ERROR',
+          COMMON_ERROR_CODES.validationError,
         ),
       );
       return;
@@ -58,7 +59,7 @@ export const supplierVerificationDocumentUpload = (
             ? 'Verification document must be 5MB or smaller.'
             : 'Verification document upload failed.',
           400,
-          'VALIDATION_ERROR',
+          COMMON_ERROR_CODES.validationError,
         ),
       );
       return;

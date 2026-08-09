@@ -6,6 +6,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 
 import { resolveUploadSubdir } from '../../config/upload-storage.env.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 export const UPLOAD_TEMP_DIR = resolveUploadSubdir('.tmp');
@@ -144,7 +145,11 @@ export const validateImageFileAtPath = async (
   );
 
   if (!detectedFromBytes || !allowedMimeTypes.has(detectedFromBytes)) {
-    throw new AppError(invalidMessage, 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      invalidMessage,
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   try {
@@ -155,7 +160,11 @@ export const validateImageFileAtPath = async (
       throw new Error('Image decode validation failed');
     }
   } catch {
-    throw new AppError(invalidMessage, 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      invalidMessage,
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   return detectedFromBytes;
@@ -185,13 +194,21 @@ export const validatePdfFileAtPath = async (
   const header = await readFileHeader(filePath, 8);
 
   if (!detectPdfFromBytes(header)) {
-    throw new AppError(invalidMessage, 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      invalidMessage,
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   try {
     await assertPdfStructure(filePath);
   } catch {
-    throw new AppError(invalidMessage, 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      invalidMessage,
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 };
 
@@ -205,7 +222,11 @@ export const validateVerificationDocumentAtPath = async (
 
   if (detectPdfFromBytes(header)) {
     if (!allowedMimeTypes.has('application/pdf')) {
-      throw new AppError(invalidMessage, 400, 'VALIDATION_ERROR');
+      throw new AppError(
+        invalidMessage,
+        400,
+        COMMON_ERROR_CODES.validationError,
+      );
     }
 
     await validatePdfFileAtPath(filePath, invalidMessage);

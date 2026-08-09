@@ -8,6 +8,7 @@ import {
   SUPPLIER_VERIFICATION_UPLOAD_ALLOWED_MIME_TYPES,
   SUPPLIER_VERIFICATION_UPLOAD_PUBLIC_PREFIX,
 } from '../../constants/supplier-verification-upload.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import {
@@ -99,7 +100,7 @@ const assertPathInsideUploadsDir = (absolutePath: string): void => {
     throw new AppError(
       'Verification document is not available for download.',
       404,
-      'NOT_FOUND',
+      COMMON_ERROR_CODES.notFound,
     );
   }
 };
@@ -115,7 +116,11 @@ export const resolveLocalSupplierVerificationDocument = (
   const trimmed = documentUrl?.trim() ?? '';
 
   if (!trimmed) {
-    throw new AppError('Verification document not found.', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Verification document not found.',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   const prefix = `${SUPPLIER_VERIFICATION_UPLOAD_PUBLIC_PREFIX}/`;
@@ -123,7 +128,7 @@ export const resolveLocalSupplierVerificationDocument = (
     throw new AppError(
       'Verification document is not available for download.',
       404,
-      'NOT_FOUND',
+      COMMON_ERROR_CODES.notFound,
     );
   }
 
@@ -132,7 +137,7 @@ export const resolveLocalSupplierVerificationDocument = (
     throw new AppError(
       'Verification document is not available for download.',
       404,
-      'NOT_FOUND',
+      COMMON_ERROR_CODES.notFound,
     );
   }
 
@@ -143,7 +148,7 @@ export const resolveLocalSupplierVerificationDocument = (
     throw new AppError(
       'Verification document file not found.',
       404,
-      'NOT_FOUND',
+      COMMON_ERROR_CODES.notFound,
     );
   }
 
@@ -168,7 +173,7 @@ export const mapUploadedVerificationDocument = async (
     throw new AppError(
       'Select a verification document to upload.',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 

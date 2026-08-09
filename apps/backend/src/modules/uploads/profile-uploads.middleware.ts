@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import multer, { type FileFilterCallback } from 'multer';
 
 import { PROFILE_UPLOAD_MAX_BYTES } from '../../constants/profile-upload.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 
 import { isAllowedProfileImageMime } from './profile-uploads.storage.js';
@@ -33,7 +34,7 @@ const fileFilter = (
       new AppError(
         'Only JPG, PNG, and WebP images are allowed.',
         400,
-        'VALIDATION_ERROR',
+        COMMON_ERROR_CODES.validationError,
       ),
     );
     return;
@@ -70,7 +71,9 @@ export const profileImageUpload = (
             ? 'Use the image field to upload a profile photo.'
             : 'Image upload failed.';
 
-      next(new AppError(message, 400, 'VALIDATION_ERROR'));
+      next(
+        new AppError(message, 400, COMMON_ERROR_CODES.validationError),
+      );
       return;
     }
 

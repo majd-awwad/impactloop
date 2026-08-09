@@ -1,10 +1,11 @@
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 
-import { AppError } from '../../utils/app-error.js';
 import sharp from 'sharp';
 
 import { PROFILE_UPLOAD_ALLOWED_MIME_TYPES } from '../../constants/profile-upload.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
+import { AppError } from '../../utils/app-error.js';
 
 import {
   buildProfileImageFilename,
@@ -37,7 +38,11 @@ export const mapUploadedMaterialImages = async (
   files: Express.Multer.File[],
 ): Promise<UploadedMaterialImage[]> => {
   if (!files.length) {
-    throw new AppError('Select at least one image to upload.', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Select at least one image to upload.',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   return Promise.all(files.map(async (file) => {
@@ -45,7 +50,7 @@ export const mapUploadedMaterialImages = async (
       throw new AppError(
         'Only JPG, PNG, and WebP images are allowed.',
         400,
-        'VALIDATION_ERROR',
+        COMMON_ERROR_CODES.validationError,
       );
     }
 
@@ -70,7 +75,11 @@ export const mapUploadedProfileImage = async (
   userId: string,
 ): Promise<UploadedProfileImage> => {
   if (!file?.path) {
-    throw new AppError('Select an image to upload.', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Select an image to upload.',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   const tempPath = file.path;
