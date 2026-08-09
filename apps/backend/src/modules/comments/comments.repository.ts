@@ -1,5 +1,6 @@
 import type { CommentStatus, Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
+import { buildPublicMaterialWhere } from '../materials/public-material-visibility.js';
 
 const authorSelect = {
   id: true,
@@ -43,13 +44,7 @@ export const findPublicMaterialTarget = async (materialId: string) => {
   return prisma.material.findFirst({
     where: {
       id: materialId,
-      status: {
-        in: ['AVAILABLE', 'PENDING_RESERVATION', 'RESERVED'],
-      },
-      category: {
-        isActive: true,
-        categoryType: { in: ['MATERIAL', 'BOTH'] },
-      },
+      ...buildPublicMaterialWhere(),
     },
     select: { id: true },
   });

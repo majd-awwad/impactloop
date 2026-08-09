@@ -1,12 +1,9 @@
-import type { MaterialStatus, Prisma } from '../../generated/prisma/client.js';
+import type { Prisma } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
+import { PUBLIC_MATERIAL_STATUSES } from '../materials/public-material-visibility.js';
 
-const ELIGIBLE_MATERIAL_STATUSES = [
-  'AVAILABLE',
-  'PENDING_RESERVATION',
-  'RESERVED',
-] as const satisfies readonly MaterialStatus[];
+const ELIGIBLE_MATERIAL_STATUSES = PUBLIC_MATERIAL_STATUSES;
 
 export const supplierRequestInclude = (
   supplierUserId: string,

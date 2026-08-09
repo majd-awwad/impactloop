@@ -6,6 +6,7 @@ import type {
 } from '../../generated/prisma/client.js';
 import { decimalToNumber } from '../../utils/decimal.js';
 import { cardMaterialImageUrl } from '../../utils/material-image-url.js';
+import { isPublicMaterialStatus } from '../materials/public-material-visibility.js';
 import { deriveEffectiveMatchStatus } from './material-requests.match-availability.js';
 
 type MatchMaterialRow = {
@@ -86,12 +87,6 @@ const isSupplierVerified = (verificationStatus: string | null | undefined) => {
   return normalized === 'APPROVED' || normalized === 'VERIFIED';
 };
 
-const RESERVABLE_MATERIAL_STATUSES = new Set<MaterialStatus>([
-  'AVAILABLE',
-  'PENDING_RESERVATION',
-  'RESERVED',
-]);
-
 export const deriveMatchReserveEligibility = (input: {
   matchStatus: LearnerMaterialRequestMatchStatus;
   requestStatus: LearnerMaterialRequestStatus;
@@ -140,10 +135,7 @@ export const deriveMatchReserveEligibility = (input: {
     };
   }
 
-  if (
-    !input.materialStatus ||
-    !RESERVABLE_MATERIAL_STATUSES.has(input.materialStatus)
-  ) {
+  if (!isPublicMaterialStatus(input.materialStatus)) {
     return {
       canReserve: false as const,
       unavailableReason: 'NO_LONGER_AVAILABLE' as const,

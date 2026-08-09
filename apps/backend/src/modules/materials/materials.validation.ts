@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { paginationQuerySchema } from '../../utils/zod-helpers.js';
+import { PUBLIC_MATERIAL_STATUSES } from './public-material-visibility.js';
 
 const materialConditionSchema = z.enum([
   'NEW',
@@ -9,12 +10,6 @@ const materialConditionSchema = z.enum([
   'USED',
   'NEEDS_REPAIR',
 ]);
-
-const MATERIAL_STATUSES = [
-  'AVAILABLE',
-  'PENDING_RESERVATION',
-  'RESERVED',
-] as const;
 
 const PRICE_TYPES = ['FREE', 'PAID', 'ANY'] as const;
 
@@ -49,7 +44,7 @@ export const materialsQuerySchema = paginationQuerySchema
     q: z.string().trim().min(1).max(120).optional(),
     categoryId: z.string().trim().min(1).optional(),
     condition: materialConditionSchema.optional(),
-    status: z.enum(MATERIAL_STATUSES, {
+    status: z.enum(PUBLIC_MATERIAL_STATUSES, {
       error:
         'Status must be one of AVAILABLE, PENDING_RESERVATION, or RESERVED for public discovery',
     }).default('AVAILABLE'),

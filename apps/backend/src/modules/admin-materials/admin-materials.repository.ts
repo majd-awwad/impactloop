@@ -1,6 +1,7 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
+import { buildPublicMaterialWhere } from '../materials/public-material-visibility.js';
 import { createNotification } from '../notifications/notifications.repository.js';
 import { ACTIVE_RESERVATION_STATUSES } from '../reservations/reservation-status.js';
 import type {
@@ -619,7 +620,7 @@ export const findReportableMaterial = async (id: string) => {
   return prisma.material.findFirst({
     where: {
       id,
-      status: { in: ['AVAILABLE', 'PENDING_RESERVATION', 'RESERVED'] },
+      ...buildPublicMaterialWhere(),
     },
     select: {
       id: true,

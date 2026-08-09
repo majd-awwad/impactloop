@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { AppError } from '../../utils/app-error.js';
+import { PUBLIC_MATERIAL_STATUSES } from '../materials/public-material-visibility.js';
 import { TAXONOMY_ALIAS_SOURCE } from './learner-interest-resolver.js';
 import {
   resolveMaterialConceptAssignments,
@@ -23,7 +24,7 @@ export const ALL_MATERIAL_STATUSES = ['AVAILABLE', 'PENDING_RESERVATION', 'RESER
 export type MaterialAuditStatus = (typeof ALL_MATERIAL_STATUSES)[number];
 export const OPERATIONAL_MATERIAL_STATUSES = ['AVAILABLE', 'PENDING_RESERVATION', 'RESERVED', 'UNAVAILABLE'] as const satisfies readonly MaterialAuditStatus[];
 export const HISTORICAL_MATERIAL_STATUSES = ['REUSED'] as const satisfies readonly MaterialAuditStatus[];
-export const PUBLIC_DISCOVERABLE_MATERIAL_STATUSES = ['AVAILABLE', 'PENDING_RESERVATION', 'RESERVED'] as const satisfies readonly MaterialAuditStatus[];
+export const PUBLIC_DISCOVERABLE_MATERIAL_STATUSES = PUBLIC_MATERIAL_STATUSES;
 export const CHECK_MATERIAL_STATUSES = OPERATIONAL_MATERIAL_STATUSES;
 export const REPORTED_ONLY_MATERIAL_STATUSES = HISTORICAL_MATERIAL_STATUSES;
 

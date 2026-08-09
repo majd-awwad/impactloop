@@ -1,6 +1,7 @@
 import { prisma } from '../../database/prisma.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import * as materialsRepository from '../materials/materials.repository.js';
+import { buildPublicMaterialWhere } from '../materials/public-material-visibility.js';
 
 const publicSupplierProfileSelect = {
   id: true,
@@ -46,15 +47,7 @@ export const countPublicMaterialsForSupplier = async (supplierProfileId: string)
   return prisma.material.count({
     where: {
       supplierProfileId,
-      status: {
-        in: ['AVAILABLE', 'PENDING_RESERVATION', 'RESERVED'],
-      },
-      category: {
-        isActive: true,
-        categoryType: {
-          in: ['MATERIAL', 'BOTH'],
-        },
-      },
+      ...buildPublicMaterialWhere(),
     },
   });
 };
@@ -123,11 +116,7 @@ export const findPublicMaterialsBySupplierProfileId = async (
 ) => {
   const where: Prisma.MaterialWhereInput = {
     supplierProfileId,
-    status: { in: ['AVAILABLE', 'PENDING_RESERVATION', 'RESERVED'] },
-    category: {
-      isActive: true,
-      categoryType: { in: ['MATERIAL', 'BOTH'] },
-    },
+    ...buildPublicMaterialWhere(),
   };
   const [items, total] = await Promise.all([
     prisma.material.findMany({
