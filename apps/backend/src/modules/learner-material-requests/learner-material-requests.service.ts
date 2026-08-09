@@ -1,3 +1,4 @@
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { prisma } from '../../database/prisma.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
@@ -100,7 +101,11 @@ const resolveLocationSnapshot = async (
       include: { location: true },
     });
     if (!saved) {
-      throw new AppError('Saved location not found', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Saved location not found',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     }
     return {
       locationCountry: saved.location.country,
@@ -148,16 +153,24 @@ const resolveProjectOrigin = async (
       },
     });
     if (!item || item.build.learnerId !== learnerId) {
-      throw new AppError('Build item not found', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Build item not found',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     }
     if (input.projectBuildId && input.projectBuildId !== item.buildId) {
-      throw new AppError('Build item does not match build', 400, 'VALIDATION_ERROR');
+      throw new AppError(
+        'Build item does not match build',
+        400,
+        COMMON_ERROR_CODES.validationError,
+      );
     }
     if (input.projectId && input.projectId !== item.build.projectId) {
       throw new AppError(
         'Build item does not match project',
         400,
-        'VALIDATION_ERROR',
+        COMMON_ERROR_CODES.validationError,
       );
     }
     return {
@@ -172,10 +185,18 @@ const resolveProjectOrigin = async (
       where: { id: input.projectBuildId, learnerId },
     });
     if (!build) {
-      throw new AppError('Project build not found', 404, 'NOT_FOUND');
+      throw new AppError(
+        'Project build not found',
+        404,
+        COMMON_ERROR_CODES.notFound,
+      );
     }
     if (input.projectId && input.projectId !== build.projectId) {
-      throw new AppError('Build does not match project', 400, 'VALIDATION_ERROR');
+      throw new AppError(
+        'Build does not match project',
+        400,
+        COMMON_ERROR_CODES.validationError,
+      );
     }
     return {
       projectId: build.projectId,
@@ -189,7 +210,7 @@ const resolveProjectOrigin = async (
     select: { id: true },
   });
   if (!project) {
-    throw new AppError('Project not found', 404, 'NOT_FOUND');
+    throw new AppError('Project not found', 404, COMMON_ERROR_CODES.notFound);
   }
   return {
     projectId: project.id,
@@ -211,7 +232,7 @@ const assertSelectableCategory = async (
     !category.isActive ||
     !isMaterialSelectableCategory(category.categoryType)
   ) {
-    throw new AppError('Category not found', 404, 'NOT_FOUND');
+    throw new AppError('Category not found', 404, COMMON_ERROR_CODES.notFound);
   }
   return category;
 };
@@ -371,7 +392,11 @@ export const getLearnerMaterialRequest = async (
 ) => {
   const row = await repository.findRequestByIdForLearner(requestId, learnerId);
   if (!row) {
-    throw new AppError('Material request not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Material request not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
 
   const heldByMaterialId = await buildHeldByMaterialId(row.matches ?? []);
@@ -385,7 +410,11 @@ export const updateLearnerMaterialRequest = async (
 ) => {
   const row = await repository.findRequestByIdForLearner(requestId, learnerId);
   if (!row) {
-    throw new AppError('Material request not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Material request not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
   assertRequestEditable(row);
 
@@ -489,7 +518,11 @@ export const cancelLearnerMaterialRequest = async (
 ) => {
   const row = await repository.findRequestByIdForLearner(requestId, learnerId);
   if (!row) {
-    throw new AppError('Material request not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Material request not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
   assertRequestOpen(row);
   const updated = await repository.updateRequest(requestId, {
@@ -506,7 +539,11 @@ export const fulfillLearnerMaterialRequest = async (
 ) => {
   const row = await repository.findRequestByIdForLearner(requestId, learnerId);
   if (!row) {
-    throw new AppError('Material request not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Material request not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
   assertRequestOpen(row);
   const updated = await repository.updateRequest(requestId, {
@@ -523,7 +560,11 @@ export const duplicateLearnerMaterialRequest = async (
 ) => {
   const row = await repository.findRequestByIdForLearner(requestId, learnerId);
   if (!row) {
-    throw new AppError('Material request not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Material request not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
   if (row.status !== 'EXPIRED' && row.status !== 'CANCELLED') {
     throw new AppError(
@@ -557,7 +598,11 @@ export const dismissLearnerMaterialRequestMatch = async (
 ) => {
   const match = await repository.findMatchById(matchId);
   if (!match || match.materialRequest.learnerId !== learnerId) {
-    throw new AppError('Suggestion not found', 404, 'NOT_FOUND');
+    throw new AppError(
+      'Suggestion not found',
+      404,
+      COMMON_ERROR_CODES.notFound,
+    );
   }
   if (match.status !== 'SUGGESTED') {
     throw new AppError('Suggestion cannot be dismissed', 409, 'REQUEST_NOT_EDITABLE');
