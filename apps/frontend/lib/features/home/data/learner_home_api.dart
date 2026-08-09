@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/errors/api_exception.dart';
+import '../../../core/errors/common_api_error_codes.dart';
 import '../../../core/network/api_response.dart';
 import '../domain/learner_home_models.dart';
 import 'learner_home_item_mapper.dart';
@@ -178,8 +179,8 @@ LearnerHomeFailure classifyLearnerHomeError(Object error) {
     if (error.statusCode == 401 ||
         error.statusCode == 403 ||
         error.code == 'SESSION_EXPIRED' ||
-        error.code == 'UNAUTHENTICATED' ||
-        error.code == 'FORBIDDEN') {
+        error.code == CommonApiErrorCodes.unauthenticated ||
+        error.code == CommonApiErrorCodes.forbidden) {
       return LearnerHomeFailure(
         kind: LearnerHomeErrorKind.sessionExpired,
         message: 'Your session has expired.',

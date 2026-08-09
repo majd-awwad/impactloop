@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 
 import { env } from '../../config/env.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 
 import { AppError } from '../../utils/app-error.js';
 
@@ -68,7 +69,11 @@ export const requireRefreshTokenFromRequest = (req: Request): string => {
   const refreshToken = getRefreshTokenFromRequest(req);
 
   if (!refreshToken) {
-    throw new AppError('Refresh token is required', 401, 'UNAUTHENTICATED');
+    throw new AppError(
+      'Refresh token is required',
+      401,
+      COMMON_ERROR_CODES.unauthenticated,
+    );
   }
 
   return refreshToken;

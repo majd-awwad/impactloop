@@ -4,6 +4,7 @@ import type {
 } from '../../generated/prisma/client.js';
 
 import { env } from '../../config/env.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 
 import { AppError } from '../../utils/app-error.js';
 
@@ -315,14 +316,22 @@ export const registerUser = async (
   const existingUser = await authRepository.findUserIdByEmail(parsed.email);
 
   if (existingUser) {
-    throw new AppError('Email is already registered', 409, 'CONFLICT');
+    throw new AppError(
+      'Email is already registered',
+      409,
+      COMMON_ERROR_CODES.conflict,
+    );
   }
 
   if (parsed.phone) {
     const existingPhone = await authRepository.findUserIdByPhone(parsed.phone);
 
     if (existingPhone) {
-      throw new AppError('Phone number is already registered', 409, 'CONFLICT');
+      throw new AppError(
+        'Phone number is already registered',
+        409,
+        COMMON_ERROR_CODES.conflict,
+      );
     }
   }
 
@@ -345,7 +354,11 @@ export const loginUser = async (input: LoginInput): Promise<AuthResult> => {
   const user = await authRepository.findUserByEmailWithRoles(input.email);
 
   if (!user) {
-    throw new AppError('Invalid email or password', 401, 'UNAUTHENTICATED');
+    throw new AppError(
+      'Invalid email or password',
+      401,
+      COMMON_ERROR_CODES.unauthenticated,
+    );
   }
 
   assertAccountCanLogin(user.accountStatus);
@@ -356,7 +369,11 @@ export const loginUser = async (input: LoginInput): Promise<AuthResult> => {
   );
 
   if (!passwordMatches) {
-    throw new AppError('Invalid email or password', 401, 'UNAUTHENTICATED');
+    throw new AppError(
+      'Invalid email or password',
+      401,
+      COMMON_ERROR_CODES.unauthenticated,
+    );
   }
 
   const loginTimestamp = new Date();
@@ -382,7 +399,7 @@ export const refreshAuthSession = async (
     throw new AppError(
       'Invalid or expired refresh token',
       401,
-      'UNAUTHENTICATED',
+      COMMON_ERROR_CODES.unauthenticated,
     );
   }
 
@@ -395,7 +412,7 @@ export const refreshAuthSession = async (
     throw new AppError(
       'Refresh token is invalid or revoked',
       401,
-      'UNAUTHENTICATED',
+      COMMON_ERROR_CODES.unauthenticated,
     );
   }
 
@@ -418,7 +435,7 @@ export const refreshAuthSession = async (
     throw new AppError(
       'Refresh token is invalid or revoked',
       401,
-      'UNAUTHENTICATED',
+      COMMON_ERROR_CODES.unauthenticated,
     );
   }
 
@@ -444,7 +461,7 @@ export const getAuthenticatedUser = async (
   const user = await authRepository.findUserByIdWithRoles(userId);
 
   if (!user) {
-    throw new AppError('User not found', 404, 'NOT_FOUND');
+    throw new AppError('User not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   return toUserSummary(user);
@@ -500,7 +517,7 @@ export const resetPasswordWithToken = async (
     throw new AppError(
       'Invalid or expired reset token',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -521,7 +538,7 @@ export const resetPasswordWithToken = async (
     throw new AppError(
       'Invalid or expired reset token',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -541,7 +558,7 @@ export const changePasswordForUser = async (
   const user = await authRepository.findUserByIdWithRoles(userId);
 
   if (!user) {
-    throw new AppError('User not found', 404, 'NOT_FOUND');
+    throw new AppError('User not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   const passwordMatches = await comparePassword(
@@ -553,7 +570,7 @@ export const changePasswordForUser = async (
     throw new AppError(
       'Current password is incorrect.',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -584,7 +601,7 @@ export const becomeSupplier = async (
   const user = await authRepository.findUserByIdWithRoles(userId);
 
   if (!user) {
-    throw new AppError('User not found', 404, 'NOT_FOUND');
+    throw new AppError('User not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   const roles = user.roles.map((assignment) => assignment.role);
@@ -603,14 +620,14 @@ export const becomeSupplier = async (
       throw new AppError(
         'You already have a supplier profile.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     }
 
     throw new AppError(
       'This account cannot use the become-supplier flow',
       403,
-      'FORBIDDEN',
+      COMMON_ERROR_CODES.forbidden,
     );
   }
 
@@ -618,7 +635,7 @@ export const becomeSupplier = async (
     throw new AppError(
       ORGANIZATION_BECOME_SUPPLIER_MESSAGE,
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -626,7 +643,7 @@ export const becomeSupplier = async (
     throw new AppError(
       'Unsupported supplier type for this flow.',
       400,
-      'VALIDATION_ERROR',
+      COMMON_ERROR_CODES.validationError,
     );
   }
 
@@ -659,7 +676,7 @@ export const becomeLearner = async (
   const user = await authRepository.findUserByIdWithRoles(userId);
 
   if (!user) {
-    throw new AppError('User not found', 404, 'NOT_FOUND');
+    throw new AppError('User not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   const roles = user.roles.map((assignment) => assignment.role);
@@ -675,7 +692,7 @@ export const becomeLearner = async (
     throw new AppError(
       PERSONAL_SUPPLIER_CANNOT_BECOME_LEARNER_MESSAGE,
       403,
-      'FORBIDDEN',
+      COMMON_ERROR_CODES.forbidden,
     );
   }
 
@@ -687,14 +704,14 @@ export const becomeLearner = async (
       throw new AppError(
         'You already have learner access on this account.',
         409,
-        'CONFLICT',
+        COMMON_ERROR_CODES.conflict,
       );
     }
 
     throw new AppError(
       PERSONAL_SUPPLIER_CANNOT_BECOME_LEARNER_MESSAGE,
       403,
-      'FORBIDDEN',
+      COMMON_ERROR_CODES.forbidden,
     );
   }
 
@@ -716,7 +733,7 @@ export const switchActiveRole = async (
   const user = await authRepository.findUserByIdWithRoles(userId);
 
   if (!user) {
-    throw new AppError('User not found', 404, 'NOT_FOUND');
+    throw new AppError('User not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
   const roles = user.roles.map((assignment) => assignment.role);
@@ -733,7 +750,7 @@ export const switchActiveRole = async (
       throw new AppError(
         'Supplier portal is not available for this account',
         403,
-        'FORBIDDEN',
+        COMMON_ERROR_CODES.forbidden,
       );
     }
   } else if (requestedRole === 'LEARNER') {
@@ -744,7 +761,7 @@ export const switchActiveRole = async (
       throw new AppError(
         'Organization supplier accounts cannot switch to learner mode.',
         403,
-        'FORBIDDEN',
+        COMMON_ERROR_CODES.forbidden,
       );
     }
 
@@ -752,11 +769,15 @@ export const switchActiveRole = async (
       throw new AppError(
         'Learner portal is not available for this account',
         403,
-        'FORBIDDEN',
+        COMMON_ERROR_CODES.forbidden,
       );
     }
   } else {
-    throw new AppError('Invalid active role', 400, 'VALIDATION_ERROR');
+    throw new AppError(
+      'Invalid active role',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
   }
 
   const persistedActiveRole = await authRepository.setUserActiveRole(

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../core/errors/common_api_error_codes.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
 import '../../application/auth_controller.dart';
@@ -56,14 +57,14 @@ class _LoginFormState extends ConsumerState<LoginForm> {
       _passwordError = passwordIssue == null ? null : l10n.passwordRequired;
       _formError = null;
 
-      if (error.code == 'UNAUTHENTICATED') {
+      if (error.code == CommonApiErrorCodes.unauthenticated) {
         _passwordError = l10n.invalidCredentials;
         return;
       }
 
       if (_emailError == null &&
           _passwordError == null &&
-          error.code == 'VALIDATION_ERROR') {
+          error.code == CommonApiErrorCodes.validationError) {
         _formError = l10n.validationError;
         return;
       }
