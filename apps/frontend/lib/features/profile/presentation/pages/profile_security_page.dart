@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
 import '../../../../shared/widgets/app_password_field.dart';
@@ -76,7 +77,7 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
 
       setState(() {
         _isSubmitting = false;
-        _formError = localizedApiErrorMessage(error, l10n);
+        _formError = localizedApiErrorMessage(error, context.l10n);
       });
     } catch (_) {
       if (!mounted) {

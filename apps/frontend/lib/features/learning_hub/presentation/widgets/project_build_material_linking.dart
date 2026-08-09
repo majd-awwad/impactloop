@@ -122,7 +122,6 @@ class _ProjectBuildMaterialCandidatesSheetState
       showErrorSnackBar(
         context,
         error,
-        l10n: context.l10n,
         message: projectBuildMaterialLinkErrorMessage(
           error,
           languageCode: Localizations.localeOf(context).languageCode,

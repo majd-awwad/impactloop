@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../application/supplier_material_requests_providers.dart';
 import '../../data/models/supplier_material_request.dart';
 import '../theme/supplier_theme_extension.dart';

@@ -6,6 +6,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
@@ -117,9 +118,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       final message = switch (error.code) {
         'PROFILE_IMAGE_READ_FAILED' => l10n.imageReadFailed,
         'PROFILE_IMAGE_TOO_LARGE' => l10n.imageTooLarge,
-        _ => localizedApiErrorMessage(error, l10n),
+        _ => localizedApiErrorMessage(error, context.l10n),
       };
-      showErrorSnackBar(context, message);
+      showErrorSnackBar(context, error, message: message);
     }
   }
 
@@ -206,11 +207,15 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         _displayNameError = firstFieldError(
           error,
           const ['displayName'],
-          l10n: l10n,
+          l10n: context.l10n,
         );
-        _phoneError = firstFieldError(error, const ['phone'], l10n: l10n);
+        _phoneError = firstFieldError(
+          error,
+          const ['phone'],
+          l10n: context.l10n,
+        );
         _formError = _displayNameError == null && _phoneError == null
-            ? localizedApiErrorMessage(error, l10n)
+            ? localizedApiErrorMessage(error, context.l10n)
             : null;
       });
     } catch (_) {
