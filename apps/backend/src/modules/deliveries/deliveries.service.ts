@@ -29,10 +29,14 @@ import { evaluateDeliveryGroupPaymentReadiness } from '../payments/payments.read
 import { isPositiveMoney, toMoneyDecimal } from '../payments/payments.money.js';
 import { ensureDeliveryForAcceptedReservation } from '../delivery-groups/delivery-group-operations.service.js';
 import { isTerminalDeliveryStatus } from './delivery-status.policy.js';
+import {
+  deriveUnconfirmedDeliveryWindow,
+  isLiveDriverLocationStale,
+} from './delivery-configuration.js';
 export {
   DRIVER_IN_PROGRESS_ASSIGNED_STATUSES,
-  MAX_ACTIVE_DRIVER_DELIVERIES,
 } from '../driver/driver-availability.js';
+export { MAX_ACTIVE_DRIVER_DELIVERIES } from './delivery-configuration.js';
 export { TERMINAL_DELIVERY_STATUSES } from './delivery-status.policy.js';
 export { isTerminalDeliveryStatus };
 
@@ -373,12 +377,7 @@ const resolveDeliveryWindow = (reservation: {
     };
   }
 
-  const now = Date.now();
-  const earliest = reservation.pickupWindowEnd
-    ? Math.max(reservation.pickupWindowEnd.getTime(), now + 60 * 60 * 1000)
-    : now + 24 * 60 * 60 * 1000;
-  const start = new Date(earliest);
-  return { start, end: new Date(start.getTime() + 2 * 60 * 60 * 1000) };
+  return deriveUnconfirmedDeliveryWindow(reservation.pickupWindowEnd);
 };
 
 export type RequestDeliveryResult = ReturnType<typeof mapLearnerDelivery>;
@@ -1051,7 +1050,7 @@ export const getLearnerDeliveryTracking = async (
   const isLocationStale =
     canTrack &&
     locationRecordedAt != null &&
-    Date.now() - locationRecordedAt.getTime() > 90_000;
+    isLiveDriverLocationStale(locationRecordedAt);
 
   const dropoffLat =
     delivery.dropoffLocation.latitude == null

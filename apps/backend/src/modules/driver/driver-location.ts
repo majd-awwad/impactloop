@@ -1,6 +1,7 @@
 import { prisma } from '../../database/prisma.js';
+import { DRIVER_RECENT_LOCATION_PING_MAX_AGE_MS } from '../deliveries/delivery-configuration.js';
 
-export const DRIVER_RECENT_LOCATION_PING_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+export { DRIVER_RECENT_LOCATION_PING_MAX_AGE_MS };
 
 export type DriverReferencePoint = {
   latitude: number | null;

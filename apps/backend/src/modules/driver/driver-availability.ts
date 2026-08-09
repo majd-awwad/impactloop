@@ -5,6 +5,10 @@ import type {
   PrismaClient,
 } from '../../generated/prisma/client.js';
 
+import { MAX_ACTIVE_DRIVER_DELIVERIES } from '../deliveries/delivery-configuration.js';
+
+export { MAX_ACTIVE_DRIVER_DELIVERIES };
+
 export const DRIVER_IN_PROGRESS_ASSIGNED_STATUSES = [
   'DRIVER_ASSIGNED',
   'ARRIVED_PICKUP',
@@ -12,8 +16,6 @@ export const DRIVER_IN_PROGRESS_ASSIGNED_STATUSES = [
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
 ] as const satisfies readonly DeliveryStatus[];
-
-export const MAX_ACTIVE_DRIVER_DELIVERIES = 3;
 
 export const countActiveDriverDeliveries = async (
   tx: Prisma.TransactionClient | PrismaClient,
