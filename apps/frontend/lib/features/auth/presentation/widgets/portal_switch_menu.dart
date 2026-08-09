@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_radius.dart';
+import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../l10n/l10n.dart';
 import '../../application/auth_controller.dart';
@@ -48,10 +50,7 @@ class PortalModeLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Text(
-      user.isSupplierMode ? l10n.supplierMode : l10n.learnerMode,
-      style: style,
-    );
+    return Text(activePortalModeLabel(user, l10n), style: style);
   }
 }
 
@@ -151,13 +150,30 @@ class PortalSwitchMenuItems {
     required bool useListTileStyle,
   }) {
     if (useListTileStyle) {
-      return ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: Icon(icon, color: iconColor, size: 20),
-        title: Text(label, style: labelStyle),
-        onTap: onPressed,
-        dense: true,
-        visualDensity: VisualDensity.compact,
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: AppRadius.smAll,
+          hoverColor: iconColor.withValues(alpha: 0.10),
+          splashColor: iconColor.withValues(alpha: 0.14),
+          highlightColor: iconColor.withValues(alpha: 0.08),
+          focusColor: iconColor.withValues(alpha: 0.12),
+          mouseCursor: SystemMouseCursors.click,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xs,
+              vertical: AppSpacing.sm,
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: iconColor, size: 20),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(child: Text(label, style: labelStyle)),
+              ],
+            ),
+          ),
+        ),
       );
     }
 

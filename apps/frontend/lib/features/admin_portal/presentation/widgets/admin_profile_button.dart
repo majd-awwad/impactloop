@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
-import '../../../../app/theme/app_spacing.dart';
-import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../l10n/l10n.dart';
+import '../../../../shared/widgets/app_account_menu.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_route_helpers.dart';
+import '../../../auth/application/portal_navigation.dart';
 import '../../../profile/presentation/l10n/account_settings_l10n.dart';
 import '../theme/admin_decoration_set.dart';
 import 'admin_settings_controls.dart';
@@ -33,6 +34,70 @@ class AdminProfileButton extends ConsumerWidget {
     if (context.mounted) {
       context.go('/login');
     }
+  }
+
+  void _openMenu(BuildContext context, WidgetRef ref) {
+    final user = ref.read(authControllerProvider).user;
+
+    showAppAccountMenu(
+      context: context,
+      builder: (menuContext) {
+        final style = AppAccountMenuStyle.admin(context);
+        final l10n = context.l10n;
+        final decorations = context.adminDecorations;
+        final palette = context.adminPalette;
+
+        void navigate(String route) {
+          Navigator.of(menuContext).pop();
+          context.go(route);
+        }
+
+        return AppAccountMenuPanel(
+          style: style,
+          avatar: Container(
+            width: 48,
+            height: 48,
+            alignment: Alignment.center,
+            decoration: decorations.avatarCircle,
+            child: Text(
+              _initial,
+              style: TextStyle(
+                color: palette.primaryTeal,
+                fontWeight: FontWeight.w800,
+                fontSize: 20,
+              ),
+            ),
+          ),
+          displayName: displayName,
+          email: email,
+          modeLabel: user != null
+              ? activePortalModeLabel(user, l10n)
+              : l10n.adminMode,
+          settingsControls: showSettingsControls
+              ? const AdminSettingsControls(compact: true)
+              : null,
+          leadingActions: [
+            AppAccountMenuActionTile(
+              style: style,
+              action: AppAccountMenuAction(
+                label: AccountSettingsL10n.of(context).pageTitle,
+                icon: Icons.manage_accounts_outlined,
+                onTap: () => navigate(accountSettingsRoute),
+              ),
+            ),
+          ],
+          logoutAction: AppAccountMenuAction(
+            label: l10n.logout,
+            icon: Icons.logout_rounded,
+            onTap: () {
+              Navigator.of(menuContext).pop();
+              _logout(context, ref);
+            },
+            destructive: true,
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -83,77 +148,6 @@ class AdminProfileButton extends ConsumerWidget {
           ),
         ),
       ),
-    );
-  }
-
-  void _openMenu(BuildContext context, WidgetRef ref) {
-    final palette = context.adminPalette;
-    final compact = MediaQuery.sizeOf(context).width < 920;
-
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: palette.surfaceElevated,
-              borderRadius: AppRadius.lgAll,
-              border: Border.all(color: palette.border),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  displayName,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: palette.textPrimary,
-                  ),
-                ),
-                if (email != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    email!,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: palette.textSecondary,
-                    ),
-                  ),
-                ],
-                if (compact || showSettingsControls) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  const AdminSettingsControls(compact: true),
-                ],
-                const SizedBox(height: AppSpacing.md),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(sheetContext).pop();
-                    context.go(accountSettingsRoute);
-                  },
-                  icon: const Icon(Icons.manage_accounts_outlined),
-                  label: Text(AccountSettingsL10n.of(context).pageTitle),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                FilledButton.icon(
-                  onPressed: () {
-                    Navigator.of(sheetContext).pop();
-                    _logout(context, ref);
-                  },
-                  icon: const Icon(Icons.logout_rounded),
-                  label: const Text('Logout'),
-                  style: AppStatusButtonStyle.filled(
-                    context,
-                    AppStatusTone.danger,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }

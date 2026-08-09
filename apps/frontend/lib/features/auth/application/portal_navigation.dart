@@ -1,5 +1,6 @@
 import '../data/models/user.dart';
 import '../../supplier_portal/application/supplier_verification_gate.dart';
+import '../../../l10n/app_localizations.dart';
 import 'auth_route_helpers.dart';
 
 bool userHasRestrictedStaffRole(User user) {
@@ -74,8 +75,21 @@ String oppositePortalSwitchRoute(User user, String targetRole) {
   return homeRoute;
 }
 
-String activePortalModeLabel(User user) {
-  return user.isSupplierMode ? 'Supplier mode' : 'Learner mode';
+String activePortalModeLabel(User user, AppLocalizations l10n) {
+  final role = user.activeRole.trim().toUpperCase();
+  switch (role) {
+    case 'SUPPLIER':
+      return l10n.supplierMode;
+    case 'DRIVER':
+      return l10n.driverMode;
+    case 'ADMIN':
+      return l10n.adminMode;
+    case 'MODERATOR':
+      return l10n.moderatorMode;
+    case 'LEARNER':
+    default:
+      return l10n.learnerMode;
+  }
 }
 
 bool shouldShowSwitchToLearner(User user) =>

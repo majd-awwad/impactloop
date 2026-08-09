@@ -6614,6 +6614,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supplierMode => 'Supplier mode';
 
   @override
+  String get driverMode => 'Driver mode';
+
+  @override
+  String get adminMode => 'Admin mode';
+
+  @override
+  String get moderatorMode => 'Moderator mode';
+
+  @override
+  String get supplierDashboard => 'Supplier dashboard';
+
+  @override
+  String get adminPortalNav => 'Admin Portal';
+
+  @override
+  String get materialRequestsNav => 'Material requests';
+
+  @override
   String get supplierVerifySubmittedTitle => 'Supplier verification submitted';
 
   @override

@@ -6541,6 +6541,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierMode => 'وضع المورد';
 
   @override
+  String get driverMode => 'وضع السائق';
+
+  @override
+  String get adminMode => 'وضع المسؤول';
+
+  @override
+  String get moderatorMode => 'وضع المشرف';
+
+  @override
+  String get supplierDashboard => 'لوحة المورد';
+
+  @override
+  String get adminPortalNav => 'بوابة الإدارة';
+
+  @override
+  String get materialRequestsNav => 'طلبات المواد';
+
+  @override
   String get supplierVerifySubmittedTitle => 'تم إرسال تحقق المورد';
 
   @override

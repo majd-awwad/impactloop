@@ -276,12 +276,14 @@ class _FeatureChip extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: accentColor),
           const SizedBox(width: AppSpacing.xs),
-          Text(
-            label,
-            maxLines: 1,
-            softWrap: false,
-            overflow: TextOverflow.ellipsis,
-            style: _chipStyle(context, color: textColor),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              style: _chipStyle(context, color: textColor),
+            ),
           ),
         ],
       ),

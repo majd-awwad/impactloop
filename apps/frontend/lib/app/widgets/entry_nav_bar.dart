@@ -15,6 +15,7 @@ import '../../features/auth/presentation/widgets/portal_switch_menu.dart';
 import '../../features/auth/data/models/user.dart';
 import '../../features/profile/presentation/l10n/account_settings_l10n.dart';
 import '../../features/notifications/application/notifications_routes.dart';
+import '../../shared/widgets/app_account_menu.dart';
 import '../../shared/widgets/app_feedback.dart';
 import '../../shared/widgets/notification_bell_button.dart';
 import '../../shared/widgets/user_avatar.dart';
@@ -269,6 +270,7 @@ class _PhoneAppBarLayout extends StatelessWidget {
                       settings: settings,
                       ref: ref,
                       compact: true,
+                      showSettingsControls: true,
                       isLoggingOut: isAuthLoading,
                     ),
                   ] else if (!isAuthenticated)
@@ -377,6 +379,7 @@ class _DesktopNavLayout extends StatelessWidget {
             settings: settings,
             ref: ref,
             compact: condensed,
+            showSettingsControls: false,
             isLoggingOut: isAuthLoading,
           ),
         ] else if (showSignIn || showCreateAccount) ...[
@@ -563,6 +566,7 @@ class _MobileNavLayout extends StatelessWidget {
                     settings: settings,
                     ref: ref,
                     compact: true,
+                    showSettingsControls: false,
                     isLoggingOut: isAuthLoading,
                   ),
                 ] else if (showCompactAction && showCreateAccount)
@@ -729,6 +733,7 @@ class _AccountMenu extends StatelessWidget {
     required this.settings,
     required this.ref,
     required this.compact,
+    required this.showSettingsControls,
     required this.isLoggingOut,
   });
 
@@ -736,6 +741,7 @@ class _AccountMenu extends StatelessWidget {
   final AppSettings settings;
   final WidgetRef ref;
   final bool compact;
+  final bool showSettingsControls;
   final bool isLoggingOut;
 
   String get _displayName {
@@ -755,6 +761,9 @@ class _AccountMenu extends StatelessWidget {
 
   bool get _showDriverProfile => user.hasRole('DRIVER') && user.isDriverMode;
 
+  bool get _showDriverNotifications =>
+      user.hasRole('DRIVER') && user.isDriverMode;
+
   Future<void> _logout(BuildContext context) async {
     final logoutError = await ref
         .read(authControllerProvider.notifier)
@@ -771,6 +780,169 @@ class _AccountMenu extends StatelessWidget {
     }
   }
 
+  void _openMenu(BuildContext context) {
+    showAppAccountMenu(
+      context: context,
+      builder: (menuContext) {
+        final style = AppAccountMenuStyle.app(context);
+        final l10n = context.l10n;
+        final colors = AppThemeColors.of(context);
+
+        void navigate(String route, {bool push = false}) {
+          Navigator.of(menuContext).pop();
+          if (push) {
+            context.push(route);
+          } else {
+            context.go(route);
+          }
+        }
+
+        final leadingActions = <Widget>[
+          if (_showDriverProfile)
+            AppAccountMenuActionTile(
+              style: style,
+              action: AppAccountMenuAction(
+                label: l10n.driverProfileTitle,
+                icon: Icons.badge_outlined,
+                onTap: () => navigate('/driver/profile'),
+              ),
+            ),
+          AppAccountMenuActionTile(
+            style: style,
+            action: AppAccountMenuAction(
+              label: l10n.profile,
+              icon: Icons.person_outline_rounded,
+              onTap: () => navigate(profileRoute),
+            ),
+          ),
+          AppAccountMenuActionTile(
+            style: style,
+            action: AppAccountMenuAction(
+              label: AccountSettingsL10n.of(context).pageTitle,
+              icon: Icons.manage_accounts_outlined,
+              onTap: () => navigate(accountSettingsRoute),
+            ),
+          ),
+          if (_showLearnerActions) ...[
+            AppAccountMenuActionTile(
+              style: style,
+              action: AppAccountMenuAction(
+                label: l10n.myReservations,
+                icon: Icons.receipt_long_outlined,
+                onTap: () => navigate(learnerReservationsRoute),
+              ),
+            ),
+            AppAccountMenuActionTile(
+              style: style,
+              action: AppAccountMenuAction(
+                label: l10n.materialRequestsNav,
+                icon: Icons.playlist_add_check_outlined,
+                onTap: () => navigate('/learner/material-requests'),
+              ),
+            ),
+            AppAccountMenuActionTile(
+              style: style,
+              action: AppAccountMenuAction(
+                label: l10n.notificationsTitle,
+                icon: Icons.notifications_none_rounded,
+                onTap: () =>
+                    navigate(notificationsRouteForUser(user), push: true),
+              ),
+            ),
+          ],
+          if (_showDriverNotifications)
+            AppAccountMenuActionTile(
+              style: style,
+              action: AppAccountMenuAction(
+                label: l10n.notificationsTitle,
+                icon: Icons.notifications_none_rounded,
+                onTap: () =>
+                    navigate(notificationsRouteForUser(user), push: true),
+              ),
+            ),
+          if (_isAdmin)
+            AppAccountMenuActionTile(
+              style: style,
+              action: AppAccountMenuAction(
+                label: l10n.adminPortalNav,
+                icon: Icons.admin_panel_settings_outlined,
+                onTap: () => navigate(adminPortalRoute),
+              ),
+            ),
+          if (_showSupplierDashboard)
+            AppAccountMenuActionTile(
+              style: style,
+              action: AppAccountMenuAction(
+                label: l10n.supplierDashboard,
+                icon: Icons.dashboard_outlined,
+                onTap: () => navigate(supplierPortalRoute),
+              ),
+            ),
+          if (shouldShowBecomeSupplier(user))
+            AppAccountMenuActionTile(
+              style: style,
+              action: AppAccountMenuAction(
+                label: l10n.becomeSupplierTitle,
+                icon: Icons.storefront_outlined,
+                onTap: () => navigate(becomeSupplierRoute),
+              ),
+            ),
+        ];
+
+        final portalItems = PortalSwitchMenuItems.build(
+          context: context,
+          ref: ref,
+          user: user,
+          labelStyle: style.actionLabelStyle,
+          noteStyle: style.secondaryStyle,
+          onBeforeSwitch: () => Navigator.of(menuContext).pop(),
+          iconColor: style.textPrimary,
+          useListTileStyle: true,
+        );
+
+        return AppAccountMenuPanel(
+          style: style,
+          avatar: UserAvatar(
+            displayName: _displayName,
+            profileImageUrl: user.profileImageUrl,
+            radius: 24,
+            backgroundColor: colors.primary.withValues(alpha: 0.14),
+            foregroundColor: colors.primary,
+            initialTextStyle: AuthDarkTextStyles.title(
+              context,
+            ).copyWith(color: colors.primary, fontSize: 20),
+          ),
+          displayName: _displayName,
+          email: user.email,
+          modeLabel: activePortalModeLabel(user, l10n),
+          settingsControls: showSettingsControls
+              ? _UtilityPills(settings: settings, ref: ref, compact: true)
+              : null,
+          leadingActions: leadingActions,
+          trailingSections: [
+            if (portalItems.isNotEmpty)
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: portalItems,
+              ),
+          ],
+          logoutAction: AppAccountMenuAction(
+            label: isLoggingOut ? l10n.loggingOut : l10n.logout,
+            icon: Icons.logout_rounded,
+            onTap: isLoggingOut
+                ? null
+                : () {
+                    Navigator.of(menuContext).pop();
+                    _logout(context);
+                  },
+            destructive: true,
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -781,250 +953,58 @@ class _AccountMenu extends StatelessWidget {
     final border = colors.borderSubtle;
     final accent = colors.primary;
 
-    return MenuAnchor(
-      style: MenuStyle(
-        backgroundColor: WidgetStatePropertyAll(colors.surfaceElevated),
-        elevation: const WidgetStatePropertyAll(10),
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(
-            borderRadius: AppRadius.lgAll,
-            side: BorderSide(color: border),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openMenu(context),
+        borderRadius: AppRadius.pillAll,
+        child: Ink(
+          height: 42,
+          padding: EdgeInsetsDirectional.symmetric(
+            horizontal: compact ? AppSpacing.xs : AppSpacing.sm,
           ),
-        ),
-        padding: const WidgetStatePropertyAll(
-          EdgeInsets.symmetric(vertical: AppSpacing.sm),
-        ),
-      ),
-      builder: (context, controller, child) {
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () {
-              if (controller.isOpen) {
-                controller.close();
-              } else {
-                controller.open();
-              }
-            },
+          decoration: BoxDecoration(
+            color: surface,
             borderRadius: AppRadius.pillAll,
-            child: Ink(
-              height: 42,
-              padding: EdgeInsetsDirectional.symmetric(
-                horizontal: compact ? AppSpacing.xs : AppSpacing.sm,
+            border: Border.all(color: border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              UserAvatar(
+                displayName: _displayName,
+                profileImageUrl: user.profileImageUrl,
+                radius: 15,
+                backgroundColor: accent.withValues(alpha: isDark ? 0.16 : 0.1),
+                foregroundColor: accent,
+                initialTextStyle: AuthDarkTextStyles.label(
+                  context,
+                ).copyWith(color: accent, fontWeight: FontWeight.w800),
               ),
-              decoration: BoxDecoration(
-                color: surface,
-                borderRadius: AppRadius.pillAll,
-                border: Border.all(color: controller.isOpen ? accent : border),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  UserAvatar(
-                    displayName: _displayName,
-                    profileImageUrl: user.profileImageUrl,
-                    radius: 15,
-                    backgroundColor: accent.withValues(
-                      alpha: isDark ? 0.16 : 0.1,
-                    ),
-                    foregroundColor: accent,
-                    initialTextStyle: AuthDarkTextStyles.label(
+              if (!compact) ...[
+                const SizedBox(width: AppSpacing.sm),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 112),
+                  child: Text(
+                    _displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AuthDarkTextStyles.label(
                       context,
-                    ).copyWith(color: accent, fontWeight: FontWeight.w800),
+                    ).copyWith(color: primaryText, fontWeight: FontWeight.w700),
                   ),
-                  if (!compact) ...[
-                    const SizedBox(width: AppSpacing.sm),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 112),
-                      child: Text(
-                        _displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AuthDarkTextStyles.label(context).copyWith(
-                          color: primaryText,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(width: AppSpacing.xs),
-                  Icon(
-                    controller.isOpen
-                        ? Icons.keyboard_arrow_up_rounded
-                        : Icons.keyboard_arrow_down_rounded,
-                    size: 18,
-                    color: secondaryText,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-      menuChildren: [
-        ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height * 0.85,
-            maxWidth: 320,
-          ),
-          child: SingleChildScrollView(
-            primary: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(
-                    AppSpacing.md,
-                    AppSpacing.sm,
-                    AppSpacing.md,
-                    AppSpacing.md,
-                  ),
-                  child: Row(
-                    children: [
-                      UserAvatar(
-                        displayName: _displayName,
-                        profileImageUrl: user.profileImageUrl,
-                        radius: 22,
-                        backgroundColor: accent.withValues(alpha: 0.14),
-                        foregroundColor: accent,
-                        initialTextStyle: AuthDarkTextStyles.title(
-                          context,
-                        ).copyWith(color: accent, fontSize: 18),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _displayName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AuthDarkTextStyles.label(context).copyWith(
-                                color: primaryText,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            Text(
-                              user.email,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AuthDarkTextStyles.body(
-                                context,
-                              ).copyWith(color: secondaryText, fontSize: 12),
-                            ),
-                            Text(
-                              activePortalModeLabel(user),
-                              style: AuthDarkTextStyles.body(
-                                context,
-                              ).copyWith(color: accent, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                if (_showDriverProfile)
-                  _AccountMenuItem(
-                    icon: Icons.badge_outlined,
-                    label: context.l10n.driverProfileTitle,
-                    onPressed: () => context.go('/driver/profile'),
-                  ),
-                _AccountMenuItem(
-                  icon: Icons.person_outline_rounded,
-                  label: context.l10n.profile,
-                  onPressed: () => context.go('/profile'),
-                ),
-                _AccountMenuItem(
-                  icon: Icons.manage_accounts_outlined,
-                  label: AccountSettingsL10n.of(context).pageTitle,
-                  onPressed: () => context.go(accountSettingsRoute),
-                ),
-                if (_showLearnerActions)
-                  _AccountMenuItem(
-                    icon: Icons.notifications_none_rounded,
-                    label: settings.languageCode == 'ar'
-                        ? 'الإشعارات'
-                        : 'Notifications',
-                    onPressed: () =>
-                        context.push(notificationsRouteForUser(user)),
-                  ),
-                if (_showLearnerActions)
-                  _AccountMenuItem(
-                    icon: Icons.receipt_long_outlined,
-                    label: context.l10n.myReservations,
-                    onPressed: () => context.go(learnerReservationsRoute),
-                  ),
-                if (_isAdmin)
-                  _AccountMenuItem(
-                    icon: Icons.admin_panel_settings_outlined,
-                    label: 'Admin Portal',
-                    onPressed: () => context.go(adminPortalRoute),
-                  ),
-                if (_showSupplierDashboard)
-                  _AccountMenuItem(
-                    icon: Icons.dashboard_outlined,
-                    label: 'Supplier dashboard',
-                    onPressed: () => context.go('/supplier'),
-                  ),
-                if (shouldShowBecomeSupplier(user))
-                  _AccountMenuItem(
-                    icon: Icons.storefront_outlined,
-                    label: 'Become a supplier',
-                    onPressed: () => context.go(becomeSupplierRoute),
-                  ),
-                ...PortalSwitchMenuItems.build(
-                  context: context,
-                  ref: ref,
-                  user: user,
-                  labelStyle: AuthDarkTextStyles.label(
-                    context,
-                  ).copyWith(color: primaryText),
-                  noteStyle: AuthDarkTextStyles.body(
-                    context,
-                  ).copyWith(color: secondaryText, fontSize: 12),
-                  iconColor: primaryText,
-                ),
-                const Divider(height: 1),
-                Padding(
-                  padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        context.l10n.settings,
-                        style: AuthDarkTextStyles.label(context).copyWith(
-                          color: secondaryText,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      _UtilityPills(
-                        settings: settings,
-                        ref: ref,
-                        compact: true,
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                _AccountMenuItem(
-                  icon: Icons.logout_rounded,
-                  label: isLoggingOut
-                      ? context.l10n.loggingOut
-                      : context.l10n.logout,
-                  destructive: true,
-                  onPressed: isLoggingOut ? null : () => _logout(context),
                 ),
               ],
-            ),
+              const SizedBox(width: AppSpacing.xs),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: secondaryText,
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -1034,18 +1014,16 @@ class _AccountMenuItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onPressed,
-    this.destructive = false,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback? onPressed;
-  final bool destructive;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final color = destructive ? colors.danger : colors.textPrimary;
+    final color = colors.textPrimary;
 
     return MenuItemButton(
       onPressed: onPressed,

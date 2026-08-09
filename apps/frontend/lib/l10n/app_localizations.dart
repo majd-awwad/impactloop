@@ -11295,6 +11295,42 @@ abstract class AppLocalizations {
   /// **'Supplier mode'**
   String get supplierMode;
 
+  /// No description provided for @driverMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver mode'**
+  String get driverMode;
+
+  /// No description provided for @adminMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin mode'**
+  String get adminMode;
+
+  /// No description provided for @moderatorMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderator mode'**
+  String get moderatorMode;
+
+  /// No description provided for @supplierDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier dashboard'**
+  String get supplierDashboard;
+
+  /// No description provided for @adminPortalNav.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Portal'**
+  String get adminPortalNav;
+
+  /// No description provided for @materialRequestsNav.
+  ///
+  /// In en, this message translates to:
+  /// **'Material requests'**
+  String get materialRequestsNav;
+
   /// No description provided for @supplierVerifySubmittedTitle.
   ///
   /// In en, this message translates to:
