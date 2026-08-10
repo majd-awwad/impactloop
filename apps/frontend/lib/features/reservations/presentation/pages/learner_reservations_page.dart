@@ -90,6 +90,7 @@ class _ReservationsContentState extends ConsumerState<_ReservationsContent>
   LearnerReservationStatusFilter _selectedFilter =
       LearnerReservationStatusFilter.all;
   var _hasLoadedOnce = false;
+  var _refreshDeliveriesOnPoll = false;
 
   late final LifecyclePollingController _refreshController =
       LifecyclePollingController(
@@ -127,15 +128,29 @@ class _ReservationsContentState extends ConsumerState<_ReservationsContent>
     List<LearnerReservation> reservations,
     List<LearnerDelivery> deliveries,
   ) {
+    _refreshDeliveriesOnPoll = learnerReservationsListNeedsDeliveryRefresh(
+      reservations,
+      deliveries,
+    );
     _refreshController.syncEnabled(
       learnerReservationsListNeedsActiveRefresh(reservations, deliveries),
     );
   }
 
-  void _refreshReservations() {
+  Future<void> _refreshReservations() async {
     if (!mounted) return;
     ref.invalidate(myReservationsProvider);
-    ref.invalidate(learnerDeliveriesProvider);
+    if (_refreshDeliveriesOnPoll) {
+      ref.invalidate(learnerDeliveriesProvider);
+    }
+    try {
+      await ref.read(myReservationsProvider.future);
+      if (_refreshDeliveriesOnPoll && mounted) {
+        await ref.read(learnerDeliveriesProvider.future);
+      }
+    } catch (_) {
+      // Provider UI surfaces errors.
+    }
   }
 
   Future<void> _onPullToRefresh() async {

@@ -114,6 +114,7 @@ class _ReservationDetailContentState
     with WidgetsBindingObserver, LifecyclePollingHost<_ReservationDetailContent> {
   String? _checkoutableOrderId;
   final _pickupCodeSectionKey = GlobalKey();
+  var _refreshDeliveriesOnPoll = false;
 
   late final LifecyclePollingController _refreshController =
       LifecyclePollingController(
@@ -162,15 +163,29 @@ class _ReservationDetailContentState
     LearnerReservation reservation,
     List<LearnerDelivery> deliveries,
   ) {
+    _refreshDeliveriesOnPoll = learnerReservationDetailNeedsDeliveryRefresh(
+      reservation,
+      deliveries,
+    );
     _refreshController.syncEnabled(
       learnerReservationDetailNeedsActiveRefresh(reservation, deliveries),
     );
   }
 
-  void _refresh() {
+  Future<void> _refresh() async {
     if (!mounted) return;
     ref.invalidate(learnerReservationProvider(widget.reservationId));
-    ref.invalidate(learnerDeliveriesProvider);
+    if (_refreshDeliveriesOnPoll) {
+      ref.invalidate(learnerDeliveriesProvider);
+    }
+    try {
+      await ref.read(learnerReservationProvider(widget.reservationId).future);
+      if (_refreshDeliveriesOnPoll && mounted) {
+        await ref.read(learnerDeliveriesProvider.future);
+      }
+    } catch (_) {
+      // Provider UI surfaces errors.
+    }
   }
 
   void _onCheckoutOrder(String orderId) {
