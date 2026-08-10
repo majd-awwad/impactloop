@@ -20,7 +20,6 @@ import '../../../ai/presentation/widgets/ai_assistant_shell.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../home/application/learner_home_provider.dart';
 import '../../../learner_material_requests/application/learner_material_requests_providers.dart';
-import '../../../notifications/application/notifications_provider.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../application/project_build_refresh.dart';
 import '../../domain/models/learning_project.dart';
@@ -111,6 +110,7 @@ class _LearningProjectBuildPageState
   @override
   void deactivate() {
     _routeSuspended = true;
+    _buildRefreshController.setPaused(true);
     super.deactivate();
   }
 
@@ -119,6 +119,7 @@ class _LearningProjectBuildPageState
     super.activate();
     if (_routeSuspended) {
       _routeSuspended = false;
+      _buildRefreshController.setPaused(false);
       unawaited(_refreshBuild());
     }
   }
@@ -127,6 +128,10 @@ class _LearningProjectBuildPageState
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.resumed:
+        // Stay paused while another route covers this page.
+        if (_routeSuspended) {
+          return;
+        }
         _buildRefreshController.setPaused(false);
         if (mounted) {
           unawaited(_refreshBuild());
@@ -142,17 +147,6 @@ class _LearningProjectBuildPageState
 
   void _syncBuildRefreshPolling(ProjectBuild? build) {
     _buildRefreshController.syncPolling(build);
-  }
-
-  void _handleNotificationUnreadChange(int? previous, int? next) {
-    if (next == null || previous == null || next <= previous) {
-      return;
-    }
-
-    _refreshBuild();
-    invalidateLearnerMaterialRequests(ref);
-    ref.invalidate(learnerHomeFeedProvider);
-    ref.invalidate(learnerHomeSectionDetailsProvider);
   }
 
   Future<void> _refreshBuild() {
@@ -1260,11 +1254,6 @@ class _LearningProjectBuildPageState
         }
       });
     });
-
-    ref.listen(myNotificationUnreadCountProvider, (previous, next) {
-      _handleNotificationUnreadChange(previous?.value, next.value);
-    });
-    ref.watch(myNotificationUnreadCountProvider);
 
     final buildAsync = ref.watch(projectBuildProvider(widget.projectId));
     buildAsync.whenData((build) {

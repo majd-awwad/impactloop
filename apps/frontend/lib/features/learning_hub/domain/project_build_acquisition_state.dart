@@ -120,30 +120,25 @@ class ProjectBuildAcquisitionState {
   static bool canRemoveAcquiredAllocation(ProjectBuildItem item) =>
       isAcquired(item);
 
+  /// True only while an external party can still change linked reservation
+  /// state asynchronously. Selected-but-not-ready materials without a live
+  /// reservation must not keep the build page polling.
   static bool itemNeedsActiveRefresh(ProjectBuildItem item) {
     if (isAcquiredViaCompletedReservation(item)) {
       return false;
     }
 
     final reservation = item.linkedReservation;
-    if (reservation != null) {
-      final status = reservation.status.toUpperCase();
-      if (_terminalReservationStatuses.contains(status)) {
-        return false;
-      }
-
-      if (_activeReservationStatuses.contains(status)) {
-        return true;
-      }
-
-      return !item.isReadyForBuild;
+    if (reservation == null) {
+      return false;
     }
 
-    if (item.linkedMaterial != null && !item.isReadyForBuild) {
-      return true;
+    final status = reservation.status.toUpperCase();
+    if (_terminalReservationStatuses.contains(status)) {
+      return false;
     }
 
-    return false;
+    return _activeReservationStatuses.contains(status);
   }
 
   static bool buildNeedsActiveRefresh(ProjectBuild? build) {

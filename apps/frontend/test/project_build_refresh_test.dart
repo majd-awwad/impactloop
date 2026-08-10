@@ -270,4 +270,78 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 120));
     expect(refreshCount, countAfterDispose);
   });
+
+  test('refresh controller does not poll selected material without reservation',
+      () async {
+    var refreshCount = 0;
+    final controller = ProjectBuildRefreshController(
+      onRefresh: () => refreshCount++,
+      interval: const Duration(milliseconds: 50),
+    );
+
+    final selectedOnlyBuild = ProjectBuild(
+      id: 'build-1',
+      projectId: 'project-1',
+      status: ProjectBuildStatus.inProgress,
+      project: const ProjectBuildProject(
+        id: 'project-1',
+        title: 'Rolling Workshop Storage Crate',
+        shortDescription: 'Build a rolling crate',
+      ),
+      progress: const ProjectBuildProgress(total: 1, ready: 0, percent: 0),
+      materialReadiness: const ProjectBuildMaterialReadiness(
+        ready: 0,
+        linked: 1,
+        reserved: 0,
+        missing: 0,
+        total: 1,
+      ),
+      stepProgress: const ProjectBuildStepProgress(
+        completed: 0,
+        total: 1,
+        percent: 0,
+        steps: [],
+      ),
+      items: [
+        ProjectBuildItem(
+          id: 'item-1',
+          requiredComponentId: 'component-1',
+          status: ProjectBuildItemStatus.missing,
+          component: const ProjectRequiredComponentItem(
+            id: 'component-1',
+            name: LocalizedText(en: 'Plastic crate', ar: 'صندوق بلاستيك'),
+            materialType: 'Storage',
+            quantity: 1,
+            unit: 'piece',
+            isRequired: true,
+            canBeSubstituted: false,
+          ),
+          isReadyForBuild: false,
+          readinessLabel: 'Material selected — reserve to continue',
+          linkedMaterial: const LinkedMaterialSummary(
+            id: 'material-1',
+            title: 'Sorted Plastic Bottle Caps Bag',
+            categoryNameEn: 'Storage',
+            condition: 'GOOD',
+            status: 'AVAILABLE',
+            isPubliclyAvailable: true,
+            isFree: true,
+            currency: 'NIS',
+            supplierName: 'Supplier',
+            city: 'Ramallah',
+            pickupAllowed: true,
+            deliveryAllowed: false,
+          ),
+        ),
+      ],
+    );
+
+    controller.syncPolling(selectedOnlyBuild);
+    expect(controller.isPollingActive, isFalse);
+
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    expect(refreshCount, 0);
+
+    controller.dispose();
+  });
 }

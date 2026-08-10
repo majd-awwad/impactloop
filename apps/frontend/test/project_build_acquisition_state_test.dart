@@ -224,12 +224,54 @@ void main() {
         items: [_item(isReadyForBuild: true, reservationStatus: 'COMPLETED')],
       );
 
+      final selectedOnlyBuild = ProjectBuild(
+        id: 'build-1',
+        projectId: 'project-1',
+        status: ProjectBuildStatus.inProgress,
+        project: const ProjectBuildProject(
+          id: 'project-1',
+          title: 'Rolling Workshop Storage Crate',
+          shortDescription: 'Build a rolling crate',
+        ),
+        progress: const ProjectBuildProgress(total: 1, ready: 0, percent: 0),
+        materialReadiness: const ProjectBuildMaterialReadiness(
+          ready: 0,
+          linked: 1,
+          reserved: 0,
+          missing: 0,
+          total: 1,
+        ),
+        stepProgress: const ProjectBuildStepProgress(
+          completed: 0,
+          total: 1,
+          percent: 0,
+          steps: [],
+        ),
+        items: [
+          _item(
+            isReadyForBuild: false,
+            includeReservation: false,
+            includeMaterial: true,
+          ),
+        ],
+      );
+
       expect(
         ProjectBuildAcquisitionState.buildNeedsActiveRefresh(activeBuild),
         isTrue,
       );
       expect(
         ProjectBuildAcquisitionState.buildNeedsActiveRefresh(acquiredBuild),
+        isFalse,
+      );
+      expect(
+        ProjectBuildAcquisitionState.itemNeedsActiveRefresh(
+          selectedOnlyBuild.items.single,
+        ),
+        isFalse,
+      );
+      expect(
+        ProjectBuildAcquisitionState.buildNeedsActiveRefresh(selectedOnlyBuild),
         isFalse,
       );
     });

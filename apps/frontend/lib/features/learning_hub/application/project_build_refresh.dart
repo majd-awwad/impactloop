@@ -12,7 +12,7 @@ bool projectBuildNeedsActiveRefresh(ProjectBuild? build) {
   return ProjectBuildAcquisitionState.buildNeedsActiveRefresh(build);
 }
 
-typedef ProjectBuildRefreshCallback = void Function();
+typedef ProjectBuildRefreshCallback = FutureOr<void> Function();
 
 class ProjectBuildRefreshController {
   ProjectBuildRefreshController({
@@ -26,12 +26,16 @@ class ProjectBuildRefreshController {
   Timer? _timer;
   bool _pollingActive = false;
   bool _paused = false;
+  bool _disposed = false;
+  bool _inFlight = false;
   ProjectBuild? _lastBuild;
 
-  bool get isPollingActive => _pollingActive && !_paused;
+  bool get isPollingActive => _pollingActive && !_paused && !_disposed;
+
+  bool get isRefreshInFlight => _inFlight;
 
   void setPaused(bool paused) {
-    if (_paused == paused) {
+    if (_disposed || _paused == paused) {
       return;
     }
 
@@ -46,13 +50,16 @@ class ProjectBuildRefreshController {
   }
 
   void syncPolling(ProjectBuild? build) {
+    if (_disposed) {
+      return;
+    }
     _lastBuild = build;
     _applyPollingState();
   }
 
   void _applyPollingState() {
     final shouldPoll =
-        !_paused && projectBuildNeedsActiveRefresh(_lastBuild);
+        !_disposed && !_paused && projectBuildNeedsActiveRefresh(_lastBuild);
     if (shouldPoll == _pollingActive && (_timer != null || !shouldPoll)) {
       return;
     }
@@ -66,13 +73,27 @@ class ProjectBuildRefreshController {
     }
 
     _timer = Timer.periodic(interval, (_) {
-      if (!_paused) {
-        onRefresh();
-      }
+      unawaited(_runRefreshTick());
     });
   }
 
+  Future<void> _runRefreshTick() async {
+    if (_disposed || _paused || _inFlight) {
+      return;
+    }
+
+    _inFlight = true;
+    try {
+      await Future<void>.sync(onRefresh);
+    } catch (_) {
+      // Provider / page surfaces errors.
+    } finally {
+      _inFlight = false;
+    }
+  }
+
   void dispose() {
+    _disposed = true;
     _timer?.cancel();
     _timer = null;
     _pollingActive = false;
