@@ -453,18 +453,25 @@ class _HubContent extends StatelessWidget {
     final categoryLabels = _categoryLabels(categoriesAsync);
     final tagOptions = _tagOptions(result.items, selectedTag);
 
+    final isMobile = MediaQuery.sizeOf(context).width <
+        LearnerDiscoveryLayout.mobileBreakpoint;
+    final sectionGap =
+        isMobile ? AppSpacing.sm + 2 : AppSpacing.md;
+
     return SingleChildScrollView(
-      padding: appMobileAwareScrollPadding(context, top: AppSpacing.md),
+      // Match Materials: single horizontal inset from scroll padding.
+      // Extra AI FAB clearance so the last card clears nav + FAB.
+      padding: appMobileAwareScrollPadding(
+        context,
+        top: AppSpacing.md,
+        reserveAiFab: true,
+      ),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(
             maxWidth: LearnerDiscoveryLayout.pageMaxWidth,
           ),
-          child: Padding(
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: AppSpacing.md,
-            ),
-            child: Column(
+          child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 LearnerPageHeader(
@@ -478,7 +485,7 @@ class _HubContent extends StatelessWidget {
                     ar: 'اكتشف المشاريع وتعلم ما يمكنك بناؤه من مواد معاد تدويرها.',
                   ).resolve(context),
                 ),
-                const SizedBox(height: AppSpacing.md),
+                SizedBox(height: sectionGap),
                 LearnerCtaBanner(
                   title: const LocalizedText(
                     en: 'Have a project idea?',
@@ -502,17 +509,17 @@ class _HubContent extends StatelessWidget {
                   onSecondary: onMySubmissions,
                   leading: Icon(
                     Icons.desktop_windows_outlined,
-                    size: 48,
+                    size: isMobile ? 28 : 48,
                     color: LearnerDiscoveryStyle.primary(context)
                         .withValues(alpha: 0.9),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.md),
+                SizedBox(height: sectionGap),
                 _LearningListModeTabs(
                   selectedMode: listMode,
                   onModeSelected: onListModeSelected,
                 ),
-                const SizedBox(height: AppSpacing.md),
+                SizedBox(height: sectionGap),
                 if (categoryLabels.isNotEmpty) ...[
                   LearningCategoryChips(
                     categories: categoryLabels,
@@ -524,7 +531,7 @@ class _HubContent extends StatelessWidget {
                       onCategorySelected(index, categoryId);
                     },
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(height: isMobile ? AppSpacing.sm : AppSpacing.sm),
                 ],
                 _LearningHubFilters(
                   searchController: searchController,
@@ -544,7 +551,7 @@ class _HubContent extends StatelessWidget {
                   onSortSelected: onSortSelected,
                   onClearFilters: onClearFilters,
                 ),
-                const SizedBox(height: AppSpacing.md),
+                SizedBox(height: sectionGap),
                 if (isRefreshing)
                   const _HubInlineStatusBanner(
                     icon: Icons.sync_rounded,
@@ -578,7 +585,17 @@ class _HubContent extends StatelessWidget {
                     result.total,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(
+                    top: AppSpacing.xs,
+                    bottom: AppSpacing.sm,
+                  ),
+                  child: Divider(
+                    height: 1,
+                    color: LearnerDiscoveryStyle.border(context)
+                        .withValues(alpha: 0.7),
+                  ),
+                ),
                 if (result.items.isEmpty)
                   _HubStatePanel(
                     icon: hasActiveFilters
@@ -723,7 +740,6 @@ class _HubContent extends StatelessWidget {
                 _LearningHubBuildJourneyPanel(onSubmitProject: onSubmitProject),
               ],
             ),
-          ),
         ),
       ),
     );

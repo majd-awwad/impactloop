@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_spacing.dart';
 
 /// Horizontal chip scroller that never clips first/last chips.
+///
+/// Edge padding keeps the first and last chips fully inside the viewport
+/// instead of sitting flush against the clipped scroll edge.
 class LearnerChipRow extends StatelessWidget {
   const LearnerChipRow({
     super.key,
@@ -25,8 +28,10 @@ class LearnerChipRow extends StatelessWidget {
       width: double.infinity,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: padding ?? EdgeInsets.zero,
-        clipBehavior: Clip.none,
+        // Soft edge inset so terminal chips are fully visible when scrolled
+        // to either end. Prefer real padding over ClipRect workarounds.
+        padding: padding ??
+            const EdgeInsetsDirectional.symmetric(horizontal: 2),
         child: Row(
           children: [
             for (var i = 0; i < children.length; i++) ...[

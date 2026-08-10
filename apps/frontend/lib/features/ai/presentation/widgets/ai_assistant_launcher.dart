@@ -33,10 +33,12 @@ class AiAssistantLauncher extends ConsumerWidget {
     final colors = AppThemeColors.of(context);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final isMobile = MediaQuery.sizeOf(context).width < 600;
-    final navOffset = isMobile ? 88.0 : 24.0;
+    // Sit clearly above the floating bottom nav; keep a stable edge inset
+    // so the FAB never covers nav labels or card footers near the bottom.
+    final navOffset = isMobile ? 104.0 : 24.0;
 
     return PositionedDirectional(
-      end: AppSpacing.lg,
+      end: AppSpacing.md,
       bottom: bottomInset + navOffset,
       child: Semantics(
         button: true,

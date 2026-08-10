@@ -351,8 +351,8 @@ class LearningProjectCompactCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final readiness = project.personalBuildReadiness;
     final coverage = project.materialCoverage;
-    final progress = readiness?.readinessRatio ??
-        coverage?.availabilityRatio;
+    // Only show progress when real coverage/readiness data exists.
+    final progress = readiness?.readinessRatio ?? coverage?.availabilityRatio;
 
     return InkWell(
       borderRadius: AppRadius.lgAll,
@@ -377,9 +377,16 @@ class LearningProjectCompactCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Image on the start edge (right in Arabic RTL).
+              _CompactCardImage(project: project),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+                  padding: const EdgeInsetsDirectional.fromSTEB(
+                    AppSpacing.sm + 2,
+                    AppSpacing.sm + 2,
+                    AppSpacing.sm + 2,
+                    AppSpacing.sm,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -388,35 +395,24 @@ class LearningProjectCompactCard extends StatelessWidget {
                         style: textTheme.titleSmall?.copyWith(
                           color: palette.textPrimary,
                           fontWeight: FontWeight.w800,
-                          height: 1.2,
+                          height: 1.22,
+                          fontSize: 14.5,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.start,
                       ),
                       const SizedBox(height: AppSpacing.xs),
-                      _ProjectMetaChip(
-                        label: project.category.resolve(context),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Row(
+                      Wrap(
+                        spacing: AppSpacing.xs,
+                        runSpacing: AppSpacing.xs,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Icon(
-                            Icons.equalizer_rounded,
-                            size: 16,
-                            color: palette.lime,
+                          _ProjectMetaChip(
+                            label: project.category.resolve(context),
                           ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              project.difficulty.resolve(context),
-                              style: textTheme.labelSmall?.copyWith(
-                                color: palette.lime,
-                                fontWeight: FontWeight.w700,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                          _CompactDifficultyBadge(
+                            label: project.difficulty.resolve(context),
                           ),
                         ],
                       ),
@@ -429,7 +425,7 @@ class LearningProjectCompactCard extends StatelessWidget {
                                 borderRadius: AppRadius.pillAll,
                                 child: LinearProgressIndicator(
                                   value: progress.clamp(0.0, 1.0),
-                                  minHeight: 6,
+                                  minHeight: 4,
                                   backgroundColor: palette.borderSubtle,
                                   color: palette.lime,
                                 ),
@@ -440,12 +436,15 @@ class LearningProjectCompactCard extends StatelessWidget {
                               '${(progress * 100).round()}%',
                               style: textTheme.labelSmall?.copyWith(
                                 color: palette.textSecondary,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 11,
                               ),
                             ),
                           ],
                         ),
                       ],
+                      const SizedBox(height: AppSpacing.sm),
+                      const Divider(height: 1),
                       const SizedBox(height: AppSpacing.sm),
                       ProjectEngagementStrip(
                         project: project,
@@ -455,47 +454,89 @@ class LearningProjectCompactCard extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(
-                width: 108,
-                child: ClipRRect(
-                  borderRadius: const BorderRadiusDirectional.only(
-                    topEnd: Radius.circular(AppRadius.lg),
-                    bottomEnd: Radius.circular(AppRadius.lg),
-                  ),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: AlignmentDirectional.topStart,
-                        end: AlignmentDirectional.bottomEnd,
-                        colors: projectGradient(project),
-                      ),
-                    ),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (project.imageUrl != null)
-                          Image.network(
-                            project.imageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const SizedBox.shrink(),
-                          )
-                        else
-                          Center(
-                            child: Icon(
-                              project.heroIconData,
-                              size: 36,
-                              color: palette.textPrimary,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CompactDifficultyBadge extends StatelessWidget {
+  const _CompactDifficultyBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.equalizer_rounded, size: 14, color: palette.lime),
+        const SizedBox(width: 3),
+        Text(
+          label,
+          style: textTheme.labelSmall?.copyWith(
+            color: palette.textSecondary,
+            fontWeight: FontWeight.w600,
+            fontSize: 11.5,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+}
+
+class _CompactCardImage extends StatelessWidget {
+  const _CompactCardImage({required this.project});
+
+  final LearningProject project;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImage = project.imageUrl != null && project.imageUrl!.isNotEmpty;
+
+    return SizedBox(
+      width: LearningProjectCardLayout.compactImageWidth,
+      child: ClipRRect(
+        borderRadius: const BorderRadiusDirectional.only(
+          topStart: Radius.circular(AppRadius.lg),
+          bottomStart: Radius.circular(AppRadius.lg),
+        ),
+        child: ColoredBox(
+          color: projectImagePlaceholderColor(context),
+          child: hasImage
+              ? Image.network(
+                  project.imageUrl!,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  alignment: Alignment.center,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const _PlaceholderIcon(),
+                )
+              : const _PlaceholderIcon(),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlaceholderIcon extends StatelessWidget {
+  const _PlaceholderIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Icon(
+        Icons.school_outlined,
+        size: 34,
+        color: projectImagePlaceholderIconColor(context),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/learning_hub_providers.dart';
@@ -74,7 +75,13 @@ class _ProjectEngagementStripState
     }
 
     if (authState.user?.hasRole('LEARNER') != true) {
-      showInfoSnackBar(context, 'Use a learner account to $action projects.');
+      showInfoSnackBar(
+        context,
+        LocalizedText(
+          en: 'Use a learner account to $action projects.',
+          ar: 'استخدم حساب متعلم للتفاعل مع المشاريع.',
+        ).resolve(context),
+      );
       return false;
     }
 
@@ -255,60 +262,112 @@ class _ProjectEngagementStripState
     }
   }
 
+  String _likesLabel(BuildContext context, {required bool compact}) {
+    if (compact) {
+      return '$_likesCount';
+    }
+    return LocalizedText(
+      en: _likesCount == 1 ? '1 like' : '$_likesCount likes',
+      ar: '$_likesCount إعجاب',
+    ).resolve(context);
+  }
+
+  String _saveLabel(BuildContext context, {required bool compact}) {
+    final l10n = context.l10n;
+    if (compact) {
+      return '';
+    }
+    return _isSaved ? l10n.saved : l10n.save;
+  }
+
+  String _followersLabel(BuildContext context, {required bool compact}) {
+    if (compact) {
+      return '$_followersCount';
+    }
+    return LocalizedText(
+      en: _followersCount == 1
+          ? '1 follower'
+          : '$_followersCount followers',
+      ar: '$_followersCount متابع',
+    ).resolve(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final compact = widget.density == ProjectEngagementDensity.compact;
+    final l10n = context.l10n;
     final pills = [
       _EngagementPill(
         icon: _isLiked ? Icons.favorite_rounded : Icons.favorite_border,
-        label: _likesCount == 1 ? '1 like' : '$_likesCount likes',
+        label: _likesLabel(context, compact: compact),
         selected: _isLiked,
         isLoading: _updatingAction == _EngagementAction.like,
         compact: compact,
-        tooltip: _isLiked ? 'Unlike project' : 'Like project',
+        tooltip: _isLiked
+            ? LocalizedText(
+                en: 'Unlike project',
+                ar: 'إزالة الإعجاب',
+              ).resolve(context)
+            : LocalizedText(
+                en: 'Like project',
+                ar: 'الإعجاب بالمشروع',
+              ).resolve(context),
+        semanticLabel: LocalizedText(
+          en: _likesCount == 1 ? '1 like' : '$_likesCount likes',
+          ar: '$_likesCount إعجاب',
+        ).resolve(context),
         onTap: _toggleLike,
       ),
       _EngagementPill(
         icon: _isSaved ? Icons.bookmark_rounded : Icons.bookmark_border,
-        label: _isSaved ? 'Saved' : 'Save',
+        label: _saveLabel(context, compact: compact),
         selected: _isSaved,
         isLoading: _updatingAction == _EngagementAction.save,
         compact: compact,
-        tooltip: _isSaved ? 'Remove saved project' : 'Save project',
+        tooltip: _isSaved
+            ? LocalizedText(
+                en: 'Remove saved project',
+                ar: 'إزالة من المحفوظات',
+              ).resolve(context)
+            : LocalizedText(
+                en: 'Save project',
+                ar: 'حفظ المشروع',
+              ).resolve(context),
+        semanticLabel: _isSaved ? l10n.saved : l10n.save,
         onTap: _toggleSave,
       ),
       _EngagementPill(
         icon: _isFollowing
             ? Icons.notifications_active_rounded
             : Icons.notifications_none_rounded,
-        label: _followersCount == 1
-            ? '1 follower'
-            : '$_followersCount followers',
+        label: _followersLabel(context, compact: compact),
         selected: _isFollowing,
         isLoading: _updatingAction == _EngagementAction.follow,
         compact: compact,
-        tooltip: _isFollowing ? 'Unfollow project' : 'Follow project',
+        tooltip: _isFollowing
+            ? LocalizedText(
+                en: 'Unfollow project',
+                ar: 'إلغاء متابعة المشروع',
+              ).resolve(context)
+            : LocalizedText(
+                en: 'Follow project',
+                ar: 'متابعة المشروع',
+              ).resolve(context),
+        semanticLabel: LocalizedText(
+          en: _followersCount == 1
+              ? '1 follower'
+              : '$_followersCount followers',
+          ar: '$_followersCount متابع',
+        ).resolve(context),
         onTap: _toggleFollow,
       ),
     ];
 
-    if (compact) {
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (var index = 0; index < pills.length; index++) ...[
-              if (index > 0) const SizedBox(width: AppSpacing.sm),
-              pills[index],
-            ],
-          ],
-        ),
-      );
-    }
-
+    // Wrap keeps all actions inside the card width on mobile instead of
+    // forcing a single overflowing horizontal row of labeled pills.
     return Wrap(
       spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
+      runSpacing: AppSpacing.xs,
       children: pills,
     );
   }
@@ -324,6 +383,7 @@ class _EngagementPill extends StatelessWidget {
     required this.isLoading,
     required this.compact,
     required this.tooltip,
+    required this.semanticLabel,
     required this.onTap,
   });
 
@@ -333,6 +393,7 @@ class _EngagementPill extends StatelessWidget {
   final bool isLoading;
   final bool compact;
   final String tooltip;
+  final String semanticLabel;
   final VoidCallback onTap;
 
   @override
@@ -341,48 +402,65 @@ class _EngagementPill extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final background = selected ? palette.limeSoft : palette.mutedChip;
     final foreground = selected ? palette.lime : palette.textSecondary;
+    final showLabel = label.trim().isNotEmpty;
 
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        borderRadius: AppRadius.pillAll,
-        onTap: isLoading ? null : onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: EdgeInsetsDirectional.symmetric(
-            horizontal: compact ? AppSpacing.sm : AppSpacing.md,
-            vertical: compact ? AppSpacing.xs : AppSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            color: background,
-            borderRadius: AppRadius.pillAll,
-            border: Border.all(
-              color: selected
-                  ? palette.lime.withValues(alpha: 0.34)
-                  : palette.borderSubtle,
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: Tooltip(
+        message: tooltip,
+        child: InkWell(
+          borderRadius: AppRadius.pillAll,
+          onTap: isLoading ? null : onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            constraints: BoxConstraints(
+              minHeight: compact ? 32 : 36,
+              minWidth: compact ? 32 : 0,
             ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (isLoading)
-                SizedBox(
-                  width: compact ? 14 : 16,
-                  height: compact ? 14 : 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: foreground,
-                  ),
-                )
-              else
-                Icon(icon, size: compact ? 16 : 18, color: foreground),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                label,
-                style: (compact ? textTheme.labelSmall : textTheme.labelMedium)
-                    ?.copyWith(color: foreground, fontWeight: FontWeight.w700),
+            padding: EdgeInsetsDirectional.symmetric(
+              horizontal: compact
+                  ? (showLabel ? AppSpacing.sm : AppSpacing.xs + 2)
+                  : AppSpacing.md,
+              vertical: compact ? AppSpacing.xs : AppSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: background,
+              borderRadius: AppRadius.pillAll,
+              border: Border.all(
+                color: selected
+                    ? palette.lime.withValues(alpha: 0.34)
+                    : palette.borderSubtle,
               ),
-            ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isLoading)
+                  SizedBox(
+                    width: compact ? 14 : 16,
+                    height: compact ? 14 : 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: foreground,
+                    ),
+                  )
+                else
+                  Icon(icon, size: compact ? 16 : 18, color: foreground),
+                if (showLabel) ...[
+                  SizedBox(width: compact ? 4 : AppSpacing.xs),
+                  Text(
+                    label,
+                    style:
+                        (compact ? textTheme.labelSmall : textTheme.labelMedium)
+                            ?.copyWith(
+                      color: foreground,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),

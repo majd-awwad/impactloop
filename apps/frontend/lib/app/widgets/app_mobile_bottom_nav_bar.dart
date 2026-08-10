@@ -15,15 +15,21 @@ import '../../features/auth/application/auth_controller.dart';
 
 const appMobileBottomNavReservedHeight = 96.0;
 
+/// Extra scroll clearance so list content clears the AI FAB above the nav.
+const appMobileAiFabReservedHeight = 72.0;
+
 EdgeInsetsDirectional appMobileAwareScrollPadding(
   BuildContext context, {
   double start = AppSpacing.md,
   double top = AppSpacing.lg,
   double end = AppSpacing.md,
   double bottom = AppSpacing.xl,
+  bool reserveAiFab = false,
 }) {
-  final extraBottom = MediaQuery.sizeOf(context).width < 600
-      ? appMobileBottomNavReservedHeight
+  final isMobile = MediaQuery.sizeOf(context).width < 600;
+  final extraBottom = isMobile
+      ? appMobileBottomNavReservedHeight +
+          (reserveAiFab ? appMobileAiFabReservedHeight : 0.0)
       : 0.0;
 
   return EdgeInsetsDirectional.fromSTEB(start, top, end, bottom + extraBottom);

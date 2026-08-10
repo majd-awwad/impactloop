@@ -42,21 +42,21 @@ class LearnerCtaBanner extends StatelessWidget {
               style: AppTextStyles.title(context).copyWith(
                 color: LearnerDiscoveryStyle.textPrimary(context),
                 fontWeight: FontWeight.w800,
-                fontSize: compact ? 16 : 18,
-                height: 1.25,
+                fontSize: compact ? 14.5 : 18,
+                height: 1.2,
               ),
               textAlign: TextAlign.start,
             ),
-            const SizedBox(height: AppSpacing.xs),
+            SizedBox(height: compact ? 2 : AppSpacing.xs),
             Text(
               subtitle,
               style: AppTextStyles.body(context).copyWith(
                 color: LearnerDiscoveryStyle.textSecondary(context),
-                fontSize: compact ? 13 : 14,
-                height: 1.35,
+                fontSize: compact ? 12 : 14,
+                height: 1.3,
               ),
               textAlign: TextAlign.start,
-              maxLines: 2,
+              maxLines: compact ? 2 : 2,
               overflow: TextOverflow.ellipsis,
             ),
           ],
@@ -116,8 +116,58 @@ class LearnerCtaBanner extends StatelessWidget {
             );
 
         if (compact) {
+          final compactIllustration = leading ??
+              Icon(
+                Icons.lightbulb_outline_rounded,
+                size: 28,
+                color: LearnerDiscoveryStyle.primary(context)
+                    .withValues(alpha: 0.85),
+              );
+          final compactPrimary = FilledButton.icon(
+            onPressed: onAction,
+            style: FilledButton.styleFrom(
+              backgroundColor: LearnerDiscoveryStyle.primary(context),
+              foregroundColor: LearnerDiscoveryStyle.textOnPrimary(context),
+              minimumSize: const Size(0, 40),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs + 2,
+              ),
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+            ),
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: Text(
+              actionLabel,
+              style: AppTextStyles.label(context).copyWith(
+                color: LearnerDiscoveryStyle.textOnPrimary(context),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          );
+          final compactSecondary =
+              secondaryLabel == null || onSecondary == null
+                  ? null
+                  : TextButton(
+                      onPressed: onSecondary,
+                      style: TextButton.styleFrom(
+                        foregroundColor:
+                            LearnerDiscoveryStyle.textPrimary(context),
+                        minimumSize: const Size(0, 36),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: const EdgeInsetsDirectional.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.xs,
+                        ),
+                      ),
+                      child: Text(secondaryLabel!),
+                    );
+
           return Container(
-            padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm + 2,
+            ),
             decoration:
                 LearnerDiscoveryStyle.softPanelDecoration(context),
             child: Column(
@@ -126,17 +176,21 @@ class LearnerCtaBanner extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    illustration,
-                    const SizedBox(width: AppSpacing.md),
+                    compactIllustration,
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(child: copy),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.md),
-                primaryButton,
-                if (secondaryButton != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  secondaryButton,
-                ],
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  children: [
+                    Expanded(child: compactPrimary),
+                    if (compactSecondary != null) ...[
+                      const SizedBox(width: AppSpacing.xs),
+                      compactSecondary,
+                    ],
+                  ],
+                ),
               ],
             ),
           );

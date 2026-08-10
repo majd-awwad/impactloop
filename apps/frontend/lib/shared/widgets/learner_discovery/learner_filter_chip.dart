@@ -85,18 +85,19 @@ class LearnerFilterChip extends StatelessWidget {
                 Icon(icon, size: dense ? 15 : 16, color: foreground),
                 const SizedBox(width: 6),
               ],
-              Flexible(
-                child: Text(
-                  label,
-                  style: AppTextStyles.label(context).copyWith(
-                    color: foreground,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                    fontSize: dense ? 12.5 : 13,
-                    letterSpacing: 0,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              // Intrinsic width only — Flexible breaks inside horizontal
+              // scroll rows (unbounded max width) and clipped chips.
+              Text(
+                label,
+                style: AppTextStyles.label(context).copyWith(
+                  color: foreground,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  fontSize: dense ? 12.5 : 13,
+                  letterSpacing: 0,
                 ),
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
