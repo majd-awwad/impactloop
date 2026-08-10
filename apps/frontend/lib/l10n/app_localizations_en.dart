@@ -3320,7 +3320,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supplierPriceCategoryLocationAndImagesAre =>
-      'Price, category, location, and images are not editable here yet.';
+      'Price, category, and location are not editable here yet.';
 
   @override
   String get supplierMaterialUpdatedSuccessfully =>

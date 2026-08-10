@@ -509,6 +509,7 @@ export const updateSupplierMaterial = async (
   const finalTitle = input.title;
   const titleChanged = material.title !== finalTitle;
   const expectedUpdatedAt = material.updatedAt;
+  const replaceImageUrls = input.imageUrls;
   const updateData = {
     title: finalTitle,
     description: input.description,
@@ -538,6 +539,7 @@ export const updateSupplierMaterial = async (
       expectedUpdatedAt,
       updateData,
       replaceConceptIds,
+      replaceImageUrls,
     });
   });
 
@@ -547,6 +549,24 @@ export const updateSupplierMaterial = async (
 
   if (updateResult.status === "stale") {
     throw new AppError(STALE_MATERIAL_UPDATE_MESSAGE, 409, "CONFLICT");
+  }
+
+  if (replaceImageUrls !== undefined) {
+    const refreshed = await supplierRepository.findSupplierOwnedMaterialById(
+      scope,
+      materialId,
+    );
+    if (!refreshed) {
+      throw new AppError("Material not found", 404, "NOT_FOUND");
+    }
+
+    return mapSupplierOwnedMaterial(
+      refreshed,
+      blockingReservationCount,
+      0,
+      {},
+      heldQuantity,
+    );
   }
 
   return mapSupplierOwnedMaterial(

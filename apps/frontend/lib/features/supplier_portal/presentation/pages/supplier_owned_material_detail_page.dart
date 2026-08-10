@@ -211,14 +211,58 @@ class _Breadcrumb extends StatelessWidget {
   }
 }
 
-class _MaterialHero extends StatelessWidget {
+class _MaterialHero extends StatefulWidget {
   const _MaterialHero({required this.material, required this.desktop});
 
   final SupplierMyMaterial material;
   final bool desktop;
 
   @override
+  State<_MaterialHero> createState() => _MaterialHeroState();
+}
+
+class _MaterialHeroState extends State<_MaterialHero> {
+  int _selectedIndex = 0;
+
+  List<String> get _imageUrls {
+    final images = [...widget.material.images]
+      ..sort((a, b) {
+        if (a.isCover != b.isCover) {
+          return a.isCover ? -1 : 1;
+        }
+        return a.sortOrder.compareTo(b.sortOrder);
+      });
+
+    final urls = images
+        .map((image) => image.imageUrl.trim())
+        .where((url) => url.isNotEmpty)
+        .toList(growable: false);
+
+    if (urls.isNotEmpty) {
+      return urls;
+    }
+
+    final cover = widget.material.coverImageUrl?.trim();
+    if (cover != null && cover.isNotEmpty) {
+      return [cover];
+    }
+
+    return const [];
+  }
+
+  @override
+  void didUpdateWidget(covariant _MaterialHero oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final urls = _imageUrls;
+    if (_selectedIndex >= urls.length) {
+      _selectedIndex = 0;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final material = widget.material;
+    final desktop = widget.desktop;
     final l = context.s;
     final l10n = context.l10n;
     final colors = context.supplierColors;
@@ -232,34 +276,93 @@ class _MaterialHero extends StatelessWidget {
     final category = isArabic
         ? material.category.nameAr
         : material.category.nameEn;
-    final image = material.coverImageUrl;
+    final imageUrls = _imageUrls;
+    final selectedUrl = imageUrls.isEmpty
+        ? null
+        : imageUrls[_selectedIndex.clamp(0, imageUrls.length - 1)];
 
-    final imagePanel = ClipRRect(
-      borderRadius: AppRadius.lgAll,
-      child: SizedBox(
-        height: desktop ? 238 : 220,
-        width: desktop ? 350 : double.infinity,
-        child: image == null || image.isEmpty
-            ? ColoredBox(
-                color: colors.chipUnselected,
-                child: Icon(
-                  Icons.image_outlined,
-                  size: 52,
-                  color: colors.textMuted,
-                ),
-              )
-            : Image.network(
-                ApiConfig.resolveMediaUrl(image),
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => ColoredBox(
-                  color: colors.chipUnselected,
-                  child: Icon(
-                    Icons.image_outlined,
-                    size: 52,
-                    color: colors.textMuted,
-                  ),
-                ),
+    final imagePanel = SizedBox(
+      width: desktop ? 350 : double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ClipRRect(
+            borderRadius: AppRadius.lgAll,
+            child: SizedBox(
+              height: desktop ? 238 : 220,
+              width: double.infinity,
+              child: selectedUrl == null
+                  ? ColoredBox(
+                      color: colors.chipUnselected,
+                      child: Icon(
+                        Icons.image_outlined,
+                        size: 52,
+                        color: colors.textMuted,
+                      ),
+                    )
+                  : Image.network(
+                      ApiConfig.resolveMediaUrl(selectedUrl),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => ColoredBox(
+                        color: colors.chipUnselected,
+                        child: Icon(
+                          Icons.image_outlined,
+                          size: 52,
+                          color: colors.textMuted,
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+          if (imageUrls.length > 1) ...[
+            const SizedBox(height: AppSpacing.sm),
+            SizedBox(
+              height: 64,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: imageUrls.length,
+                separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+                itemBuilder: (context, index) {
+                  final selected = index == _selectedIndex;
+                  return InkWell(
+                    onTap: () => setState(() => _selectedIndex = index),
+                    borderRadius: AppRadius.mdAll,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: 64,
+                      decoration: BoxDecoration(
+                        borderRadius: AppRadius.mdAll,
+                        border: Border.all(
+                          color: selected
+                              ? colors.accent
+                              : colors.border.withValues(alpha: 0.5),
+                          width: selected ? 2 : 1,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(
+                          AppRadius.md - (selected ? 1 : 0),
+                        ),
+                        child: Image.network(
+                          ApiConfig.resolveMediaUrl(imageUrls[index]),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => ColoredBox(
+                            color: colors.chipUnselected,
+                            child: Icon(
+                              Icons.image_outlined,
+                              size: 20,
+                              color: colors.textMuted,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
+            ),
+          ],
+        ],
       ),
     );
 

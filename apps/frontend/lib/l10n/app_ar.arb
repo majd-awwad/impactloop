@@ -1529,7 +1529,7 @@
   "supplierEdit": "تعديل",
   "supplierEditMaterial": "تعديل المادة",
   "supplierUpdateSafeListingDetailsPriceAnd": "حدّث تفاصيل الإدراج الآمنة. تغييرات السعر والفئة تتطلب مراجعة.",
-  "supplierPriceCategoryLocationAndImagesAre": "السعر والفئة والموقع والصور غير قابلة للتعديل هنا بعد.",
+  "supplierPriceCategoryLocationAndImagesAre": "السعر والفئة والموقع غير قابلة للتعديل هنا بعد.",
   "supplierMaterialUpdatedSuccessfully": "تم تحديث المادة بنجاح.",
   "supplierCouldNotUpdateMaterialPleaseTry": "تعذر تحديث المادة. يرجى المحاولة مرة أخرى.",
   "supplierDelete": "حذف",

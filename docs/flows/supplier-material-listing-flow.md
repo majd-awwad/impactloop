@@ -126,7 +126,7 @@ Read-only for list/detail. `PATCH` updates safe material fields; `DELETE` remove
 
 ### User path
 
-Open edit from My Materials or detail when `canEdit`. Update title, description, quantity, unit, condition, pickup notes, pickup allowed. Save → `PATCH /api/supplier/materials/:id`.
+Open edit from My Materials or detail when `canEdit`. Update title, description, quantity, unit, condition, pickup notes, pickup allowed, and images (1–5). Save → `PATCH /api/supplier/materials/:id`.
 
 ### Eligibility
 
@@ -134,7 +134,7 @@ Allowed: `AVAILABLE`, `UNAVAILABLE` with no blocking reservations (`PENDING`, `A
 
 ### Not editable
 
-Price, category, material type/name, images, pickup location, and status.
+Price, category, material type/name, pickup location, and status.
 
 ---
 

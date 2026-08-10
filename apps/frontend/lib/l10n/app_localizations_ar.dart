@@ -3270,7 +3270,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get supplierPriceCategoryLocationAndImagesAre =>
-      'السعر والفئة والموقع والصور غير قابلة للتعديل هنا بعد.';
+      'السعر والفئة والموقع غير قابلة للتعديل هنا بعد.';
 
   @override
   String get supplierMaterialUpdatedSuccessfully => 'تم تحديث المادة بنجاح.';

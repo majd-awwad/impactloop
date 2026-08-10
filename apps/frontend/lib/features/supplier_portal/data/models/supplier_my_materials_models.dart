@@ -365,6 +365,7 @@ class UpdateSupplierMyMaterialRequest {
     required this.deliveryAllowed,
     this.pickupNotes,
     this.suggestedUses,
+    this.imageUrls,
   });
 
   final String title;
@@ -376,6 +377,7 @@ class UpdateSupplierMyMaterialRequest {
   final bool deliveryAllowed;
   final String? pickupNotes;
   final String? suggestedUses;
+  final List<String>? imageUrls;
 
   Map<String, dynamic> toJson() {
     return {
@@ -392,6 +394,7 @@ class UpdateSupplierMyMaterialRequest {
       'suggestedUses': suggestedUses == null || suggestedUses!.trim().isEmpty
           ? null
           : suggestedUses!.trim(),
+      if (imageUrls != null) 'imageUrls': imageUrls,
     };
   }
 }

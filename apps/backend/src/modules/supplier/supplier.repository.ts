@@ -989,6 +989,7 @@ export const updateSupplierMaterialWithConcepts = async (input: {
   expectedUpdatedAt: Date;
   updateData: SupplierMaterialScalarUpdateData;
   replaceConceptIds?: readonly string[];
+  replaceImageUrls?: readonly string[];
 }): Promise<UpdateSupplierMaterialWithConceptsResult> => {
   const replaceConceptIds =
     input.replaceConceptIds === undefined
@@ -1039,6 +1040,20 @@ export const updateSupplierMaterialWithConcepts = async (input: {
         })),
       });
     }
+  }
+
+  if (input.replaceImageUrls !== undefined) {
+    await input.client.materialImage.deleteMany({
+      where: { materialId: input.materialId },
+    });
+    await input.client.materialImage.createMany({
+      data: input.replaceImageUrls.map((imageUrl, index) => ({
+        materialId: input.materialId,
+        imageUrl,
+        sortOrder: index,
+        isCover: index === 0,
+      })),
+    });
   }
 
   const material = await input.client.material.findUniqueOrThrow({

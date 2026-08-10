@@ -1503,7 +1503,11 @@ class _ReserveMaterialButton extends StatelessWidget {
     final palette = MaterialsUiPalette.of(context);
     final disabledReason = reservationUi.disabledReason;
 
+    // Shrink-wrap: when this sits in Scaffold.bottomNavigationBar on mobile,
+    // max height is the full screen. MainAxisSize.max would expand the bar to
+    // fill the viewport and leave the page body at zero height (blank page).
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         FilledButton.icon(

@@ -5744,7 +5744,7 @@ abstract class AppLocalizations {
   /// No description provided for @supplierPriceCategoryLocationAndImagesAre.
   ///
   /// In en, this message translates to:
-  /// **'Price, category, location, and images are not editable here yet.'**
+  /// **'Price, category, and location are not editable here yet.'**
   String get supplierPriceCategoryLocationAndImagesAre;
 
   /// No description provided for @supplierMaterialUpdatedSuccessfully.

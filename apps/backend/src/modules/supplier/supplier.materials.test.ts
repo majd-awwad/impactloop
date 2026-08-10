@@ -3478,6 +3478,86 @@ describe("updateSupplierMaterial", () => {
     assert.deepEqual(after, before);
   });
 
+  test("replaces material images when imageUrls are provided", async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      "editable-images",
+      "AVAILABLE",
+    );
+
+    await prisma.materialImage.create({
+      data: {
+        materialId: material.id,
+        imageUrl: "/uploads/materials/old-cover.jpg",
+        sortOrder: 0,
+        isCover: true,
+      },
+    });
+
+    const updated = await updateSupplierMaterial(ctx.supplierId, material.id, {
+      title: material.title,
+      description: material.description,
+      quantity:
+        typeof material.quantity === "number"
+          ? material.quantity
+          : material.quantity.toNumber(),
+      unit: material.unit,
+      condition: material.condition,
+      pickupAllowed: material.pickupAllowed,
+      deliveryAllowed: material.deliveryAllowed,
+      pickupNotes: material.pickupNotes ?? null,
+      suggestedUses: material.suggestedUses ?? null,
+      imageUrls: [
+        "/uploads/materials/new-cover.jpg",
+        "/uploads/materials/new-second.jpg",
+      ],
+    });
+
+    assert.equal(updated.images.length, 2);
+    assert.equal(updated.images[0]!.imageUrl, "/uploads/materials/new-cover.jpg");
+    assert.equal(updated.images[0]!.isCover, true);
+    assert.equal(
+      updated.images[1]!.imageUrl,
+      "/uploads/materials/new-second.jpg",
+    );
+    assert.equal(updated.images[1]!.isCover, false);
+
+    const stored = await prisma.materialImage.findMany({
+      where: { materialId: material.id },
+      orderBy: { sortOrder: "asc" },
+      select: { imageUrl: true, isCover: true, sortOrder: true },
+    });
+
+    assert.deepEqual(stored, [
+      {
+        imageUrl: "/uploads/materials/new-cover.jpg",
+        isCover: true,
+        sortOrder: 0,
+      },
+      {
+        imageUrl: "/uploads/materials/new-second.jpg",
+        isCover: false,
+        sortOrder: 1,
+      },
+    ]);
+  });
+
+  test("rejects empty imageUrls on update schema", () => {
+    const result = updateSupplierMaterialSchema.safeParse({
+      title: "Valid title",
+      description: "Valid description",
+      quantity: 1,
+      unit: "piece",
+      condition: "GOOD",
+      pickupAllowed: true,
+      deliveryAllowed: false,
+      imageUrls: [],
+    });
+
+    assert.equal(result.success, false);
+  });
+
   test("rejects editing another supplier material", async () => {
     const material = await createMaterial(
       ctx,

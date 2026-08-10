@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/router/navigation_extensions.dart';
-import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../materials/application/material_listing_providers.dart';
+import '../../../materials/data/models/material_draft_image.dart';
 import '../../application/supplier_my_materials_providers.dart';
 import '../../data/models/supplier_my_materials_models.dart';
 import '../../data/supplier_my_materials_repository.dart';
 import '../theme/supplier_theme_extension.dart';
+import '../widgets/material_image_picker_section.dart';
 import '../widgets/materials/supplier_material_edit_helper.dart';
 import '../widgets/materials/supplier_material_label_helper.dart';
 import '../widgets/materials/supplier_my_materials_colors.dart';
@@ -46,10 +47,12 @@ class _SupplierEditMaterialPageState
   final _pickupNotesController = TextEditingController();
   final _suggestedUsesController = TextEditingController();
 
+  final List<MaterialDraftImage> _images = [];
   String _condition = 'GOOD';
   bool _pickupAllowed = true;
   String? _loadedMaterialId;
   bool _saving = false;
+  bool _isUploadingImages = false;
 
   @override
   void dispose() {
@@ -67,6 +70,7 @@ class _SupplierEditMaterialPageState
     super.didUpdateWidget(oldWidget);
     if (oldWidget.materialId != widget.materialId) {
       _loadedMaterialId = null;
+      _images.clear();
     }
   }
 
@@ -84,6 +88,22 @@ class _SupplierEditMaterialPageState
     _pickupAllowed = material.pickupAllowed;
     _pickupNotesController.text = material.pickupNotes ?? '';
     _suggestedUsesController.text = material.suggestedUses ?? '';
+
+    final sortedImages = [...material.images]
+      ..sort((a, b) {
+        if (a.isCover != b.isCover) {
+          return a.isCover ? -1 : 1;
+        }
+        return a.sortOrder.compareTo(b.sortOrder);
+      });
+
+    _images
+      ..clear()
+      ..addAll(
+        sortedImages
+            .where((image) => image.imageUrl.trim().isNotEmpty)
+            .map((image) => MaterialDraftImage.fromUrl(image.imageUrl)),
+      );
   }
 
   String _formatQuantity(double quantity) {
@@ -97,8 +117,108 @@ class _SupplierEditMaterialPageState
     context.popOrGo('/supplier/materials');
   }
 
+  Future<void> _pickImages() async {
+    if (_saving || _isUploadingImages) {
+      return;
+    }
+
+    final picked = await MaterialImagePickerSection.pickImages(
+      currentCount: _images.length,
+      l: context.s,
+      onError: (message) => showSupplierErrorSnackBar(context, message),
+    );
+
+    if (picked == null || picked.isEmpty || !mounted) {
+      return;
+    }
+
+    setState(() => _images.addAll(picked));
+  }
+
+  void _removeImage(int index) {
+    if (_saving || _isUploadingImages) {
+      return;
+    }
+    if (_images.length <= 1) {
+      showSupplierErrorSnackBar(context, context.s.addAtLeastOneMaterialPhoto);
+      return;
+    }
+    setState(() => _images.removeAt(index));
+  }
+
+  List<String> _imageUrlValues() {
+    return _images
+        .map((image) => image.url)
+        .whereType<String>()
+        .toList(growable: false);
+  }
+
+  Future<List<String>> _resolveImageUrls() async {
+    final pending = _images.where((image) => image.isPending).toList();
+    if (pending.isEmpty) {
+      return _imageUrlValues();
+    }
+
+    final uploadFailedMessage = context.s.imageUploadFailed;
+    setState(() => _isUploadingImages = true);
+    try {
+      final uploaded = await uploadMaterialImages(ref, pending);
+      if (uploaded.length != pending.length) {
+        throw ApiException(message: uploadFailedMessage);
+      }
+
+      var uploadIndex = 0;
+      final resolvedImages = <MaterialDraftImage>[];
+
+      for (final image in _images) {
+        if (image.isPending) {
+          final uploadedImage = uploaded[uploadIndex++];
+          resolvedImages.add(
+            MaterialDraftImage.uploaded(
+              url: uploadedImage.url,
+              fileName: uploadedImage.filename,
+              mimeType: uploadedImage.mimeType,
+              sizeBytes: uploadedImage.sizeBytes,
+            ),
+          );
+        } else {
+          resolvedImages.add(image);
+        }
+      }
+
+      if (!mounted) {
+        return resolvedImages
+            .map((image) => image.url)
+            .whereType<String>()
+            .toList(growable: false);
+      }
+
+      setState(() {
+        _images
+          ..clear()
+          ..addAll(resolvedImages);
+        _isUploadingImages = false;
+      });
+
+      return resolvedImages
+          .map((image) => image.url)
+          .whereType<String>()
+          .toList(growable: false);
+    } catch (error) {
+      if (mounted) {
+        setState(() => _isUploadingImages = false);
+      }
+      rethrow;
+    }
+  }
+
   Future<void> _save() async {
-    if (_saving || !_formKey.currentState!.validate()) {
+    if (_saving || _isUploadingImages || !_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (_images.isEmpty) {
+      showSupplierErrorSnackBar(context, context.s.addAtLeastOneMaterialPhoto);
       return;
     }
 
@@ -112,19 +232,31 @@ class _SupplierEditMaterialPageState
     final pickupNotes = _pickupNotesController.text.trim();
     final suggestedUses = _suggestedUsesController.text.trim();
 
-    final request = UpdateSupplierMyMaterialRequest(
-      title: _titleController.text.trim(),
-      description: _descriptionController.text.trim(),
-      quantity: quantity,
-      unit: _unitController.text.trim(),
-      condition: _condition,
-      pickupAllowed: _pickupAllowed,
-      deliveryAllowed: false,
-      pickupNotes: pickupNotes.isEmpty ? null : pickupNotes,
-      suggestedUses: suggestedUses.isEmpty ? null : suggestedUses,
-    );
-
     try {
+      final imageUrls = await _resolveImageUrls();
+      if (imageUrls.isEmpty) {
+        if (mounted) {
+          showSupplierErrorSnackBar(
+            context,
+            context.s.addAtLeastOneMaterialPhoto,
+          );
+        }
+        return;
+      }
+
+      final request = UpdateSupplierMyMaterialRequest(
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        quantity: quantity,
+        unit: _unitController.text.trim(),
+        condition: _condition,
+        pickupAllowed: _pickupAllowed,
+        deliveryAllowed: false,
+        pickupNotes: pickupNotes.isEmpty ? null : pickupNotes,
+        suggestedUses: suggestedUses.isEmpty ? null : suggestedUses,
+        imageUrls: imageUrls,
+      );
+
       await ref
           .read(supplierMyMaterialsRepositoryProvider)
           .updateMaterial(widget.materialId, request);
@@ -251,9 +383,7 @@ class _SupplierEditMaterialPageState
               ),
               isArabic,
             );
-            final coverUrl = material.coverImageUrl == null
-                ? null
-                : ApiConfig.resolveMediaUrl(material.coverImageUrl!);
+            final busy = _saving || _isUploadingImages;
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpacing.lg),
@@ -262,6 +392,14 @@ class _SupplierEditMaterialPageState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    MaterialImagePickerSection(
+                      images: _images,
+                      isUploading: busy,
+                      minImages: 1,
+                      onPickImages: _pickImages,
+                      onRemoveImage: _removeImage,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
                     SupplierDarkTextField(
                       controller: _titleController,
                       label: l.materialName,
@@ -335,9 +473,10 @@ class _SupplierEditMaterialPageState
                           )
                           .toList(growable: false),
                       onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _condition = value);
+                        if (busy || value == null) {
+                          return;
                         }
+                        setState(() => _condition = value);
                       },
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -346,8 +485,9 @@ class _SupplierEditMaterialPageState
                       title: Text(l.pickupAllowed),
                       subtitle: Text(l.pickupAllowedSubtitle),
                       value: _pickupAllowed,
-                      onChanged: (value) =>
-                          setState(() => _pickupAllowed = value),
+                      onChanged: busy
+                          ? null
+                          : (value) => setState(() => _pickupAllowed = value),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     SupplierDarkTextField(
@@ -367,28 +507,6 @@ class _SupplierEditMaterialPageState
                       style: context.supplierSectionTitle(),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    if (coverUrl != null) ...[
-                      ClipRRect(
-                        borderRadius: AppRadius.lgAll,
-                        child: SizedBox(
-                          height: 140,
-                          width: double.infinity,
-                          child: Image.network(
-                            coverUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Container(
-                              color: context.supplierColors.chipUnselected,
-                              alignment: Alignment.center,
-                              child: Icon(
-                                Icons.image_outlined,
-                                color: context.supplierColors.textMuted,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                    ],
                     _ReadOnlyRow(label: l.filterCategory, value: category),
                     if (material.materialType != null &&
                         material.materialType!.trim().isNotEmpty)
@@ -409,7 +527,7 @@ class _SupplierEditMaterialPageState
                     Row(
                       children: [
                         OutlinedButton(
-                          onPressed: _saving ? null : _goBack,
+                          onPressed: busy ? null : _goBack,
                           style: SupplierMyMaterialsColors.editButtonStyle(
                             context,
                           ),
@@ -417,12 +535,12 @@ class _SupplierEditMaterialPageState
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         FilledButton(
-                          onPressed: _saving ? null : _save,
+                          onPressed: busy ? null : _save,
                           style: AppStatusButtonStyle.filled(
                             context,
                             AppStatusTone.primary,
                           ),
-                          child: _saving
+                          child: busy
                               ? const SizedBox(
                                   width: 18,
                                   height: 18,

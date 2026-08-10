@@ -21,6 +21,7 @@ class MaterialImagePickerSection extends StatelessWidget {
     required this.isUploading,
     required this.onPickImages,
     required this.onRemoveImage,
+    this.minImages = 0,
   });
 
   final List<MaterialDraftImage> images;
@@ -28,7 +29,11 @@ class MaterialImagePickerSection extends StatelessWidget {
   final VoidCallback onPickImages;
   final ValueChanged<int> onRemoveImage;
 
+  /// When set above 0, the last remaining photos cannot be removed.
+  final int minImages;
+
   bool get _canAddMore => !isUploading && images.length < _maxImages;
+  bool get _canRemove => images.length > minImages;
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +112,7 @@ class MaterialImagePickerSection extends StatelessWidget {
                       image: images[index],
                       isCover: index == 0,
                       isUploading: isUploading,
+                      canRemove: _canRemove,
                       onRemove: () => onRemoveImage(index),
                     );
                   },
@@ -313,12 +319,14 @@ class _ThumbnailTile extends StatelessWidget {
     required this.image,
     required this.isCover,
     required this.isUploading,
+    required this.canRemove,
     required this.onRemove,
   });
 
   final MaterialDraftImage image;
   final bool isCover;
   final bool isUploading;
+  final bool canRemove;
   final VoidCallback onRemove;
 
   @override
@@ -357,26 +365,30 @@ class _ThumbnailTile extends StatelessWidget {
               ),
             ),
           ),
-        PositionedDirectional(
-          end: 4,
-          top: 4,
-          child: Material(
-            color: AppColorTokens.supplierImageOverlay,
-            shape: const CircleBorder(),
-            clipBehavior: Clip.antiAlias,
-            child: IconButton(
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 28, height: 28),
-              onPressed: isUploading ? null : onRemove,
-              icon: const Icon(
-                Icons.close,
-                size: 16,
-                color: AppColorTokens.lightSurface,
+        if (canRemove)
+          PositionedDirectional(
+            end: 4,
+            top: 4,
+            child: Material(
+              color: AppColorTokens.supplierImageOverlay,
+              shape: const CircleBorder(),
+              clipBehavior: Clip.antiAlias,
+              child: IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 28,
+                  height: 28,
+                ),
+                onPressed: isUploading ? null : onRemove,
+                icon: const Icon(
+                  Icons.close,
+                  size: 16,
+                  color: AppColorTokens.lightSurface,
+                ),
               ),
             ),
           ),
-        ),
       ],
     );
   }

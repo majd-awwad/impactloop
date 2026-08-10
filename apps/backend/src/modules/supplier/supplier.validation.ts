@@ -233,6 +233,7 @@ export const updateSupplierMaterialSchema = z.object({
   deliveryAllowed: z.boolean(),
   pickupNotes: z.string().trim().max(500).optional().nullable(),
   suggestedUses: z.string().trim().max(1000).optional().nullable(),
+  imageUrls: z.array(materialImageUrlSchema).min(1).max(5).optional(),
 });
 
 export type UpdateSupplierMaterialInput = z.infer<

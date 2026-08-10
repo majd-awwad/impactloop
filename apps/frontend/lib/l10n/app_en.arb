@@ -1523,7 +1523,7 @@
   "supplierEdit": "Edit",
   "supplierEditMaterial": "Edit material",
   "supplierUpdateSafeListingDetailsPriceAnd": "Update safe listing details. Price and category changes require review.",
-  "supplierPriceCategoryLocationAndImagesAre": "Price, category, location, and images are not editable here yet.",
+  "supplierPriceCategoryLocationAndImagesAre": "Price, category, and location are not editable here yet.",
   "supplierMaterialUpdatedSuccessfully": "Material updated successfully.",
   "supplierCouldNotUpdateMaterialPleaseTry": "Could not update material. Please try again.",
   "supplierDelete": "Delete",
