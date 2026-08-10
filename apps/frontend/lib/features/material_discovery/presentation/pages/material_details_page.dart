@@ -109,7 +109,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
   late final LifecyclePollingController _reservationPollingController =
       LifecyclePollingController(
         interval: _reservationRefreshInterval,
-        onRefresh: () => unawaited(_loadViewerStateIfAuthenticated()),
+        onRefresh: _loadViewerStateIfAuthenticated,
       );
   int _likeMutationGeneration = 0;
   bool _observingLifecycle = false;

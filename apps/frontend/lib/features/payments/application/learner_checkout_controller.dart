@@ -178,6 +178,7 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
   final String reservationId;
 
   Timer? _pollTimer;
+  bool _pollInFlight = false;
 
   PaymentsRepository get _payments => ref.read(paymentsRepositoryProvider);
   ReservationsRepository get _reservations =>
@@ -810,8 +811,13 @@ class LearnerCheckoutController extends Notifier<LearnerCheckoutState> {
   void _startPolling() {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
-      if (!ref.mounted) return;
-      await reconcile(soft: true);
+      if (!ref.mounted || _pollInFlight) return;
+      _pollInFlight = true;
+      try {
+        await reconcile(soft: true);
+      } finally {
+        _pollInFlight = false;
+      }
     });
   }
 
