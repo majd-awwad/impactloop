@@ -7,12 +7,12 @@ class AiL10n {
 
   static const title = LocalizedText(
     en: 'ImpactLoop Assistant',
-    ar: 'مساعد ImpactLoop',
+    ar: 'ImpactLoop مساعد',
   );
 
   static const inputHint = LocalizedText(
-    en: 'Ask about projects, materials, tools, or safety…',
-    ar: 'اسأل عن المشاريع أو المواد أو الأدوات أو السلامة…',
+    en: 'Write your message here…',
+    ar: 'اكتب رسالتك هنا…',
   );
 
   static const send = LocalizedText(en: 'Send', ar: 'إرسال');
@@ -22,6 +22,26 @@ class AiL10n {
   static const history = LocalizedText(
     en: 'History',
     ar: 'السجل',
+  );
+
+  static const statusActive = LocalizedText(
+    en: 'Active now',
+    ar: 'نشط الآن',
+  );
+
+  static const typing = LocalizedText(
+    en: 'Typing…',
+    ar: 'جاري الكتابة…',
+  );
+
+  static const conversationsTab = LocalizedText(
+    en: 'Conversations',
+    ar: 'المحادثات',
+  );
+
+  static const attachmentsTab = LocalizedText(
+    en: 'Attachments',
+    ar: 'المرفقات',
   );
 
   static const activeConversations = LocalizedText(
@@ -34,14 +54,77 @@ class AiL10n {
     ar: 'المؤرشفة',
   );
 
+  static const searchConversations = LocalizedText(
+    en: 'Search conversations…',
+    ar: 'ابحث في المحادثات…',
+  );
+
+  static const viewAllConversations = LocalizedText(
+    en: 'View all conversations',
+    ar: 'عرض كل المحادثات',
+  );
+
+  static const lastMessagePrefix = LocalizedText(
+    en: 'Last message:',
+    ar: 'آخر رسالة:',
+  );
+
+  static const today = LocalizedText(en: 'Today', ar: 'اليوم');
+
+  static const yesterday = LocalizedText(en: 'Yesterday', ar: 'أمس');
+
+  static const attach = LocalizedText(en: 'Attach', ar: 'إرفاق');
+
+  static const voiceInput = LocalizedText(en: 'Voice input', ar: 'إدخال صوتي');
+
+  static const featureComingSoon = LocalizedText(
+    en: 'This feature is coming soon.',
+    ar: 'هذه الميزة قادمة قريبًا.',
+  );
+
+  static const noAttachments = LocalizedText(
+    en: 'No attachments yet.',
+    ar: 'لا توجد مرفقات بعد.',
+  );
+
+  static const categorySafety = LocalizedText(
+    en: 'Safety tips',
+    ar: 'نصائح السلامة',
+  );
+
+  static const categoryMaterials = LocalizedText(
+    en: 'Sustainable materials',
+    ar: 'مواد مستدامة',
+  );
+
+  static const categoryTools = LocalizedText(
+    en: 'Tools & equipment',
+    ar: 'أدوات ومعدات',
+  );
+
+  static const categorySafetyPrompt = LocalizedText(
+    en: 'What safety precautions should I follow for my current project?',
+    ar: 'ما احتياطات السلامة التي يجب أن أتبعها في مشروعي الحالي؟',
+  );
+
+  static const categoryMaterialsPrompt = LocalizedText(
+    en: 'Suggest sustainable materials suitable for a beginner project.',
+    ar: 'اقترح مواد مستدامة مناسبة لمشروع للمبتدئين.',
+  );
+
+  static const categoryToolsPrompt = LocalizedText(
+    en: 'Which tools and equipment do I need for a beginner build?',
+    ar: 'ما الأدوات والمعدات التي أحتاجها لبناء مبتدئ؟',
+  );
+
   static const emptyTitle = LocalizedText(
     en: 'How can I help with your project?',
     ar: 'كيف يمكنني مساعدتك في مشروعك؟',
   );
 
   static const emptySubtitle = LocalizedText(
-    en: 'Educational guidance for materials, tools, safety, and beginner projects.',
-    ar: 'إرشاد تعليمي حول المواد والأدوات والسلامة والمشاريع للمبتدئين.',
+    en: 'Ask about materials, tools, safety, and step-by-step project guidance.',
+    ar: 'اسأل عن المواد والأدوات والسلامة والإرشاد خطوة بخطوة لمشروعك.',
   );
 
   static const outOfScopeLabel = LocalizedText(

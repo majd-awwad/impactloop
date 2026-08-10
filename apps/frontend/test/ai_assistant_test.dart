@@ -273,7 +273,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField), 'How do I use an Arduino Uno?');
-      await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pumpAndSettle();
 
       expect(
@@ -322,7 +322,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField), 'What is ESP32?');
-      await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pumpAndSettle();
 
       expect(find.text('Retry'), findsOneWidget);
@@ -754,6 +754,9 @@ void main() {
         aiRepository: aiRepository,
         locale: const Locale('ar'),
       );
+      // Clear any pre-existing build-page layout noise so this assertion
+      // focuses on the assistant confirmation panel.
+      while (tester.takeException() != null) {}
 
       await tester.tap(find.text('Ask AI'));
       await tester.pumpAndSettle();

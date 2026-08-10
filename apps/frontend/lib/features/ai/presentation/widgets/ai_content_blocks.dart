@@ -1504,34 +1504,55 @@ class _AiActionConfirmationBlock extends StatelessWidget {
               ),
             ],
             const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: isDisabled ? null : onCancel,
-                    child: Text(
-                      block.cancelLabel ??
-                          AiL10n.cancelAction.resolve(context),
-                    ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final stacked = constraints.maxWidth < 300;
+                final cancelButton = OutlinedButton(
+                  onPressed: isDisabled ? null : onCancel,
+                  child: Text(
+                    block.cancelLabel ??
+                        AiL10n.cancelAction.resolve(context),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
                   ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: isDisabled ? null : onConfirm,
-                    child: isBusy
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(
-                            block.confirmLabel ??
-                                AiL10n.confirmAction.resolve(context),
-                          ),
-                  ),
-                ),
-              ],
+                );
+                final confirmButton = FilledButton(
+                  onPressed: isDisabled ? null : onConfirm,
+                  child: isBusy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          block.confirmLabel ??
+                              AiL10n.confirmAction.resolve(context),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                );
+
+                if (stacked) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      confirmButton,
+                      const SizedBox(height: AppSpacing.sm),
+                      cancelButton,
+                    ],
+                  );
+                }
+
+                return Row(
+                  children: [
+                    Expanded(child: cancelButton),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(child: confirmButton),
+                  ],
+                );
+              },
             ),
           ],
         ),

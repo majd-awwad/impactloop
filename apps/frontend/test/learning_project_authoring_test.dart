@@ -793,7 +793,7 @@ void main() {
     expect(aiRepository.startAuthoringSessionCalls, 0);
     expect(aiRepository.sendMessageCalls, 0);
     expect(find.text('AI project assistant'), findsOneWidget);
-    expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.send_rounded), findsOneWidget);
     expect(find.text(AiL10n.authoringSequentialStart.en), findsNothing);
     expect(find.text('Your project space is ready'), findsNothing);
     expect(find.byType(LearningProjectAuthoringAssistantPage), findsOneWidget);

@@ -23,31 +23,54 @@ class AiChatEmptyState extends StatelessWidget {
 
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+        padding: EdgeInsetsDirectional.all(
+          MediaQuery.sizeOf(context).width < 280 ? AppSpacing.md : AppSpacing.lg,
+        ),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.sizeOf(context).width < 280 ? 240 : 440,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
-                  color: colors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(18),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      colors.primary.withValues(alpha: 0.18),
+                      colors.primary.withValues(alpha: 0.08),
+                    ],
+                  ),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: colors.primary.withValues(alpha: 0.18),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors.primary.withValues(alpha: 0.12),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: Icon(
                   Icons.auto_awesome_rounded,
                   color: colors.primary,
-                  size: 28,
+                  size: 34,
                 ),
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.lg),
               Text(
                 AiL10n.emptyTitle.resolve(context),
                 style: AppTextStyles.title(context).copyWith(
                   color: palette.textPrimary,
-                  fontSize: 20,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  height: 1.3,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -56,11 +79,12 @@ class AiChatEmptyState extends StatelessWidget {
                 AiL10n.emptySubtitle.resolve(context),
                 style: AppTextStyles.body(context).copyWith(
                   color: palette.textMuted,
-                  height: 1.45,
+                  height: 1.5,
+                  fontSize: 14,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.xl),
               Wrap(
                 spacing: AppSpacing.sm,
                 runSpacing: AppSpacing.sm,
@@ -69,7 +93,8 @@ class AiChatEmptyState extends StatelessWidget {
                   for (final question in AiL10n.suggestedQuestions)
                     _SuggestedPromptChip(
                       label: question.resolve(context),
-                      onTap: () => onSuggestedQuestionTap(question.resolve(context)),
+                      onTap: () =>
+                          onSuggestedQuestionTap(question.resolve(context)),
                     ),
                 ],
               ),
@@ -95,19 +120,56 @@ class _SuggestedPromptChip extends StatelessWidget {
     final palette = MaterialsUiPalette.of(context);
     final colors = AppThemeColors.of(context);
 
-    return ActionChip(
-      label: Text(
-        label,
-        style: AppTextStyles.body(context).copyWith(
-          color: palette.textPrimary,
-          fontSize: 13,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.pillAll,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: palette.panelSurface,
+            borderRadius: AppRadius.pillAll,
+            border: Border.all(
+              color: palette.borderSubtle.withValues(alpha: 0.9),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: colors.shadow.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.sizeOf(context).width < 280 ? 200 : 320,
+            ),
+            child: Padding(
+              padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm + 2,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.lightbulb_outline, size: 16, color: colors.primary),
+                  const SizedBox(width: AppSpacing.xs),
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: AppTextStyles.body(context).copyWith(
+                        color: palette.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
-      backgroundColor: palette.panelSurface.withValues(alpha: 0.92),
-      side: BorderSide(color: palette.borderSubtle.withValues(alpha: 0.82)),
-      shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
-      avatar: Icon(Icons.lightbulb_outline, size: 16, color: colors.primary),
-      onPressed: onTap,
     );
   }
 }
