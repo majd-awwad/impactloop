@@ -147,8 +147,8 @@ class _MaterialSearchFiltersState extends State<MaterialSearchFilters> {
           controller: widget.searchController,
           onChanged: widget.onSearchChanged,
           hintText: const LocalizedText(
-            en: 'Search materials, categories, or city',
-            ar: 'ابحث عن مواد أو فئات أو مدينة',
+            en: 'Search materials, categories, suppliers, or location',
+            ar: 'ابحث عن مواد أو فئات أو موردين أو مدينة',
           ).resolve(context),
         ),
         const SizedBox(height: AppSpacing.sm),

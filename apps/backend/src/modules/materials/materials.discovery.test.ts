@@ -95,6 +95,103 @@ async function createSupplierUser(suffix: string) {
   });
 }
 
+async function createSupplierWithIdentity(input: {
+  suffix: string;
+  displayName: string;
+  publicName: string;
+  supplierType: string;
+  email?: string;
+  phone?: string | null;
+  organizationName?: string;
+  organizationType?: 'WORKSHOP' | 'FACTORY' | 'EDUCATIONAL_INSTITUTION';
+}) {
+  const passwordHash = await hashPassword('TestPassword123!');
+
+  const user = await prisma.user.create({
+    data: {
+      displayName: input.displayName,
+      email:
+        input.email ??
+        `${TEST_MARKER}-supplier-${input.suffix}-${Date.now()}@impactloop.test`,
+      phone: input.phone ?? undefined,
+      passwordHash,
+      accountStatus: 'ACTIVE',
+      emailVerifiedAt: new Date(),
+      roles: {
+        create: [{ role: 'SUPPLIER', isPrimary: true }],
+      },
+      supplierProfile: {
+        create: {
+          supplierType: input.supplierType,
+          publicName: input.publicName,
+          verificationStatus: 'VERIFIED',
+          ...(input.organizationName
+            ? {
+                organizationProfile: {
+                  create: {
+                    organizationName: input.organizationName,
+                    organizationType: input.organizationType ?? 'WORKSHOP',
+                  },
+                },
+              }
+            : {}),
+        },
+      },
+    },
+    select: {
+      id: true,
+      supplierProfile: { select: { id: true } },
+    },
+  });
+
+  assert.ok(user.supplierProfile?.id);
+  return {
+    userId: user.id,
+    profileId: user.supplierProfile.id,
+  };
+}
+
+async function createMaterialForSupplier(
+  ctx: TestContext,
+  supplierProfileId: string,
+  input: {
+    title: string;
+    ownerId: string;
+    description?: string;
+    categoryId?: string;
+    locationId?: string;
+    isFree?: boolean;
+    deliveryAllowed?: boolean;
+    pickupAllowed?: boolean;
+    status?: 'AVAILABLE' | 'PENDING_RESERVATION' | 'RESERVED' | 'UNAVAILABLE';
+  },
+) {
+  const material = await prisma.material.create({
+    data: {
+      ownerId: input.ownerId,
+      supplierProfileId,
+      categoryId: input.categoryId ?? ctx.categoryId,
+      locationId: input.locationId ?? ctx.locationId,
+      title: input.title,
+      description: input.description ?? `${input.title} description`,
+      materialType: 'Discovery test material',
+      quantity: 4,
+      unit: 'piece',
+      condition: 'GOOD',
+      sourceType: 'WORKSHOP_SURPLUS',
+      status: input.status ?? 'AVAILABLE',
+      isFree: input.isFree ?? true,
+      deliveryAllowed: input.deliveryAllowed ?? false,
+      pickupAllowed: input.pickupAllowed ?? true,
+      viewsCount: 0,
+    },
+    select: { id: true },
+  });
+
+  ctx.createdMaterialIds.push(material.id);
+  return material;
+}
+
 async function createLearnerUser(suffix: string) {
   const passwordHash = await hashPassword('TestPassword123!');
 
@@ -273,6 +370,315 @@ describe('public material discovery', () => {
     });
 
     assert.ok(result.items.some((item) => item.id === material.id));
+  });
+
+  test('q matches exact individual supplier publicName', async () => {
+    const token = `${Date.now()}`;
+    const publicName = `${TEST_MARKER} Exact Public ${token}`;
+    const supplier = await createSupplierWithIdentity({
+      suffix: `exact-pub-${token}`,
+      displayName: `${TEST_MARKER} display ignored ${token}`,
+      publicName,
+      supplierType: 'INDIVIDUAL_SUPPLIER',
+    });
+    ctx.createdUserIds.push(supplier.userId);
+
+    const material = await createMaterialForSupplier(ctx, supplier.profileId, {
+      title: `${TEST_MARKER} material for exact public ${token}`,
+      ownerId: supplier.userId,
+    });
+
+    const result = await getMaterials({
+      page: 1,
+      limit: 20,
+      q: publicName,
+      status: 'AVAILABLE',
+      priceType: 'ANY',
+      sort: 'newest',
+    });
+
+    assert.ok(result.items.some((item) => item.id === material.id));
+    assert.ok(result.pagination.total >= 1);
+  });
+
+  test('q matches partial case-insensitive supplier publicName', async () => {
+    const token = `${Date.now()}`;
+    const publicName = `${TEST_MARKER} Cedar Workshop ${token}`;
+    const supplier = await createSupplierWithIdentity({
+      suffix: `partial-pub-${token}`,
+      displayName: `${TEST_MARKER} other display ${token}`,
+      publicName,
+      supplierType: 'INDIVIDUAL_SUPPLIER',
+    });
+    ctx.createdUserIds.push(supplier.userId);
+
+    const material = await createMaterialForSupplier(ctx, supplier.profileId, {
+      title: `${TEST_MARKER} material partial public ${token}`,
+      ownerId: supplier.userId,
+    });
+
+    const result = await getMaterials({
+      page: 1,
+      limit: 20,
+      q: `cedar workshop ${token}`,
+      status: 'AVAILABLE',
+      priceType: 'ANY',
+      sort: 'newest',
+    });
+
+    assert.ok(result.items.some((item) => item.id === material.id));
+  });
+
+  test('q matches organization public organizationName', async () => {
+    const token = `${Date.now()}`;
+    const organizationName = `${TEST_MARKER} Green Fab Org ${token}`;
+    const supplier = await createSupplierWithIdentity({
+      suffix: `org-${token}`,
+      displayName: `${TEST_MARKER} org owner ${token}`,
+      publicName: `${TEST_MARKER} org public label ${token}`,
+      supplierType: 'WORKSHOP',
+      organizationName,
+      organizationType: 'WORKSHOP',
+    });
+    ctx.createdUserIds.push(supplier.userId);
+
+    const material = await createMaterialForSupplier(ctx, supplier.profileId, {
+      title: `${TEST_MARKER} org-owned material ${token}`,
+      ownerId: supplier.userId,
+    });
+
+    const result = await getMaterials({
+      page: 1,
+      limit: 20,
+      q: `Green Fab Org ${token}`,
+      status: 'AVAILABLE',
+      priceType: 'ANY',
+      sort: 'newest',
+    });
+
+    assert.ok(result.items.some((item) => item.id === material.id));
+  });
+
+  test('q does not match unrelated supplier name', async () => {
+    const token = `${Date.now()}`;
+    const supplier = await createSupplierWithIdentity({
+      suffix: `unrelated-${token}`,
+      displayName: `${TEST_MARKER} Unrelated Display ${token}`,
+      publicName: `${TEST_MARKER} Unrelated Public ${token}`,
+      supplierType: 'INDIVIDUAL_SUPPLIER',
+    });
+    ctx.createdUserIds.push(supplier.userId);
+
+    const material = await createMaterialForSupplier(ctx, supplier.profileId, {
+      title: `${TEST_MARKER} unrelated supplier material ${token}`,
+      ownerId: supplier.userId,
+    });
+
+    const result = await getMaterials({
+      page: 1,
+      limit: 50,
+      q: `${TEST_MARKER} DefinitelyNotThisSupplier ${token}`,
+      status: 'AVAILABLE',
+      priceType: 'ANY',
+      sort: 'newest',
+    });
+
+    assert.equal(
+      result.items.some((item) => item.id === material.id),
+      false,
+    );
+  });
+
+  test('q does not search private supplier email or phone', async () => {
+    const token = `${Date.now()}`;
+    const privateEmail = `${TEST_MARKER}-private-${token}@secret.impactloop.test`;
+    const privatePhone = `+96279${String(Date.now()).slice(-7)}`;
+    const supplier = await createSupplierWithIdentity({
+      suffix: `private-${token}`,
+      displayName: `${TEST_MARKER} Private Display ${token}`,
+      publicName: `${TEST_MARKER} Private Public ${token}`,
+      supplierType: 'INDIVIDUAL_SUPPLIER',
+      email: privateEmail,
+      phone: privatePhone,
+    });
+    ctx.createdUserIds.push(supplier.userId);
+
+    const material = await createMaterialForSupplier(ctx, supplier.profileId, {
+      title: `${TEST_MARKER} private-contact material ${token}`,
+      ownerId: supplier.userId,
+    });
+
+    const byEmail = await getMaterials({
+      page: 1,
+      limit: 50,
+      q: privateEmail,
+      status: 'AVAILABLE',
+      priceType: 'ANY',
+      sort: 'newest',
+    });
+    const byPhone = await getMaterials({
+      page: 1,
+      limit: 50,
+      q: privatePhone,
+      status: 'AVAILABLE',
+      priceType: 'ANY',
+      sort: 'newest',
+    });
+
+    assert.equal(
+      byEmail.items.some((item) => item.id === material.id),
+      false,
+    );
+    assert.equal(
+      byPhone.items.some((item) => item.id === material.id),
+      false,
+    );
+  });
+
+  test('supplier q combines with category free and delivery filters', async () => {
+    const token = `${Date.now()}`;
+    assert.ok(ctx.otherCategoryId, 'needs a second active material category');
+
+    const supplier = await createSupplierWithIdentity({
+      suffix: `combo-${token}`,
+      displayName: `${TEST_MARKER} Combo Display ${token}`,
+      publicName: `${TEST_MARKER} Combo Supplier ${token}`,
+      supplierType: 'INDIVIDUAL_SUPPLIER',
+    });
+    ctx.createdUserIds.push(supplier.userId);
+
+    const matching = await createMaterialForSupplier(ctx, supplier.profileId, {
+      title: `${TEST_MARKER} combo match ${token}`,
+      ownerId: supplier.userId,
+      categoryId: ctx.categoryId,
+      isFree: true,
+      deliveryAllowed: true,
+    });
+    const wrongCategory = await createMaterialForSupplier(
+      ctx,
+      supplier.profileId,
+      {
+        title: `${TEST_MARKER} combo wrong category ${token}`,
+        ownerId: supplier.userId,
+        categoryId: ctx.otherCategoryId!,
+        isFree: true,
+        deliveryAllowed: true,
+      },
+    );
+    const paid = await createMaterialForSupplier(ctx, supplier.profileId, {
+      title: `${TEST_MARKER} combo paid ${token}`,
+      ownerId: supplier.userId,
+      categoryId: ctx.categoryId,
+      isFree: false,
+      deliveryAllowed: true,
+    });
+    const noDelivery = await createMaterialForSupplier(ctx, supplier.profileId, {
+      title: `${TEST_MARKER} combo no delivery ${token}`,
+      ownerId: supplier.userId,
+      categoryId: ctx.categoryId,
+      isFree: true,
+      deliveryAllowed: false,
+    });
+
+    const result = await getMaterials({
+      page: 1,
+      limit: 50,
+      q: `Combo Supplier ${token}`,
+      categoryId: ctx.categoryId,
+      status: 'AVAILABLE',
+      priceType: 'FREE',
+      deliveryAvailable: true,
+      sort: 'newest',
+    });
+
+    const ids = new Set(result.items.map((item) => item.id));
+    assert.ok(ids.has(matching.id));
+    assert.equal(ids.has(wrongCategory.id), false);
+    assert.equal(ids.has(paid.id), false);
+    assert.equal(ids.has(noDelivery.id), false);
+  });
+
+  test('supplier q pagination and total remain correct', async () => {
+    const token = `${Date.now()}`;
+    const supplier = await createSupplierWithIdentity({
+      suffix: `page-${token}`,
+      displayName: `${TEST_MARKER} Page Display ${token}`,
+      publicName: `${TEST_MARKER} Pageable Supplier ${token}`,
+      supplierType: 'INDIVIDUAL_SUPPLIER',
+    });
+    ctx.createdUserIds.push(supplier.userId);
+
+    const createdIds: string[] = [];
+    for (let index = 0; index < 3; index += 1) {
+      const material = await createMaterialForSupplier(ctx, supplier.profileId, {
+        title: `${TEST_MARKER} pageable material ${token} ${index}`,
+        ownerId: supplier.userId,
+      });
+      createdIds.push(material.id);
+    }
+
+    const page1 = await getMaterials({
+      page: 1,
+      limit: 2,
+      q: `Pageable Supplier ${token}`,
+      status: 'AVAILABLE',
+      priceType: 'ANY',
+      sort: 'newest',
+    });
+    const page2 = await getMaterials({
+      page: 2,
+      limit: 2,
+      q: `Pageable Supplier ${token}`,
+      status: 'AVAILABLE',
+      priceType: 'ANY',
+      sort: 'newest',
+    });
+
+    assert.ok(page1.pagination.total >= 3);
+    assert.equal(page1.items.length, 2);
+    assert.ok(page2.items.length >= 1);
+
+    const allIds = new Set([
+      ...page1.items.map((item) => item.id),
+      ...page2.items.map((item) => item.id),
+    ]);
+    for (const id of createdIds) {
+      assert.ok(allIds.has(id));
+    }
+  });
+
+  test('supplier q does not expose non-discoverable materials', async () => {
+    const token = `${Date.now()}`;
+    const supplier = await createSupplierWithIdentity({
+      suffix: `hidden-${token}`,
+      displayName: `${TEST_MARKER} Hidden Display ${token}`,
+      publicName: `${TEST_MARKER} Hidden Supplier ${token}`,
+      supplierType: 'INDIVIDUAL_SUPPLIER',
+    });
+    ctx.createdUserIds.push(supplier.userId);
+
+    const visible = await createMaterialForSupplier(ctx, supplier.profileId, {
+      title: `${TEST_MARKER} visible via supplier ${token}`,
+      ownerId: supplier.userId,
+      status: 'AVAILABLE',
+    });
+    const hidden = await createMaterialForSupplier(ctx, supplier.profileId, {
+      title: `${TEST_MARKER} hidden via supplier ${token}`,
+      ownerId: supplier.userId,
+      status: 'UNAVAILABLE',
+    });
+
+    const result = await getMaterials({
+      page: 1,
+      limit: 50,
+      q: `Hidden Supplier ${token}`,
+      priceType: 'ANY',
+      sort: 'newest',
+    });
+
+    const ids = new Set(result.items.map((item) => item.id));
+    assert.ok(ids.has(visible.id));
+    assert.equal(ids.has(hidden.id), false);
   });
 
   test('priceType FREE filter works', async () => {

@@ -54,6 +54,35 @@ const buildSearchClauses = (q: string): Prisma.MaterialWhereInput[] => [
       },
     },
   },
+  // Public supplier identity only — never email/phone/private contact fields.
+  {
+    supplierProfile: {
+      publicName: {
+        contains: q,
+        mode: 'insensitive',
+      },
+    },
+  },
+  {
+    supplierProfile: {
+      user: {
+        displayName: {
+          contains: q,
+          mode: 'insensitive',
+        },
+      },
+    },
+  },
+  {
+    supplierProfile: {
+      organizationProfile: {
+        organizationName: {
+          contains: q,
+          mode: 'insensitive',
+        },
+      },
+    },
+  },
 ];
 
 const buildMaterialsWhere = (
@@ -303,6 +332,19 @@ const buildNearestWhereClauses = (
         FROM "material_tags" mt
         WHERE mt."material_id" = m."id"
           AND mt."tag" ILIKE ${pattern}
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM "supplier_profiles" sp
+        INNER JOIN "users" su ON su."id" = sp."user_id"
+        LEFT JOIN "organization_profiles" op
+          ON op."supplier_profile_id" = sp."id"
+        WHERE sp."id" = m."supplier_profile_id"
+          AND (
+            sp."public_name" ILIKE ${pattern}
+            OR su."display_name" ILIKE ${pattern}
+            OR op."organization_name" ILIKE ${pattern}
+          )
       )
     )`);
   }
