@@ -34,6 +34,7 @@ import {
   detectMaterialSearchIntent,
   detectPlatformGuidanceIntent,
   detectSupplierPublishGuidanceIntent,
+  detectCurrentInProgressProjectWording,
   filterLearnerReservationsForStatusQuery,
   isLearnerAllReservationsQuery,
   isLearnerPendingReservationQuery,
@@ -2865,6 +2866,52 @@ const resolveToolInput = async (input: {
 
     throw new AppError(
       'Tell me which learning project you mean.',
+      400,
+      'AI_ROUTE_UNCLEAR',
+    );
+  }
+
+  if (input.route === 'PROJECT_DETAILS') {
+    const explicitQuery = extractProjectTitleQuery(input.userMessage);
+    const projectMatch = await resolveProjectFromMessage({
+      conversationId: input.conversationId,
+      userMessage: input.userMessage,
+      explicitQuery,
+    });
+    if (projectMatch) {
+      return { projectId: projectMatch.entity.id };
+    }
+
+    // Active builds only when the user explicitly means current/in-progress work.
+    if (detectCurrentInProgressProjectWording(input.userMessage)) {
+      const builds = await listActiveProjectBuildsForLearner(input.userId);
+      const uniqueProjectIds = [
+        ...new Set(
+          builds
+            .map((build) => build.projectId)
+            .filter((projectId): projectId is string => Boolean(projectId)),
+        ),
+      ];
+      if (uniqueProjectIds.length === 1) {
+        return { projectId: uniqueProjectIds[0]! };
+      }
+      if (uniqueProjectIds.length > 1) {
+        const locale = detectResponseLocale(input.userMessage, 'en');
+        throw new AppError(
+          locale === 'ar'
+            ? 'عندك أكثر من مشروع قيد التنفيذ. حدّد أي واحد تقصد.'
+            : 'You have more than one in-progress project. Tell me which one you mean.',
+          400,
+          'AI_ROUTE_UNCLEAR',
+        );
+      }
+    }
+
+    const locale = detectResponseLocale(input.userMessage, 'en');
+    throw new AppError(
+      locale === 'ar'
+        ? 'حدّد أي مشروع تقصد، أو اعرض المشاريع أولاً ثم اسألني عن آخر واحد.'
+        : 'Tell me which learning project you mean, or browse projects first and then ask about the latest one.',
       400,
       'AI_ROUTE_UNCLEAR',
     );

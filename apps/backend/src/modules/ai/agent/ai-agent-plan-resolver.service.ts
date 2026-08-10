@@ -32,6 +32,8 @@ import {
   detectProjectSearchIntent,
   detectProjectsWithinBudgetIntent,
   detectProjectMaterialAvailabilityIntent,
+  detectRecentProjectDetailsIntent,
+  detectSavedProjectsIntent,
   extractBudgetBound,
   parseProjectsWithinBudgetInput,
   resolveProjectsWithinBudgetNumericContinuation,
@@ -1996,6 +1998,38 @@ const buildPhraseDetectorFallbackPlan = (
     );
   }
 
+  if (detectSavedProjectsIntent(input.userMessage)) {
+    return markFallback(
+      buildDeterministicFallbackPlan({
+        userMessage: input.userMessage,
+        routeDecision: {
+          route: 'SAVED_PROJECTS',
+          confidence: 0.93,
+          source: 'deterministic',
+          suggestedTool: 'get_saved_projects',
+        },
+        locale: input.locale,
+        conversationContext: input.conversationContext,
+      }),
+    );
+  }
+
+  if (detectRecentProjectDetailsIntent(input.userMessage)) {
+    return markFallback(
+      buildDeterministicFallbackPlan({
+        userMessage: input.userMessage,
+        routeDecision: {
+          route: 'PROJECT_DETAILS',
+          confidence: 0.93,
+          source: 'deterministic',
+          suggestedTool: 'get_learning_project_details',
+        },
+        locale: input.locale,
+        conversationContext: input.conversationContext,
+      }),
+    );
+  }
+
   const routeDecision = resolveAgentRoute({
     userMessage: input.userMessage,
     locale: input.locale,
@@ -2322,6 +2356,20 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     if (ownedContinuation) {
       return markStructuredContinuationDiagnostics(ownedContinuation);
     }
+  }
+
+  if (detectRecentProjectDetailsIntent(input.userMessage)) {
+    return buildDeterministicFallbackPlan({
+      userMessage: input.userMessage,
+      routeDecision: {
+        route: 'PROJECT_DETAILS',
+        confidence: 0.93,
+        source: 'deterministic',
+        suggestedTool: 'get_learning_project_details',
+      },
+      locale: input.locale,
+      conversationContext,
+    });
   }
 
   const plannerResult = await planSemanticUnderstanding({

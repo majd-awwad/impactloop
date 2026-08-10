@@ -1485,13 +1485,22 @@ export const planSemanticUnderstanding = async (input: {
     };
   }
 
-  if (resolveAiChatProvider() !== 'gemini') {
+  const chatProvider = resolveAiChatProvider();
+  if (chatProvider !== 'gemini' && chatProvider !== 'openai') {
     return toSemanticPlannerFailure();
   }
 
   try {
-    const { GeminiAiChatProvider } = await import('../providers/gemini-chat.provider.js');
-    const provider = new GeminiAiChatProvider();
+    const { getAiChatProvider } = await import(
+      '../providers/ai-chat-provider.factory.js'
+    );
+    const { providerSupportsSemanticUnderstanding } = await import(
+      '../providers/ai-chat-provider.types.js'
+    );
+    const provider = getAiChatProvider();
+    if (!providerSupportsSemanticUnderstanding(provider)) {
+      return toSemanticPlannerFailure();
+    }
     const result = await provider.classifySemanticUnderstanding({
       prompt: buildSemanticPlannerPrompt(input),
       locale: input.locale,
@@ -1499,16 +1508,27 @@ export const planSemanticUnderstanding = async (input: {
     const understanding = validateSemanticUnderstanding(result.data);
     if (!understanding) {
       logger.warn(
-        { userMessageLength: input.userMessage.length },
+        { userMessageLength: input.userMessage.length, provider: chatProvider },
         'AI semantic understanding planner returned invalid output',
       );
       return toSemanticPlannerFailure('semantic_invalid');
     }
     return { status: 'success', understanding };
   } catch (error) {
+    const details =
+      error instanceof AppError &&
+      typeof error.details === 'object' &&
+      error.details !== null
+        ? (error.details as Record<string, unknown>)
+        : null;
     logger.warn(
       {
-        error: error instanceof Error ? error.message.slice(0, 180) : 'unknown',
+        errorCode: error instanceof AppError ? error.code : undefined,
+        statusCode: error instanceof AppError ? error.statusCode : undefined,
+        stage: typeof details?.stage === 'string' ? details.stage : undefined,
+        model: typeof details?.model === 'string' ? details.model : undefined,
+        safeMessage:
+          error instanceof Error ? error.message.slice(0, 180) : 'unknown',
       },
       'AI semantic understanding planner failed',
     );

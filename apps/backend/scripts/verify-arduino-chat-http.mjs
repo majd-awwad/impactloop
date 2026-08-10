@@ -111,12 +111,60 @@ console.log(JSON.stringify({ conversationId, result }, null, 2));
 
 const succeeded =
   result.status === 201 &&
-  result.provider === 'gemini' &&
-  result.model === 'gemini-3.1-flash-lite' &&
+  Boolean(result.provider) &&
+  Boolean(result.model) &&
   Boolean(result.textPreview);
 
 if (!succeeded) {
   process.exitCode = 1;
+} else {
+  // Validate model against the same candidate policy as production when possible.
+  try {
+    const { getAiChatRuntimeConfig } = await import('../src/config/env.ts');
+    const runtime = getAiChatRuntimeConfig();
+    const expectedProvider = runtime.provider;
+    const candidates = new Set(runtime.modelCandidates);
+
+    if (result.provider !== expectedProvider) {
+      console.error(
+        JSON.stringify({
+          ok: false,
+          reason: 'provider_mismatch',
+          expectedProvider,
+          actualProvider: result.provider,
+        }),
+      );
+      process.exitCode = 1;
+    } else if (!candidates.has(result.model)) {
+      console.error(
+        JSON.stringify({
+          ok: false,
+          reason: 'model_not_in_candidates',
+          model: result.model,
+          modelCandidates: [...candidates],
+        }),
+      );
+      process.exitCode = 1;
+    } else {
+      console.log(
+        JSON.stringify({
+          ok: true,
+          provider: result.provider,
+          model: result.model,
+          modelCandidates: [...candidates],
+        }),
+      );
+    }
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        ok: false,
+        reason: 'candidate_validation_failed',
+        message: error instanceof Error ? error.message : String(error),
+      }),
+    );
+    process.exitCode = 1;
+  }
 }
 
 await prisma.$disconnect();

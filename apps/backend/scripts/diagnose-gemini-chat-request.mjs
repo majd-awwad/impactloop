@@ -8,7 +8,7 @@ import { aiProviderAnswerSchema } from '../src/modules/ai/ai.content-blocks.ts';
 import { buildAnswerUserPrompt } from '../src/modules/ai/providers/chat-prompt-builders.ts';
 import { extractJsonObject } from '../src/services/gemini-price-suggestion.provider.ts';
 
-const model = process.argv[2] ?? process.env.AI_CHAT_MODEL?.trim() ?? 'gemini-3.1-flash-lite';
+const model = process.argv[2] ?? process.env.AI_CHAT_MODEL?.trim() ?? 'gemini-2.0-flash';
 const apiKey = process.env.GEMINI_API_KEY?.trim();
 
 const parseSdkError = (error, operation) => {

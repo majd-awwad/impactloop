@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:frontend/features/auth/application/auth_navigation.dart';
+import 'package:frontend/features/auth/application/portal_navigation.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 
 User _user({
@@ -157,7 +158,7 @@ void main() {
       expect(profileRouteForActiveRole(user), profileRoute);
     });
 
-    test('supplier-active account targets its supplier profile', () {
+    test('supplier-active account targets its supplier overview', () {
       final user = _user(
         roles: const ['LEARNER', 'SUPPLIER'],
         activeRole: 'SUPPLIER',
@@ -169,7 +170,7 @@ void main() {
         ),
       );
 
-      expect(profileRouteForActiveRole(user), supplierProfileRoute);
+      expect(profileRouteForActiveRole(user), supplierOverviewRoute);
     });
 
     test('staff active roles use their existing portal targets', () {
@@ -199,18 +200,18 @@ void main() {
       );
     });
 
-    test('returns supplier-active accounts to their supplier profile', () {
+    test('returns supplier-active accounts to their supplier overview', () {
       expect(
         activeLearnerProfileRedirect(
           _user(roles: const ['LEARNER', 'SUPPLIER'], activeRole: 'SUPPLIER'),
         ),
-        supplierProfileRoute,
+        supplierOverviewRoute,
       );
       expect(
         activeLearnerProfileRedirect(
           _user(roles: const ['SUPPLIER'], activeRole: 'SUPPLIER'),
         ),
-        supplierProfileRoute,
+        supplierOverviewRoute,
       );
     });
 
@@ -226,6 +227,41 @@ void main() {
           _user(roles: const ['DRIVER'], activeRole: 'DRIVER'),
         ),
         driverPortalRoute,
+      );
+    });
+  });
+
+  group('resolveSupplierEntryDestination', () {
+    test('learner without supplier role goes to onboarding', () {
+      expect(
+        resolveSupplierEntryDestination(_user()),
+        SupplierEntryDestination.onboarding,
+      );
+      expect(resolveSupplierEntryDestination(null), SupplierEntryDestination.onboarding);
+    });
+
+    test('supplier-capable user in learner mode switches portal', () {
+      expect(
+        resolveSupplierEntryDestination(
+          _user(
+            roles: const ['LEARNER', 'SUPPLIER'],
+            activeRole: 'LEARNER',
+            canSwitchToSupplier: true,
+          ),
+        ),
+        SupplierEntryDestination.switchToSupplierPortal,
+      );
+    });
+
+    test('supplier-mode user opens supplier overview', () {
+      expect(
+        resolveSupplierEntryDestination(
+          _user(
+            roles: const ['LEARNER', 'SUPPLIER'],
+            activeRole: 'SUPPLIER',
+          ),
+        ),
+        SupplierEntryDestination.supplierOverview,
       );
     });
   });

@@ -82,7 +82,7 @@ String supplierEntryRouteForUser(User? user) {
   }
 
   if (userHasSupplierRole(user)) {
-    return supplierProfileRoute;
+    return supplierOverviewRoute;
   }
 
   return supplierOnboardingRoute;

@@ -101,6 +101,30 @@ bool shouldShowBecomeLearner(User user) =>
 bool shouldShowSwitchToSupplier(User user) =>
     user.isLearnerMode && user.canSwitchToSupplier;
 
+/// Centralized supplier-entry policy used by learner home and other portals.
+enum SupplierEntryDestination {
+  /// Learner lacks supplier role/profile — send to become-supplier / register.
+  onboarding,
+
+  /// Supplier-capable but currently in learner mode — switch portal first.
+  switchToSupplierPortal,
+
+  /// Already in supplier mode — open supplier overview.
+  supplierOverview,
+}
+
+SupplierEntryDestination resolveSupplierEntryDestination(User? user) {
+  if (user != null &&
+      (user.hasRole('SUPPLIER') || user.supplierProfile != null)) {
+    if (user.isSupplierMode) {
+      return SupplierEntryDestination.supplierOverview;
+    }
+    return SupplierEntryDestination.switchToSupplierPortal;
+  }
+
+  return SupplierEntryDestination.onboarding;
+}
+
 bool isOrganizationSupplierWithoutLearnerSwitch(User user) {
   if (user.canSwitchToLearner || user.canBecomeLearner) {
     return false;

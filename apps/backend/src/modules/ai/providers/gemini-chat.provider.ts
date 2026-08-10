@@ -27,6 +27,19 @@ import type {
   AiChatProviderResult,
 } from './ai-chat-provider.types.js';
 import type { AiLocale } from '../ai.types.js';
+import {
+  parseSemanticPlannerResponseText,
+  SEMANTIC_PLANNER_OPERATION,
+  shouldRejectAsNonSemanticPayload,
+} from './semantic-planner-response.js';
+
+export {
+  SEMANTIC_PLANNER_OPERATION,
+  isLearnerAnswerBlocksPayload,
+  isAdminReviewDirectPayload,
+  shouldRejectAsNonSemanticPayload,
+  parseSemanticPlannerResponseText,
+} from './semantic-planner-response.js';
 
 const ADMIN_PROJECT_REVIEW_MARKER = 'ADMIN_PROJECT_REVIEW_V1';
 
@@ -107,6 +120,9 @@ type ParsedGeminiApiError = {
 export type GeminiProviderFailureDetails = {
   stage: GeminiFailureStage;
   model?: string;
+  status?: number | string;
+  code?: string;
+  reason?: string;
   retryDelayMs?: number;
   quotaMetric?: string;
   quotaId?: string;
@@ -295,9 +311,117 @@ const parseGeminiApiError = (error: unknown): ParsedGeminiApiError => {
   }
 };
 
-const isGeminiModelUnavailableError = (error: unknown): boolean => {
-  if (isGeminiQuotaOrRateLimitError(error)) {
+const isGeminiApiKeyAuthError = (error: unknown): boolean => {
+  const parsed = parseGeminiApiError(error);
+  const statusText = String(parsed.status ?? '').toUpperCase();
+  const codeText = String(parsed.code ?? '').toUpperCase();
+  const reason = String(parsed.reason ?? '').toUpperCase();
+  const message = parsed.safeMessage.toLowerCase();
+
+  return (
+    reason.includes('API_KEY_INVALID') ||
+    statusText === '401' ||
+    codeText === 'UNAUTHENTICATED' ||
+    message.includes('api key not valid') ||
+    message.includes('api key invalid')
+  );
+};
+
+/**
+ * Project/API/key permission failures that are NOT tied to a specific model.
+ * These must fail fast without trying fallback models.
+ */
+const isGeminiProjectOrApiPermissionError = (error: unknown): boolean => {
+  if (isGeminiApiKeyAuthError(error)) {
+    return true;
+  }
+
+  const parsed = parseGeminiApiError(error);
+  const statusText = String(parsed.status ?? '').toUpperCase();
+  const codeText = String(parsed.code ?? '').toUpperCase();
+  const reason = String(parsed.reason ?? '').toUpperCase();
+  const message = parsed.safeMessage.toLowerCase();
+
+  const isPermissionStatus =
+    statusText === '403' ||
+    codeText === 'PERMISSION_DENIED' ||
+    reason.includes('PERMISSION_DENIED') ||
+    message.includes('permission denied');
+
+  if (!isPermissionStatus) {
     return false;
+  }
+
+  return (
+    message.includes('your project has been denied') ||
+    message.includes('api has not been used') ||
+    message.includes('api is not enabled') ||
+    message.includes('has not been enabled') ||
+    message.includes('service_disabled') ||
+    message.includes('billing') ||
+    message.includes('consumer_invalid') ||
+    message.includes('api key restriction') ||
+    message.includes('requests from this api key') ||
+    reason.includes('SERVICE_DISABLED') ||
+    reason.includes('CONSUMER_INVALID') ||
+    reason.includes('ACCESS_TOKEN_SCOPE_INSUFFICIENT') ||
+    // Generic 403/PERMISSION_DENIED with no identifiable model resource.
+    (!/\bmodels?\/[a-z0-9._-]+/i.test(parsed.safeMessage) &&
+      !/\bmodel[s]?\b.*\b(not found|unavailable|not supported|denied|no longer)/i.test(
+        message,
+      ))
+  );
+};
+
+/**
+ * True only when the failure is demonstrably about the requested model resource.
+ */
+const isGeminiModelSpecificAccessDenial = (error: unknown): boolean => {
+  if (isGeminiProjectOrApiPermissionError(error) || isGeminiApiKeyAuthError(error)) {
+    return false;
+  }
+
+  const parsed = parseGeminiApiError(error);
+  const statusText = String(parsed.status ?? '').toUpperCase();
+  const codeText = String(parsed.code ?? '').toUpperCase();
+  const reason = String(parsed.reason ?? '').toUpperCase();
+  const message = parsed.safeMessage.toLowerCase();
+  const mentionsModelResource =
+    /\bmodels?\/[a-z0-9._-]+/i.test(parsed.safeMessage) ||
+    /\bmodels\/[a-z0-9._-]+/i.test(message);
+
+  const isPermission =
+    statusText === '403' ||
+    codeText === 'PERMISSION_DENIED' ||
+    reason.includes('PERMISSION_DENIED') ||
+    message.includes('permission denied');
+
+  if (!isPermission) {
+    return false;
+  }
+
+  return (
+    mentionsModelResource ||
+    message.includes('permission denied on model') ||
+    message.includes('denied access to model') ||
+    (message.includes('model') &&
+      (message.includes('not supported') ||
+        message.includes('not available') ||
+        message.includes('no longer available')))
+  );
+};
+
+const isGeminiModelUnavailableError = (error: unknown): boolean => {
+  if (
+    isGeminiQuotaOrRateLimitError(error) ||
+    isGeminiApiKeyAuthError(error) ||
+    isGeminiProjectOrApiPermissionError(error)
+  ) {
+    return false;
+  }
+
+  if (isGeminiModelSpecificAccessDenial(error)) {
+    return true;
   }
 
   const parsed = parseGeminiApiError(error);
@@ -311,7 +435,8 @@ const isGeminiModelUnavailableError = (error: unknown): boolean => {
     codeText === 'NOT_FOUND' ||
     reason.includes('MODEL_NOT_FOUND') ||
     message.includes('no longer available') ||
-    (message.includes('model') && message.includes('not found'))
+    (message.includes('model') && message.includes('not found')) ||
+    (message.includes('model') && message.includes('not supported'))
   );
 };
 
@@ -345,8 +470,10 @@ const generateContentWithModelFallback = async <
 ): Promise<{ response: T; model: string }> => {
   const candidates = getGeminiChatModelCandidates();
   let lastError: unknown;
+  let lastModel: string | undefined;
 
   for (const model of candidates) {
+    lastModel = model;
     try {
       const response = (await ai.models.generateContent(
         buildRequest(model),
@@ -384,7 +511,7 @@ const generateContentWithModelFallback = async <
       }
 
       if (!isGeminiModelUnavailableError(error)) {
-        throw error;
+        throw mapGeminiFailureToAppError(error, 'generation_request', model);
       }
 
       logger.warn(
@@ -400,7 +527,11 @@ const generateContentWithModelFallback = async <
     }
   }
 
-  throw lastError ?? new Error('No Gemini chat model candidates are available.');
+  throw mapGeminiFailureToAppError(
+    lastError ?? new Error('No Gemini chat model candidates are available.'),
+    'generation_request',
+    lastModel ?? candidates[0],
+  );
 };
 
 const buildProviderFailureDetails = (
@@ -412,6 +543,9 @@ const buildProviderFailureDetails = (
   return {
     stage,
     model: model ?? parsed.quota?.model,
+    status: parsed.status,
+    code: parsed.code,
+    reason: parsed.reason,
     retryDelayMs: parsed.quota?.retryDelayMs,
     quotaMetric: parsed.quota?.quotaMetric,
     quotaId: parsed.quota?.quotaId,
@@ -448,18 +582,9 @@ const mapGeminiFailureToAppError = (
 
   const parsed = parseGeminiApiError(error);
   const failureDetails = buildProviderFailureDetails(error, stage, model);
-  const statusText = String(parsed.status ?? '').toUpperCase();
-  const codeText = String(parsed.code ?? '').toUpperCase();
-  const reason = String(parsed.reason ?? '').toUpperCase();
   const message = parsed.safeMessage.toLowerCase();
 
-  if (
-    reason.includes('API_KEY_INVALID') ||
-    message.includes('api key not valid') ||
-    statusText === '401' ||
-    statusText === '403' ||
-    message.includes('permission denied')
-  ) {
+  if (isGeminiApiKeyAuthError(error) || isGeminiProjectOrApiPermissionError(error)) {
     return new AppError(
       'The learning assistant is not configured correctly.',
       503,
@@ -589,56 +714,6 @@ export const buildGeminiAnswerContents = (
       },
     })),
   ];
-};
-
-/** Marks semantic-planner JSON requests; must not share learner answer-block parsing. */
-export const SEMANTIC_PLANNER_OPERATION = 'classifySemanticUnderstanding';
-
-export const isLearnerAnswerBlocksPayload = (value: unknown): boolean => {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return false;
-  }
-  const candidate = value as Record<string, unknown>;
-  return Array.isArray(candidate.blocks);
-};
-
-export const isAdminReviewDirectPayload = (value: unknown): boolean => {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return false;
-  }
-  const candidate = value as Record<string, unknown>;
-  return (
-    typeof candidate.summary === 'string' &&
-    typeof candidate.attentionLevel === 'string' &&
-    !('route' in candidate)
-  );
-};
-
-export const shouldRejectAsNonSemanticPayload = (value: unknown): boolean =>
-  isLearnerAnswerBlocksPayload(value) || isAdminReviewDirectPayload(value);
-
-/**
- * Semantic planner JSON extraction: direct object text or bounded fenced JSON only.
- * Rejects prose wrappers that are not safely fenced.
- */
-export const parseSemanticPlannerResponseText = (content: string): unknown => {
-  const trimmed = content.trim();
-  if (trimmed.length === 0) {
-    throw new SyntaxError('Semantic planner response was empty.');
-  }
-
-  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)```\s*$/i);
-  if (fenced?.[1]) {
-    return JSON.parse(fenced[1].trim());
-  }
-
-  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-    return JSON.parse(trimmed);
-  }
-
-  throw new SyntaxError(
-    'Semantic planner response was not a direct JSON object or fenced JSON block.',
-  );
 };
 
 export class GeminiAiChatProvider implements AiChatProvider {

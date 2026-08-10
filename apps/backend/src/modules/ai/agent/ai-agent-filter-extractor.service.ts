@@ -566,6 +566,48 @@ export const normalizeMaterialItemQuery = (
   return alias ?? trimmed;
 };
 
+export const detectSavedProjectsIntent = (userMessage: string): boolean => {
+  const normalized = normalize(userMessage);
+  return (
+    /\b(saved|bookmarked)\b.*\b(project|projects)\b/i.test(userMessage) ||
+    /(المشاريع|مشروع).*(حفظت|محفوظ|حفظتها|حفظته)/i.test(normalized) ||
+    /(شو|ما).*(المشاريع|مشروع).*(حفظ)/i.test(normalized) ||
+    /(اخر|آخر|last).*(مشروع|project).*(حفظت|محفوظ|saved)/i.test(normalized)
+  );
+};
+
+export const detectRecentProjectDetailsIntent = (userMessage: string): boolean => {
+  // Saved-project lookups are owned by detectSavedProjectsIntent.
+  if (detectSavedProjectsIntent(userMessage)) {
+    return false;
+  }
+
+  const normalized = normalize(userMessage);
+  return /((?:اخر|آخر|last|recent|previous|السابق).*(?:مشروع|project))|((?:مشروع|project).*(?:اخر|آخر|last|recent|previous|السابق))|(?:اشرح|احكيلي|حكيلي|tell|explain).*(?:عن|about).*(?:اخر|آخر|last|recent|السابق).*(?:مشروع|project)/i.test(
+    normalized,
+  );
+};
+
+/** Current/in-progress project wording — may resolve via active builds. */
+export const detectCurrentInProgressProjectWording = (
+  userMessage: string,
+): boolean => {
+  const normalized = normalize(userMessage);
+  return (
+    /(مشروعي\s+الحالي|المشروع\s+الحالي|المشروع\s+اللي\s+بشتغل|اللي\s+بشتغل\s+عليه|اللي\s+بلشت\s+فيه|قيد\s+التنفيذ)/i.test(
+      normalized,
+    ) ||
+    /\b(my\s+current\s+project|the\s+project\s+i'?m\s+working\s+on|current\s+project|in[- ]progress\s+project)\b/i.test(
+      userMessage,
+    )
+  );
+};
+
+/**
+ * Keyword/regex intent detectors in this module are used by
+ * `buildSemanticFallbackPlan` and deterministic routing helpers.
+ * GENERAL_LEARNING excludes only intents positively owned elsewhere.
+ */
 export const detectEducationalLearningIntent = (userMessage: string): boolean => {
   const normalized = normalize(userMessage);
   const educationalCue =
@@ -577,14 +619,26 @@ export const detectEducationalLearningIntent = (userMessage: string): boolean =>
       normalized,
     );
 
-  return educationalCue && !platformSearchCue;
-};
+  if (!educationalCue || platformSearchCue) {
+    return false;
+  }
 
-/**
- * Keyword/regex intent detectors in this module are used only by
- * `buildSemanticFallbackPlan` after semantic planner failure in production v2.
- * They must not be invoked as a primary routing path before Gemini.
- */
+  // Exclude only intents that another detector positively owns.
+  if (detectSavedProjectsIntent(userMessage)) {
+    return false;
+  }
+  if (detectRecentProjectDetailsIntent(userMessage)) {
+    return false;
+  }
+  if (detectCurrentInProgressProjectWording(userMessage)) {
+    return false;
+  }
+  if (detectProjectSearchIntent(userMessage)) {
+    return false;
+  }
+
+  return true;
+};
 export type PlatformGuidanceTopic =
   | 'MATERIAL_RESERVATION'
   | 'SAVE_PROJECT'
@@ -711,7 +765,19 @@ export const isMaterialUseContextQuery = (userMessage: string): boolean =>
   /(?:arduino|اردو|أردو|اردنو).*(?:مواد|materials|قطع|parts)/i.test(userMessage);
 
 export const detectProjectSearchIntent = (userMessage: string): boolean => {
-  if (detectEducationalLearningIntent(userMessage)) {
+  // Avoid recursion with detectEducationalLearningIntent (which may call us).
+  const normalizedForEducation = normalize(userMessage);
+  const looksEducational =
+    /(كيف\s+(?:ب|أ)?ستخدم|how\s+(?:do\s+i|to)\s+use|اشرحلي|اشرح|explain|شو\s+هي|what\s+is|what\s+are|الفرق\s+بين|difference\s+between|احكيلي\s+كيف|teach\s+me)/i.test(
+      normalizedForEducation,
+    ) &&
+    !/(اعرض|وريني|ورجيني|بدي|عندكم|عندك|show\s+me|find|search|available|متوفرة|مجاني|free|هل\s+عندكم)/i.test(
+      normalizedForEducation,
+    ) &&
+    !detectSavedProjectsIntent(userMessage) &&
+    !detectRecentProjectDetailsIntent(userMessage) &&
+    !detectCurrentInProgressProjectWording(userMessage);
+  if (looksEducational) {
     return false;
   }
   if (detectProjectsWithinBudgetIntent(userMessage)) {
@@ -720,12 +786,17 @@ export const detectProjectSearchIntent = (userMessage: string): boolean => {
 
   const parsedMessage = stripBenignListPrefixForParsing(userMessage);
   const normalized = normalize(parsedMessage);
-  const asksProjects = /(مشاريع|projects)/i.test(normalized);
+  const asksProjects = /(مشاريع|مشروع|projects?)/i.test(normalized);
   const searchCue =
     includesAny(normalized, SEARCH_VERBS) ||
     /(مناسبة|suitable|for\s+beginners?|مبتدئ|beginner)/i.test(normalized);
+  const suggestProjectCue =
+    /(اقترح|انصحني|بتنصحني|recommend|suggest).*(مشروع|project)/i.test(
+      normalized,
+    ) ||
+    /(مشروع|project).*(اقترح|انصحني|recommend|suggest)/i.test(normalized);
 
-  return asksProjects && searchCue;
+  return (asksProjects && searchCue) || suggestProjectCue;
 };
 
 export const hasTrustedProjectMaterialContext = (userMessage: string): boolean => {

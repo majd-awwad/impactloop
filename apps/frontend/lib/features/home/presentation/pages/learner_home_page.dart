@@ -12,6 +12,7 @@ import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_navigation.dart';
+import '../../../auth/presentation/widgets/portal_switch_menu.dart';
 import '../widgets/empty_activity_card.dart';
 import '../widgets/home_action_card.dart';
 import '../widgets/home_section_header.dart';
@@ -379,8 +380,11 @@ class _QuickActionsSection extends ConsumerWidget {
                       ? context.l10n.profile
                       : null,
                   compact: useCompactActions,
-                  onPressed: () =>
-                      context.push(supplierEntryRouteForUser(user)),
+                  onPressed: () => openSupplierDestinationForUser(
+                    context: context,
+                    ref: ref,
+                    user: user,
+                  ),
                 ),
             ];
 

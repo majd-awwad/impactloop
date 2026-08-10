@@ -183,6 +183,259 @@ describe('GeminiAiChatProvider model fallback', () => {
     assert.equal(result.model, 'gemini-2.0-flash-lite');
   });
 
+  test('falls back when the primary chat model returns PERMISSION_DENIED', async () => {
+    const attemptedModels: string[] = [];
+
+    setGeminiChatClientFactoryForTests(() => ({
+      models: {
+        generateContent: async (request: { model?: string }) => {
+          const model = request.model ?? 'unknown';
+          attemptedModels.push(model);
+
+          if (model === 'gemini-3.1-flash-lite') {
+            throw new Error(
+              JSON.stringify({
+                error: {
+                  code: 403,
+                  message:
+                    'Permission denied on models/gemini-3.1-flash-lite for this API key.',
+                  status: 'PERMISSION_DENIED',
+                },
+              }),
+            );
+          }
+
+          return {
+            text: JSON.stringify({
+              blocks: [
+                {
+                  type: 'text',
+                  text: 'Arduino Uno is a beginner microcontroller board.',
+                  purpose: 'answer',
+                },
+              ],
+            }),
+            modelVersion: model,
+            usageMetadata: {
+              promptTokenCount: 42,
+              candidatesTokenCount: 18,
+            },
+          };
+        },
+      },
+    }));
+
+    process.env.AI_CHAT_MODEL = 'gemini-3.1-flash-lite';
+
+    const provider = new GeminiAiChatProvider();
+    const result = await provider.generateGeneralLearningAnswer({
+      locale: 'en',
+      userMessage: 'Explain Arduino Uno simply',
+      history: [],
+      scopeClassification: 'DOMAIN_KNOWLEDGE',
+    });
+
+    assert.deepEqual(attemptedModels.slice(0, 2), [
+      'gemini-3.1-flash-lite',
+      'gemini-2.0-flash-lite',
+    ]);
+    assert.equal(result.model, 'gemini-2.0-flash-lite');
+  });
+
+  test('does not fall back on generic 403 PERMISSION_DENIED', async () => {
+    const attemptedModels: string[] = [];
+
+    setGeminiChatClientFactoryForTests(() => ({
+      models: {
+        generateContent: async (request: { model?: string }) => {
+          attemptedModels.push(request.model ?? 'unknown');
+          throw new Error(
+            JSON.stringify({
+              error: {
+                code: 403,
+                message: 'Permission denied.',
+                status: 'PERMISSION_DENIED',
+              },
+            }),
+          );
+        },
+      },
+    }));
+
+    process.env.AI_CHAT_MODEL = 'gemini-3.1-flash-lite';
+
+    const provider = new GeminiAiChatProvider();
+
+    await assert.rejects(
+      () =>
+        provider.generateGeneralLearningAnswer({
+          locale: 'en',
+          userMessage: 'Explain Arduino Uno simply',
+          history: [],
+          scopeClassification: 'DOMAIN_KNOWLEDGE',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, 'AI_PROVIDER_AUTH_ERROR');
+        assert.deepEqual(attemptedModels, ['gemini-3.1-flash-lite']);
+        assert.equal(
+          (error.details as { model?: string } | undefined)?.model,
+          'gemini-3.1-flash-lite',
+        );
+        assert.equal(
+          (error.details as { status?: number | string } | undefined)?.status,
+          403,
+        );
+        assert.equal(
+          (error.details as { code?: string } | undefined)?.code,
+          'PERMISSION_DENIED',
+        );
+        return true;
+      },
+    );
+  });
+
+  test('does not fall back on project/API permission 403', async () => {
+    const attemptedModels: string[] = [];
+
+    setGeminiChatClientFactoryForTests(() => ({
+      models: {
+        generateContent: async (request: { model?: string }) => {
+          attemptedModels.push(request.model ?? 'unknown');
+          throw new Error(
+            JSON.stringify({
+              error: {
+                code: 403,
+                message:
+                  'Your project has been denied access. Generative Language API has not been used or is not enabled.',
+                status: 'PERMISSION_DENIED',
+                details: [{ reason: 'SERVICE_DISABLED' }],
+              },
+            }),
+          );
+        },
+      },
+    }));
+
+    process.env.AI_CHAT_MODEL = 'gemini-3.1-flash-lite';
+
+    const provider = new GeminiAiChatProvider();
+
+    await assert.rejects(
+      () =>
+        provider.generateGeneralLearningAnswer({
+          locale: 'en',
+          userMessage: 'Explain Arduino Uno simply',
+          history: [],
+          scopeClassification: 'DOMAIN_KNOWLEDGE',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, 'AI_PROVIDER_AUTH_ERROR');
+        assert.deepEqual(attemptedModels, ['gemini-3.1-flash-lite']);
+        return true;
+      },
+    );
+  });
+
+  test('does not fall back on 401 UNAUTHENTICATED', async () => {
+    const attemptedModels: string[] = [];
+
+    setGeminiChatClientFactoryForTests(() => ({
+      models: {
+        generateContent: async (request: { model?: string }) => {
+          attemptedModels.push(request.model ?? 'unknown');
+          throw new Error(
+            JSON.stringify({
+              error: {
+                code: 401,
+                message: 'Request had invalid authentication credentials.',
+                status: 'UNAUTHENTICATED',
+              },
+            }),
+          );
+        },
+      },
+    }));
+
+    process.env.AI_CHAT_MODEL = 'gemini-3.1-flash-lite';
+
+    const provider = new GeminiAiChatProvider();
+
+    await assert.rejects(
+      () =>
+        provider.generateGeneralLearningAnswer({
+          locale: 'en',
+          userMessage: 'Explain Arduino Uno simply',
+          history: [],
+          scopeClassification: 'DOMAIN_KNOWLEDGE',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, 'AI_PROVIDER_AUTH_ERROR');
+        assert.deepEqual(attemptedModels, ['gemini-3.1-flash-lite']);
+        return true;
+      },
+    );
+  });
+
+  test('falls back when model is not found / unavailable', async () => {
+    const attemptedModels: string[] = [];
+
+    setGeminiChatClientFactoryForTests(() => ({
+      models: {
+        generateContent: async (request: { model?: string }) => {
+          const model = request.model ?? 'unknown';
+          attemptedModels.push(model);
+
+          if (model === 'gemini-3.1-flash-lite') {
+            throw new Error(
+              JSON.stringify({
+                error: {
+                  code: 404,
+                  message: 'models/gemini-3.1-flash-lite is not found',
+                  status: 'NOT_FOUND',
+                  details: [{ reason: 'MODEL_NOT_FOUND' }],
+                },
+              }),
+            );
+          }
+
+          return {
+            text: JSON.stringify({
+              blocks: [
+                {
+                  type: 'text',
+                  text: 'Arduino Uno is a beginner microcontroller board.',
+                  purpose: 'answer',
+                },
+              ],
+            }),
+            modelVersion: model,
+            usageMetadata: {
+              promptTokenCount: 12,
+              candidatesTokenCount: 8,
+            },
+          };
+        },
+      },
+    }));
+
+    process.env.AI_CHAT_MODEL = 'gemini-3.1-flash-lite';
+
+    const provider = new GeminiAiChatProvider();
+    const result = await provider.generateGeneralLearningAnswer({
+      locale: 'en',
+      userMessage: 'Explain Arduino Uno simply',
+      history: [],
+      scopeClassification: 'DOMAIN_KNOWLEDGE',
+    });
+
+    assert.ok(attemptedModels.length >= 2);
+    assert.equal(attemptedModels[0], 'gemini-3.1-flash-lite');
+    assert.equal(result.model, attemptedModels[attemptedModels.length - 1]);
+  });
+
   test('tries fallback models before surfacing RESOURCE_EXHAUSTED', async () => {
     const attemptedModels: string[] = [];
 
@@ -251,7 +504,8 @@ describe('GeminiAiChatProvider model fallback', () => {
     assert.deepEqual(attemptedModels, [
       'gemini-3.1-flash-lite',
       'gemini-2.0-flash-lite',
-      'gemini-2.0-flash',
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
     ]);
   });
 });

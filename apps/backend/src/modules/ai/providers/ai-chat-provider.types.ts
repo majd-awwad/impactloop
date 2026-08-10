@@ -46,4 +46,16 @@ export interface AiChatProvider {
   generateGeneralLearningAnswer(
     input: AiChatGenerateAnswerInput,
   ): Promise<AiChatProviderResult<AiProviderAnswer>>;
+  classifySemanticUnderstanding?(input: {
+    prompt: string;
+    locale: AiLocale;
+  }): Promise<AiChatProviderResult<unknown>>;
 }
+
+export const providerSupportsSemanticUnderstanding = (
+  provider: AiChatProvider,
+): provider is AiChatProvider & {
+  classifySemanticUnderstanding: NonNullable<
+    AiChatProvider['classifySemanticUnderstanding']
+  >;
+} => typeof provider.classifySemanticUnderstanding === 'function';

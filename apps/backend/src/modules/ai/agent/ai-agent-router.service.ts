@@ -14,6 +14,9 @@ import {
   detectProjectBudgetEstimationIntent,
   detectProjectsWithinBudgetIntent,
   detectProjectMaterialAvailabilityIntent,
+  detectProjectSearchIntent,
+  detectRecentProjectDetailsIntent,
+  detectSavedProjectsIntent,
   shouldDeferMaterialSearchForOwnedMaterialsProjectUse,
 } from './ai-agent-filter-extractor.service.js';
 import { stripBenignListPrefixForParsing } from './ai-agent-number-parser.service.js';
@@ -123,13 +126,24 @@ const PLATFORM_ROUTE_PATTERNS: RoutePattern[] = [
     ],
   },
   {
+    route: 'PROJECT_DETAILS',
+    confidence: 0.93,
+    suggestedTool: 'get_learning_project_details',
+    patterns: [
+      /(?:اخر|آخر|last|recent|previous).*(?:مشروع|project)/i,
+      /(?:مشروع|project).*(?:اخر|آخر|last|recent|previous|السابق)/i,
+      /(?:اشرح|احكيلي|حكيلي|tell|explain).*(?:عن|about).*(?:اخر|آخر|last|recent).*(?:مشروع|project)/i,
+    ],
+  },
+  {
     route: 'SAVED_PROJECTS',
     confidence: 0.93,
     suggestedTool: 'get_saved_projects',
     patterns: [
       /\b(saved|bookmarked)\b.*\b(project|projects)\b/i,
-      /(المشاريع).*(حفظت|محفوظ|حفظتها)/i,
-      /(شو|ما).*(المشاريع).*(حفظ)/i,
+      /(المشاريع|مشروع).*(حفظت|محفوظ|حفظتها|حفظته)/i,
+      /(شو|ما).*(المشاريع|مشروع).*(حفظ)/i,
+      /(اخر|آخر|last).*(مشروع|project).*(حفظت|محفوظ|saved)/i,
     ],
   },
   {
@@ -231,6 +245,33 @@ const matchSemanticPlatformRoute = (text: string): AiAgentRouteDecision | null =
       confidence: 0.94,
       source: 'deterministic',
       suggestedTool: 'get_active_project_builds',
+    };
+  }
+
+  if (detectSavedProjectsIntent(text)) {
+    return {
+      route: 'SAVED_PROJECTS',
+      confidence: 0.93,
+      source: 'deterministic',
+      suggestedTool: 'get_saved_projects',
+    };
+  }
+
+  if (detectRecentProjectDetailsIntent(text)) {
+    return {
+      route: 'PROJECT_DETAILS',
+      confidence: 0.93,
+      source: 'deterministic',
+      suggestedTool: 'get_learning_project_details',
+    };
+  }
+
+  if (detectProjectSearchIntent(text)) {
+    return {
+      route: 'PROJECT_SEARCH',
+      confidence: 0.92,
+      source: 'deterministic',
+      suggestedTool: 'search_learning_projects',
     };
   }
 
@@ -362,6 +403,33 @@ const matchPlatformRoute = (text: string): AiAgentRouteDecision | null => {
     };
   }
 
+  if (detectSavedProjectsIntent(text)) {
+    return {
+      route: 'SAVED_PROJECTS',
+      confidence: 0.93,
+      source: 'deterministic',
+      suggestedTool: 'get_saved_projects',
+    };
+  }
+
+  if (detectRecentProjectDetailsIntent(text)) {
+    return {
+      route: 'PROJECT_DETAILS',
+      confidence: 0.93,
+      source: 'deterministic',
+      suggestedTool: 'get_learning_project_details',
+    };
+  }
+
+  if (detectProjectSearchIntent(text)) {
+    return {
+      route: 'PROJECT_SEARCH',
+      confidence: 0.92,
+      source: 'deterministic',
+      suggestedTool: 'search_learning_projects',
+    };
+  }
+
   const normalized = normalize(text);
 
   for (const candidate of PLATFORM_ROUTE_PATTERNS) {
@@ -369,6 +437,24 @@ const matchPlatformRoute = (text: string): AiAgentRouteDecision | null => {
       if (
         candidate.route === 'ACTION_REQUEST' &&
         detectPlatformGuidanceIntent(text)
+      ) {
+        continue;
+      }
+      if (
+        candidate.route === 'PROJECT_SEARCH' &&
+        detectEducationalLearningIntent(text)
+      ) {
+        continue;
+      }
+      if (
+        candidate.route === 'PROJECT_DETAILS' &&
+        detectSavedProjectsIntent(text)
+      ) {
+        continue;
+      }
+      if (
+        candidate.route === 'PERSONALIZED_RECOMMENDATION' &&
+        detectProjectSearchIntent(text)
       ) {
         continue;
       }

@@ -6,6 +6,7 @@ import { isActiveReservationBehaviorStatus } from '../../reservations/reservatio
 import type { ReservationStatus } from '../../../generated/prisma/client.js';
 import {
   detectComponentMaterialMatchingIntent,
+  detectCurrentInProgressProjectWording,
   detectProjectBudgetEstimationFollowUp,
   extractProjectTitleQuery,
   normalizeArabicVariants,
@@ -393,7 +394,7 @@ const GROUNDED_PROJECT_CONTEXT_BLOCK_TYPES = new Set([
 ]);
 
 const hasContextualProjectReference = (userMessage: string): boolean =>
-  /(عرضته|السابق|اللي\s+عرضته|الي\s+عرضته|اللي\s+فوق|فوق|هذا\s+المشروع|هذا\s+الروبوت|the\s+one|recent)/i.test(
+  /(عرضته|السابق|اخر|آخر|اللي\s+عرضته|الي\s+عرضته|اللي\s+فوق|فوق|هذا\s+المشروع|هذا\s+الروبوت|the\s+one|recent|last|previous)/i.test(
     userMessage,
   ) ||
   /(?:^|[\s،,.!?])?(?:إله|له|لها)(?:$|[\s،,.!?؟])?/u.test(userMessage) ||
@@ -1214,12 +1215,16 @@ export const resolveBuildIdForUserMessage = async (input: {
     }
   }
 
-  const activeBuilds = await listActiveProjectBuildsForLearner(input.userId);
-  if (activeBuilds.length === 1) {
-    return {
-      buildId: activeBuilds[0]!.id,
-      projectId: activeBuilds[0]!.projectId,
-    };
+  // Only invent an active-build identity when the user clearly means
+  // current/in-progress work and exactly one owned build exists.
+  if (detectCurrentInProgressProjectWording(input.userMessage)) {
+    const activeBuilds = await listActiveProjectBuildsForLearner(input.userId);
+    if (activeBuilds.length === 1) {
+      return {
+        buildId: activeBuilds[0]!.id,
+        projectId: activeBuilds[0]!.projectId,
+      };
+    }
   }
 
   return null;

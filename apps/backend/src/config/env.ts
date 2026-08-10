@@ -41,6 +41,9 @@ const TRACKED_AI_ENV_KEYS = [
   'GEMINI_API_KEY',
   'GEMINI_MODEL',
   'OPENAI_API_KEY',
+  'OPENAI_MODEL',
+  'OPENAI_BASE_URL',
+  'OPENAI_JSON_MODE',
   'NODE_ENV',
 ] as const;
 
@@ -247,11 +250,53 @@ const readOpenAiApiKey = (): string | null => {
   return isUsableOpenAiApiKey(raw) ? raw! : null;
 };
 
-export const getConfiguredOpenAiApiKey = (): string | null => readOpenAiApiKey();
+export const getConfiguredOpenAiApiKey = (): string | null => {
+  reloadDevEnvFromDisk();
+  return readOpenAiApiKey();
+};
+
+export const isOpenRouterBaseUrl = (baseUrl: string | null | undefined): boolean => {
+  if (!baseUrl?.trim()) {
+    return false;
+  }
+
+  try {
+    const hostname = new URL(baseUrl).hostname.toLowerCase();
+    return hostname === 'openrouter.ai' || hostname.endsWith('.openrouter.ai');
+  } catch {
+    return false;
+  }
+};
+
+export const getOpenAiBaseUrl = (): string | null => {
+  reloadDevEnvFromDisk();
+  const raw = process.env.OPENAI_BASE_URL?.trim();
+  return raw ? raw.replace(/\/+$/, '') : null;
+};
+
+export const isOpenAiCompatibleJsonModeEnabled = (
+  baseUrl: string | null = getOpenAiBaseUrl(),
+): boolean => {
+  const explicit = process.env.OPENAI_JSON_MODE?.trim().toLowerCase();
+  if (explicit === 'true' || explicit === '1') {
+    return true;
+  }
+  if (explicit === 'false' || explicit === '0') {
+    return false;
+  }
+
+  // OpenRouter free models often reject response_format=json_object.
+  if (isOpenRouterBaseUrl(baseUrl)) {
+    return false;
+  }
+
+  return true;
+};
 
 export const GEMINI_CHAT_MODEL_FALLBACKS = [
   'gemini-2.0-flash-lite',
-  'gemini-2.0-flash',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
 ] as const;
 
 const reloadDevEnvFromDisk = (): void => {
@@ -267,16 +312,22 @@ const reloadDevEnvFromDisk = (): void => {
   bootstrapBackendEnvironment();
 };
 
+/**
+ * Canonical chat model: AI_CHAT_MODEL wins for all providers.
+ * OPENAI_MODEL is a backward-compatible fallback only when AI_CHAT_MODEL is unset
+ * and the resolved provider is openai/OpenAI-compatible.
+ */
 const readAiChatModel = (provider: AiChatProviderName): string => {
-  if (provider === 'openai') {
-    return (
-      process.env.OPENAI_MODEL?.trim() ||
-      process.env.AI_CHAT_MODEL?.trim() ||
-      'gpt-4o-mini'
-    );
+  const canonical = process.env.AI_CHAT_MODEL?.trim();
+  if (canonical) {
+    return canonical;
   }
 
-  return process.env.AI_CHAT_MODEL?.trim() || 'gemini-3.1-flash-lite';
+  if (provider === 'openai') {
+    return process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini';
+  }
+
+  return 'gemini-2.0-flash';
 };
 
 export const getResolvedAiChatModel = (): string => {
@@ -284,10 +335,65 @@ export const getResolvedAiChatModel = (): string => {
   return readAiChatModel(resolveAiChatProvider());
 };
 
+export type AiChatRuntimeConfig = {
+  provider: AiChatProviderName;
+  model: string;
+  geminiApiKey: string | null;
+  openaiApiKey: string | null;
+  openaiBaseUrl: string | null;
+  openaiJsonMode: boolean;
+  openaiBaseHost: string | null;
+  isOpenRouter: boolean;
+  timeoutMs: number;
+  maxOutputTokens: number;
+  modelCandidates: string[];
+};
+
+/** One coherent config snapshot per operation (single optional .env reload). */
+export const getAiChatRuntimeConfig = (): AiChatRuntimeConfig => {
+  reloadDevEnvFromDisk();
+  const provider = resolveAiChatProvider();
+  const model = readAiChatModel(provider);
+  const openaiBaseUrl = (() => {
+    const raw = process.env.OPENAI_BASE_URL?.trim();
+    return raw ? raw.replace(/\/+$/, '') : null;
+  })();
+  let openaiBaseHost: string | null = null;
+  try {
+    openaiBaseHost = openaiBaseUrl ? new URL(openaiBaseUrl).host : null;
+  } catch {
+    openaiBaseHost = null;
+  }
+
+  const fallbacks =
+    provider === 'gemini'
+      ? GEMINI_CHAT_MODEL_FALLBACKS.filter((candidate) => candidate !== model)
+      : [];
+
+  return {
+    provider,
+    model,
+    geminiApiKey: readGeminiApiKey(),
+    openaiApiKey: readOpenAiApiKey(),
+    openaiBaseUrl,
+    openaiJsonMode: isOpenAiCompatibleJsonModeEnabled(openaiBaseUrl),
+    openaiBaseHost,
+    isOpenRouter: isOpenRouterBaseUrl(openaiBaseUrl),
+    timeoutMs: env.aiChatTimeoutMs,
+    maxOutputTokens: env.aiChatMaxOutputTokens,
+    modelCandidates: [model, ...fallbacks],
+  };
+};
+
 export const getGeminiChatModelCandidates = (): string[] => {
-  const primary = getResolvedAiChatModel();
-  const fallbacks = GEMINI_CHAT_MODEL_FALLBACKS.filter((model) => model !== primary);
-  return [primary, ...fallbacks];
+  reloadDevEnvFromDisk();
+  // Gemini provider operations always use the Gemini fallback chain, even if
+  // another chat provider is selected for the rest of the app (e.g. tests).
+  const model = process.env.AI_CHAT_MODEL?.trim() || 'gemini-2.0-flash';
+  const fallbacks = GEMINI_CHAT_MODEL_FALLBACKS.filter(
+    (candidate) => candidate !== model,
+  );
+  return [model, ...fallbacks];
 };
 
 const readExplicitAiProvider = (): AiProviderName | null => {
@@ -674,6 +780,7 @@ export const env = {
   aiChatProvider: resolveAiChatProvider(),
   geminiApiKey: readGeminiApiKey(),
   openaiApiKey: readOpenAiApiKey(),
+  openaiBaseUrl: process.env.OPENAI_BASE_URL?.trim()?.replace(/\/+$/, '') || null,
   geminiModel: process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash',
   openaiModel: process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini',
   aiChatModel: readAiChatModel(resolveAiChatProvider()),
@@ -804,21 +911,24 @@ export const isAiChatProviderOperational = (
 };
 
 export const getAiChatDebugInfo = () => {
-  const aiChatProvider = resolveAiChatProvider();
+  const runtime = getAiChatRuntimeConfig();
 
   return {
     envFilePath: backendEnvFilePath,
     invitationsEnvFilePath: invitationsEnvFilePathExported,
-    aiChatProvider,
+    aiChatProvider: runtime.provider,
     explicitChatProvider: process.env.AI_CHAT_PROVIDER?.trim() ?? null,
-    aiChatModel: readAiChatModel(aiChatProvider),
-    openaiApiKeyConfigured: Boolean(env.openaiApiKey),
-    openaiModel: env.openaiModel,
-    geminiApiKeyConfigured: Boolean(getConfiguredGeminiApiKey()),
+    aiChatModel: runtime.model,
+    openaiApiKeyConfigured: Boolean(runtime.openaiApiKey),
+    openaiModel: process.env.OPENAI_MODEL?.trim() || null,
+    openaiBaseHost: runtime.openaiBaseHost,
+    openaiJsonMode: runtime.openaiJsonMode,
+    isOpenRouter: runtime.isOpenRouter,
+    geminiApiKeyConfigured: Boolean(runtime.geminiApiKey),
     geminiApiKeyFingerprint: getGeminiApiKeyFingerprint(),
     devMockFallbackEnabled: isAiChatDevMockFallbackEnabled(),
     geminiModel: env.geminiModel,
-    operational: isAiChatProviderOperational(aiChatProvider),
+    operational: isAiChatProviderOperational(runtime.provider),
     maxHistoryMessages: env.aiChatMaxHistoryMessages,
     maxMessageLength: env.aiChatMaxMessageLength,
     envOverrides: collectAiEnvOverrideDiagnostics(),
@@ -880,19 +990,28 @@ const collectAiConfigurationWarnings = (): string[] => {
     !process.env.AI_CHAT_MODEL?.trim()
   ) {
     warnings.push(
-      'AI_CHAT_MODEL is unset while AI_CHAT_PROVIDER=gemini. Chat defaults to gemini-3.1-flash-lite.',
+      'AI_CHAT_MODEL is unset while AI_CHAT_PROVIDER=gemini. Chat defaults to gemini-2.0-flash.',
     );
   }
 
-  if (process.env.AI_CHAT_MODEL?.trim() === 'gemini-2.5-flash') {
+  if (
+    explicitChatProvider === 'openai' &&
+    !process.env.AI_CHAT_MODEL?.trim() &&
+    process.env.OPENAI_MODEL?.trim()
+  ) {
     warnings.push(
-      'AI_CHAT_MODEL=gemini-2.5-flash is unavailable for many Google AI accounts. Prefer AI_CHAT_MODEL=gemini-3.1-flash-lite for chat.',
+      'AI_CHAT_MODEL is unset; using OPENAI_MODEL as a backward-compatible fallback. Prefer setting AI_CHAT_MODEL as the canonical chat model.',
     );
   }
 
-  if (process.env.AI_CHAT_MODEL?.trim() === 'gemini-2.5-flash-lite') {
+  if (
+    process.env.AI_CHAT_MODEL?.trim() &&
+    process.env.OPENAI_MODEL?.trim() &&
+    process.env.AI_CHAT_MODEL.trim() !== process.env.OPENAI_MODEL.trim() &&
+    (explicitChatProvider === 'openai' || resolvedChatProvider === 'openai')
+  ) {
     warnings.push(
-      'AI_CHAT_MODEL=gemini-2.5-flash-lite is unavailable for many new Google AI accounts. Prefer AI_CHAT_MODEL=gemini-3.1-flash-lite for chat.',
+      'AI_CHAT_MODEL and OPENAI_MODEL differ; AI_CHAT_MODEL is canonical for chat and takes precedence.',
     );
   }
 
@@ -944,16 +1063,25 @@ export const getAiPriceSuggestionDebugInfo = () => {
 };
 
 export const getAiPlatformDiagnostics = () => {
-  const chatProvider = resolveAiChatProvider();
+  const runtime = getAiChatRuntimeConfig();
+  const chatProvider = runtime.provider;
   const explicitChatProvider = process.env.AI_CHAT_PROVIDER?.trim() ?? chatProvider;
   const explicitChatModel =
-    process.env.AI_CHAT_MODEL?.trim() ?? readAiChatModel(chatProvider);
+    process.env.AI_CHAT_MODEL?.trim() ?? runtime.model;
 
   return {
     AI_CHAT_PROVIDER: explicitChatProvider,
     AI_CHAT_MODEL: explicitChatModel,
     chatProvider,
-    chatModel: readAiChatModel(chatProvider),
+    chatModel: runtime.model,
+    chatModelCandidates: runtime.modelCandidates,
+    openaiBaseHost: runtime.openaiBaseHost,
+    openaiJsonMode: runtime.openaiJsonMode,
+    isOpenRouter: runtime.isOpenRouter,
+    openaiModelConfigured: Boolean(process.env.OPENAI_MODEL?.trim()),
+    openaiModelEffectiveOnlyIfChatModelUnset: !Boolean(
+      process.env.AI_CHAT_MODEL?.trim(),
+    ),
     devMockFallbackEnabled: isAiChatDevMockFallbackEnabled(),
     geminiKeyLoaded: Boolean(getConfiguredGeminiApiKey()),
     geminiKeyLast4: getGeminiApiKeyLast4(),

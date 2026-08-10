@@ -154,18 +154,26 @@ const arduino = results.find((result) => result.label === 'arduino-en');
 if (!arduino) {
   process.exitCode = 1;
 } else {
+  const { getAiChatRuntimeConfig } = await import('../src/config/env.ts');
+  const runtime = getAiChatRuntimeConfig();
+  const candidates = new Set(runtime.modelCandidates);
   const succeeded =
     arduino.status === 201 &&
-    arduino.provider === 'gemini' &&
-    arduino.model === 'gemini-2.5-flash-lite';
+    arduino.provider === runtime.provider &&
+    typeof arduino.model === 'string' &&
+    arduino.model.length > 0 &&
+    candidates.has(arduino.model) &&
+    !arduino.hasMockMarker;
 
   console.log(
     JSON.stringify(
       {
         arduinoResult: arduino,
+        expectedProvider: runtime.provider,
+        modelCandidates: [...candidates],
         note: succeeded
-          ? 'Gemini HTTP verification succeeded'
-          : 'Gemini HTTP verification did not return 201 with provider=gemini and model=gemini-2.5-flash-lite',
+          ? 'AI HTTP verification succeeded against configured provider/candidates'
+          : 'AI HTTP verification failed provider/model/candidate checks',
       },
       null,
       2,

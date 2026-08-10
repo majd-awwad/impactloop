@@ -98,6 +98,43 @@ describe('AI chat provider resolution', () => {
 
     assert.equal(resolveAiChatProvider(), 'mock');
   });
+
+  test('.env.example and env.example stay byte-identical', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const { join } = await import('node:path');
+    const root = join(process.cwd());
+    const a = await readFile(join(root, '.env.example'), 'utf8');
+    const b = await readFile(join(root, 'env.example'), 'utf8');
+    assert.equal(a, b);
+  });
+
+  test('AI_CHAT_MODEL is canonical over OPENAI_MODEL in runtime snapshot', async () => {
+    withoutTestContext();
+    process.env.AI_CHAT_PROVIDER = 'openai';
+    process.env.AI_CHAT_MODEL = 'canonical-model';
+    process.env.OPENAI_MODEL = 'openai-specific-model';
+    process.env.OPENAI_API_KEY = TEST_OPENAI_KEY;
+    process.env.OPENAI_BASE_URL = 'https://openrouter.ai/api/v1';
+    process.env.OPENAI_JSON_MODE = 'false';
+
+    const {
+      getAiChatRuntimeConfig,
+      getAiPlatformDiagnostics,
+      setResolvedAiChatProviderForTests,
+    } = await import('../../config/env.js');
+    setResolvedAiChatProviderForTests(null);
+
+    const runtime = getAiChatRuntimeConfig();
+    assert.equal(runtime.model, 'canonical-model');
+    assert.equal(runtime.isOpenRouter, true);
+    assert.equal(runtime.openaiJsonMode, false);
+    assert.equal(runtime.openaiBaseHost, 'openrouter.ai');
+
+    const diagnostics = getAiPlatformDiagnostics();
+    assert.equal(diagnostics.chatModel, 'canonical-model');
+    assert.equal(diagnostics.openaiBaseHost, 'openrouter.ai');
+    assert.equal(diagnostics.openaiJsonMode, false);
+  });
 });
 
 describe('GeminiAiChatProvider', () => {

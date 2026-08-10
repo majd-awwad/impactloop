@@ -11,6 +11,27 @@ import '../../application/auth_route_helpers.dart';
 import '../../application/portal_navigation.dart';
 import '../../data/models/user.dart';
 
+Future<void> openSupplierDestinationForUser({
+  required BuildContext context,
+  required WidgetRef ref,
+  required User? user,
+}) async {
+  switch (resolveSupplierEntryDestination(user)) {
+    case SupplierEntryDestination.supplierOverview:
+      context.go(supplierOverviewRoute);
+      return;
+    case SupplierEntryDestination.switchToSupplierPortal:
+      await handlePortalRoleSwitch(
+        context: context,
+        ref: ref,
+        targetRole: 'SUPPLIER',
+      );
+      return;
+    case SupplierEntryDestination.onboarding:
+      context.push(supplierEntryRouteForUser(user));
+  }
+}
+
 Future<void> handlePortalRoleSwitch({
   required BuildContext context,
   required WidgetRef ref,

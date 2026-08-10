@@ -24,12 +24,12 @@ void main() {
       expect(supplierEntryRouteForUser(_testUser()), becomeSupplierRoute);
     });
 
-    test('returns profile for supplier users', () {
+    test('returns overview for supplier users', () {
       expect(
         supplierEntryRouteForUser(
           _testUser(roles: const ['LEARNER', 'SUPPLIER']),
         ),
-        supplierProfileRoute,
+        supplierOverviewRoute,
       );
     });
   });

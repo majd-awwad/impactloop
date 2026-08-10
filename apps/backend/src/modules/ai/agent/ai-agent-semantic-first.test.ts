@@ -8,6 +8,9 @@ import { classifyScopeDeterministic } from '../ai-scope-guard.js';
 import {
   detectEducationalLearningIntent,
   detectMaterialSearchIntent,
+  detectProjectSearchIntent,
+  detectRecentProjectDetailsIntent,
+  detectSavedProjectsIntent,
   extractMaterialSearchFilters,
   filterLearnerReservationsForStatusQuery,
   isLearnerAllReservationsQuery,
@@ -826,6 +829,124 @@ describe('semantic-first general learning distinction', () => {
       assert.equal(detectMaterialSearchIntent(message).detected, false);
       const route = resolveAgentRoute({ userMessage: message, locale: 'ar' });
       assert.equal(route.route, 'GENERAL_LEARNING');
+    });
+  }
+});
+
+describe('intent boundary: recent project vs educational vs search', () => {
+  const cases: Array<{
+    message: string;
+    locale: 'ar' | 'en';
+    expect: {
+      recent?: boolean;
+      educational?: boolean;
+      projectSearch?: boolean;
+      saved?: boolean;
+      route: string;
+    };
+  }> = [
+    {
+      message: 'اشرحلي عن آخر مشروع',
+      locale: 'ar',
+      expect: { recent: true, educational: false, route: 'PROJECT_DETAILS' },
+    },
+    {
+      message: 'احكيلي عن المشروع السابق',
+      locale: 'ar',
+      expect: { recent: true, educational: false, route: 'PROJECT_DETAILS' },
+    },
+    {
+      message: 'اشرحلي عن مشروع Arduino',
+      locale: 'ar',
+      expect: {
+        recent: false,
+        educational: true,
+        projectSearch: false,
+        route: 'GENERAL_LEARNING',
+      },
+    },
+    {
+      message: 'اقترحلي مشروع Arduino',
+      locale: 'ar',
+      expect: {
+        educational: false,
+        projectSearch: true,
+        route: 'PROJECT_SEARCH',
+      },
+    },
+    {
+      message: 'شو آخر مشروع حفظته؟',
+      locale: 'ar',
+      expect: {
+        saved: true,
+        recent: false,
+        educational: false,
+        route: 'SAVED_PROJECTS',
+      },
+    },
+    {
+      message: 'Tell me about my last project',
+      locale: 'en',
+      expect: { recent: true, educational: false, route: 'PROJECT_DETAILS' },
+    },
+    {
+      message: 'Explain an Arduino project',
+      locale: 'en',
+      expect: {
+        recent: false,
+        educational: true,
+        projectSearch: false,
+        route: 'GENERAL_LEARNING',
+      },
+    },
+    {
+      message: 'Suggest an Arduino project',
+      locale: 'en',
+      expect: {
+        educational: false,
+        projectSearch: true,
+        route: 'PROJECT_SEARCH',
+      },
+    },
+    {
+      message: 'Tell me about the previous project',
+      locale: 'en',
+      expect: { recent: true, educational: false, route: 'PROJECT_DETAILS' },
+    },
+  ];
+
+  for (const sample of cases) {
+    test(`${sample.locale}: ${sample.message}`, () => {
+      if (sample.expect.recent != null) {
+        assert.equal(
+          detectRecentProjectDetailsIntent(sample.message),
+          sample.expect.recent,
+        );
+      }
+      if (sample.expect.educational != null) {
+        assert.equal(
+          detectEducationalLearningIntent(sample.message),
+          sample.expect.educational,
+        );
+      }
+      if (sample.expect.projectSearch != null) {
+        assert.equal(
+          detectProjectSearchIntent(sample.message),
+          sample.expect.projectSearch,
+        );
+      }
+      if (sample.expect.saved != null) {
+        assert.equal(
+          detectSavedProjectsIntent(sample.message),
+          sample.expect.saved,
+        );
+      }
+
+      const route = resolveAgentRoute({
+        userMessage: sample.message,
+        locale: sample.locale,
+      });
+      assert.equal(route.route, sample.expect.route);
     });
   }
 });
