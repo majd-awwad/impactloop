@@ -9957,6 +9957,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authBrandTitle => 'ImpactLoop';
 
   @override
+  String get authOnboardingStorySubtitle =>
+      'Join a reuse loop where learners find materials, suppliers share surplus, and practical projects become easier to build.';
+
+  @override
+  String get authOnboardingBenefitFindNearby => 'Find useful materials nearby';
+
+  @override
+  String get authOnboardingBenefitShareSurplus =>
+      'Share surplus instead of wasting it';
+
+  @override
+  String get authOnboardingBenefitBuildPractical =>
+      'Build practical projects with less cost';
+
+  @override
   String get homeSuggestedMaterialsLoadError =>
       'Unable to load suggested materials';
 

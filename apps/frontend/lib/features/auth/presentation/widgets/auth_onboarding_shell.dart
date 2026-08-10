@@ -296,16 +296,16 @@ class AuthInfoRow extends StatelessWidget {
 class AuthOnboardingStoryPanel extends StatelessWidget {
   const AuthOnboardingStoryPanel({super.key});
 
-  static const _benefits = [
-    (Icons.search_rounded, 'Find useful materials nearby'),
-    (Icons.inventory_2_outlined, 'Share surplus instead of wasting it'),
-    (Icons.construction_rounded, 'Build practical projects with less cost'),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final colors = AuthUiPalette.of(context);
+    final l10n = context.l10n;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final benefits = [
+      (Icons.search_rounded, l10n.authOnboardingBenefitFindNearby),
+      (Icons.inventory_2_outlined, l10n.authOnboardingBenefitShareSurplus),
+      (Icons.construction_rounded, l10n.authOnboardingBenefitBuildPractical),
+    ];
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -316,7 +316,7 @@ class AuthOnboardingStoryPanel extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ImpactLoopLogo(
               iconColor: colors.primary,
@@ -326,7 +326,7 @@ class AuthOnboardingStoryPanel extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xxl),
             Text(
-              'Learn. Reuse. Build.',
+              l10n.learnReuseBuild,
               textAlign: TextAlign.start,
               style: TextStyle(
                 color: colors.textPrimary,
@@ -337,7 +337,7 @@ class AuthOnboardingStoryPanel extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Join a reuse loop where learners find materials, suppliers share surplus, and practical projects become easier to build.',
+              l10n.authOnboardingStorySubtitle,
               textAlign: TextAlign.start,
               style: TextStyle(
                 color: colors.textSecondary,
@@ -346,7 +346,7 @@ class AuthOnboardingStoryPanel extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
-            for (final benefit in _benefits) ...[
+            for (final benefit in benefits) ...[
               _BenefitRow(icon: benefit.$1, label: benefit.$2),
               const SizedBox(height: AppSpacing.md),
             ],
@@ -385,7 +385,7 @@ class _BenefitRow extends StatelessWidget {
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.only(top: 7),
+            padding: const EdgeInsetsDirectional.only(top: 7),
             child: Text(
               label,
               textAlign: TextAlign.start,

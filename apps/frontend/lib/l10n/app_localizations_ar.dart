@@ -9913,6 +9913,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String get authBrandTitle => 'ImpactLoop';
 
   @override
+  String get authOnboardingStorySubtitle =>
+      'انضم إلى منظومة إعادة استخدام يجد فيها المتعلمون المواد، ويشارك المورّدون الفائض، وتصبح المشاريع العملية أسهل في التنفيذ.';
+
+  @override
+  String get authOnboardingBenefitFindNearby =>
+      'اعثر على مواد مفيدة بالقرب منك';
+
+  @override
+  String get authOnboardingBenefitShareSurplus =>
+      'شارك المواد الفائضة بدلًا من إهدارها';
+
+  @override
+  String get authOnboardingBenefitBuildPractical =>
+      'نفّذ مشاريع عملية بتكلفة أقل';
+
+  @override
   String get homeSuggestedMaterialsLoadError => 'تعذر تحميل المواد المقترحة';
 
   @override

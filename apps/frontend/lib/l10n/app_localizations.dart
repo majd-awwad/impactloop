@@ -16829,6 +16829,30 @@ abstract class AppLocalizations {
   /// **'ImpactLoop'**
   String get authBrandTitle;
 
+  /// No description provided for @authOnboardingStorySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Join a reuse loop where learners find materials, suppliers share surplus, and practical projects become easier to build.'**
+  String get authOnboardingStorySubtitle;
+
+  /// No description provided for @authOnboardingBenefitFindNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'Find useful materials nearby'**
+  String get authOnboardingBenefitFindNearby;
+
+  /// No description provided for @authOnboardingBenefitShareSurplus.
+  ///
+  /// In en, this message translates to:
+  /// **'Share surplus instead of wasting it'**
+  String get authOnboardingBenefitShareSurplus;
+
+  /// No description provided for @authOnboardingBenefitBuildPractical.
+  ///
+  /// In en, this message translates to:
+  /// **'Build practical projects with less cost'**
+  String get authOnboardingBenefitBuildPractical;
+
   /// No description provided for @homeSuggestedMaterialsLoadError.
   ///
   /// In en, this message translates to:
