@@ -2692,6 +2692,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Track supplier responses and pickup windows for requested materials.';
 
   @override
+  String get becomeSupplierActionDescription =>
+      'Start the supplier setup path for your account.';
+
+  @override
+  String get supplierProfileActionDescription =>
+      'Update your supplier profile and pickup details.';
+
+  @override
   String get comingLater => 'Coming later';
 
   @override

@@ -2650,6 +2650,14 @@ class AppLocalizationsAr extends AppLocalizations {
       'تابع ردود المورّدين ومواعيد استلام المواد المطلوبة.';
 
   @override
+  String get becomeSupplierActionDescription =>
+      'ابدأ إعداد حساب المورّد الخاص بك.';
+
+  @override
+  String get supplierProfileActionDescription =>
+      'حدّث ملف المورّد وتفاصيل الاستلام.';
+
+  @override
   String get comingLater => 'قريبًا';
 
   @override
@@ -6327,7 +6335,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notSelected => 'لم يتم الاختيار';
 
   @override
-  String get becomeSupplierTitle => 'انضم كمورد';
+  String get becomeSupplierTitle => 'كن مورّدًا';
 
   @override
   String get becomeSupplierSubtitle =>

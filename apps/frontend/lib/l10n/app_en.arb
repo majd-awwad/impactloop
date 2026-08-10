@@ -1266,6 +1266,8 @@
   "learningActionDescription": "Open the Learning Hub project catalog.",
   "trackPickups": "Track pickups",
   "reservationsActionDescription": "Track supplier responses and pickup windows for requested materials.",
+  "becomeSupplierActionDescription": "Start the supplier setup path for your account.",
+  "supplierProfileActionDescription": "Update your supplier profile and pickup details.",
   "comingLater": "Coming later",
   "comingLaterSubtitle": "Impact insights are planned but not available yet.",
   "impactSnapshot": "Impact snapshot",

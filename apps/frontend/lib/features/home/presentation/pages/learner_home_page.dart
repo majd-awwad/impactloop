@@ -364,19 +364,19 @@ class _QuickActionsSection extends ConsumerWidget {
                 HomeActionCard(
                   icon: Icons.storefront_outlined,
                   title: useCompactActions
-                      ? 'Supplier'
+                      ? context.l10n.supplier
                       : hasSupplierRole
-                      ? 'Supplier profile'
-                      : 'Become a supplier',
+                      ? context.l10n.supplierProfile
+                      : context.l10n.becomeSupplierTitle,
                   description: useCompactActions
-                      ? 'Share materials'
+                      ? context.l10n.shareMaterials
                       : hasSupplierRole
-                      ? 'Update your supplier profile and pickup details.'
-                      : 'Start the supplier setup path for your account.',
+                      ? context.l10n.supplierProfileActionDescription
+                      : context.l10n.becomeSupplierActionDescription,
                   badge: useCompactActions
                       ? null
                       : hasSupplierRole
-                      ? 'Profile'
+                      ? context.l10n.profile
                       : null,
                   compact: useCompactActions,
                   onPressed: () =>

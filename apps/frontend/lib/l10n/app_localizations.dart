@@ -4652,6 +4652,18 @@ abstract class AppLocalizations {
   /// **'Track supplier responses and pickup windows for requested materials.'**
   String get reservationsActionDescription;
 
+  /// No description provided for @becomeSupplierActionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Start the supplier setup path for your account.'**
+  String get becomeSupplierActionDescription;
+
+  /// No description provided for @supplierProfileActionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Update your supplier profile and pickup details.'**
+  String get supplierProfileActionDescription;
+
   /// No description provided for @comingLater.
   ///
   /// In en, this message translates to:
