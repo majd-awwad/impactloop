@@ -338,3 +338,165 @@ class _ProjectMetaChip extends StatelessWidget {
     );
   }
 }
+
+/// Mobile horizontal project card matching Learning Hub reference density.
+class LearningProjectCompactCard extends StatelessWidget {
+  const LearningProjectCompactCard({super.key, required this.project});
+
+  final LearningProject project;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    final readiness = project.personalBuildReadiness;
+    final coverage = project.materialCoverage;
+    final progress = readiness?.readinessRatio ??
+        coverage?.availabilityRatio;
+
+    return InkWell(
+      borderRadius: AppRadius.lgAll,
+      onTap: () => context.push('/learning/${project.id}'),
+      child: Container(
+        constraints: const BoxConstraints(
+          minHeight: LearningProjectCardLayout.compactCardHeight,
+        ),
+        decoration: BoxDecoration(
+          color: palette.cardSurface,
+          borderRadius: AppRadius.lgAll,
+          border: Border.all(color: palette.borderSubtle),
+          boxShadow: [
+            BoxShadow(
+              color: palette.cardShadow.withValues(alpha: 0.06),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        project.title.resolve(context),
+                        style: textTheme.titleSmall?.copyWith(
+                          color: palette.textPrimary,
+                          fontWeight: FontWeight.w800,
+                          height: 1.2,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.start,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      _ProjectMetaChip(
+                        label: project.category.resolve(context),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.equalizer_rounded,
+                            size: 16,
+                            color: palette.lime,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              project.difficulty.resolve(context),
+                              style: textTheme.labelSmall?.copyWith(
+                                color: palette.lime,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (progress != null) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: AppRadius.pillAll,
+                                child: LinearProgressIndicator(
+                                  value: progress.clamp(0.0, 1.0),
+                                  minHeight: 6,
+                                  backgroundColor: palette.borderSubtle,
+                                  color: palette.lime,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Text(
+                              '${(progress * 100).round()}%',
+                              style: textTheme.labelSmall?.copyWith(
+                                color: palette.textSecondary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: AppSpacing.sm),
+                      ProjectEngagementStrip(
+                        project: project,
+                        density: ProjectEngagementDensity.compact,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 108,
+                child: ClipRRect(
+                  borderRadius: const BorderRadiusDirectional.only(
+                    topEnd: Radius.circular(AppRadius.lg),
+                    bottomEnd: Radius.circular(AppRadius.lg),
+                  ),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: AlignmentDirectional.topStart,
+                        end: AlignmentDirectional.bottomEnd,
+                        colors: projectGradient(project),
+                      ),
+                    ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (project.imageUrl != null)
+                          Image.network(
+                            project.imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const SizedBox.shrink(),
+                          )
+                        else
+                          Center(
+                            child: Icon(
+                              project.heroIconData,
+                              size: 36,
+                              color: palette.textPrimary,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

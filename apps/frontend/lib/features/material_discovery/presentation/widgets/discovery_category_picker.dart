@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/models/localized_text.dart';
-import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../../shared/widgets/learner_discovery/learner_discovery.dart';
 import '../../../materials/data/models/category.dart';
 import '../../domain/material_discovery_constants.dart';
 
@@ -32,7 +30,6 @@ class _DiscoveryCategoryPickerState extends State<DiscoveryCategoryPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
     final visible = widget.categories
         .take(discoveryVisibleCategoryCount)
         .toList();
@@ -40,93 +37,65 @@ class _DiscoveryCategoryPickerState extends State<DiscoveryCategoryPicker> {
     final hasHidden = hiddenCount > 0;
     final selectedHidden = widget.selectedCategoryIndex > visible.length;
 
+    final chips = <Widget>[
+      LearnerFilterChip(
+        label: const LocalizedText(en: 'All', ar: 'الكل').resolve(context),
+        selected: widget.selectedCategoryIndex == 0,
+        onSelected: () => widget.onCategorySelected(0),
+        style: LearnerFilterChipStyle.solid,
+        dense: widget.compact,
+      ),
+      ...visible.asMap().entries.map((entry) {
+        final index = entry.key + 1;
+        final category = entry.value;
+        return LearnerFilterChip(
+          label: _categoryLabel(category).resolve(context),
+          selected: widget.selectedCategoryIndex == index,
+          onSelected: () => widget.onCategorySelected(index),
+          dense: widget.compact,
+        );
+      }),
+      if (hasHidden)
+        LearnerFilterChip(
+          label: _expanded
+              ? const LocalizedText(en: 'Fewer', ar: 'أقل').resolve(context)
+              : selectedHidden
+              ? const LocalizedText(
+                  en: 'More • selected',
+                  ar: 'المزيد • محدد',
+                ).resolve(context)
+              : LocalizedText(
+                  en: 'More ($hiddenCount)',
+                  ar: 'المزيد ($hiddenCount)',
+                ).resolve(context),
+          selected: _expanded || selectedHidden,
+          onSelected: () => setState(() => _expanded = !_expanded),
+          dense: widget.compact,
+        ),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          const LocalizedText(en: 'Categories', ar: 'الفئات').resolve(context),
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textPrimary,
-            fontSize: widget.compact ? 12 : null,
-          ),
-          textAlign: TextAlign.start,
-        ),
-        SizedBox(height: widget.compact ? AppSpacing.xs : AppSpacing.sm),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _CategoryChip(
-                label: const LocalizedText(
-                  en: 'All',
-                  ar: 'الكل',
-                ).resolve(context),
-                selected: widget.selectedCategoryIndex == 0,
-                onPressed: () => widget.onCategorySelected(0),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              ...visible.asMap().entries.map((entry) {
-                final index = entry.key + 1;
-                final category = entry.value;
-                return Padding(
-                  padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
-                  child: _CategoryChip(
-                    label: _categoryLabel(category).resolve(context),
-                    selected: widget.selectedCategoryIndex == index,
-                    onPressed: () => widget.onCategorySelected(index),
-                  ),
-                );
-              }),
-              if (hasHidden)
-                _CategoryChip(
-                  label: _expanded
-                      ? const LocalizedText(
-                          en: 'Fewer',
-                          ar: 'أقل',
-                        ).resolve(context)
-                      : selectedHidden
-                      ? const LocalizedText(
-                          en: 'More • selected',
-                          ar: 'المزيد • محدد',
-                        ).resolve(context)
-                      : LocalizedText(
-                          en: 'More ($hiddenCount)',
-                          ar: 'المزيد ($hiddenCount)',
-                        ).resolve(context),
-                  selected: _expanded || selectedHidden,
-                  onPressed: () => setState(() => _expanded = !_expanded),
-                ),
-            ],
-          ),
-        ),
+        LearnerChipRow(children: chips),
         if (_expanded && hasHidden) ...[
           const SizedBox(height: AppSpacing.sm),
-          Container(
-            constraints: const BoxConstraints(maxHeight: 168),
-            padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
-            decoration: BoxDecoration(
-              color: palette.cardSurfaceAlt,
-              borderRadius: AppRadius.lgAll,
-              border: Border.all(color: palette.borderSubtle),
-            ),
-            child: SingleChildScrollView(
-              child: Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: widget.categories.asMap().entries.map((entry) {
-                  final index = entry.key + 1;
-                  final category = entry.value;
-                  return _CategoryChip(
-                    label: _categoryLabel(category).resolve(context),
-                    selected: widget.selectedCategoryIndex == index,
-                    onPressed: () {
-                      widget.onCategorySelected(index);
-                      setState(() => _expanded = false);
-                    },
-                  );
-                }).toList(),
-              ),
-            ),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: widget.categories.asMap().entries.map((entry) {
+              final index = entry.key + 1;
+              final category = entry.value;
+              return LearnerFilterChip(
+                label: _categoryLabel(category).resolve(context),
+                selected: widget.selectedCategoryIndex == index,
+                onSelected: () {
+                  widget.onCategorySelected(index);
+                  setState(() => _expanded = false);
+                },
+                dense: widget.compact,
+              );
+            }).toList(),
           ),
         ],
       ],
@@ -137,50 +106,6 @@ class _DiscoveryCategoryPickerState extends State<DiscoveryCategoryPicker> {
     return LocalizedText(
       en: category.nameEn,
       ar: category.nameAr.isNotEmpty ? category.nameAr : category.nameEn,
-    );
-  }
-}
-
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({
-    required this.label,
-    required this.selected,
-    required this.onPressed,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: AppRadius.pillAll,
-      child: Container(
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          color: selected
-              ? palette.mint.withValues(alpha: 0.14)
-              : palette.cardSurfaceAlt,
-          borderRadius: AppRadius.pillAll,
-          border: Border.all(
-            color: selected ? palette.mint : palette.borderSubtle,
-          ),
-        ),
-        child: Text(
-          label,
-          style: AppTextStyles.label(context).copyWith(
-            color: selected ? palette.textPrimary : palette.textSecondary,
-          ),
-          textAlign: TextAlign.start,
-        ),
-      ),
     );
   }
 }

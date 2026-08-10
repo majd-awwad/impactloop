@@ -2,22 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/learner_discovery/learner_discovery.dart';
 import '../../../../shared/widgets/materials/app_material_card.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../domain/discovery_material.dart';
 import '../material_discovery_content.dart';
 
 int materialDiscoveryGridColumnCount(double width) {
-  if (width >= 1320) {
-    return 4;
-  }
-  if (width >= 900) {
-    return 3;
-  }
-  if (width >= 600) {
-    return 2;
-  }
-  return 1;
+  return LearnerDiscoveryLayout.discoveryColumns(width);
 }
 
 String? materialDiscoverySupplierDisplayName(
@@ -74,7 +66,8 @@ class MaterialsDiscoveryResultsGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        if (width < 600) {
+        // Very narrow widths keep compact list cards for readability.
+        if (width < 380) {
           return ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -237,7 +230,7 @@ class SliverMaterialsDiscoveryResultsGrid extends StatelessWidget {
     return SliverLayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.crossAxisExtent;
-        if (width < 600) {
+        if (width < 380) {
           return SliverList.separated(
             itemCount: materials.length,
             separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),

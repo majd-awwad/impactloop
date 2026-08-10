@@ -758,11 +758,6 @@ export const env = {
     'ImpactLoop/1.0 (supplier profile reverse geocoding)',
   ...(() => {
     const payment = resolvePaymentRuntimeConfig(process.env);
-    if (payment.usedDevelopmentSecretFallback) {
-      console.warn(
-        '[payments] Using development-only mock payment secret fallback(s). Set distinct PAYMENT_MOCK_* secrets in .env for non-local work. Secret values are not logged.',
-      );
-    }
     return {
       paymentProvider: payment.paymentProvider,
       paymentProviderMode: payment.paymentProviderMode,
@@ -772,6 +767,8 @@ export const env = {
       paymentMockWebhookReplayWindowMs:
         payment.paymentMockWebhookReplayWindowMs,
       paymentMockCheckoutTtlMs: payment.paymentMockCheckoutTtlMs,
+      paymentUsedDevelopmentSecretFallback:
+        payment.usedDevelopmentSecretFallback,
     };
   })(),
 };
@@ -970,72 +967,6 @@ export const getAiPlatformDiagnostics = () => {
   };
 };
 
-export const logAiPlatformDiagnostics = (): void => {
-  if (env.nodeEnv === 'production') {
-    return;
-  }
-
-  const diagnostics = getAiPlatformDiagnostics();
-  console.log('[AI platform diagnostics]', JSON.stringify(diagnostics));
-};
-
-export const logAiPriceSuggestionStartupConfig = (): void => {
-  if (env.nodeEnv === 'production') {
-    return;
-  }
-
-  const debug = getAiPriceSuggestionDebugInfo();
-  console.log('[AI price suggestion config]');
-  console.log(`  env file: ${debug.envFilePath}`);
-  console.log(`  AI provider: ${debug.aiProvider}`);
-  if (debug.explicitProvider) {
-    console.log(`  AI_PROVIDER env: ${debug.explicitProvider}`);
-  }
-  console.log(`  Gemini key configured: ${debug.geminiApiKeyConfigured}`);
-  if (debug.rawGeminiApiKeyPresent && debug.geminiApiKeyRejectedAsPlaceholder) {
-    console.log('  Gemini key present but rejected (placeholder/invalid format)');
-  }
-  console.log(`  Gemini model: ${debug.geminiModel}`);
-  console.log(`  AI operational: ${debug.operational}`);
-
-  const chatDebug = getAiChatDebugInfo();
-  console.log('[AI chat config]');
-  console.log(`  env file: ${chatDebug.envFilePath}`);
-  console.log(`  invitations env file: ${chatDebug.invitationsEnvFilePath}`);
-  console.log(`  AI chat provider: ${chatDebug.aiChatProvider}`);
-  if (chatDebug.explicitChatProvider) {
-    console.log(`  AI_CHAT_PROVIDER env: ${chatDebug.explicitChatProvider}`);
-  }
-  console.log(`  AI chat model: ${chatDebug.aiChatModel}`);
-  console.log(`  devMockFallbackEnabled: ${chatDebug.devMockFallbackEnabled}`);
-  console.log(`  geminiKeyLoaded: ${chatDebug.geminiApiKeyConfigured}`);
-  if (chatDebug.geminiApiKeyFingerprint) {
-    console.log(`  geminiKeyFingerprint: ${chatDebug.geminiApiKeyFingerprint}`);
-  }
-  console.log(`  OpenAI key configured: ${chatDebug.openaiApiKeyConfigured}`);
-  console.log(`  AI chat operational: ${chatDebug.operational}`);
-
-  if (chatDebug.envOverrides.length > 0) {
-    console.log('  Env overrides detected:');
-    for (const override of chatDebug.envOverrides) {
-      console.log(
-        `    - ${override.key} via ${override.source}: ${JSON.stringify(override.previous)} -> ${JSON.stringify(override.current)}`,
-      );
-    }
-  }
-
-  if (chatDebug.configurationWarnings.length > 0) {
-    console.log('  Configuration warnings:');
-    for (const warning of chatDebug.configurationWarnings) {
-      console.log(`    - ${warning}`);
-    }
-  }
-
-  console.log(
-    '  Note: restart the backend after changing .env AI settings. File watchers reload code, not environment files.',
-  );
-};
-
 export const getEmailInvitationDebugInfo = () => ({
   envFilePath: backendEnvFilePath,
   invitationsEnvFilePath: invitationsEnvFilePathExported,
@@ -1050,64 +981,3 @@ export const getEmailInvitationDebugInfo = () => ({
   smtpPassConfigured: Boolean(env.smtpPass),
   smtpFromConfigured: Boolean(process.env.SMTP_FROM?.trim()),
 });
-
-export const logEmailInvitationStartupConfig = (): void => {
-  if (env.nodeEnv === 'production') {
-    return;
-  }
-
-  const debug = getEmailInvitationDebugInfo();
-  console.log('[Email invitation config]');
-  console.log(`  env file: ${debug.envFilePath}`);
-  console.log(`  invitations env file: ${debug.invitationsEnvFilePath}`);
-  console.log(`  EMAIL provider: ${debug.emailProvider}`);
-  if (debug.explicitEmailProvider) {
-    console.log(`  EMAIL_PROVIDER env: ${debug.explicitEmailProvider}`);
-  } else if (debug.emailProvider === 'mock') {
-    console.log('  EMAIL_PROVIDER env: (unset, defaulting to mock)');
-  }
-  console.log(`  APP_PUBLIC_BASE_URL configured: ${debug.explicitAppPublicBaseUrl}`);
-  if (debug.explicitAppPublicBaseUrl) {
-    console.log(`  APP_PUBLIC_BASE_URL: ${debug.appPublicBaseUrl}`);
-  } else {
-    console.log('  APP_PUBLIC_BASE_URL: (unset)');
-    console.log(
-      '  Invitation links will fail until APP_PUBLIC_BASE_URL matches your Flutter web URL.',
-    );
-  }
-  if (debug.emailProvider === 'smtp') {
-    console.log(`  SMTP host configured: ${debug.smtpHostConfigured}`);
-    console.log(`  SMTP port: ${debug.smtpPort}`);
-    console.log(`  SMTP secure: ${debug.smtpSecure}`);
-    console.log(`  SMTP user configured: ${debug.smtpUserConfigured}`);
-    console.log(`  SMTP pass configured: ${debug.smtpPassConfigured}`);
-    console.log(`  SMTP from configured: ${debug.smtpFromConfigured}`);
-    const smtpErrors = getSmtpConfigurationErrors();
-    if (smtpErrors.length > 0) {
-      console.log('  SMTP configuration errors:');
-      for (const error of smtpErrors) {
-        console.log(`    - ${error}`);
-      }
-    }
-  } else {
-    console.log('  Mock provider: invitation links are logged to this console.');
-  }
-};
-
-export const logRecommendationOutboxStartupConfig = (): void => {
-  const outbox = recommendationOutboxRuntime;
-  console.log('[Recommendation outbox config]');
-  console.log(`  enabled: ${outbox.enabled}`);
-  console.log(`  required: ${outbox.required}`);
-  console.log(`  pollIntervalMs: ${outbox.pollIntervalMs}`);
-  console.log(`  batchSize: ${outbox.batchSize}`);
-  console.log(`  maxAttempts: ${outbox.maxAttempts}`);
-  console.log(`  leaseMs: ${outbox.leaseMs}`);
-  if (!outbox.enabled && outbox.required) {
-    console.log(
-      '  WARNING: worker is required but disabled; readiness will remain not ready',
-    );
-  } else if (!outbox.enabled) {
-    console.log('  worker intentionally disabled (optional in this environment)');
-  }
-};

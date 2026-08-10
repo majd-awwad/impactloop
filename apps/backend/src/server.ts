@@ -1,13 +1,6 @@
 import './config/env.js';
 import { app } from './app.js';
-import {
-  env,
-  getResolvedEmailProvider,
-  logAiPlatformDiagnostics,
-  logAiPriceSuggestionStartupConfig,
-  logEmailInvitationStartupConfig,
-  logRecommendationOutboxStartupConfig,
-} from './config/env.js';
+import { env, getResolvedEmailProvider } from './config/env.js';
 import { databasePool, getDatabasePoolSnapshot, prisma } from './database/prisma.js';
 import { verifySmtpInvitationTransport } from './modules/invitations/email/smtp-email-invitation-provider.js';
 import {
@@ -25,28 +18,27 @@ import {
 import { preloadRecommendationMlRuntime } from './modules/recommendations/ml-runtime-state.service.js';
 import { ReservationLifecycleWorker } from './modules/reservations/reservation-lifecycle.worker.js';
 import { MaterialRequestLifecycleWorker } from './modules/material-requests/material-request-lifecycle.worker.js';
+import { logger } from './observability/logger.js';
+import {
+  logAiStartupConfig,
+  logEmailInvitationStartupConfig,
+  logPaymentStartupConfig,
+  logRecommendationMlRuntimeReady,
+  logRecommendationOutboxStartupConfig,
+  logServerListening,
+  logSmtpInvitationVerifyResult,
+} from './observability/startup-logging.js';
 
-logAiPriceSuggestionStartupConfig();
-logAiPlatformDiagnostics();
+logPaymentStartupConfig();
+logAiStartupConfig();
 logEmailInvitationStartupConfig();
-logRecommendationOutboxStartupConfig();
 
 const recommendationMlRuntime = await preloadRecommendationMlRuntime();
-console.log(
-  '[Recommendation ML runtime]',
-  JSON.stringify(recommendationMlRuntime),
-);
+logRecommendationMlRuntimeReady(recommendationMlRuntime);
 
 if (getResolvedEmailProvider() === 'smtp') {
   void verifySmtpInvitationTransport().then((result) => {
-    if (result.ok) {
-      console.log('[Email invitation config] SMTP connection verify: ok');
-      return;
-    }
-
-    console.log(
-      `[Email invitation config] SMTP connection verify failed: ${result.error ?? 'unknown error'}`,
-    );
+    logSmtpInvitationVerifyResult(result);
   });
 }
 
@@ -61,14 +53,8 @@ const recommendationOutboxWorker = new RecommendationOutboxWorker({
 
 if (env.recommendationOutboxWorkerEnabled) {
   recommendationOutboxWorker.start();
-  console.log('[Recommendation outbox] worker enabled');
-} else if (env.recommendationOutboxWorkerRequired) {
-  console.log(
-    '[Recommendation outbox] worker required but disabled; readiness will remain not ready',
-  );
-} else {
-  console.log('[Recommendation outbox] worker intentionally disabled');
 }
+logRecommendationOutboxStartupConfig();
 
 registerRecommendationOutboxHealthProvider({
   getSnapshot: (nowMs) => recommendationOutboxWorker.getHealthSnapshot(nowMs),
@@ -93,9 +79,12 @@ const materialRequestLifecycleWorker = new MaterialRequestLifecycleWorker();
 materialRequestLifecycleWorker.start();
 
 const server = app.listen(env.port, () => {
-  console.log(
-    `ImpactLoop API pid=${process.pid} listening on port ${env.port} pool=${JSON.stringify(getDatabasePoolSnapshot())}`,
-  );
+  const pool = getDatabasePoolSnapshot();
+  logServerListening({
+    port: env.port,
+    pid: process.pid,
+    poolMax: pool.poolMax,
+  });
 });
 
 let shuttingDown = false;
@@ -107,7 +96,10 @@ const shutdown = async (signal: string): Promise<void> => {
   reservationLifecycleWorker.stop();
   materialRequestLifecycleWorker.stop();
   databaseHealthProbe.stop();
-  console.log(`[ImpactLoop API] ${signal} received; shutting down`);
+  logger.info(
+    { operation: 'server.shutdown', reason: signal },
+    'ImpactLoop API shutting down',
+  );
 
   await runReadinessAwareShutdown({
     beginShutdown: beginReadinessShutdown,
@@ -125,8 +117,13 @@ const shutdown = async (signal: string): Promise<void> => {
       recommendationOutboxWorker.markStopped();
     },
     onHardExit: (code) => {
-      console.error(
-        `[ImpactLoop API] hard exit after outbox shutdown timeout (code=${code})`,
+      logger.error(
+        {
+          operation: 'server.shutdown_hard_exit',
+          statusCode: code,
+          reason: 'outbox_shutdown_timeout',
+        },
+        'ImpactLoop API hard exit after outbox shutdown timeout',
       );
       process.exit(code);
     },

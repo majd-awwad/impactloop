@@ -11,13 +11,14 @@ The backend loads, in order:
 
 Put SMTP settings in `config/invitations.env` (or saved `.env`), then restart the backend.
 
-Startup should show:
+Startup should show structured readiness logs such as:
 
 ```
-EMAIL provider: smtp
-[Email invitation provider] SmtpEmailInvitationProvider selected
-SMTP connection verify: ok
+INFO  email.ready provider=smtp
+INFO  email.smtp.verify status=ok
 ```
+
+Provider selection is also available at DEBUG (`email.provider_selected`).
 
 ## Gmail SMTP (local test)
 

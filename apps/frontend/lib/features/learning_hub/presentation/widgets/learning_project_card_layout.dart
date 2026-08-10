@@ -1,20 +1,18 @@
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/learner_discovery/learner_discovery.dart';
 
 class LearningProjectCardLayout {
   const LearningProjectCardLayout._();
 
   static const double coverHeight = 168;
   static const double gridCardHeight = 436;
+  static const double compactCardHeight = 132;
 
   static int columnsForWidth(double width) {
-    if (width >= 1160) {
-      return 3;
-    }
-    if (width >= 760) {
-      return 2;
-    }
-    return 1;
+    return LearnerDiscoveryLayout.discoveryColumns(width);
   }
+
+  static bool useCompactList(double width) => width < 600;
 
   static double itemWidthForGrid({
     required double gridWidth,

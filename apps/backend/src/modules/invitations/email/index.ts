@@ -1,4 +1,5 @@
-import { env, getResolvedEmailProvider } from '../../../config/env.js';
+import { getResolvedEmailProvider } from '../../../config/env.js';
+import { logger } from '../../../observability/logger.js';
 
 import type { EmailInvitationProvider } from './email-invitation-provider.js';
 import { MockEmailInvitationProvider } from './mock-email-invitation-provider.js';
@@ -16,14 +17,22 @@ export const getEmailInvitationProvider = (): EmailInvitationProvider => {
 
   if (getResolvedEmailProvider() === 'smtp') {
     provider = new SmtpEmailInvitationProvider();
-    if (env.nodeEnv !== 'production') {
-      console.log('[Email invitation provider] SmtpEmailInvitationProvider selected');
-    }
+    logger.debug(
+      {
+        operation: 'email.provider_selected',
+        provider: 'smtp',
+      },
+      'SmtpEmailInvitationProvider selected',
+    );
   } else {
     provider = new MockEmailInvitationProvider();
-    if (env.nodeEnv !== 'production') {
-      console.log('[Email invitation provider] MockEmailInvitationProvider selected');
-    }
+    logger.debug(
+      {
+        operation: 'email.provider_selected',
+        provider: 'mock',
+      },
+      'MockEmailInvitationProvider selected',
+    );
   }
 
   return provider;

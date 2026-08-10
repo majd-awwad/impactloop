@@ -6,6 +6,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/learner_discovery/learner_discovery.dart';
 import '../../../../shared/widgets/materials/app_material_card.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../materials/data/models/category.dart';
@@ -17,7 +18,6 @@ import '../widgets/discovery_location_privacy_panel.dart';
 import '../widgets/discovery_material_map.dart';
 import '../widgets/materials_discovery_results_grid.dart';
 import '../widgets/material_search_filters.dart';
-import '../widgets/materials_hero_section.dart';
 
 class MaterialsDiscoveryView extends StatelessWidget {
   const MaterialsDiscoveryView({
@@ -112,38 +112,37 @@ class MaterialsDiscoveryView extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 600;
-        final showHero = showHeroSection && !isMobile;
+        final isMobile =
+            LearnerDiscoveryLayout.isMobile(constraints.maxWidth);
+        final resultsLabel = (hasActiveFilters
+                ? LocalizedText(
+                    en: 'Showing $showingCount of $total matching results',
+                    ar: 'عرض $showingCount من $total نتيجة مطابقة',
+                  )
+                : LocalizedText(
+                    en: 'Showing $showingCount of $total results',
+                    ar: 'عرض $showingCount من $total نتيجة',
+                  ))
+            .resolve(context);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (showHero) ...[
-              MaterialsHeroSection(
-                compact: true,
+            if (showHeroSection) ...[
+              LearnerPageHeader(
+                icon: Icons.description_outlined,
                 title: const LocalizedText(
-                  en: 'Material Discovery',
+                  en: 'Discover Materials',
                   ar: 'اكتشاف المواد',
-                ),
+                ).resolve(context),
                 subtitle: const LocalizedText(
                   en: 'Browse reusable materials from verified suppliers. Search, filter, and reserve what you need.',
                   ar: 'تصفح المواد القابلة لإعادة الاستخدام من موردين موثوقين. ابحث، وفلتر، واحجز ما تحتاجه.',
-                ),
-                stats: {
-                  const LocalizedText(en: 'loaded', ar: 'محمّلة'):
-                      '$showingCount',
-                  const LocalizedText(en: 'matches', ar: 'مطابقة'): '$total',
-                },
+                ).resolve(context),
               ),
-              const SizedBox(height: AppSpacing.sm),
-            ],
-            if (isMobile) ...[
-              _CompactDiscoveryHeader(
-                showingCount: showingCount,
-                total: total,
-                hasActiveFilters: hasActiveFilters,
+              SizedBox(
+                height: LearnerDiscoveryLayout.sectionGap(constraints.maxWidth),
               ),
-              const SizedBox(height: AppSpacing.sm),
             ],
             if (refetchErrorMessage != null) ...[
               _RefetchErrorBanner(
@@ -187,16 +186,11 @@ class MaterialsDiscoveryView extends StatelessWidget {
               onConditionSelected: onConditionSelected,
               hasActiveFilters: hasActiveFilters,
               onClearFilters: onClearFilters,
+              resultsCount: total,
             ),
-            SizedBox(height: isMobile ? AppSpacing.sm : AppSpacing.xl),
-            if (!isMobile) ...[
-              _ResultsHeader(
-                showingCount: showingCount,
-                total: total,
-                hasActiveFilters: hasActiveFilters,
-              ),
-              const SizedBox(height: AppSpacing.md),
-            ],
+            SizedBox(height: isMobile ? AppSpacing.md : AppSpacing.lg),
+            LearnerResultsToolbar(label: resultsLabel),
+            const SizedBox(height: AppSpacing.sm),
             if (materials.isEmpty)
               _EmptyStatePanel(
                 icon: hasActiveFilters
@@ -226,12 +220,22 @@ class MaterialsDiscoveryView extends StatelessWidget {
             ],
             if (hasMore) ...[
               const SizedBox(height: AppSpacing.lg),
-              Center(
+              SizedBox(
+                width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: isLoadingMore ? null : onLoadMore,
-                  style: AppStatusButtonStyle.outlined(
-                    context,
-                    AppStatusTone.neutral,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor:
+                        LearnerDiscoveryStyle.textPrimary(context),
+                    side: BorderSide(
+                      color: LearnerDiscoveryStyle.border(context),
+                    ),
+                    minimumSize: const Size(0, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.lgAll,
+                    ),
+                    backgroundColor:
+                        LearnerDiscoveryStyle.inputSurface(context),
                   ),
                   icon: isLoadingMore
                       ? const SizedBox(
@@ -247,8 +251,8 @@ class MaterialsDiscoveryView extends StatelessWidget {
                             ar: 'جارٍ تحميل المزيد...',
                           ).resolve(context)
                         : LocalizedText(
-                            en: 'Load more ($showingCount of $total)',
-                            ar: 'تحميل المزيد ($showingCount من $total)',
+                            en: 'Show more materials',
+                            ar: 'عرض المزيد من المواد',
                           ).resolve(context),
                   ),
                 ),
@@ -261,108 +265,6 @@ class MaterialsDiscoveryView extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _CompactDiscoveryHeader extends StatelessWidget {
-  const _CompactDiscoveryHeader({
-    required this.showingCount,
-    required this.total,
-    required this.hasActiveFilters,
-  });
-
-  final int showingCount;
-  final int total;
-  final bool hasActiveFilters;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          LocalizedText(
-            en: 'Reusable Materials',
-            ar: 'المواد القابلة لإعادة الاستخدام',
-          ).resolve(context),
-          style: AppTextStyles.title(context).copyWith(
-            color: palette.textPrimary,
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-          ),
-          textAlign: TextAlign.start,
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          (hasActiveFilters
-                  ? LocalizedText(
-                      en: 'Showing $showingCount of $total matching results',
-                      ar: 'عرض $showingCount من $total نتيجة مطابقة',
-                    )
-                  : LocalizedText(
-                      en: 'Showing $showingCount of $total public results',
-                      ar: 'عرض $showingCount من $total نتيجة عامة',
-                    ))
-              .resolve(context),
-          style: AppTextStyles.subtitle(
-            context,
-          ).copyWith(color: palette.textSecondary, fontSize: 14),
-          textAlign: TextAlign.start,
-        ),
-      ],
-    );
-  }
-}
-
-class _ResultsHeader extends StatelessWidget {
-  const _ResultsHeader({
-    required this.showingCount,
-    required this.total,
-    required this.hasActiveFilters,
-  });
-
-  final int showingCount;
-  final int total;
-  final bool hasActiveFilters;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          LocalizedText(
-            en: 'Reusable Materials',
-            ar: 'المواد القابلة لإعادة الاستخدام',
-          ).resolve(context),
-          style: AppTextStyles.display(
-            context,
-          ).copyWith(color: palette.textPrimary),
-          textAlign: TextAlign.start,
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          (hasActiveFilters
-                  ? LocalizedText(
-                      en: 'Showing $showingCount of $total matching results',
-                      ar: 'عرض $showingCount من $total نتيجة مطابقة',
-                    )
-                  : LocalizedText(
-                      en: 'Showing $showingCount of $total public results',
-                      ar: 'عرض $showingCount من $total نتيجة عامة',
-                    ))
-              .resolve(context),
-          style: AppTextStyles.subtitle(
-            context,
-          ).copyWith(color: palette.textSecondary),
-          textAlign: TextAlign.start,
-        ),
-      ],
     );
   }
 }

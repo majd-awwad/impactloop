@@ -10,6 +10,7 @@ import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/learner_discovery/learner_discovery.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../materials/application/material_listing_providers.dart';
 import '../../../materials/data/models/category.dart';
@@ -430,7 +431,9 @@ class _MaterialsDiscoveryPageState
                   padding: appMobileAwareScrollPadding(context),
                   child: Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1400),
+                      constraints: const BoxConstraints(
+                        maxWidth: LearnerDiscoveryLayout.pageMaxWidth,
+                      ),
                       child: MaterialsDiscoveryView(
                         materials: _materials,
                         pagination: _pagination,
