@@ -14,9 +14,9 @@ import 'notification_display.dart';
 import 'payment_notification_presentation.dart';
 
 const notificationsPageSize = 20;
-const notificationsPollInterval = Duration(seconds: 30);
 
-/// Number of open notification list screens. Badge polling pauses while > 0.
+/// Tracks open notification list screens so leaving the inbox can reconcile
+/// the app-wide unread badge once (no permanent polling).
 final notificationsListPageVisibleProvider =
     NotifierProvider<NotificationsListPageVisibleNotifier, int>(
       NotificationsListPageVisibleNotifier.new,
@@ -419,8 +419,6 @@ class NotificationUnreadCountNotifier extends AsyncNotifier<int> {
   @override
   Future<int> build() async {
     final authKey = ref.watch(authControllerProvider.select(_authListWatchKey));
-    final notificationsPageVisible =
-        ref.watch(notificationsListPageVisibleProvider) > 0;
 
     if (authKey.$1 == AuthStatus.unknown) {
       return 0;
@@ -430,19 +428,10 @@ class NotificationUnreadCountNotifier extends AsyncNotifier<int> {
       return 0;
     }
 
-    // Light polling so the bell badge updates without opening /notifications.
-    // Reuses the existing unread-count endpoint — no new WebSocket system.
-    // Pauses while the notifications list is open to avoid duplicate 30s timers.
-    if (!notificationsPageVisible) {
-      final timer = Timer.periodic(notificationsPollInterval, (_) {
-        if (!ref.mounted) {
-          return;
-        }
-        ref.invalidateSelf();
-      });
-      ref.onDispose(timer.cancel);
-    }
-
+    // One-shot fetch on auth/session (re)build and explicit invalidation
+    // (app resume when inbox is closed). While the inbox is open, list
+    // refresh / mark-read update the badge via setCount/adjustBy — do not
+    // also watch visibility (that caused open+close unread GET bursts).
     return ref.read(notificationsApiProvider).fetchUnreadCount();
   }
 

@@ -21,8 +21,6 @@ import '../../../auth/application/auth_route_helpers.dart';
 import '../../../auth/data/models/user.dart';
 import '../../application/notification_display.dart';
 import '../../../../core/errors/common_api_error_codes.dart';
-import '../../../../core/polling/lifecycle_polling_controller.dart';
-import '../../../../core/polling/lifecycle_polling_host.dart';
 import '../../application/notifications_provider.dart';
 import '../../application/payment_notification_presentation.dart';
 import '../../data/models/app_notification.dart';
@@ -107,24 +105,15 @@ class _NotificationsBody extends ConsumerStatefulWidget {
 }
 
 class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
-    with WidgetsBindingObserver, LifecyclePollingHost<_NotificationsBody> {
+    with WidgetsBindingObserver {
   bool _refreshInFlight = false;
   String? _openingNotificationId;
   NotificationsListPageVisibleNotifier? _pageVisibleNotifier;
 
-  late final LifecyclePollingController _pollController =
-      LifecyclePollingController(
-        interval: notificationsPollInterval,
-        onRefresh: _pollNotifications,
-      );
-
-  @override
-  LifecyclePollingController get lifecyclePollingController => _pollController;
-
   @override
   void initState() {
     super.initState();
-    initLifecyclePollingHost();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
@@ -132,7 +121,6 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
       _pageVisibleNotifier =
           ref.read(notificationsListPageVisibleProvider.notifier);
       _pageVisibleNotifier!.increment();
-      _pollController.syncEnabled(true);
     });
   }
 
@@ -140,6 +128,7 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
   void dispose() {
     final pageVisibleNotifier = _pageVisibleNotifier;
     _pageVisibleNotifier = null;
+    WidgetsBinding.instance.removeObserver(this);
     // Defer provider writes — Riverpod forbids mutating during unmount.
     // Prefer microtask over Future()/Timer.zero so flutter_test teardown
     // does not see a pending timer.
@@ -152,25 +141,32 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
         }
       });
     }
-    disposeLifecyclePollingHost();
     super.dispose();
   }
 
   @override
-  void onLifecyclePollingRouteVisible() {
-    _pollNotifications();
+  void activate() {
+    super.activate();
+    unawaited(_reconcileNotifications());
   }
 
   @override
-  void onLifecyclePollingAppResumed() {
-    _pollNotifications();
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_reconcileNotifications());
+    }
   }
 
-  void _pollNotifications() {
+  Future<void> _reconcileNotifications() async {
     if (!mounted || _refreshInFlight) {
       return;
     }
-    unawaited(refreshNotifications(ref));
+    _refreshInFlight = true;
+    try {
+      await refreshNotifications(ref);
+    } finally {
+      _refreshInFlight = false;
+    }
   }
 
   Future<void> _handleRefresh() async {

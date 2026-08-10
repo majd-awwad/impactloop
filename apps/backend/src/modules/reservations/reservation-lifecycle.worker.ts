@@ -8,6 +8,7 @@ import { escalateStaleNoDriverDeliveriesForOwner } from './reservations.no-drive
 import { escalateStaleAssignedDriverPickupsForOwner } from './reservations.stale-assigned-driver-auto-escalation.repository.js';
 import { escalateStaleNoDriverDeliveriesForRequester } from './reservations.no-driver-auto-escalation.repository.js';
 import { escalateStaleAssignedDriverPickupsForRequester } from './reservations.stale-assigned-driver-auto-escalation.repository.js';
+import { syncDueDriverTimeRemindersForActiveAssignments } from '../notifications/driver-notification-events.service.js';
 
 const LOCK_NAME = 'impactloop:reservation-lifecycle';
 const CONSECUTIVE_FAILURE_THRESHOLD = 3;
@@ -149,6 +150,7 @@ export class ReservationLifecycleWorker {
         await escalateStaleNoDriverDeliveriesForOwner(ownerId);
         await escalateStaleAssignedDriverPickupsForOwner(ownerId);
       }
+      await syncDueDriverTimeRemindersForActiveAssignments();
       logger.debug(
         {
           operation: 'reservation.lifecycle.batch',

@@ -2,7 +2,6 @@ import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js
 import { AppError } from '../../utils/app-error.js';
 
 import { filterNotificationsForDisplay } from './driver-notification-validity.js';
-import { syncDueDriverTimeRemindersForUser } from './driver-notification-events.service.js';
 import * as notificationsRepository from './notifications.repository.js';
 import type { ListNotificationsQuery } from './notifications.validation.js';
 
@@ -89,8 +88,6 @@ export const listMyNotifications = async (
   userId: string,
   query: ListNotificationsQuery,
 ) => {
-  await syncDueDriverTimeRemindersForUser(userId);
-
   const page = normalizePage(query.page);
   const limit = normalizeLimit(query.limit);
 
@@ -121,8 +118,6 @@ export const listMyNotifications = async (
 };
 
 export const getMyNotificationUnreadCount = async (userId: string) => {
-  await syncDueDriverTimeRemindersForUser(userId);
-
   return {
     unreadCount: await notificationsRepository.countUnreadNotificationsForUser(
       userId,

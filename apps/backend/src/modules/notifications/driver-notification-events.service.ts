@@ -396,7 +396,7 @@ export const notifyDriverDeliveryUnassignedByAdmin = async (input: {
 
 /**
  * Idempotent due-only sync for pickup/drop-off reminders.
- * Safe to call from GET /api/notifications — never creates NEW JOB rows.
+ * Prefer lifecycle-worker batching over coupling to notification GET routes.
  */
 export const syncDueDriverTimeRemindersForUser = async (userId: string) => {
   const existing = reminderSyncByUser.get(userId);
@@ -442,6 +442,62 @@ export const syncDueDriverTimeRemindersForUser = async (userId: string) => {
     inFlight,
   });
   await inFlight;
+};
+
+/**
+ * Lifecycle-worker entry: sync due pickup/drop-off reminders for assigned
+ * deliveries whose reminder window is currently open (same rule as
+ * isReminderDue). Avoids scanning every non-terminal assignment every tick.
+ * Uses createNotificationIfMissing idempotency.
+ */
+export const syncDueDriverTimeRemindersForActiveAssignments = async () => {
+  const now = new Date();
+  const lookaheadEnd = new Date(now.getTime() + REMINDER_LOOKAHEAD_MS);
+
+  // isReminderDue: windowStart <= now + lookahead AND (windowEnd ?? windowStart) > now
+  const assignedDeliveries = await prisma.delivery.findMany({
+    where: {
+      assignedDriverProfileId: { not: null },
+      OR: [
+        {
+          status: { in: [...beforePickupStatuses] },
+          reservation: {
+            supplierPickupWindowStart: { lte: lookaheadEnd, not: null },
+            OR: [
+              { supplierPickupWindowEnd: { gt: now } },
+              {
+                AND: [
+                  { supplierPickupWindowEnd: null },
+                  { supplierPickupWindowStart: { gt: now } },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          status: { in: [...inTransitStatuses] },
+          reservation: {
+            confirmedDeliveryWindowStart: { lte: lookaheadEnd, not: null },
+            OR: [
+              { confirmedDeliveryWindowEnd: { gt: now } },
+              {
+                AND: [
+                  { confirmedDeliveryWindowEnd: null },
+                  { confirmedDeliveryWindowStart: { gt: now } },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    },
+    select: { id: true },
+  });
+
+  for (const { id } of assignedDeliveries) {
+    await notifyDriverPickupTime(id);
+    await notifyDriverDropoffTime(id);
+  }
 };
 
 /** Remove stale unread job alerts once a delivery is accepted. */

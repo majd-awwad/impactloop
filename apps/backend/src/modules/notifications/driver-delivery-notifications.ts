@@ -8,6 +8,7 @@ export {
   notifyDriverPickupTime,
   notifyDriverDropoffTime,
   syncDueDriverTimeRemindersForUser,
+  syncDueDriverTimeRemindersForActiveAssignments,
   clearUnreadNewJobNotificationsForDelivery,
   notifyDriverDeliveryMovedToAdminReview,
   resetDriverDeliveryReminderSyncThrottleForTests,
