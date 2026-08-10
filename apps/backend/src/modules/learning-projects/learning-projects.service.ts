@@ -62,15 +62,21 @@ import {
   type NormalizedSubmitComponent,
 } from './learning-projects.submit-components.js';
 import {
+  attachPersonalBuildReadiness,
   batchComputeProjectMaterialCoverage,
+  EMPTY_COVERAGE_SUMMARY,
   matchesMaterialAvailabilityFilter,
   paginateBrowseResults,
+  requiresCoverageBeforePagination,
   sortBrowseProjects,
   type BrowseProjectSortEntry,
   type LearningProjectsBrowseSort,
   type MaterialAvailabilityFilter,
   type ProjectMaterialCoverageResult,
 } from './learning-projects.material-coverage.js';
+import { measureRequestStage } from '../../observability/stage-timing.js';
+import { logger } from '../../observability/logger.js';
+import { getDatabasePoolSnapshot } from '../../database/prisma.js';
 
 type SubmitLearningProjectResponse = {
   id: string;
@@ -709,10 +715,26 @@ export const getLearningProjects = async (
   query: LearningProjectsQuery,
   viewer?: AccessTokenPayload,
 ) => {
-  const candidates =
-    await learningProjectsRepository.findLearningProjectBrowseCandidates(query);
+  const startedAt = performance.now();
+  const candidates = await measureRequestStage(
+    'learning-projects.browse.candidates',
+    () => learningProjectsRepository.findLearningProjectBrowseCandidates(query),
+  );
 
-  return mapLearningProjectListResult(candidates, query, viewer);
+  const result = await mapLearningProjectListResult(candidates, query, viewer);
+
+  logger.debug(
+    {
+      operation: 'learning-projects.browse.summary',
+      candidateCount: candidates.length,
+      durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+      mode: `${query.sort ?? 'DEFAULT'}:${query.availability ?? 'ANY'}:p${query.page}:l${query.limit}`,
+      ...getDatabasePoolSnapshot(),
+    },
+    'Learning projects browse summary',
+  );
+
+  return result;
 };
 
 export const getSavedLearningProjects = async (
@@ -1142,15 +1164,90 @@ const applyCoverageBrowseTransforms = async (
   query: LearningProjectsQuery,
   viewer?: AccessTokenPayload,
 ) => {
-  const candidateIds = candidates.map((item) => item.id);
-  const coverageByProjectId = await batchComputeProjectMaterialCoverage({
-    projectIds: candidateIds,
-    personalReadinessProjectIds: [],
-  });
-
   const availabilityFilter: MaterialAvailabilityFilter =
     query.availability ?? 'ANY';
   const sort: LearningProjectsBrowseSort = query.sort ?? 'DEFAULT';
+  const coverageBeforePagination = requiresCoverageBeforePagination({
+    availability: availabilityFilter,
+    sort,
+  });
+  const learnerId = viewer?.roles.includes('LEARNER') ? viewer.sub : undefined;
+
+  const emptyCoverage = (): ProjectMaterialCoverageResult => ({
+    materialCoverage: EMPTY_COVERAGE_SUMMARY,
+    componentCoverage: [],
+    personalBuildReadiness: null,
+  });
+
+  if (!coverageBeforePagination) {
+    const rankingProjectIds = candidates.map((entry) => entry.id);
+    const likesByProjectId =
+      sort === 'MOST_POPULAR'
+        ? await measureRequestStage(
+            'learning-projects.browse.ranking-likes',
+            () =>
+              learningProjectsRepository.countLikesByProjectIds(rankingProjectIds),
+          )
+        : new Map<string, number>();
+
+    const sortEntries: BrowseProjectSortEntry[] = candidates.map((project) => ({
+      id: project.id,
+      createdAt: project.createdAt,
+      difficulty: project.difficulty,
+      estimatedDurationMinutes: project.estimatedDurationMinutes,
+      coverage: emptyCoverage().materialCoverage,
+      likesCount: likesByProjectId.get(project.id) ?? 0,
+    }));
+
+    const sortedIds = sortBrowseProjects(sortEntries, sort).map(
+      (entry) => entry.id,
+    );
+    const projectById = new Map(
+      candidates.map((project) => [project.id, project] as const),
+    );
+    const orderedProjects = sortedIds
+      .map((projectId) => projectById.get(projectId))
+      .filter((project): project is NonNullable<typeof project> => project != null);
+
+    const paginatedProjects = paginateBrowseResults(
+      orderedProjects,
+      query.page,
+      query.limit,
+    );
+    const pageProjectIds = paginatedProjects.items.map((project) => project.id);
+
+    const coverageByProjectId = await measureRequestStage(
+      'learning-projects.browse.coverage-page',
+      () =>
+        batchComputeProjectMaterialCoverage({
+          projectIds: pageProjectIds,
+          learnerId,
+          personalReadinessProjectIds: learnerId ? pageProjectIds : [],
+        }),
+    );
+
+    return {
+      items: paginatedProjects.items.map((project) => ({
+        project,
+        coverage: coverageByProjectId.get(project.id) ?? emptyCoverage(),
+      })),
+      pagination: {
+        ...paginatedProjects.pagination,
+        total: orderedProjects.length,
+      },
+      coverageByProjectId,
+    };
+  }
+
+  const candidateIds = candidates.map((item) => item.id);
+  const coverageByProjectId = await measureRequestStage(
+    'learning-projects.browse.coverage-full-candidates',
+    () =>
+      batchComputeProjectMaterialCoverage({
+        projectIds: candidateIds,
+        personalReadinessProjectIds: [],
+      }),
+  );
 
   let entries = candidates
     .map((project) => {
@@ -1182,8 +1279,10 @@ const applyCoverageBrowseTransforms = async (
   const rankingProjectIds = entries.map((entry) => entry.project.id);
   const likesByProjectId =
     sort === 'MOST_AVAILABLE' || sort === 'MOST_POPULAR'
-      ? await learningProjectsRepository.countLikesByProjectIds(
-          rankingProjectIds,
+      ? await measureRequestStage(
+          'learning-projects.browse.ranking-likes',
+          () =>
+            learningProjectsRepository.countLikesByProjectIds(rankingProjectIds),
         )
       : new Map<string, number>();
 
@@ -1207,18 +1306,21 @@ const applyCoverageBrowseTransforms = async (
   const paginated = paginateBrowseResults(entries, query.page, query.limit);
   const pageProjectIds = paginated.items.map((entry) => entry.project.id);
 
-  if (viewer?.roles.includes('LEARNER') && pageProjectIds.length > 0) {
-    const pageCoverage = await batchComputeProjectMaterialCoverage({
-      projectIds: pageProjectIds,
-      learnerId: viewer.sub,
-      personalReadinessProjectIds: pageProjectIds,
-    });
+  if (learnerId && pageProjectIds.length > 0) {
+    await measureRequestStage(
+      'learning-projects.browse.personal-readiness',
+      () =>
+        attachPersonalBuildReadiness({
+          results: coverageByProjectId,
+          learnerId,
+          projectIds: pageProjectIds,
+        }),
+    );
 
-    for (const projectId of pageProjectIds) {
-      const pageResult = pageCoverage.get(projectId);
-      const existing = coverageByProjectId.get(projectId);
-      if (pageResult && existing) {
-        existing.personalBuildReadiness = pageResult.personalBuildReadiness;
+    for (const entry of paginated.items) {
+      const updated = coverageByProjectId.get(entry.project.id);
+      if (updated) {
+        entry.coverage = updated;
       }
     }
   }
@@ -1237,10 +1339,9 @@ const mapLearningProjectListResult = async (
   query: LearningProjectsQuery,
   viewer?: AccessTokenPayload,
 ) => {
-  const transformed = await applyCoverageBrowseTransforms(
-    candidates,
-    query,
-    viewer,
+  const transformed = await measureRequestStage(
+    'learning-projects.browse.coverage-filter-sort-page',
+    () => applyCoverageBrowseTransforms(candidates, query, viewer),
   );
   const projectIds = transformed.items.map((entry) => entry.project.id);
   const [
@@ -1250,14 +1351,18 @@ const mapLearningProjectListResult = async (
     followsByProjectId,
     followedProjectIds,
     reviewSummariesByProjectId,
-  ] = await Promise.all([
-    learningProjectsRepository.countLikesByProjectIds(projectIds),
-    learningProjectsRepository.findLikedProjectIds(viewer?.sub, projectIds),
-    learningProjectsRepository.findSavedProjectIds(viewer?.sub, projectIds),
-    learningProjectsRepository.countFollowsByProjectIds(projectIds),
-    learningProjectsRepository.findFollowedProjectIds(viewer?.sub, projectIds),
-    learningProjectsRepository.summarizeReviewsByProjectIds(projectIds),
-  ]);
+  ] = await measureRequestStage(
+    'learning-projects.browse.engagement-batch',
+    () =>
+      Promise.all([
+        learningProjectsRepository.countLikesByProjectIds(projectIds),
+        learningProjectsRepository.findLikedProjectIds(viewer?.sub, projectIds),
+        learningProjectsRepository.findSavedProjectIds(viewer?.sub, projectIds),
+        learningProjectsRepository.countFollowsByProjectIds(projectIds),
+        learningProjectsRepository.findFollowedProjectIds(viewer?.sub, projectIds),
+        learningProjectsRepository.summarizeReviewsByProjectIds(projectIds),
+      ]),
+  );
 
   return {
     items: transformed.items.map((entry) =>

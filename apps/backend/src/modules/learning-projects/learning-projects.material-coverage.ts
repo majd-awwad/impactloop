@@ -5,7 +5,10 @@ import type {
 } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
-import { getMaterialQuantityState } from '../reservations/reservations.quantity.js';
+import {
+  getMaterialQuantityStates,
+  type MaterialQuantityState,
+} from '../reservations/reservations.quantity.js';
 
 import {
   evaluateMaterialLinkCapacity,
@@ -70,6 +73,31 @@ export type ProjectMaterialCoverageResult = {
   personalBuildReadiness: ProjectPersonalBuildReadiness | null;
 };
 
+export const EMPTY_COVERAGE_SUMMARY: ProjectMaterialCoverageSummary = Object.freeze({
+  totalRequiredComponents: 0,
+  availableComponents: 0,
+  partialComponents: 0,
+  missingComponents: 0,
+  unknownComponents: 0,
+  availabilityRatio: 0,
+  coverageLevel: 'UNKNOWN',
+});
+
+/** True when coverage must run before filter/sort/pagination to preserve semantics. */
+export const requiresCoverageBeforePagination = (input: {
+  availability?: MaterialAvailabilityFilter | null;
+  sort?: LearningProjectsBrowseSort | null;
+}) => {
+  const availability = input.availability ?? 'ANY';
+  const sort = input.sort ?? 'DEFAULT';
+
+  if (availability !== 'ANY') {
+    return true;
+  }
+
+  return sort === 'MOST_AVAILABLE';
+};
+
 type CoverageComponentRecord = {
   id: string;
   projectId: string;
@@ -119,6 +147,12 @@ const coverageMaterialSelect = {
 type CoverageMaterialRecord = Prisma.MaterialGetPayload<{
   select: typeof coverageMaterialSelect;
 }>;
+
+type CoverageEvaluationContext = {
+  candidateMaterialsByKey: Map<string, Promise<CoverageMaterialRecord[]>>;
+  pendingQuantityMaterialIds: Set<string>;
+  quantityStateByMaterialId: Map<string, MaterialQuantityState | null>;
+};
 
 const decimalToNumber = (value: Prisma.Decimal): number => value.toNumber();
 
@@ -222,17 +256,8 @@ const buildPublicCoverageMaterialWhere = (input: {
   return where;
 };
 
-const fetchPublicCoverageCandidateMaterials = async (
-  where: Prisma.MaterialWhereInput,
-) =>
-  prisma.material.findMany({
-    where,
-    select: coverageMaterialSelect,
-    take: COVERAGE_CANDIDATE_POOL_LIMIT,
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+const buildCoverageCandidateCacheKey = (where: Prisma.MaterialWhereInput) =>
+  JSON.stringify(where);
 
 const toMatchingMaterial = (
   material: CoverageMaterialRecord,
@@ -264,19 +289,74 @@ const toScoredComponentInput = (
   componentPosition,
 });
 
-export const evaluateComponentPublicAvailability = async (
+const fetchPublicCoverageCandidateMaterials = async (
+  where: Prisma.MaterialWhereInput,
+  context?: CoverageEvaluationContext,
+) => {
+  if (!context) {
+    return prisma.material.findMany({
+      where,
+      select: coverageMaterialSelect,
+      take: COVERAGE_CANDIDATE_POOL_LIMIT,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  const cacheKey = buildCoverageCandidateCacheKey(where);
+  const cached = context.candidateMaterialsByKey.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const pending = prisma.material.findMany({
+    where,
+    select: coverageMaterialSelect,
+    take: COVERAGE_CANDIDATE_POOL_LIMIT,
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+  context.candidateMaterialsByKey.set(cacheKey, pending);
+  return pending;
+};
+
+const ensureCoverageQuantityStates = async (
+  context: CoverageEvaluationContext,
+) => {
+  const missingIds = [...context.pendingQuantityMaterialIds].filter(
+    (materialId) => !context.quantityStateByMaterialId.has(materialId),
+  );
+
+  if (missingIds.length === 0) {
+    return;
+  }
+
+  const states = await getMaterialQuantityStates(prisma, missingIds);
+  for (const materialId of missingIds) {
+    context.quantityStateByMaterialId.set(
+      materialId,
+      states.get(materialId) ?? null,
+    );
+  }
+  context.pendingQuantityMaterialIds.clear();
+};
+
+const collectCompatibleCoverageMaterials = async (
   component: CoverageComponentRecord,
   componentPosition: number,
-): Promise<ComponentPublicAvailabilityStatus> => {
+  context: CoverageEvaluationContext,
+): Promise<CoverageMaterialRecord[]> => {
   if (!isCoverageRequiredMaterialComponent(component)) {
-    return 'UNKNOWN';
+    return [];
   }
 
   const requiredQuantity = decimalToNumber(component.quantity);
   const requiredUnit = component.unit?.trim() ?? '';
 
   if (requiredQuantity <= 0 || requiredUnit.length === 0) {
-    return 'UNKNOWN';
+    return [];
   }
 
   const searchTerms = buildCoverageSearchTerms(component);
@@ -285,6 +365,7 @@ export const evaluateComponentPublicAvailability = async (
       categoryId: component.categoryId,
       searchTerms,
     }),
+    context,
   );
 
   if (materials.length === 0 && searchTerms.length > 0) {
@@ -293,6 +374,7 @@ export const evaluateComponentPublicAvailability = async (
         categoryId: null,
         searchTerms,
       }),
+      context,
     );
   }
 
@@ -302,6 +384,7 @@ export const evaluateComponentPublicAvailability = async (
         categoryId: component.categoryId,
         searchTerms: [],
       }),
+      context,
     );
   }
 
@@ -322,44 +405,36 @@ export const evaluateComponentPublicAvailability = async (
       } => entry.scored != null,
     );
 
-  if (scoredMaterialEntries.length === 0) {
-    return 'MISSING';
-  }
-
   const compatibleEntries = scoredMaterialEntries.filter((entry) =>
     unitsAreCompatible(requiredUnit, entry.material.unit),
   );
 
-  if (compatibleEntries.length === 0) {
+  for (const entry of compatibleEntries) {
+    if (!context.quantityStateByMaterialId.has(entry.material.id)) {
+      context.pendingQuantityMaterialIds.add(entry.material.id);
+    }
+  }
+
+  return compatibleEntries.map((entry) => entry.material);
+};
+
+const resolveComponentAvailabilityFromCompatibleMaterials = (
+  compatibleMaterials: CoverageMaterialRecord[],
+  requiredQuantity: number,
+  context: CoverageEvaluationContext,
+): ComponentPublicAvailabilityStatus => {
+  if (compatibleMaterials.length === 0) {
     return 'MISSING';
   }
 
-  const quantityByMaterialId = new Map(
-    await Promise.all(
-      compatibleEntries.map(async (entry) => {
-        const quantityState = await getMaterialQuantityState(
-          prisma,
-          entry.material.id,
-        );
-
-        return [
-          entry.material.id,
-          quantityState
-            ? decimalToNumber(quantityState.availableQuantity)
-            : null,
-        ] as const;
-      }),
-    ),
-  );
-
-  for (const entry of compatibleEntries) {
-    const availableQuantity = quantityByMaterialId.get(entry.material.id);
-    if (availableQuantity == null) {
+  for (const material of compatibleMaterials) {
+    const quantityState = context.quantityStateByMaterialId.get(material.id);
+    if (!quantityState) {
       continue;
     }
 
     const capacity = evaluateMaterialLinkCapacity({
-      availableQuantity,
+      availableQuantity: decimalToNumber(quantityState.availableQuantity),
       peerSelectedClaims: 0,
       requiredQuantity,
     });
@@ -370,6 +445,45 @@ export const evaluateComponentPublicAvailability = async (
   }
 
   return 'PARTIAL';
+};
+
+export const evaluateComponentPublicAvailability = async (
+  component: CoverageComponentRecord,
+  componentPosition: number,
+  context: CoverageEvaluationContext = {
+    candidateMaterialsByKey: new Map(),
+    pendingQuantityMaterialIds: new Set(),
+    quantityStateByMaterialId: new Map(),
+  },
+): Promise<ComponentPublicAvailabilityStatus> => {
+  if (!isCoverageRequiredMaterialComponent(component)) {
+    return 'UNKNOWN';
+  }
+
+  const requiredQuantity = decimalToNumber(component.quantity);
+  const requiredUnit = component.unit?.trim() ?? '';
+
+  if (requiredQuantity <= 0 || requiredUnit.length === 0) {
+    return 'UNKNOWN';
+  }
+
+  const compatibleMaterials = await collectCompatibleCoverageMaterials(
+    component,
+    componentPosition,
+    context,
+  );
+
+  if (compatibleMaterials.length === 0) {
+    return 'MISSING';
+  }
+
+  await ensureCoverageQuantityStates(context);
+
+  return resolveComponentAvailabilityFromCompatibleMaterials(
+    compatibleMaterials,
+    requiredQuantity,
+    context,
+  );
 };
 
 export const summarizeMaterialCoverage = (
@@ -548,79 +662,20 @@ const loadCoverageComponentsForProjects = async (projectIds: string[]) => {
   });
 };
 
-export const batchComputeProjectMaterialCoverage = async (input: {
+export const attachPersonalBuildReadiness = async (input: {
+  results: Map<string, ProjectMaterialCoverageResult>;
+  learnerId: string;
   projectIds: string[];
-  learnerId?: string;
-  personalReadinessProjectIds?: string[];
-}): Promise<Map<string, ProjectMaterialCoverageResult>> => {
-  const uniqueProjectIds = [...new Set(input.projectIds)];
-  const results = new Map<string, ProjectMaterialCoverageResult>();
-
-  if (uniqueProjectIds.length === 0) {
-    return results;
-  }
-
-  const components = await loadCoverageComponentsForProjects(uniqueProjectIds);
-  const componentsByProjectId = new Map<string, CoverageComponentRecord[]>();
-
-  for (const component of components) {
-    const bucket = componentsByProjectId.get(component.projectId) ?? [];
-    bucket.push(component);
-    componentsByProjectId.set(component.projectId, bucket);
-  }
-
-  const componentAvailabilityCache = new Map<
-    string,
-    ComponentPublicAvailabilityStatus
-  >();
-
-  for (const projectId of uniqueProjectIds) {
-    const projectComponents = (componentsByProjectId.get(projectId) ?? []).filter(
-      (component) => isCoverageRequiredMaterialComponent(component),
-    );
-
-    const componentCoverage: ProjectComponentCoverageItem[] = [];
-
-    for (const [index, component] of projectComponents.entries()) {
-      let availabilityStatus = componentAvailabilityCache.get(component.id);
-      if (!availabilityStatus) {
-        availabilityStatus = await evaluateComponentPublicAvailability(
-          component,
-          index,
-        );
-        componentAvailabilityCache.set(component.id, availabilityStatus);
-      }
-
-      componentCoverage.push({
-        componentId: component.id,
-        componentName: component.componentName,
-        availabilityStatus,
-      });
-    }
-
-    results.set(projectId, {
-      materialCoverage: summarizeMaterialCoverage(componentCoverage),
-      componentCoverage,
-      personalBuildReadiness: null,
-    });
-  }
-
-  if (!input.learnerId) {
-    return results;
-  }
-
-  const personalProjectIds = new Set(
-    input.personalReadinessProjectIds ?? input.projectIds,
-  );
-
-  if (personalProjectIds.size === 0) {
-    return results;
+}) => {
+  const personalProjectIds = [...new Set(input.projectIds)];
+  if (personalProjectIds.length === 0) {
+    return input.results;
   }
 
   const builds = await prisma.projectBuild.findMany({
     where: {
       projectId: {
-        in: [...personalProjectIds],
+        in: personalProjectIds,
       },
       learnerId: input.learnerId,
       status: 'IN_PROGRESS',
@@ -718,7 +773,7 @@ export const batchComputeProjectMaterialCoverage = async (input: {
   );
 
   for (const [projectId, build] of latestBuildByProjectId.entries()) {
-    const coverage = results.get(projectId);
+    const coverage = input.results.get(projectId);
     if (!coverage) {
       continue;
     }
@@ -756,7 +811,143 @@ export const batchComputeProjectMaterialCoverage = async (input: {
     });
   }
 
-  return results;
+  return input.results;
+};
+
+export const batchComputeProjectMaterialCoverage = async (input: {
+  projectIds: string[];
+  learnerId?: string;
+  personalReadinessProjectIds?: string[];
+}): Promise<Map<string, ProjectMaterialCoverageResult>> => {
+  const uniqueProjectIds = [...new Set(input.projectIds)];
+  const results = new Map<string, ProjectMaterialCoverageResult>();
+
+  if (uniqueProjectIds.length === 0) {
+    return results;
+  }
+
+  const components = await loadCoverageComponentsForProjects(uniqueProjectIds);
+  const componentsByProjectId = new Map<string, CoverageComponentRecord[]>();
+
+  for (const component of components) {
+    const bucket = componentsByProjectId.get(component.projectId) ?? [];
+    bucket.push(component);
+    componentsByProjectId.set(component.projectId, bucket);
+  }
+
+  const context: CoverageEvaluationContext = {
+    candidateMaterialsByKey: new Map(),
+    pendingQuantityMaterialIds: new Set(),
+    quantityStateByMaterialId: new Map(),
+  };
+
+  type PendingComponentEvaluation = {
+    projectId: string;
+    component: CoverageComponentRecord;
+    index: number;
+    compatibleMaterials: CoverageMaterialRecord[] | null;
+    earlyStatus: ComponentPublicAvailabilityStatus | null;
+  };
+
+  const pendingEvaluations: PendingComponentEvaluation[] = [];
+  const componentAvailabilityCache = new Map<
+    string,
+    ComponentPublicAvailabilityStatus
+  >();
+
+  for (const projectId of uniqueProjectIds) {
+    const projectComponents = (componentsByProjectId.get(projectId) ?? []).filter(
+      (component) => isCoverageRequiredMaterialComponent(component),
+    );
+
+    for (const [index, component] of projectComponents.entries()) {
+      if (componentAvailabilityCache.has(component.id)) {
+        continue;
+      }
+
+      const requiredQuantity = decimalToNumber(component.quantity);
+      const requiredUnit = component.unit?.trim() ?? '';
+      if (requiredQuantity <= 0 || requiredUnit.length === 0) {
+        componentAvailabilityCache.set(component.id, 'UNKNOWN');
+        continue;
+      }
+
+      const compatibleMaterials = await collectCompatibleCoverageMaterials(
+        component,
+        index,
+        context,
+      );
+
+      if (compatibleMaterials.length === 0) {
+        componentAvailabilityCache.set(component.id, 'MISSING');
+        continue;
+      }
+
+      pendingEvaluations.push({
+        projectId,
+        component,
+        index,
+        compatibleMaterials,
+        earlyStatus: null,
+      });
+    }
+  }
+
+  await ensureCoverageQuantityStates(context);
+
+  for (const pending of pendingEvaluations) {
+    if (componentAvailabilityCache.has(pending.component.id)) {
+      continue;
+    }
+
+    const requiredQuantity = decimalToNumber(pending.component.quantity);
+    const status = resolveComponentAvailabilityFromCompatibleMaterials(
+      pending.compatibleMaterials ?? [],
+      requiredQuantity,
+      context,
+    );
+    componentAvailabilityCache.set(pending.component.id, status);
+  }
+
+  for (const projectId of uniqueProjectIds) {
+    const projectComponents = (componentsByProjectId.get(projectId) ?? []).filter(
+      (component) => isCoverageRequiredMaterialComponent(component),
+    );
+
+    const componentCoverage: ProjectComponentCoverageItem[] =
+      projectComponents.map((component) => {
+        const requiredQuantity = decimalToNumber(component.quantity);
+        const requiredUnit = component.unit?.trim() ?? '';
+        const fallbackStatus: ComponentPublicAvailabilityStatus =
+          requiredQuantity <= 0 || requiredUnit.length === 0
+            ? 'UNKNOWN'
+            : 'MISSING';
+
+        return {
+          componentId: component.id,
+          componentName: component.componentName,
+          availabilityStatus:
+            componentAvailabilityCache.get(component.id) ?? fallbackStatus,
+        };
+      });
+
+    results.set(projectId, {
+      materialCoverage: summarizeMaterialCoverage(componentCoverage),
+      componentCoverage,
+      personalBuildReadiness: null,
+    });
+  }
+
+  if (!input.learnerId) {
+    return results;
+  }
+
+  const personalProjectIds = input.personalReadinessProjectIds ?? input.projectIds;
+  return attachPersonalBuildReadiness({
+    results,
+    learnerId: input.learnerId,
+    projectIds: personalProjectIds,
+  });
 };
 
 export const matchesMaterialAvailabilityFilter = (

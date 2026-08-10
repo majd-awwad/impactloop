@@ -181,12 +181,124 @@ export type MaterialQuantityState = {
   availableQuantity: Prisma.Decimal;
 };
 
-export const getMaterialQuantityState = async (
+const buildMaterialQuantityState = (input: {
+  materialId: string;
+  status: MaterialStatus;
+  materialQuantity: Prisma.Decimal | number;
+  heldQuantity: Prisma.Decimal | number;
+}): MaterialQuantityState => {
+  const materialQuantity = toDecimal(input.materialQuantity);
+  const heldQuantity = toDecimal(input.heldQuantity);
+  const availableQuantity = clampDecimalAtZero(
+    materialQuantity.minus(heldQuantity),
+  );
+
+  return {
+    materialId: input.materialId,
+    status: input.status,
+    materialQuantity,
+    heldQuantity,
+    availableQuantity,
+  };
+};
+
+const sumActiveHoldQuantitiesByMaterialIds = async (
   tx: Prisma.TransactionClient,
-  materialId: string,
-): Promise<MaterialQuantityState | null> => {
-  const material = await tx.material.findUnique({
-    where: { id: materialId },
+  materialIds: string[],
+  statuses: readonly ReservationStatus[] = ACTIVE_HOLD_STATUSES,
+) => {
+  if (materialIds.length === 0) {
+    return new Map<string, Prisma.Decimal>();
+  }
+
+  const groups = await tx.reservation.groupBy({
+    by: ['materialId'],
+    where: {
+      materialId: { in: materialIds },
+      status: { in: [...statuses] },
+    },
+    _sum: {
+      quantityRequested: true,
+    },
+  });
+
+  return new Map(
+    groups.map((group) => [
+      group.materialId,
+      toDecimal(group._sum.quantityRequested),
+    ]),
+  );
+};
+
+const sumAwaitingResolutionHoldExtrasByMaterialIds = async (
+  tx: Prisma.TransactionClient,
+  materialIds: string[],
+) => {
+  const extras = new Map<string, Prisma.Decimal>();
+  if (materialIds.length === 0) {
+    return extras;
+  }
+
+  const awaitingResolutionReservations = await tx.reservation.findMany({
+    where: {
+      materialId: { in: materialIds },
+      status: 'AWAITING_RESOLUTION',
+    },
+    select: {
+      id: true,
+      materialId: true,
+      quantityRequested: true,
+      pendingRescheduleReason: true,
+    },
+  });
+
+  if (awaitingResolutionReservations.length === 0) {
+    return extras;
+  }
+
+  const reservationIdsWithCustodyDeliveries =
+    await loadReservationIdsWithCustodyDeliveries(
+      tx,
+      awaitingResolutionReservations.map((reservation) => reservation.id),
+    );
+
+  for (const reservation of awaitingResolutionReservations) {
+    if (
+      reservationIdsWithCustodyDeliveries.has(reservation.id) ||
+      reservation.pendingRescheduleReason?.startsWith(
+        PARTIAL_PICKUP_HOLD_REASON_PREFIX,
+      )
+    ) {
+      const prior = extras.get(reservation.materialId) ?? new Prisma.Decimal(0);
+      extras.set(
+        reservation.materialId,
+        prior.plus(toDecimal(reservation.quantityRequested)),
+      );
+    }
+  }
+
+  return extras;
+};
+
+/**
+ * Batch quantity-state loader used by learning-project coverage.
+ * Semantically equivalent to calling getMaterialQuantityState per id.
+ */
+export const getMaterialQuantityStates = async (
+  tx: Prisma.TransactionClient,
+  materialIds: string[],
+): Promise<Map<string, MaterialQuantityState>> => {
+  const uniqueMaterialIds = [...new Set(materialIds.filter(Boolean))];
+  const results = new Map<string, MaterialQuantityState>();
+
+  if (uniqueMaterialIds.length === 0) {
+    return results;
+  }
+
+  const materials = await tx.material.findMany({
+    where: {
+      id: { in: uniqueMaterialIds },
+    },
     select: {
       id: true,
       status: true,
@@ -194,23 +306,38 @@ export const getMaterialQuantityState = async (
     },
   });
 
-  if (!material) {
-    return null;
+  const activeHeldByMaterialId = await sumActiveHoldQuantitiesByMaterialIds(
+    tx,
+    uniqueMaterialIds,
+  );
+  const awaitingExtrasByMaterialId =
+    await sumAwaitingResolutionHoldExtrasByMaterialIds(tx, uniqueMaterialIds);
+
+  for (const material of materials) {
+    const heldQuantity = (
+      activeHeldByMaterialId.get(material.id) ?? new Prisma.Decimal(0)
+    ).plus(awaitingExtrasByMaterialId.get(material.id) ?? new Prisma.Decimal(0));
+
+    results.set(
+      material.id,
+      buildMaterialQuantityState({
+        materialId: material.id,
+        status: material.status,
+        materialQuantity: material.quantity,
+        heldQuantity,
+      }),
+    );
   }
 
-  const materialQuantity = toDecimal(material.quantity);
-  const heldQuantity = await sumHeldQuantityForMaterial(tx, materialId);
-  const availableQuantity = clampDecimalAtZero(
-    materialQuantity.minus(heldQuantity),
-  );
+  return results;
+};
 
-  return {
-    materialId: material.id,
-    status: material.status,
-    materialQuantity,
-    heldQuantity,
-    availableQuantity,
-  };
+export const getMaterialQuantityState = async (
+  tx: Prisma.TransactionClient,
+  materialId: string,
+): Promise<MaterialQuantityState | null> => {
+  const states = await getMaterialQuantityStates(tx, [materialId]);
+  return states.get(materialId) ?? null;
 };
 
 export const resolveMaterialStatusFromHolds = async (

@@ -5,6 +5,7 @@ import {
   compareBrowseProjectsForSort,
   matchesMaterialAvailabilityFilter,
   paginateBrowseResults,
+  requiresCoverageBeforePagination,
   sortBrowseProjects,
   summarizeMaterialCoverage,
   type BrowseProjectSortEntry,
@@ -37,6 +38,50 @@ const sortEntry = (
 });
 
 describe('learning-projects browse coverage pipeline', () => {
+  test('requiresCoverageBeforePagination only for availability filters and MOST_AVAILABLE', () => {
+    assert.equal(
+      requiresCoverageBeforePagination({ availability: 'ANY', sort: 'DEFAULT' }),
+      false,
+    );
+    assert.equal(
+      requiresCoverageBeforePagination({ availability: 'ANY', sort: 'NEWEST' }),
+      false,
+    );
+    assert.equal(
+      requiresCoverageBeforePagination({
+        availability: 'ANY',
+        sort: 'SHORTEST_DURATION',
+      }),
+      false,
+    );
+    assert.equal(
+      requiresCoverageBeforePagination({ availability: 'ANY', sort: 'EASIEST' }),
+      false,
+    );
+    assert.equal(
+      requiresCoverageBeforePagination({
+        availability: 'ANY',
+        sort: 'MOST_POPULAR',
+      }),
+      false,
+    );
+    assert.equal(
+      requiresCoverageBeforePagination({
+        availability: 'ANY',
+        sort: 'MOST_AVAILABLE',
+      }),
+      true,
+    );
+    assert.equal(
+      requiresCoverageBeforePagination({ availability: 'FULL', sort: 'DEFAULT' }),
+      true,
+    );
+    assert.equal(
+      requiresCoverageBeforePagination({ availability: 'NONE', sort: 'NEWEST' }),
+      true,
+    );
+  });
+
   test('FULL classification requires every required component to be AVAILABLE', () => {
     const full = summarizeMaterialCoverage([
       { componentId: 'a', componentName: 'A', availabilityStatus: 'AVAILABLE' },
