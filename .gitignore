@@ -61,6 +61,18 @@ apps/backend/pnpm-lock.yaml
 *.zip
 
 !apps/frontend/assets/**
+# Keep community demo material originals trackable in-repo.
+!apps/backend/prisma/demo-data/materials/source-images/**
+!apps/backend/prisma/demo-data/materials/source-images/**/*.png
+!apps/backend/prisma/demo-data/materials/source-images/**/*.jpg
+!apps/backend/prisma/demo-data/materials/source-images/**/*.jpeg
+!apps/backend/prisma/demo-data/materials/source-images/**/*.webp
+# Keep community demo project covers trackable in-repo (PD-03 + localized legacy).
+!apps/backend/prisma/demo-data/projects/source-images/**
+!apps/backend/prisma/demo-data/projects/source-images/**/*.png
+!apps/backend/prisma/demo-data/projects/source-images/**/*.jpg
+!apps/backend/prisma/demo-data/projects/source-images/**/*.jpeg
+!apps/backend/prisma/demo-data/projects/source-images/**/*.webp
 
 # Logs
 *.log

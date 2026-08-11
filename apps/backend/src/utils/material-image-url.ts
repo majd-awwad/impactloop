@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { COMMUNITY_DEMO_MATERIALS_PUBLIC_PREFIX } from '../constants/community-demo-materials.js';
 import { MATERIAL_UPLOAD_PUBLIC_PREFIX } from '../constants/material-upload.js';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,6 +13,10 @@ export const isMaterialImageUrl = (value: string): boolean => {
   const trimmed = value.trim();
 
   if (trimmed.startsWith(`${MATERIAL_UPLOAD_PUBLIC_PREFIX}/`)) {
+    return true;
+  }
+
+  if (trimmed.startsWith(`${COMMUNITY_DEMO_MATERIALS_PUBLIC_PREFIX}/`)) {
     return true;
   }
 
@@ -35,6 +40,11 @@ export const cardMaterialImageUrl = (value: string): string => {
     return fs.existsSync(materialThumbnailPath(filename))
       ? publicMaterialThumbnailUrl(filename)
       : trimmed;
+  }
+
+  // Community demo originals are served as-is (no upload-thumb pipeline).
+  if (trimmed.startsWith(`${COMMUNITY_DEMO_MATERIALS_PUBLIC_PREFIX}/`)) {
+    return trimmed;
   }
 
   try {

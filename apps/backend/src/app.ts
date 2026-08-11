@@ -40,6 +40,8 @@ import {
   paymentsMockWebhookRouter,
   paymentsRouter,
 } from './modules/payments/payments.routes.js';
+import { COMMUNITY_DEMO_MATERIALS_SOURCE_IMAGES_DIR } from './constants/community-demo-materials.js';
+import { COMMUNITY_DEMO_PROJECTS_SOURCE_IMAGES_DIR } from './constants/community-demo-projects.js';
 import {
   ensureMaterialUploadsDir,
   MATERIAL_UPLOADS_DIR,
@@ -106,6 +108,15 @@ export const createApp = (options: CreateAppOptions): Express => {
   );
   app.use('/uploads/materials', express.static(MATERIAL_UPLOADS_DIR));
   app.use('/uploads/profiles', express.static(PROFILE_UPLOADS_DIR));
+  // Local community demo originals (relative URLs; client resolves via API base).
+  app.use(
+    '/demo-assets/community-materials',
+    express.static(COMMUNITY_DEMO_MATERIALS_SOURCE_IMAGES_DIR),
+  );
+  app.use(
+    '/demo-assets/community-projects',
+    express.static(COMMUNITY_DEMO_PROJECTS_SOURCE_IMAGES_DIR),
+  );
   // Supplier verification documents and build-completion photos are private —
   // never serve via anonymous express.static. Use authenticated download endpoints.
   // Raw body required for mock payment webhook HMAC verification.
