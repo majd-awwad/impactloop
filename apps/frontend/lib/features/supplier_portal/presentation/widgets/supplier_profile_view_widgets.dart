@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
+import '../../../../shared/utils/profile_avatar_url.dart';
 import '../../../../shared/widgets/app_section_card.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/supplier_verification_status_presentation.dart';
@@ -36,7 +37,7 @@ class SupplierProfileHeader extends StatelessWidget {
     final title =
         _value(identity?.publicName) ?? context.s.supplierFallbackName;
     final coverUrl = _mediaUrl(identity?.coverImageUrl);
-    final avatarUrl = _mediaUrl(identity?.avatarImageUrl);
+    final avatarUrl = _avatarMediaUrl(identity?.avatarImageUrl);
     final locationLabel = [
       _value(location?.city),
       _value(location?.area),
@@ -1287,6 +1288,11 @@ String _normalizeForComparison(String? value) {
 String? _mediaUrl(String? value) {
   final normalized = _value(value);
   return normalized == null ? null : ApiConfig.resolveMediaUrl(normalized);
+}
+
+String? _avatarMediaUrl(String? value) {
+  final effective = effectiveProfileAvatarUrl(value);
+  return effective == null ? null : ApiConfig.resolveMediaUrl(effective);
 }
 
 String? _hoursLabel(Map<String, String>? hours) {

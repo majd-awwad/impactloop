@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/api_config.dart';
+import '../../../../shared/utils/profile_avatar_url.dart';
 import '../../../auth/application/auth_controller.dart';
 import 'supplier_profile_providers.dart';
 
@@ -15,9 +16,10 @@ final supplierDisplayAvatarUrlProvider = Provider<String?>((ref) {
     orElse: () => authUser?.profileImageUrl,
   );
 
-  if (raw == null || raw.trim().isEmpty) {
+  final effectiveUrl = effectiveProfileAvatarUrl(raw);
+  if (effectiveUrl == null) {
     return null;
   }
 
-  return ApiConfig.resolveMediaUrl(raw);
+  return ApiConfig.resolveMediaUrl(effectiveUrl);
 });

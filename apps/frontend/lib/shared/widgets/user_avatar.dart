@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/config/api_config.dart';
+import '../utils/profile_avatar_url.dart';
 
 class UserAvatar extends StatelessWidget {
   const UserAvatar({
@@ -27,7 +28,7 @@ class UserAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = profileImageUrl?.trim() ?? '';
+    final imageUrl = effectiveProfileAvatarUrl(profileImageUrl) ?? '';
     final size = radius * 2;
 
     return CircleAvatar(

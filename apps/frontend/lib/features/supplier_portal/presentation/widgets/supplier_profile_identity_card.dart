@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/utils/profile_avatar_url.dart';
 import '../../../../shared/widgets/app_section_card.dart';
 import '../../data/models/supplier_profile.dart';
 import '../../data/models/supplier_profile_location.dart';
@@ -37,7 +37,7 @@ class SupplierProfileIdentityCard extends StatelessWidget {
         ? supplier!.publicName
         : profile.user.displayName;
     final location = supplier?.defaultPickupLocation;
-    final profileImageUrl = profile.user.profileImageUrl;
+    final profileImageUrl = effectiveProfileAvatarUrl(profile.user.profileImageUrl);
     final isCompact = MediaQuery.sizeOf(context).width < 720;
 
     return AppSectionCard(

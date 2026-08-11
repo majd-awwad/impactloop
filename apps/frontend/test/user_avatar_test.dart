@@ -38,4 +38,48 @@ void main() {
       expect(find.text('L'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'UserAvatar shows initials for DiceBear placeholder URLs without loading network image',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: UserAvatar(
+              displayName: 'Majd Learner',
+              profileImageUrl:
+                  'https://api.dicebear.com/9.x/initials/png?seed=Majd%20Learner',
+              radius: 20,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(Image), findsNothing);
+      expect(find.text('M'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'UserAvatar falls back to initial when network image fails to load',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: UserAvatar(
+              displayName: 'Learner User',
+              profileImageUrl: 'https://invalid.invalid/avatar.png',
+              radius: 20,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+
+      expect(find.text('L'), findsOneWidget);
+    },
+  );
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_spacing.dart';
-import '../../../core/config/api_config.dart';
 import '../materials/materials_ui_palette.dart';
+import '../user_avatar.dart';
 
 String supplierIdentityInitial(String displayName) {
   final trimmed = displayName.trim();
@@ -32,26 +32,24 @@ class SupplierIdentityAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final resolvedAvatar = avatarUrl?.trim();
-    final hasImage = resolvedAvatar != null && resolvedAvatar.isNotEmpty;
+    final background = palette.mint.withValues(alpha: 0.14);
+    // Reuse the shared local-initials avatar; empty supplier names fall back to "S".
+    final nameForInitial = displayName.trim().isEmpty
+        ? supplierIdentityInitial(displayName)
+        : displayName;
 
-    final avatar = CircleAvatar(
+    final avatar = UserAvatar(
+      displayName: nameForInitial,
+      profileImageUrl: avatarUrl,
       radius: radius,
-      backgroundColor: palette.mint.withValues(alpha: 0.14),
-      foregroundImage: hasImage
-          ? NetworkImage(ApiConfig.resolveMediaUrl(resolvedAvatar!))
-          : null,
-      child: hasImage
-          ? null
-          : Text(
-              supplierIdentityInitial(displayName),
-              style: TextStyle(
-                fontSize: radius * 0.72,
-                fontWeight: FontWeight.w800,
-                color: palette.mint,
-                height: 1,
-              ),
-            ),
+      backgroundColor: background,
+      foregroundColor: palette.mint,
+      initialTextStyle: TextStyle(
+        fontSize: radius * 0.72,
+        fontWeight: FontWeight.w800,
+        color: palette.mint,
+        height: 1,
+      ),
     );
 
     if (borderWidth <= 0) {

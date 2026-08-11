@@ -6,6 +6,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/config/api_config.dart';
+import '../../../../shared/utils/profile_avatar_url.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../auth/data/models/user.dart';
 import '../../data/models/uploaded_profile_image.dart';
@@ -150,20 +151,35 @@ class ProfileEditAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final size = radius * 2;
+    final initials = Text(
+      displayInitial,
+      style: AppTextStyles.title(context).copyWith(
+        color: colors.primary,
+        fontSize: radius * 0.7,
+        fontWeight: FontWeight.w800,
+      ),
+    );
     final avatar = CircleAvatar(
       radius: radius,
       backgroundColor: colors.primarySoft,
-      backgroundImage: imageProvider,
-      child: imageProvider == null
-          ? Text(
-              displayInitial,
-              style: AppTextStyles.title(context).copyWith(
-                color: colors.primary,
-                fontSize: radius * 0.7,
-                fontWeight: FontWeight.w800,
+      child: ClipOval(
+        child: imageProvider == null
+            ? SizedBox(width: size, height: size, child: Center(child: initials))
+            : Image(
+                image: imageProvider!,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return SizedBox(
+                    width: size,
+                    height: size,
+                    child: Center(child: initials),
+                  );
+                },
               ),
-            )
-          : null,
+      ),
     );
 
     if (!showCameraBadge) {
@@ -379,7 +395,7 @@ ImageProvider? profileEditImageProvider({
     return MemoryImage(bytes);
   }
 
-  final trimmed = imageUrl?.trim() ?? '';
+  final trimmed = effectiveProfileAvatarUrl(imageUrl) ?? '';
   if (trimmed.isEmpty) {
     return null;
   }
