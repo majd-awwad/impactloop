@@ -123,6 +123,6 @@ void main() {
     });
 
     expect(result.candidates, hasLength(2));
-    expect(result.candidates.first.displayLabel, 'Arduino Uno');
+    expect(result.candidates.first.displayLabel(), 'Arduino Uno');
   });
 }

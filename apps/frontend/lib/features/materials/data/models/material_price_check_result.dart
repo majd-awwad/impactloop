@@ -20,7 +20,15 @@ class MatchedMaterialReference {
     );
   }
 
-  String get displayLabel => nameEn;
+  String displayLabel({bool preferArabic = false}) {
+    if (preferArabic) {
+      final ar = nameAr?.trim();
+      if (ar != null && ar.isNotEmpty) {
+        return ar;
+      }
+    }
+    return nameEn;
+  }
 }
 
 class MaterialPriceCheckResult {
@@ -44,6 +52,7 @@ class MaterialPriceCheckResult {
     this.matchedReference,
     this.approvedUnit,
     this.candidates = const [],
+    this.categorySuggestion,
     required this.message,
   });
 
@@ -66,6 +75,7 @@ class MaterialPriceCheckResult {
   final MatchedMaterialReference? matchedReference;
   final String? approvedUnit;
   final List<MatchedMaterialReference> candidates;
+  final CategorySuggestion? categorySuggestion;
   final String message;
 
   static double? _parseAmount(dynamic value) {
@@ -100,6 +110,13 @@ class MaterialPriceCheckResult {
         .toList();
   }
 
+  static CategorySuggestion? _parseCategorySuggestion(dynamic value) {
+    if (value is! Map) {
+      return null;
+    }
+    return CategorySuggestion.fromJson(Map<String, dynamic>.from(value));
+  }
+
   factory MaterialPriceCheckResult.fromJson(Map<String, dynamic> json) {
     final rawMatched = json['matchedReference'];
 
@@ -127,7 +144,47 @@ class MaterialPriceCheckResult {
           : null,
       approvedUnit: json['approvedUnit'] as String?,
       candidates: _parseCandidates(json['candidates']),
+      categorySuggestion: _parseCategorySuggestion(json['categorySuggestion']),
       message: json['message'] as String? ?? '',
+    );
+  }
+}
+
+class CategorySuggestion {
+  const CategorySuggestion({
+    required this.materialType,
+    required this.confidence,
+    required this.categoryId,
+    required this.categoryNameEn,
+    this.categoryNameAr,
+  });
+
+  final MatchedMaterialReference materialType;
+  final String confidence;
+  final String categoryId;
+  final String categoryNameEn;
+  final String? categoryNameAr;
+
+  factory CategorySuggestion.fromJson(Map<String, dynamic> json) {
+    final materialTypeRaw = json['materialType'];
+    final categoryRaw = json['category'];
+    final category = categoryRaw is Map
+        ? Map<String, dynamic>.from(categoryRaw)
+        : const <String, dynamic>{};
+    return CategorySuggestion(
+      materialType: materialTypeRaw is Map
+          ? MatchedMaterialReference.fromJson(
+              Map<String, dynamic>.from(materialTypeRaw),
+            )
+          : const MatchedMaterialReference(
+              id: '',
+              nameEn: '',
+              unit: 'piece',
+            ),
+      confidence: json['confidence']?.toString() ?? '',
+      categoryId: category['id']?.toString() ?? '',
+      categoryNameEn: category['nameEn']?.toString() ?? '',
+      categoryNameAr: category['nameAr'] as String?,
     );
   }
 }

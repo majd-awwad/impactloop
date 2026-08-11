@@ -11,6 +11,7 @@ import { prisma } from '../../database/prisma.js';
 import {
   mapMatchedReferenceDto,
   matchMaterialReference,
+  suggestCrossCategoryMaterialReference,
 } from '../../services/material-reference-matching.service.js';
 import { AppError } from '../../utils/app-error.js';
 import { decimalToNumber, roundCurrency } from '../../utils/decimal.js';
@@ -61,6 +62,7 @@ export type PriceCheckReason =
   | 'PAID_OTHER_NOT_ALLOWED'
   | 'MATERIAL_REVIEW_REQUIRED'
   | 'AMBIGUOUS_MATERIAL_MATCH'
+  | 'CATEGORY_MISMATCH_SUGGESTION'
   | 'INVALID_CURRENCY'
   | 'INVALID_PRICE'
   | 'CATEGORY_NOT_FOUND'
@@ -74,6 +76,16 @@ export type MatchedReferenceDto = {
   nameEn: string;
   nameAr: string | null;
   unit: string;
+};
+
+export type CategorySuggestionDto = {
+  materialType: MatchedReferenceDto;
+  confidence: string;
+  category: {
+    id: string;
+    nameEn: string;
+    nameAr: string | null;
+  };
 };
 
 export type PriceCheckResult = {
@@ -96,6 +108,7 @@ export type PriceCheckResult = {
   matchedReference?: MatchedReferenceDto | null;
   approvedUnit?: string | null;
   candidates: MatchedReferenceDto[];
+  categorySuggestion?: CategorySuggestionDto | null;
   message: string;
 };
 
@@ -166,6 +179,7 @@ const buildBlockedResult = (
     matchedReference?: MatchedReferenceDto | null;
     approvedUnit?: string | null;
     candidates?: MatchedReferenceDto[];
+    categorySuggestion?: CategorySuggestionDto | null;
   } = {},
 ): PriceCheckResult => ({
   allowed: false,
@@ -177,6 +191,7 @@ const buildBlockedResult = (
   matchedReference: options.matchedReference ?? null,
   approvedUnit: options.approvedUnit ?? null,
   candidates: options.candidates ?? [],
+  categorySuggestion: options.categorySuggestion ?? null,
   message,
   ...(options.input != null && options.baseMaxPrice != null
     ? buildConditionPriceBreakdown(
@@ -268,6 +283,28 @@ const resolveMaterialTypeForPaidCheck = async (
   });
 
   if (matchResult.status === 'NO_MATCH') {
+    const categorySuggestion = await suggestCrossCategoryMaterialReference({
+      materialName,
+      selectedCategoryId: input.categoryId,
+    });
+    if (categorySuggestion) {
+      return {
+        ok: false,
+        result: buildBlockedResult(
+          'CATEGORY_MISMATCH_SUGGESTION',
+          `No match in the selected category. Did you mean "${categorySuggestion.materialType.nameEn}" under ${categorySuggestion.category.nameEn}? Confirm the category to continue.`,
+          {
+            candidates: [mapMatchedReferenceDto(categorySuggestion.materialType)],
+            matchedReference: mapMatchedReferenceDto(categorySuggestion.materialType),
+            categorySuggestion: {
+              materialType: mapMatchedReferenceDto(categorySuggestion.materialType),
+              confidence: categorySuggestion.confidence,
+              category: categorySuggestion.category,
+            },
+          },
+        ),
+      };
+    }
     return {
       ok: false,
       result: buildBlockedResult(
@@ -1407,13 +1444,8 @@ export const resolveMaterialReferenceForCreate = async (input: {
     }
   }
 
-  if (input.isFree) {
-    return {
-      matchResult,
-      materialType: null,
-    };
-  }
-
+  // Ambiguous matches need confirmation for free and paid — never silently
+  // collapse to customMaterialType / first candidate.
   if (matchResult.status === 'AMBIGUOUS') {
     throw new AppError(
       'We found multiple possible matches. Please clarify the material name or category.',
@@ -1426,12 +1458,38 @@ export const resolveMaterialReferenceForCreate = async (input: {
     );
   }
 
+  const categorySuggestion = await suggestCrossCategoryMaterialReference({
+    materialName: input.materialName,
+    selectedCategoryId: input.categoryId,
+  });
+
+  if (input.isFree) {
+    return {
+      matchResult,
+      materialType: null,
+      categorySuggestion,
+    };
+  }
+
   throw new AppError(
-    'This paid material needs admin price review before publishing.',
+    categorySuggestion
+      ? `No match in the selected category. Did you mean "${categorySuggestion.materialType.nameEn}" under ${categorySuggestion.category.nameEn}? Confirm the category to continue.`
+      : 'This paid material needs admin price review before publishing.',
     400,
     'VALIDATION_ERROR',
     {
-      reason: 'MATERIAL_REVIEW_REQUIRED',
+      reason: categorySuggestion
+        ? 'CATEGORY_MISMATCH_SUGGESTION'
+        : 'MATERIAL_REVIEW_REQUIRED',
+      ...(categorySuggestion
+        ? {
+            categorySuggestion: {
+              materialType: mapMatchedReferenceDto(categorySuggestion.materialType),
+              confidence: categorySuggestion.confidence,
+              category: categorySuggestion.category,
+            },
+          }
+        : {}),
     },
   );
 };

@@ -826,10 +826,12 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                     isRequestingPriceReview:
                         _isRequestingPriceReview || _isSubmitting,
                     priceReviewMessage: _priceReviewMessage,
+                    preferArabicLabels: context.isSupplierArabic,
                     onSubmitPriceReview: _isSubmitting || _submittedSuccessfully
                         ? () {}
                         : _requestPriceReview,
                     onSelectSuggestion: _applySuggestion,
+                    onApplyCategorySuggestion: _applyCategorySuggestion,
                   ),
                 ],
               ],
@@ -1112,10 +1114,12 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                     isRequestingPriceReview:
                         _isRequestingPriceReview || _isSubmitting,
                     priceReviewMessage: _priceReviewMessage,
+                    preferArabicLabels: context.isSupplierArabic,
                     onSubmitPriceReview: _isSubmitting || _submittedSuccessfully
                         ? () {}
                         : _requestPriceReview,
                     onSelectSuggestion: _applySuggestion,
+                    onApplyCategorySuggestion: _applyCategorySuggestion,
                   ),
                 ],
               ],
@@ -1823,10 +1827,53 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     }
   }
 
-  void _applySuggestion(String suggestion) {
+  void _applySuggestion(MatchedMaterialReference suggestion) {
     setState(() {
-      _materialNameController.text = suggestion;
-      _selectedMaterialType = null;
+      _materialNameController.text = suggestion.displayLabel(
+        preferArabic: context.isSupplierArabic,
+      );
+      _unitController.text = suggestion.unit;
+      _selectedMaterialType = material_models.MaterialType(
+        id: suggestion.id,
+        nameEn: suggestion.nameEn,
+        nameAr: suggestion.nameAr,
+        normalizedName: suggestion.nameEn.toLowerCase(),
+        defaultUnit: suggestion.unit,
+        category: material_models.MaterialTypeCategorySummary(
+          id: _categoryId ?? '',
+          nameEn: '',
+          nameAr: '',
+        ),
+        hasActivePriceRule: true,
+        aliases: const [],
+      );
+      _priceCheck = null;
+      _priceReviewMessage = null;
+    });
+    _verifyPrice();
+  }
+
+  void _applyCategorySuggestion(CategorySuggestion suggestion) {
+    setState(() {
+      _categoryId = suggestion.categoryId;
+      _materialNameController.text = suggestion.materialType.displayLabel(
+        preferArabic: context.isSupplierArabic,
+      );
+      _unitController.text = suggestion.materialType.unit;
+      _selectedMaterialType = material_models.MaterialType(
+        id: suggestion.materialType.id,
+        nameEn: suggestion.materialType.nameEn,
+        nameAr: suggestion.materialType.nameAr,
+        normalizedName: suggestion.materialType.nameEn.toLowerCase(),
+        defaultUnit: suggestion.materialType.unit,
+        category: material_models.MaterialTypeCategorySummary(
+          id: suggestion.categoryId,
+          nameEn: suggestion.categoryNameEn,
+          nameAr: suggestion.categoryNameAr ?? '',
+        ),
+        hasActivePriceRule: true,
+        aliases: const [],
+      );
       _priceCheck = null;
       _priceReviewMessage = null;
     });
@@ -2093,6 +2140,30 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       }
       if (reason == 'MATERIAL_REVIEW_REQUIRED') {
         return l.paidMaterialNeedsPriceReview;
+      }
+      if (reason == 'AMBIGUOUS_MATERIAL_MATCH') {
+        final candidates = details['candidates'];
+        if (candidates is List && candidates.isNotEmpty) {
+          final labels = candidates
+              .whereType<Map>()
+              .map(
+                (item) => MatchedMaterialReference.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .where((item) => item.id.isNotEmpty)
+              .map(
+                (item) => item.displayLabel(preferArabic: context.isSupplierArabic),
+              )
+              .join(' · ');
+          if (labels.isNotEmpty) {
+            return '${l.clarifyMaterialName}: $labels';
+          }
+        }
+        return l.clarifyMaterialName;
+      }
+      if (reason == 'CATEGORY_MISMATCH_SUGGESTION') {
+        return error.message.isNotEmpty ? error.message : l.clarifyMaterialName;
       }
       if (reason == 'REQUEST_IN_PROGRESS') {
         return l.materialBeingPublished;

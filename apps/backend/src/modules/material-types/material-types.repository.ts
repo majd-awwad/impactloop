@@ -93,6 +93,39 @@ export const findActiveMaterialTypesForMatching = async (
   });
 };
 
+/** Global catalog for high-confidence cross-category suggestion only. */
+export const findActiveMaterialTypesForGlobalMatching = async (
+  client?: PrismaClientLike,
+) => {
+  return (client ?? prisma).materialType.findMany({
+    where: {
+      isActive: true,
+    },
+    select: {
+      id: true,
+      nameEn: true,
+      nameAr: true,
+      normalizedName: true,
+      defaultUnit: true,
+      categoryId: true,
+      category: {
+        select: {
+          id: true,
+          nameEn: true,
+          nameAr: true,
+        },
+      },
+      aliases: {
+        select: {
+          alias: true,
+          normalizedAlias: true,
+        },
+      },
+    },
+    orderBy: { nameEn: 'asc' },
+  });
+};
+
 export const findMaterialTypeById = async (
   materialTypeId: string,
   client?: PrismaClientLike,

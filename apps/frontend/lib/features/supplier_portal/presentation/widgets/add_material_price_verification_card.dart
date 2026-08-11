@@ -13,6 +13,8 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
     this.priceReviewMessage,
     required this.onSubmitPriceReview,
     required this.onSelectSuggestion,
+    this.onApplyCategorySuggestion,
+    this.preferArabicLabels = false,
     this.showPriceReview = true,
   });
 
@@ -20,7 +22,9 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
   final bool isRequestingPriceReview;
   final String? priceReviewMessage;
   final VoidCallback onSubmitPriceReview;
-  final ValueChanged<String> onSelectSuggestion;
+  final ValueChanged<MatchedMaterialReference> onSelectSuggestion;
+  final ValueChanged<CategorySuggestion>? onApplyCategorySuggestion;
+  final bool preferArabicLabels;
   final bool showPriceReview;
 
   @override
@@ -29,6 +33,7 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
     final allowed = result.allowed;
     final canSubmitPriceReview =
         showPriceReview && _showPriceReviewButton(result.reason);
+    final categorySuggestion = result.categorySuggestion;
 
     return Container(
       width: double.infinity,
@@ -50,7 +55,11 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
           if (result.matchedReference != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
-              l.matchedPriceReference(result.matchedReference!.displayLabel),
+              l.matchedPriceReference(
+                result.matchedReference!.displayLabel(
+                  preferArabic: preferArabicLabels,
+                ),
+              ),
               style: context.supplierBody().copyWith(
                 color: context.supplierColors.textMuted,
               ),
@@ -94,7 +103,22 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
               l.approvedUnitLabel(result.approvedUnit!),
               style: context.supplierBody(),
             ),
-          if (result.candidates.isNotEmpty) ...[
+          if (categorySuggestion != null &&
+              onApplyCategorySuggestion != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(l.didYouMeanThese, style: context.supplierLabel()),
+            const SizedBox(height: AppSpacing.sm),
+            ActionChip(
+              label: Text(
+                preferArabicLabels &&
+                        (categorySuggestion.categoryNameAr?.trim().isNotEmpty ??
+                            false)
+                    ? '${categorySuggestion.materialType.displayLabel(preferArabic: true)} — ${categorySuggestion.categoryNameAr}'
+                    : '${categorySuggestion.materialType.displayLabel()} — ${categorySuggestion.categoryNameEn}',
+              ),
+              onPressed: () => onApplyCategorySuggestion!(categorySuggestion),
+            ),
+          ] else if (result.candidates.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
             Text(l.didYouMeanThese, style: context.supplierLabel()),
             const SizedBox(height: AppSpacing.sm),
@@ -104,9 +128,10 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
               children: result.candidates
                   .map(
                     (candidate) => ActionChip(
-                      label: Text(candidate.displayLabel),
-                      onPressed: () =>
-                          onSelectSuggestion(candidate.displayLabel),
+                      label: Text(
+                        candidate.displayLabel(preferArabic: preferArabicLabels),
+                      ),
+                      onPressed: () => onSelectSuggestion(candidate),
                     ),
                   )
                   .toList(),
@@ -143,6 +168,7 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
     return switch (reason) {
       'PAID_OTHER_NOT_ALLOWED' => l.paidCannotUseOther,
       'AMBIGUOUS_MATERIAL_MATCH' => l.clarifyMaterialName,
+      'CATEGORY_MISMATCH_SUGGESTION' => l.clarifyMaterialName,
       'PRICE_TOO_HIGH' => l.priceBlockedReason('PRICE_TOO_HIGH'),
       'PRICE_RULE_REQUIRED' ||
       'MATERIAL_REVIEW_REQUIRED' => l.priceVerificationRequired,
