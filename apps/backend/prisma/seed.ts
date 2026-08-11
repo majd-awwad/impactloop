@@ -6,6 +6,8 @@ import { seedTaxonomyFoundation } from "../src/modules/taxonomy/taxonomy-foundat
 import { hashPassword } from "../src/utils/password.js";
 import { normalizeSearchText } from "../src/utils/normalize-search-text.js";
 import { resolveNoShowReportIncidentKey } from "../src/modules/no-show-reports/no-show-report.incident-key.js";
+import { isAllowedSeedImageUrl } from "../src/utils/allowed-seed-image-url.js";
+import { LEGACY_PROJECT_COVERS } from "./demo-data/projects/legacy-project-covers.data.js";
 
 const SEED_PASSWORD = "password";
 const CURRENCY = "NIS";
@@ -26,8 +28,10 @@ const assertImage = (label: string, imageUrl: string | null | undefined) => {
     throw new Error(`Missing imageUrl for ${label}`);
   }
 
-  if (!imageUrl.startsWith("https://")) {
-    throw new Error(`Image URL for ${label} must start with https://`);
+  if (!isAllowedSeedImageUrl(imageUrl)) {
+    throw new Error(
+      `Image URL for ${label} must be https:// or a /demo-assets/community-{materials|projects}/ path`,
+    );
   }
 };
 
@@ -4295,7 +4299,8 @@ const upsertProjectBudgetDemoMaterial = async (input: {
     deliveryAllowed: input.material.deliveryAllowed,
     pickupNotes: 'Pickup details are confirmed after reservation acceptance.',
     suggestedUses: input.material.suggestedUses,
-    viewsCount: input.material.viewsCount,
+    // viewsCount is a denormalized lifetime counter maintained by MaterialView
+    // writes / BEHAVIOR-DATA-02 reconcile — do not re-inflate from seed defs.
   };
 
   if (existing) {
@@ -4309,6 +4314,7 @@ const upsertProjectBudgetDemoMaterial = async (input: {
   const created = await prisma.material.create({
     data: {
       ...materialData,
+      viewsCount: 0,
       images: {
         create: input.material.imageUrls.map((imageUrl, index) => ({
           imageUrl,
@@ -4461,7 +4467,7 @@ const CORE_PROJECTS: ProjectSeed[] = [
     categoryKey: "robotics",
     difficulty: "INTERMEDIATE",
     estimatedDurationMinutes: 240,
-    coverImageUrl: IMAGES.robotProject,
+    coverImageUrl: LEGACY_PROJECT_COVERS['obstacle-avoidance-robot'],
     status: "PUBLISHED",
     components: [
       {
@@ -4563,7 +4569,7 @@ const CORE_PROJECTS: ProjectSeed[] = [
     categoryKey: "electronics-learning",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 60,
-    coverImageUrl: IMAGES.electronics,
+    coverImageUrl: LEGACY_PROJECT_COVERS['simple-led-circuit'],
     status: "PUBLISHED",
     components: [
       {
@@ -4582,7 +4588,7 @@ const CORE_PROJECTS: ProjectSeed[] = [
         materialType: "LED Pack",
         categoryKey: "electronics-components",
         quantity: 1,
-        unit: "piece",
+        unit: "pack",
         role: "REQUIRED_MATERIAL",
         required: true,
         substitute: true,
@@ -4593,11 +4599,22 @@ const CORE_PROJECTS: ProjectSeed[] = [
         materialType: "Resistor Pack",
         categoryKey: "electronics-components",
         quantity: 1,
-        unit: "piece",
+        unit: "box",
         role: "REQUIRED_MATERIAL",
         required: true,
         substitute: true,
         keywords: ["resistor", "220 ohm"],
+      },
+      {
+        name: "Jumper wires",
+        materialType: "Jumper Wires",
+        categoryKey: "electronics-components",
+        quantity: 1,
+        unit: "pack",
+        role: "REQUIRED_MATERIAL",
+        required: true,
+        substitute: true,
+        keywords: ["jumper wires", "dupont"],
       },
       {
         name: "Battery holder",
@@ -4652,7 +4669,7 @@ const CORE_PROJECTS: ProjectSeed[] = [
     categoryKey: "recycling-crafts",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 90,
-    coverImageUrl: IMAGES.cardboard,
+    coverImageUrl: LEGACY_PROJECT_COVERS['recycled-desk-organizer'],
     status: "PUBLISHED",
     components: [
       {
@@ -4728,7 +4745,7 @@ const CORE_PROJECTS: ProjectSeed[] = [
     categoryKey: "woodworking",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 80,
-    coverImageUrl: IMAGES.woodPanels,
+    coverImageUrl: LEGACY_PROJECT_COVERS['mini-wooden-phone-stand'],
     status: "PUBLISHED",
     components: [
       {
@@ -4757,8 +4774,8 @@ const CORE_PROJECTS: ProjectSeed[] = [
         name: "Small screws",
         materialType: "Screws and Nuts",
         categoryKey: "metal-fasteners",
-        quantity: 4,
-        unit: "pieces",
+        quantity: 1,
+        unit: "box",
         role: "CONSUMABLE",
         required: true,
         substitute: true,
@@ -4805,7 +4822,7 @@ const CORE_PROJECTS: ProjectSeed[] = [
     categoryKey: "home-experiments",
     difficulty: "INTERMEDIATE",
     estimatedDurationMinutes: 180,
-    coverImageUrl: IMAGES.greenhouse,
+    coverImageUrl: LEGACY_PROJECT_COVERS['mini-greenhouse-prototype'],
     status: "PUBLISHED",
     components: [
       {
@@ -4845,8 +4862,8 @@ const CORE_PROJECTS: ProjectSeed[] = [
         name: "Screws and nuts",
         materialType: "Screws and Nuts",
         categoryKey: "metal-fasteners",
-        quantity: 8,
-        unit: "pieces",
+        quantity: 1,
+        unit: "box",
         role: "CONSUMABLE",
         required: true,
         substitute: true,
@@ -4894,7 +4911,7 @@ const CORE_PROJECTS: ProjectSeed[] = [
     categoryKey: "textile-crafts",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 100,
-    coverImageUrl: IMAGES.sewing,
+    coverImageUrl: LEGACY_PROJECT_COVERS['fabric-pencil-case'],
     status: "PUBLISHED",
     components: [
       {
@@ -4972,7 +4989,7 @@ const CORE_PROJECTS: ProjectSeed[] = [
     categoryKey: "recycling-crafts",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 120,
-    coverImageUrl: IMAGES.motors,
+    coverImageUrl: LEGACY_PROJECT_COVERS['rubber-band-powered-car'],
     status: "PENDING_REVIEW",
     components: [
       {
@@ -5053,7 +5070,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "robotics",
     difficulty: "INTERMEDIATE",
     estimatedDurationMinutes: 210,
-    coverImageUrl: IMAGES.robotProject,
+    coverImageUrl: LEGACY_PROJECT_COVERS['line-follower-robot'],
     status: "PUBLISHED",
     components: [
       {
@@ -5155,7 +5172,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "electronics-learning",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 120,
-    coverImageUrl: IMAGES.greenhouse,
+    coverImageUrl: LEGACY_PROJECT_COVERS['smart-plant-monitor'],
     status: "PUBLISHED",
     components: [
       {
@@ -5246,7 +5263,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "electronics-learning",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 75,
-    coverImageUrl: IMAGES.electronics,
+    coverImageUrl: LEGACY_PROJECT_COVERS['automatic-night-light'],
     status: "PUBLISHED",
     components: [
       {
@@ -5276,7 +5293,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
         materialType: "Resistor Pack",
         categoryKey: "electronics-components",
         quantity: 1,
-        unit: "pack",
+        unit: "box",
         role: "REQUIRED_MATERIAL",
         required: true,
         substitute: true,
@@ -5337,7 +5354,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "electronics-learning",
     difficulty: "INTERMEDIATE",
     estimatedDurationMinutes: 150,
-    coverImageUrl: IMAGES.electronics,
+    coverImageUrl: LEGACY_PROJECT_COVERS['temperature-humidity-station'],
     status: "PUBLISHED",
     components: [
       {
@@ -5428,7 +5445,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "robotics",
     difficulty: "INTERMEDIATE",
     estimatedDurationMinutes: 180,
-    coverImageUrl: IMAGES.robotProject,
+    coverImageUrl: LEGACY_PROJECT_COVERS['servo-distance-scanner'],
     status: "PUBLISHED",
     components: [
       {
@@ -5519,7 +5536,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "electronics-learning",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 100,
-    coverImageUrl: IMAGES.electronics,
+    coverImageUrl: LEGACY_PROJECT_COVERS['electronic-dice'],
     status: "PUBLISHED",
     components: [
       {
@@ -5560,7 +5577,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
         materialType: "Resistor Pack",
         categoryKey: "electronics-components",
         quantity: 1,
-        unit: "pack",
+        unit: "box",
         role: "REQUIRED_MATERIAL",
         required: true,
         substitute: true,
@@ -5610,7 +5627,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "home-experiments",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 90,
-    coverImageUrl: IMAGES.greenhouse,
+    coverImageUrl: LEGACY_PROJECT_COVERS['water-level-alarm'],
     status: "PUBLISHED",
     components: [
       {
@@ -5701,7 +5718,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "home-experiments",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 70,
-    coverImageUrl: IMAGES.electronics,
+    coverImageUrl: LEGACY_PROJECT_COVERS['portable-usb-fan'],
     status: "PUBLISHED",
     components: [
       {
@@ -5720,7 +5737,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
         materialType: "USB Cables",
         categoryKey: "electronics-components",
         quantity: 1,
-        unit: "piece",
+        unit: "bundle",
         role: "REQUIRED_MATERIAL",
         required: true,
         substitute: true,
@@ -5792,7 +5809,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "textile-crafts",
     difficulty: "INTERMEDIATE",
     estimatedDurationMinutes: 180,
-    coverImageUrl: IMAGES.sewing,
+    coverImageUrl: LEGACY_PROJECT_COVERS['patchwork-tote-bag'],
     status: "PUBLISHED",
     components: [
       {
@@ -5883,7 +5900,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "recycling-crafts",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 120,
-    coverImageUrl: IMAGES.craft,
+    coverImageUrl: LEGACY_PROJECT_COVERS['bottle-cap-mosaic'],
     status: "PUBLISHED",
     components: [
       {
@@ -5973,7 +5990,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "home-experiments",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 80,
-    coverImageUrl: IMAGES.greenhouse,
+    coverImageUrl: LEGACY_PROJECT_COVERS['glass-jar-herb-planter'],
     status: "PUBLISHED",
     components: [
       {
@@ -6064,7 +6081,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "recycling-crafts",
     difficulty: "INTERMEDIATE",
     estimatedDurationMinutes: 150,
-    coverImageUrl: IMAGES.cardboard,
+    coverImageUrl: LEGACY_PROJECT_COVERS['cardboard-marble-run'],
     status: "PUBLISHED",
     components: [
       {
@@ -6155,7 +6172,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "recycling-crafts",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 90,
-    coverImageUrl: IMAGES.craft,
+    coverImageUrl: LEGACY_PROJECT_COVERS['tin-can-lantern'],
     status: "PUBLISHED",
     components: [
       {
@@ -6163,7 +6180,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
         materialType: "Tin Cans",
         categoryKey: "packaging-containers",
         quantity: 1,
-        unit: "piece",
+        unit: "set",
         role: "REQUIRED_MATERIAL",
         required: true,
         substitute: false,
@@ -6246,7 +6263,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "textile-crafts",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 100,
-    coverImageUrl: IMAGES.sewing,
+    coverImageUrl: LEGACY_PROJECT_COVERS['felt-phone-sleeve'],
     status: "PUBLISHED",
     components: [
       {
@@ -6337,7 +6354,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "textile-crafts",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 110,
-    coverImageUrl: IMAGES.textile,
+    coverImageUrl: LEGACY_PROJECT_COVERS['yarn-wall-hanging'],
     status: "PUBLISHED",
     components: [
       {
@@ -6356,7 +6373,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
         materialType: "Wooden Dowels",
         categoryKey: "wood-boards",
         quantity: 1,
-        unit: "piece",
+        unit: "bundle",
         role: "REQUIRED_MATERIAL",
         required: true,
         substitute: true,
@@ -6428,7 +6445,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "home-experiments",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 60,
-    coverImageUrl: IMAGES.greenhouse,
+    coverImageUrl: LEGACY_PROJECT_COVERS['egg-carton-seed-starter'],
     status: "PUBLISHED",
     components: [
       {
@@ -6508,7 +6525,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "woodworking",
     difficulty: "INTERMEDIATE",
     estimatedDurationMinutes: 160,
-    coverImageUrl: IMAGES.woodPanels,
+    coverImageUrl: LEGACY_PROJECT_COVERS['small-wall-shelf'],
     status: "PUBLISHED",
     components: [
       {
@@ -6526,8 +6543,8 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
         name: "Angle brackets",
         materialType: "Angle Brackets",
         categoryKey: "metal-fasteners",
-        quantity: 2,
-        unit: "pieces",
+        quantity: 1,
+        unit: "pack",
         role: "REQUIRED_MATERIAL",
         required: true,
         substitute: true,
@@ -6537,8 +6554,8 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
         name: "Screws",
         materialType: "Screws and Nuts",
         categoryKey: "metal-fasteners",
-        quantity: 8,
-        unit: "pieces",
+        quantity: 1,
+        unit: "box",
         role: "CONSUMABLE",
         required: true,
         substitute: true,
@@ -6599,7 +6616,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "woodworking",
     difficulty: "INTERMEDIATE",
     estimatedDurationMinutes: 200,
-    coverImageUrl: IMAGES.wood,
+    coverImageUrl: LEGACY_PROJECT_COVERS['reclaimed-wood-birdhouse'],
     status: "PUBLISHED",
     components: [
       {
@@ -6618,7 +6635,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
         materialType: "Wooden Dowels",
         categoryKey: "wood-boards",
         quantity: 1,
-        unit: "piece",
+        unit: "bundle",
         role: "OPTIONAL_MATERIAL",
         required: false,
         substitute: true,
@@ -6690,7 +6707,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "woodworking",
     difficulty: "INTERMEDIATE",
     estimatedDurationMinutes: 140,
-    coverImageUrl: IMAGES.woodPanels,
+    coverImageUrl: LEGACY_PROJECT_COVERS['plywood-laptop-stand'],
     status: "PUBLISHED",
     components: [
       {
@@ -6781,7 +6798,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "woodworking",
     difficulty: "INTERMEDIATE",
     estimatedDurationMinutes: 190,
-    coverImageUrl: IMAGES.wood,
+    coverImageUrl: LEGACY_PROJECT_COVERS['wooden-tool-caddy'],
     status: "PUBLISHED",
     components: [
       {
@@ -6800,7 +6817,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
         materialType: "Wooden Dowels",
         categoryKey: "wood-boards",
         quantity: 1,
-        unit: "piece",
+        unit: "bundle",
         role: "REQUIRED_MATERIAL",
         required: true,
         substitute: true,
@@ -6810,8 +6827,8 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
         name: "Screws",
         materialType: "Screws and Nuts",
         categoryKey: "metal-fasteners",
-        quantity: 10,
-        unit: "pieces",
+        quantity: 1,
+        unit: "box",
         role: "CONSUMABLE",
         required: true,
         substitute: true,
@@ -6872,7 +6889,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "home-experiments",
     difficulty: "BEGINNER",
     estimatedDurationMinutes: 130,
-    coverImageUrl: IMAGES.greenhouse,
+    coverImageUrl: LEGACY_PROJECT_COVERS['pvc-plant-stand'],
     status: "PUBLISHED",
     components: [
       {
@@ -6901,8 +6918,8 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
         name: "Bolts and washers",
         materialType: "Bolts and Washers",
         categoryKey: "metal-fasteners",
-        quantity: 8,
-        unit: "pieces",
+        quantity: 1,
+        unit: "box",
         role: "CONSUMABLE",
         required: true,
         substitute: true,
@@ -6963,7 +6980,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "home-experiments",
     difficulty: "ADVANCED",
     estimatedDurationMinutes: 240,
-    coverImageUrl: IMAGES.acrylic,
+    coverImageUrl: LEGACY_PROJECT_COVERS['acrylic-display-box'],
     status: "PUBLISHED",
     components: [
       {
@@ -6992,8 +7009,8 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
         name: "Screws and nuts",
         materialType: "Screws and Nuts",
         categoryKey: "metal-fasteners",
-        quantity: 8,
-        unit: "pieces",
+        quantity: 1,
+        unit: "box",
         role: "CONSUMABLE",
         required: true,
         substitute: true,
@@ -7054,7 +7071,7 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
     categoryKey: "home-experiments",
     difficulty: "INTERMEDIATE",
     estimatedDurationMinutes: 150,
-    coverImageUrl: IMAGES.tools,
+    coverImageUrl: LEGACY_PROJECT_COVERS['rolling-storage-crate'],
     status: "PUBLISHED",
     components: [
       {
@@ -7083,8 +7100,8 @@ const ADDITIONAL_PROJECTS: ProjectSeed[] = [
         name: "Bolts and washers",
         materialType: "Bolts and Washers",
         categoryKey: "metal-fasteners",
-        quantity: 8,
-        unit: "pieces",
+        quantity: 1,
+        unit: "box",
         role: "CONSUMABLE",
         required: true,
         substitute: true,
@@ -7583,7 +7600,8 @@ const createMaterials = async (context: SeedContext) => {
         pickupNotes:
           "Pickup details are confirmed after reservation acceptance.",
         suggestedUses: material.suggestedUses,
-        viewsCount: material.viewsCount,
+        // Start at 0; engagement / community behavior / BD-02 own the counter.
+        viewsCount: 0,
         images: {
           create: material.imageUrls.map((imageUrl, index) => ({
             imageUrl,
@@ -7728,10 +7746,7 @@ const createProjects = async (context: SeedContext) => {
             : "Pending review seed project for admin moderation testing.",
         stepsGeneratedByAi: false,
         images: {
-          create: [
-            { imageUrl: project.coverImageUrl, sortOrder: 0 },
-            { imageUrl: project.coverImageUrl, sortOrder: 1 },
-          ],
+          create: [{ imageUrl: project.coverImageUrl, sortOrder: 0 }],
         },
         requiredComponents: {
           create: project.components.map((component) => ({
@@ -8002,14 +8017,14 @@ const RESERVATIONS: ReservationSeed[] = [
     key: "r-learner-acrylic-awaiting-supplier",
     materialKey: "wf-supplier-acrylic-sheets",
     learnerEmail: "learner@learner.com",
-    status: "AWAITING_SUPPLIER_CONFIRMATION",
+    status: "ACCEPTED",
     quantity: 3,
     fulfillmentMethod: "DELIVERY",
     message: "I need acrylic sheets for a mini greenhouse prototype.",
-    pickupStartOffset: 3,
+    pickupStartOffset: 0,
     pickupStartHour: 10,
     pickupEndHour: 12,
-    pendingRescheduleRequestedBy: "LEARNER",
+    supplierNote: "Acrylic sheets confirmed; driver is en route to dropoff.",
   },
   {
     key: "r-learner-screws-rejected",
@@ -8284,7 +8299,7 @@ const DELIVERIES: DeliverySeed[] = [
     reservationKey: "r-learner-acrylic-awaiting-supplier",
     driverEmail: "driver@driver.com",
     status: "ON_THE_WAY",
-    note: "Acrylic sheets are on the way after supplier confirmation scenario.",
+    note: "Acrylic sheets are on the way after supplier accepted the reservation.",
   },
   {
     reservationKey: "r-learner-pvc-resolution",
