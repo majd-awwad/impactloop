@@ -74,9 +74,9 @@ void main() {
   test('restoreSession clears local session when refresh fails', () async {
     final tokenStorage = _MemoryTokenStorage('stale-refresh');
     final accessTokenHolder = AccessTokenHolder()..accessToken = 'stale-access';
+    final failingAdapter = _RefreshAdapter(shouldFail: true);
     final sessionRefresher = AuthSessionRefresher(
-      refreshClient: Dio()
-        ..httpClientAdapter = _RefreshAdapter(shouldFail: true),
+      refreshClient: Dio()..httpClientAdapter = failingAdapter,
       tokenStorage: tokenStorage,
       accessTokenHolder: accessTokenHolder,
     );
@@ -94,8 +94,38 @@ void main() {
 
     expect(accessTokenHolder.accessToken, isNull);
     expect(await tokenStorage.readRefreshToken(), isNull);
+    // Initial attempt + exactly one capped retry for 401/rotation races.
+    expect(failingAdapter.refreshCallCount, 2);
   });
 
+  test(
+    'refresh 401 retry is hard-capped to one extra attempt then fails',
+    () async {
+      final tokenStorage = _MemoryTokenStorage('revoked-refresh');
+      final accessTokenHolder = AccessTokenHolder()..accessToken = 'old-access';
+      final failingAdapter = _RefreshAdapter(shouldFail: true);
+      final sessionRefresher = AuthSessionRefresher(
+        refreshClient: Dio()..httpClientAdapter = failingAdapter,
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
+      );
+
+      await expectLater(
+        sessionRefresher.refreshAccessToken(),
+        throwsA(
+          isA<ApiException>().having((e) => e.statusCode, 'statusCode', 401),
+        ),
+      );
+      expect(failingAdapter.refreshCallCount, 2);
+
+      // A later call starts a new operation, still capped at 1+1.
+      await expectLater(
+        sessionRefresher.refreshAccessToken(),
+        throwsA(isA<ApiException>()),
+      );
+      expect(failingAdapter.refreshCallCount, 4);
+    },
+  );
   test('logout clears session through AuthSessionRefresher', () async {
     final tokenStorage = _MemoryTokenStorage('refresh-token');
     final accessTokenHolder = AccessTokenHolder()..accessToken = 'access-token';

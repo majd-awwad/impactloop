@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/api_config.dart';
 import '../errors/api_exception.dart';
+import '../errors/common_api_error_codes.dart';
 import '../network/api_response.dart';
 import '../network/dio_platform_adapter.dart';
 import 'access_token_holder.dart';
@@ -29,6 +30,7 @@ final authSessionRefresherProvider = Provider<AuthSessionRefresher>((ref) {
   );
 
   configureDioPlatformAdapter(refreshClient);
+  refreshClient.options.extra['withCredentials'] = true;
 
   return AuthSessionRefresher(
     refreshClient: refreshClient,
@@ -94,6 +96,20 @@ class AuthSessionRefresher {
   }
 
   Future<String> _refreshAccessTokenInternal() async {
+    try {
+      return await _refreshAccessTokenOnce();
+    } on ApiException catch (error) {
+      // Another tab/request may have rotated the httpOnly cookie while this
+      // attempt still carried the predecessor. Retry once against the updated jar.
+      if (error.statusCode == 401 ||
+          error.code == CommonApiErrorCodes.unauthenticated) {
+        return _refreshAccessTokenOnce();
+      }
+      rethrow;
+    }
+  }
+
+  Future<String> _refreshAccessTokenOnce() async {
     final storedRefreshToken = await _tokenStorage.readRefreshToken();
 
     try {
@@ -102,6 +118,7 @@ class AuthSessionRefresher {
         data: storedRefreshToken == null
             ? const <String, dynamic>{}
             : {'refreshToken': storedRefreshToken},
+        options: Options(extra: const {'withCredentials': true}),
       );
 
       final body = response.data;

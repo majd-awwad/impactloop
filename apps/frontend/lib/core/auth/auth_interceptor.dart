@@ -33,6 +33,8 @@ class AuthInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     options.headers[clientPlatformHeader] = clientPlatform;
+    // Dio web reads this per-request; keeps httpOnly refresh cookies on cross-origin calls.
+    options.extra['withCredentials'] = true;
 
     final accessToken = _getAccessToken();
 
