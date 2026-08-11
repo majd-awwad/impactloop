@@ -1,12 +1,18 @@
+import fs from "node:fs";
 import { Prisma } from "../src/generated/prisma/client.js";
 import { prisma } from "../src/database/prisma.js";
 import { seedCategoryTaxonomyOwnership } from "../src/modules/taxonomy/category-taxonomy-ownership.seed.js";
 import { seedTaxonomyCompatibilityRelations } from "../src/modules/taxonomy/taxonomy-compatibility-relations.seed.js";
 import { seedTaxonomyFoundation } from "../src/modules/taxonomy/taxonomy-foundation.repository.js";
+import {
+  communityDemoMaterialImageDiskPath,
+  communityDemoMaterialImageUrl,
+} from "../src/constants/community-demo-materials.js";
 import { hashPassword } from "../src/utils/password.js";
 import { normalizeSearchText } from "../src/utils/normalize-search-text.js";
 import { resolveNoShowReportIncidentKey } from "../src/modules/no-show-reports/no-show-report.incident-key.js";
 import { isAllowedSeedImageUrl } from "../src/utils/allowed-seed-image-url.js";
+import { SEED_CATALOG_REAL_IMAGE_PATHS } from "./demo-data/materials/seed-catalog-images.data.js";
 import { LEGACY_PROJECT_COVERS } from "./demo-data/projects/legacy-project-covers.data.js";
 
 const SEED_PASSWORD = "password";
@@ -33,7 +39,35 @@ const assertImage = (label: string, imageUrl: string | null | undefined) => {
       `Image URL for ${label} must be https:// or a /demo-assets/community-{materials|projects}/ path`,
     );
   }
+
+  const demoPrefix = "/demo-assets/community-materials/";
+  if (imageUrl.startsWith(demoPrefix)) {
+    const relative = imageUrl.slice(demoPrefix.length);
+    const diskPath = communityDemoMaterialImageDiskPath(relative);
+    if (!fs.existsSync(diskPath)) {
+      throw new Error(`Missing demo asset file for ${label}: ${diskPath}`);
+    }
+  }
 };
+
+const applySeedCatalogRealImages = <
+  T extends { key: string; imageUrls: string[] },
+>(
+  materials: T[],
+): T[] =>
+  materials.map((material) => {
+    const relativePaths = SEED_CATALOG_REAL_IMAGE_PATHS[material.key];
+    if (!relativePaths || relativePaths.length === 0) {
+      return material;
+    }
+
+    return {
+      ...material,
+      imageUrls: relativePaths.map((relativePath) =>
+        communityDemoMaterialImageUrl(relativePath),
+      ),
+    };
+  });
 
 const jsonArray = (value: string[] | undefined): Prisma.InputJsonValue =>
   value == null ? Prisma.JsonNull : value;
@@ -4163,7 +4197,10 @@ const ADDITIONAL_MATERIALS: MaterialSeed[] = [
   },
 ];
 
-const MATERIALS: MaterialSeed[] = [...CORE_MATERIALS, ...ADDITIONAL_MATERIALS];
+const MATERIALS: MaterialSeed[] = applySeedCatalogRealImages([
+  ...CORE_MATERIALS,
+  ...ADDITIONAL_MATERIALS,
+]);
 
 const PROJECT_BUDGET_DEMO_MATERIAL_KEYS = [
   'majd-arduino-student-salvage',

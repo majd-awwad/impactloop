@@ -74,6 +74,9 @@ apps/backend/pnpm-lock.yaml
 !apps/backend/prisma/demo-data/projects/source-images/**/*.jpeg
 !apps/backend/prisma/demo-data/projects/source-images/**/*.webp
 
+# Local recovery / forensic audit artifacts (not demo assets)
+apps/backend/tmp-recovery-audit/
+
 # Logs
 *.log
 
