@@ -59,6 +59,13 @@ Community seed scripts refuse non-local database hosts.
 - Backend serves the folder via Express static mount in `app.ts`
 - Clients resolve relative paths with the API base URL (no localhost baked into rows)
 
+### Core catalog real photos (`seed-catalog/`)
+
+- Selected `prisma/seed.ts` materials (stable `MaterialSeed.key`) use curated files under `source-images/seed-catalog/`
+- Mapping source of truth: `prisma/demo-data/materials/seed-catalog-images.data.ts`
+- `npx prisma migrate reset` / `npm run seed` recreates those Materials with the same demo URLs
+- Runtime uploads still use `UPLOAD_ROOT_DIR` (`POST /api/uploads/material-images`) — keep demo assets and user uploads separate
+
 ## Learning projects (37)
 
 ### Original 30 (English catalog)
