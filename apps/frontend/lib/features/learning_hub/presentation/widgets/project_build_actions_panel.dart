@@ -12,6 +12,7 @@ import '../../application/learning_hub_providers.dart';
 import '../../domain/models/learning_project.dart';
 import '../../domain/models/project_build.dart';
 import '../l10n/learning_hub_coverage_l10n.dart';
+import '../l10n/learning_project_build_l10n.dart';
 import '../theme/learning_ui_palette.dart';
 
 class ProjectBuildActionsPanel extends ConsumerStatefulWidget {
@@ -186,7 +187,7 @@ class _ProjectBuildActionsPanelState
               : '$readyCount of $totalRequired ready in your build';
 
           final primaryLabel = build == null
-              ? 'Start build'
+              ? LearningProjectBuildL10n.startBuild.resolve(context)
               : switch (build.status) {
                   ProjectBuildStatus.paused =>
                     LearnerBuildsL10n.resumeBuild.resolve(context),
@@ -194,7 +195,8 @@ class _ProjectBuildActionsPanelState
                     LearnerBuildsL10n.viewCompleted.resolve(context),
                   ProjectBuildStatus.archived =>
                     LearnerBuildsL10n.viewCompleted.resolve(context),
-                  ProjectBuildStatus.inProgress => 'Continue checklist',
+                  ProjectBuildStatus.inProgress =>
+                    LearningProjectBuildL10n.continueChecklist.resolve(context),
                 };
 
           VoidCallback? onPrimary;
@@ -248,7 +250,7 @@ class _BuildPanelContent extends StatelessWidget {
     required this.onBrowseMaterials,
     this.readyCount,
     this.statusText,
-    this.primaryLabel = 'Start build',
+    this.primaryLabel,
     this.secondaryLabel,
     this.onSecondary,
   });
@@ -259,7 +261,7 @@ class _BuildPanelContent extends StatelessWidget {
   final bool hasBuild;
   final int? readyCount;
   final String? statusText;
-  final String primaryLabel;
+  final String? primaryLabel;
   final VoidCallback? onStartOrContinue;
   final VoidCallback onBrowseMaterials;
   final String? secondaryLabel;
@@ -268,6 +270,8 @@ class _BuildPanelContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).width < 760;
+    final resolvedPrimary =
+        primaryLabel ?? LearningProjectBuildL10n.startBuild.resolve(context);
     final copy = _BuildPanelCopy(
       project: project,
       componentCount: componentCount,
@@ -278,7 +282,7 @@ class _BuildPanelContent extends StatelessWidget {
     final actions = _BuildPanelActions(
       isBusy: isBusy,
       hasBuild: hasBuild,
-      primaryLabel: primaryLabel,
+      primaryLabel: resolvedPrimary,
       onStartOrContinue: onStartOrContinue,
       onBrowseMaterials: onBrowseMaterials,
       secondaryLabel: secondaryLabel,
@@ -336,7 +340,9 @@ class _BuildPanelCopy extends StatelessWidget {
         Icon(Icons.construction_rounded, color: palette.lime),
         const SizedBox(height: AppSpacing.md),
         Text(
-          hasBuild ? 'Build checklist' : 'Plan this build',
+          hasBuild
+              ? LearningProjectBuildL10n.buildChecklist.resolve(context)
+              : LearningProjectBuildL10n.planThisBuild.resolve(context),
           style: textTheme.titleLarge?.copyWith(
             color: palette.textPrimary,
             fontWeight: FontWeight.w700,
@@ -422,7 +428,7 @@ class _BuildPanelActions extends StatelessWidget {
         OutlinedButton.icon(
           onPressed: onBrowseMaterials,
           icon: const Icon(Icons.search_rounded),
-          label: const Text('Browse materials'),
+          label: Text(LearningProjectBuildL10n.browseMaterials.resolve(context)),
         ),
       ],
     );

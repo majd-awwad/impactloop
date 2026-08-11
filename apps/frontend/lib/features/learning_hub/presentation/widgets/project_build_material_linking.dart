@@ -669,7 +669,9 @@ class _CandidateCard extends StatelessWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.link_rounded),
-                label: const Text('Link to component'),
+                label: Text(
+                  LearningProjectBuildL10n.linkToComponent.resolve(context),
+                ),
               ),
               OutlinedButton(
                 onPressed: isLinking ? null : onView,
@@ -677,7 +679,9 @@ class _CandidateCard extends StatelessWidget {
                   context,
                   AppStatusTone.neutral,
                 ),
-                child: const Text('View material'),
+                child: Text(
+                  LearningProjectBuildL10n.viewMaterial.resolve(context),
+                ),
               ),
             ],
           ),

@@ -122,6 +122,13 @@ const waitingPoolPredicates = (filters: AvailableJobsListFilters) => {
   const clauses: Prisma.Sql[] = [
     Prisma.sql`d."status" = 'WAITING_FOR_DRIVER'::"DeliveryStatus"`,
     Prisma.sql`d."assigned_driver_profile_id" IS NULL`,
+    // Accept only works on ACCEPTED reservations; exclude expired/cancelled zombies.
+    Prisma.sql`EXISTS (
+      SELECT 1
+      FROM "reservations" r
+      WHERE r."id" = d."reservation_id"
+        AND r."status" = 'ACCEPTED'::"ReservationStatus"
+    )`,
   ];
 
   if (filters.city?.trim()) {
@@ -389,6 +396,7 @@ export const loadAvailableListDeliveriesByIds = async (
       id: { in: ids },
       status: 'WAITING_FOR_DRIVER',
       assignedDriverProfileId: null,
+      reservation: { status: 'ACCEPTED' },
     },
     select: driverAvailableListSelect,
   });

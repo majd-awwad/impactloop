@@ -143,6 +143,36 @@ class LearningProjectBuildL10n {
     ar: 'عرض المادة',
   );
 
+  static const linkToComponent = LocalizedText(
+    en: 'Link to component',
+    ar: 'ربط بالمكوّن',
+  );
+
+  static const startBuild = LocalizedText(
+    en: 'Start build',
+    ar: 'ابدأ البناء',
+  );
+
+  static const continueChecklist = LocalizedText(
+    en: 'Continue checklist',
+    ar: 'متابعة قائمة التحقق',
+  );
+
+  static const browseMaterials = LocalizedText(
+    en: 'Browse materials',
+    ar: 'تصفح المواد',
+  );
+
+  static const buildChecklist = LocalizedText(
+    en: 'Build checklist',
+    ar: 'قائمة تحقق البناء',
+  );
+
+  static const planThisBuild = LocalizedText(
+    en: 'Plan this build',
+    ar: 'خطّط لهذا البناء',
+  );
+
   static const unlinkMaterial = LocalizedText(
     en: 'Unlink',
     ar: 'إلغاء الربط',
