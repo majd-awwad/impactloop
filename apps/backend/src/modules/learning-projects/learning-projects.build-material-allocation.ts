@@ -154,8 +154,18 @@ export const normalizeBuildMaterialUnit = (
     return '';
   }
 
-  if (normalized.endsWith('ies')) {
+  if (normalized.endsWith('ies') && normalized.length > 4) {
     return `${normalized.slice(0, -3)}y`;
+  }
+
+  // boxes → box, batches → batch, inches → inch
+  if (
+    (normalized.endsWith('xes') ||
+      normalized.endsWith('ches') ||
+      normalized.endsWith('shes')) &&
+    normalized.length > 4
+  ) {
+    return normalized.slice(0, -2);
   }
 
   if (normalized.endsWith('s') && normalized.length > 3) {

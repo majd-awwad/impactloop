@@ -31,6 +31,8 @@ export type MaterialForComponentMatching = {
   materialType: string;
   categoryId: string;
   tags: Array<{ tag: string }>;
+  conceptCanonicalKeys?: string[];
+  materialTypeAliases?: string[];
 };
 
 export type LearnerMaterialMatchType = 'EXACT' | 'COMPATIBLE' | 'ALTERNATIVE';
@@ -136,6 +138,8 @@ export const toRankingMaterialInput = (
   tags: material.tags.map((entry) => entry.tag),
   supplierVerified: false,
   ownerCompletedHandovers: 0,
+  conceptCanonicalKeys: material.conceptCanonicalKeys,
+  materialTypeAliases: material.materialTypeAliases,
 });
 
 export const toRankingComponentInput = (component: {
@@ -144,6 +148,8 @@ export const toRankingComponentInput = (component: {
   categoryId: string | null;
   searchKeywords: Prisma.JsonValue | null;
   alternativeKeywords: Prisma.JsonValue | null;
+  conceptCanonicalKeys?: string[];
+  satisfiedByFormKeys?: string[];
 }): BuildCandidateComponentInput => {
   const searchTerms = buildComponentSearchTerms(component);
   return {
@@ -153,6 +159,8 @@ export const toRankingComponentInput = (component: {
     searchKeywords: parseJsonStringArray(component.searchKeywords),
     alternativeKeywords: parseJsonStringArray(component.alternativeKeywords),
     searchTerms,
+    conceptCanonicalKeys: component.conceptCanonicalKeys,
+    satisfiedByFormKeys: component.satisfiedByFormKeys,
   };
 };
 
@@ -196,8 +204,19 @@ export const classifyLearnerMaterialMatchType = (input: {
   canBeSubstituted: boolean;
   alternativeKeywordMatched: boolean;
 }): LearnerMaterialMatchType | null => {
-  if (input.matchReasonCodes.includes('EXACT_NAME')) {
+  if (
+    input.matchReasonCodes.includes('EXACT_NAME') ||
+    input.matchReasonCodes.includes('CONCEPT_EXACT') ||
+    input.matchReasonCodes.includes('TYPE_EXACT')
+  ) {
     return 'EXACT';
+  }
+
+  if (
+    input.matchReasonCodes.includes('CONCEPT_COMPATIBLE') ||
+    input.matchReasonCodes.includes('TYPE_ALIAS')
+  ) {
+    return 'COMPATIBLE';
   }
 
   if (
@@ -249,6 +268,8 @@ export const scoreMaterialAgainstComponent = (input: {
     isRequired: boolean;
     componentPosition: number;
     projectId: string;
+    conceptCanonicalKeys?: string[];
+    satisfiedByFormKeys?: string[];
   };
 }): ScoredMaterialComponentMatch | null => {
   const rankingMaterial = toRankingMaterialInput(input.material);
@@ -268,10 +289,45 @@ export const scoreMaterialAgainstComponent = (input: {
     return null;
   }
 
+  const hasTaxonomyOrTypeSignal = matchReasonCodes.some((code) =>
+    [
+      'CONCEPT_EXACT',
+      'CONCEPT_COMPATIBLE',
+      'TYPE_EXACT',
+      'TYPE_ALIAS',
+      'MATERIAL_TYPE_MATCH',
+      'EXACT_NAME',
+    ].includes(code),
+  );
+  const componentType = input.component.materialType.trim().toLowerCase();
+  const materialType = input.material.materialType.trim().toLowerCase();
+  const typesConflict =
+    componentType.length > 0 &&
+    materialType.length > 0 &&
+    componentType !== 'general' &&
+    componentType !== 'unspecified' &&
+    materialType !== 'general' &&
+    materialType !== 'unspecified' &&
+    componentType !== materialType &&
+    !materialType.includes(componentType) &&
+    !componentType.includes(materialType);
+
   const alternativeKeywordMatched = hasAlternativeKeywordEvidence(
     rankingMaterial,
     rankingComponent.alternativeKeywords,
   );
+
+  // A listing with a different canonical type (e.g. Raspberry Pi Kit) must not
+  // satisfy an accessory requirement (Heatsink) via title keyword alone.
+  // Explicit project alternatives remain allowed when substitution is enabled.
+  if (
+    typesConflict &&
+    !hasTaxonomyOrTypeSignal &&
+    !(input.component.canBeSubstituted && alternativeKeywordMatched)
+  ) {
+    return null;
+  }
+
   const matchType = classifyLearnerMaterialMatchType({
     matchReasonCodes,
     canBeSubstituted: input.component.canBeSubstituted,

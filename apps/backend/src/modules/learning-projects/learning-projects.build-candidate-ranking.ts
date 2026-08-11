@@ -1,3 +1,9 @@
+import {
+  evaluateProjectMaterialTaxonomyEvidence,
+  type ProjectMaterialTaxonomyMatchKind,
+  type TaxonomyMatchEvidence,
+} from './project-material-concept-matching.js';
+
 export type BuildCandidateScoreBreakdown = {
   relevance: number;
   convenience: number;
@@ -24,6 +30,10 @@ export type BuildCandidateMaterialInput = {
   tags: string[];
   supplierVerified: boolean;
   ownerCompletedHandovers: number;
+  /** Active MaterialConcept canonical keys when available. */
+  conceptCanonicalKeys?: string[];
+  /** Normalized aliases of the material's MaterialType (optional). */
+  materialTypeAliases?: string[];
 };
 
 export type BuildCandidateComponentInput = {
@@ -33,6 +43,10 @@ export type BuildCandidateComponentInput = {
   searchKeywords: string[];
   alternativeKeywords: string[];
   searchTerms: string[];
+  /** Active ProjectComponentConcept canonical keys when available. */
+  conceptCanonicalKeys?: string[];
+  /** MATERIAL_FORM keys reachable via SATISFIED_BY from component concepts. */
+  satisfiedByFormKeys?: string[];
 };
 
 export type BuildCandidateLearnerContext = {
@@ -75,8 +89,28 @@ const tokenize = (value: string) =>
     .filter((token) => token.length >= 3)
     .map(normalizeToken);
 
+/** Tokens that alone must not create strong motor/sensor family collisions. */
+const BROAD_LEXICAL_TOKENS = new Set([
+  'motor',
+  'motors',
+  'sensor',
+  'sensors',
+  'board',
+  'boards',
+  'module',
+  'modules',
+  'driver',
+  'drivers',
+  'kit',
+  'cable',
+  'with',
+  'and',
+]);
+
 const hasStrongTokenOverlap = (left: string, right: string) => {
-  const leftTokens = tokenize(left);
+  const leftTokens = tokenize(left).filter(
+    (token) => !BROAD_LEXICAL_TOKENS.has(token),
+  );
   const rightTokens = tokenize(right);
 
   if (leftTokens.length === 0 || rightTokens.length === 0) {
@@ -92,21 +126,44 @@ const hasStrongTokenOverlap = (left: string, right: string) => {
 };
 
 export type MaterialComponentMatchReasonCode =
+  | 'CONCEPT_EXACT'
+  | 'CONCEPT_COMPATIBLE'
+  | 'TYPE_EXACT'
+  | 'TYPE_ALIAS'
   | 'EXACT_NAME'
   | 'NAME_MATCH'
   | 'STRONG_MATCH'
   | 'MATERIAL_TYPE_MATCH'
   | 'CATEGORY_MATCH'
-  | 'KEYWORD_MATCH';
+  | 'KEYWORD_MATCH'
+  | 'LEXICAL_FALLBACK';
 
 const MATCH_REASON_PRIORITY: readonly MaterialComponentMatchReasonCode[] = [
+  'CONCEPT_EXACT',
+  'CONCEPT_COMPATIBLE',
+  'TYPE_EXACT',
+  'TYPE_ALIAS',
   'EXACT_NAME',
   'NAME_MATCH',
   'STRONG_MATCH',
   'MATERIAL_TYPE_MATCH',
   'CATEGORY_MATCH',
   'KEYWORD_MATCH',
+  'LEXICAL_FALLBACK',
 ] as const;
+
+export const resolveTaxonomyMatchEvidence = (
+  material: BuildCandidateMaterialInput,
+  component: BuildCandidateComponentInput,
+): TaxonomyMatchEvidence | null =>
+  evaluateProjectMaterialTaxonomyEvidence({
+    componentConceptKeys: component.conceptCanonicalKeys ?? [],
+    materialConceptKeys: material.conceptCanonicalKeys ?? [],
+    satisfiedByFormKeys: component.satisfiedByFormKeys ?? [],
+    componentMaterialType: component.materialType,
+    materialMaterialType: material.materialType,
+    materialTypeAliases: material.materialTypeAliases,
+  });
 
 /** Shared material↔component relevance used by learner candidates and supplier related-projects. */
 export const scoreMaterialComponentRelevance = (
@@ -114,16 +171,36 @@ export const scoreMaterialComponentRelevance = (
   component: BuildCandidateComponentInput,
 ) => {
   let score = 0;
+  const taxonomyEvidence = resolveTaxonomyMatchEvidence(material, component);
+  if (taxonomyEvidence) {
+    score += taxonomyEvidence.scoreBoost;
+  }
+
   const normalizedTitle = normalizeText(material.title);
   const normalizedName = normalizeText(component.componentName);
   const haystack = haystackForMaterial(material);
+  const componentTypeNorm = normalizeText(component.materialType);
+  const materialTypeNorm = normalizeText(material.materialType);
+  const typesConflictWithListing =
+    !taxonomyEvidence &&
+    !isGeneralMaterialType(component.materialType) &&
+    !isGeneralMaterialType(material.materialType) &&
+    componentTypeNorm !== materialTypeNorm &&
+    !materialTypeNorm.includes(componentTypeNorm) &&
+    !componentTypeNorm.includes(materialTypeNorm);
 
   if (normalizedName.length > 0) {
     if (normalizedTitle === normalizedName) {
       score += 400;
-    } else if (normalizedTitle.includes(normalizedName)) {
+    } else if (
+      !typesConflictWithListing &&
+      normalizedTitle.includes(normalizedName)
+    ) {
       score += 280;
-    } else if (hasStrongTokenOverlap(normalizedName, normalizedTitle)) {
+    } else if (
+      !typesConflictWithListing &&
+      hasStrongTokenOverlap(normalizedName, normalizedTitle)
+    ) {
       score += 280;
     }
   }
@@ -137,7 +214,12 @@ export const scoreMaterialComponentRelevance = (
 
   const componentType = normalizeText(component.materialType);
   const materialType = normalizeText(material.materialType);
+  // Avoid double-counting when TYPE_EXACT / TYPE_ALIAS already applied a boost.
+  const typeAlreadyBoosted =
+    taxonomyEvidence?.kind === 'TYPE_EXACT' ||
+    taxonomyEvidence?.kind === 'TYPE_ALIAS';
   if (
+    !typeAlreadyBoosted &&
     !isGeneralMaterialType(component.materialType) &&
     (materialType.includes(componentType) || componentType.includes(materialType))
   ) {
@@ -157,6 +239,10 @@ export const scoreMaterialComponentRelevance = (
 
   for (const term of uniqueKeywordTerms) {
     if (term === normalizedName || isGeneralMaterialType(term)) {
+      continue;
+    }
+    // Skip ultra-broad single tokens that collide across motor/sensor families.
+    if (BROAD_LEXICAL_TOKENS.has(term)) {
       continue;
     }
 
@@ -200,18 +286,42 @@ export const deriveMaterialComponentMatchReasonCodes = (input: {
   material: BuildCandidateMaterialInput;
   component: BuildCandidateComponentInput;
   relevance: number;
+  taxonomyEvidence?: TaxonomyMatchEvidence | null;
 }): MaterialComponentMatchReasonCode[] => {
   const codes = new Set<MaterialComponentMatchReasonCode>();
+  const taxonomyEvidence =
+    input.taxonomyEvidence ??
+    resolveTaxonomyMatchEvidence(input.material, input.component);
+
+  if (taxonomyEvidence) {
+    codes.add(taxonomyEvidence.kind);
+  }
+
   const normalizedName = normalizeText(input.component.componentName);
   const normalizedTitle = normalizeText(input.material.title);
   const haystack = haystackForMaterial(input.material);
+  const componentTypeNorm = normalizeText(input.component.materialType);
+  const materialTypeNorm = normalizeText(input.material.materialType);
+  const typesConflictWithListing =
+    !taxonomyEvidence &&
+    !isGeneralMaterialType(input.component.materialType) &&
+    !isGeneralMaterialType(input.material.materialType) &&
+    componentTypeNorm !== materialTypeNorm &&
+    !materialTypeNorm.includes(componentTypeNorm) &&
+    !componentTypeNorm.includes(materialTypeNorm);
 
   if (normalizedName.length > 0) {
     if (normalizedTitle === normalizedName) {
       codes.add('EXACT_NAME');
-    } else if (normalizedTitle.includes(normalizedName)) {
+    } else if (
+      !typesConflictWithListing &&
+      normalizedTitle.includes(normalizedName)
+    ) {
       codes.add('NAME_MATCH');
-    } else if (hasStrongTokenOverlap(normalizedName, normalizedTitle)) {
+    } else if (
+      !typesConflictWithListing &&
+      hasStrongTokenOverlap(normalizedName, normalizedTitle)
+    ) {
       codes.add('STRONG_MATCH');
     }
   }
@@ -220,6 +330,7 @@ export const deriveMaterialComponentMatchReasonCodes = (input: {
     !codes.has('EXACT_NAME') &&
     !codes.has('NAME_MATCH') &&
     !codes.has('STRONG_MATCH') &&
+    !taxonomyEvidence &&
     input.relevance >= 280
   ) {
     codes.add('STRONG_MATCH');
@@ -251,12 +362,38 @@ export const deriveMaterialComponentMatchReasonCodes = (input: {
     codes.add('KEYWORD_MATCH');
   }
 
+  if (
+    codes.size === 0 &&
+    input.relevance > 0
+  ) {
+    codes.add('LEXICAL_FALLBACK');
+  } else if (
+    !taxonomyEvidence &&
+    (codes.has('KEYWORD_MATCH') ||
+      codes.has('NAME_MATCH') ||
+      codes.has('STRONG_MATCH') ||
+      codes.has('EXACT_NAME') ||
+      codes.has('MATERIAL_TYPE_MATCH'))
+  ) {
+    // Inspectable lexical path when taxonomy did not decide.
+    if (
+      !codes.has('CONCEPT_EXACT') &&
+      !codes.has('CONCEPT_COMPATIBLE') &&
+      !codes.has('TYPE_EXACT') &&
+      !codes.has('TYPE_ALIAS')
+    ) {
+      codes.add('LEXICAL_FALLBACK');
+    }
+  }
+
   return MATCH_REASON_PRIORITY.filter((code) => codes.has(code));
 };
 
 export const primaryMaterialComponentMatchReasonCode = (
   codes: readonly MaterialComponentMatchReasonCode[],
 ): MaterialComponentMatchReasonCode | null => codes[0] ?? null;
+
+export type { ProjectMaterialTaxonomyMatchKind, TaxonomyMatchEvidence };
 
 const scoreConvenience = (
   material: BuildCandidateMaterialInput,
@@ -390,6 +527,21 @@ export const buildCandidateMatchHints = (input: {
   score: BuildCandidateScoreBreakdown;
 }) => {
   const hints = new Set<string>();
+  const taxonomyEvidence = resolveTaxonomyMatchEvidence(
+    input.material,
+    input.component,
+  );
+  if (taxonomyEvidence?.kind === 'CONCEPT_EXACT') {
+    hints.add('Concept match');
+  } else if (taxonomyEvidence?.kind === 'CONCEPT_COMPATIBLE') {
+    hints.add('Compatible concept');
+  } else if (
+    taxonomyEvidence?.kind === 'TYPE_EXACT' ||
+    taxonomyEvidence?.kind === 'TYPE_ALIAS'
+  ) {
+    hints.add('Material type match');
+  }
+
   const normalizedName = normalizeText(input.component.componentName);
   const normalizedTitle = normalizeText(input.material.title);
   const haystack = haystackForMaterial(input.material);
@@ -408,7 +560,7 @@ export const buildCandidateMatchHints = (input: {
           : 'Name match'
         : 'Strong match',
     );
-  } else if (input.score.relevance >= 280) {
+  } else if (!taxonomyEvidence && input.score.relevance >= 280) {
     hints.add('Strong match');
   }
 

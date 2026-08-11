@@ -256,6 +256,13 @@ describe('learning-projects.build-material-allocation', () => {
   test('normalized units compare correctly', () => {
     assert.equal(normalizeBuildMaterialUnit('Pieces'), 'piece');
     assert.equal(normalizeBuildMaterialUnit('piece'), 'piece');
+    assert.equal(normalizeBuildMaterialUnit('boxes'), 'box');
+    assert.equal(normalizeBuildMaterialUnit('Boxes'), 'box');
+    assert.equal(normalizeBuildMaterialUnit('packs'), 'pack');
+    assert.equal(normalizeBuildMaterialUnit('bundles'), 'bundle');
+    assert.equal(normalizeBuildMaterialUnit('batches'), 'batch');
+    assert.equal(unitsAreCompatible('box', 'boxes'), true);
+    assert.equal(unitsAreCompatible('pack', 'set'), false);
     assert.ok(unitsAreCompatible('pieces', 'piece'));
     assert.ok(!unitsAreCompatible('kg', 'piece'));
   });

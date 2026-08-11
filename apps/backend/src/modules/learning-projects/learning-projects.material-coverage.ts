@@ -20,6 +20,11 @@ import {
   scoreMaterialAgainstComponent,
   type MaterialForComponentMatching,
 } from './learning-projects.material-component-matching.js';
+import {
+  findMaterialIdsByConceptIds,
+  loadComponentTaxonomyContexts,
+  loadMaterialTaxonomyContexts,
+} from './project-material-taxonomy-context.js';
 
 const PUBLIC_COVERAGE_MATERIAL_STATUSES = ['AVAILABLE'] as const;
 const COVERAGE_CANDIDATE_POOL_LIMIT = 60;
@@ -261,6 +266,7 @@ const buildCoverageCandidateCacheKey = (where: Prisma.MaterialWhereInput) =>
 
 const toMatchingMaterial = (
   material: CoverageMaterialRecord,
+  conceptCanonicalKeys: string[] = [],
 ): MaterialForComponentMatching => ({
   id: material.id,
   title: material.title,
@@ -268,11 +274,16 @@ const toMatchingMaterial = (
   materialType: material.materialType,
   categoryId: material.categoryId,
   tags: material.tags,
+  conceptCanonicalKeys,
 });
 
 const toScoredComponentInput = (
   component: CoverageComponentRecord,
   componentPosition: number,
+  taxonomy?: {
+    conceptCanonicalKeys: string[];
+    satisfiedByFormKeys: string[];
+  },
 ) => ({
   id: component.id,
   projectId: component.projectId,
@@ -287,6 +298,8 @@ const toScoredComponentInput = (
   searchKeywords: component.searchKeywords,
   alternativeKeywords: component.alternativeKeywords,
   componentPosition,
+  conceptCanonicalKeys: taxonomy?.conceptCanonicalKeys,
+  satisfiedByFormKeys: taxonomy?.satisfiedByFormKeys,
 });
 
 const fetchPublicCoverageCandidateMaterials = async (
@@ -359,6 +372,10 @@ const collectCompatibleCoverageMaterials = async (
     return [];
   }
 
+  const componentTaxonomy = (
+    await loadComponentTaxonomyContexts([component.id])
+  ).get(component.id);
+
   const searchTerms = buildCoverageSearchTerms(component);
   let materials = await fetchPublicCoverageCandidateMaterials(
     buildPublicCoverageMaterialWhere({
@@ -388,12 +405,49 @@ const collectCompatibleCoverageMaterials = async (
     );
   }
 
+  // Expand pool with concept-compatible materials (may cross category).
+  const conceptMaterialIds = await findMaterialIdsByConceptIds(
+    componentTaxonomy?.satisfiedByFormConceptIds ?? [],
+    COVERAGE_CANDIDATE_POOL_LIMIT,
+  );
+  if (conceptMaterialIds.length > 0) {
+    const existingIds = new Set(materials.map((material) => material.id));
+    const missingIds = conceptMaterialIds.filter((id) => !existingIds.has(id));
+    if (missingIds.length > 0) {
+      const conceptMaterials = await fetchPublicCoverageCandidateMaterials(
+        {
+          id: { in: missingIds },
+          status: { in: [...PUBLIC_COVERAGE_MATERIAL_STATUSES] },
+          category: {
+            isActive: true,
+            categoryType: { in: ['MATERIAL', 'BOTH'] },
+          },
+        },
+        context,
+      );
+      materials = [...materials, ...conceptMaterials].slice(
+        0,
+        COVERAGE_CANDIDATE_POOL_LIMIT,
+      );
+    }
+  }
+
+  const materialTaxonomy = await loadMaterialTaxonomyContexts(
+    materials.map((material) => material.id),
+  );
+
   const scoredMaterialEntries = materials
     .map((material) => ({
       material,
       scored: scoreMaterialAgainstComponent({
-        material: toMatchingMaterial(material),
-        component: toScoredComponentInput(component, componentPosition),
+        material: toMatchingMaterial(
+          material,
+          materialTaxonomy.get(material.id)?.conceptCanonicalKeys ?? [],
+        ),
+        component: toScoredComponentInput(component, componentPosition, {
+          conceptCanonicalKeys: componentTaxonomy?.conceptCanonicalKeys ?? [],
+          satisfiedByFormKeys: componentTaxonomy?.satisfiedByFormKeys ?? [],
+        }),
       }),
     }))
     .filter(

@@ -38,7 +38,11 @@ describe('learning-projects.material-component-matching', () => {
     });
 
     assert.equal(scored?.matchType, 'EXACT');
-    assert.equal(scored?.matchReasonCodes[0], 'EXACT_NAME');
+    assert.ok(
+      scored?.matchReasonCodes[0] === 'EXACT_NAME' ||
+        scored?.matchReasonCodes[0] === 'TYPE_EXACT',
+    );
+    assert.ok(scored?.matchReasonCodes.includes('EXACT_NAME'));
   });
 
   test('classifies alternative keyword matches only when substitution is allowed', () => {

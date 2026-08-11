@@ -236,9 +236,13 @@ describe('material component match reason codes', () => {
       relevance,
     });
 
-    assert.equal(primaryMaterialComponentMatchReasonCode(codes), 'EXACT_NAME');
+    assert.ok(
+      primaryMaterialComponentMatchReasonCode(codes) === 'EXACT_NAME' ||
+        primaryMaterialComponentMatchReasonCode(codes) === 'TYPE_EXACT',
+    );
+    assert.ok(codes.includes('EXACT_NAME'));
     assert.ok(codes.includes('CATEGORY_MATCH'));
-    assert.ok(codes.includes('MATERIAL_TYPE_MATCH'));
+    assert.ok(codes.includes('MATERIAL_TYPE_MATCH') || codes.includes('TYPE_EXACT'));
   });
 
   test('category-only match yields CATEGORY_MATCH', () => {

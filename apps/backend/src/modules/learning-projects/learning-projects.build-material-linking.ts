@@ -24,6 +24,11 @@ import {
 } from './learning-projects.build-material-allocation.js';
 import * as learningProjectsRepository from './learning-projects.repository.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
+import {
+  findMaterialIdsByConceptIds,
+  loadComponentTaxonomyContexts,
+  loadMaterialTaxonomyContexts,
+} from './project-material-taxonomy-context.js';
 
 const CANDIDATE_LIMIT = 10;
 const CANDIDATE_POOL_LIMIT = 60;
@@ -404,6 +409,7 @@ const loadOwnerCompletedHandoverCounts = async (ownerIds: string[]) => {
 const toRankingMaterialInput = (
   material: CandidateMaterialRecord,
   ownerCompletedHandovers: number,
+  conceptCanonicalKeys: string[] = [],
 ): BuildCandidateMaterialInput => ({
   id: material.id,
   title: material.title,
@@ -423,6 +429,7 @@ const toRankingMaterialInput = (
     material.supplierProfile?.verificationStatus,
   ),
   ownerCompletedHandovers,
+  conceptCanonicalKeys,
 });
 
 const toRankingComponentInput = (
@@ -432,6 +439,8 @@ const toRankingComponentInput = (
     materialType: string;
     searchKeywords: Prisma.JsonValue | null;
     alternativeKeywords?: Prisma.JsonValue | null;
+    conceptCanonicalKeys?: string[];
+    satisfiedByFormKeys?: string[];
   },
   searchTerms: string[],
 ): BuildCandidateComponentInput => ({
@@ -441,6 +450,8 @@ const toRankingComponentInput = (
   searchKeywords: parseSearchKeywords(component.searchKeywords),
   alternativeKeywords: parseSearchKeywords(component.alternativeKeywords),
   searchTerms,
+  conceptCanonicalKeys: component.conceptCanonicalKeys,
+  satisfiedByFormKeys: component.satisfiedByFormKeys,
 });
 
 const mapRankedCandidateItems = (input: {
@@ -451,10 +462,13 @@ const mapRankedCandidateItems = (input: {
     materialType: string;
     searchKeywords: Prisma.JsonValue | null;
     alternativeKeywords?: Prisma.JsonValue | null;
+    conceptCanonicalKeys?: string[];
+    satisfiedByFormKeys?: string[];
   };
   searchTerms: string[];
   learner: BuildCandidateLearnerContext;
   ownerCompletedHandoversByOwnerId: Map<string, number>;
+  materialConceptKeysById: Map<string, string[]>;
 }) => {
   const rankingComponent = toRankingComponentInput(
     input.component,
@@ -464,6 +478,7 @@ const mapRankedCandidateItems = (input: {
     toRankingMaterialInput(
       material,
       input.ownerCompletedHandoversByOwnerId.get(material.ownerId) ?? 0,
+      input.materialConceptKeysById.get(material.id) ?? [],
     ),
   );
   const ranked = rankBuildMaterialCandidates(
@@ -528,6 +543,10 @@ const listMaterialCandidatesForRequiredComponent = async (input: {
   const learner =
     input.preloadedLearner ?? (await loadLearnerCandidateContext(input.learnerId));
 
+  const componentTaxonomy = (
+    await loadComponentTaxonomyContexts([component.id])
+  ).get(component.id);
+
   let materials = await fetchCandidateMaterials(
     buildEligibleCandidateWhere({
       learnerId: input.learnerId,
@@ -555,8 +574,38 @@ const listMaterialCandidatesForRequiredComponent = async (input: {
     );
   }
 
+  const conceptMaterialIds = await findMaterialIdsByConceptIds(
+    componentTaxonomy?.satisfiedByFormConceptIds ?? [],
+    CANDIDATE_POOL_LIMIT,
+  );
+  if (conceptMaterialIds.length > 0) {
+    const existingIds = new Set(materials.map((material) => material.id));
+    const missingIds = conceptMaterialIds.filter((id) => !existingIds.has(id));
+    if (missingIds.length > 0) {
+      const conceptMaterials = await fetchCandidateMaterials({
+        id: { in: missingIds },
+        ownerId: { not: input.learnerId },
+        status: { in: [...LINKABLE_MATERIAL_STATUSES] },
+        category: {
+          isActive: true,
+          categoryType: { in: ['MATERIAL', 'BOTH'] },
+        },
+      });
+      materials = [...materials, ...conceptMaterials].slice(0, CANDIDATE_POOL_LIMIT);
+    }
+  }
+
   const ownerCompletedHandoversByOwnerId = await loadOwnerCompletedHandoverCounts(
     [...new Set(materials.map((material) => material.ownerId))],
+  );
+  const materialTaxonomy = await loadMaterialTaxonomyContexts(
+    materials.map((material) => material.id),
+  );
+  const materialConceptKeysById = new Map(
+    [...materialTaxonomy.entries()].map(([materialId, ctx]) => [
+      materialId,
+      ctx.conceptCanonicalKeys,
+    ]),
   );
 
   return {
@@ -564,10 +613,15 @@ const listMaterialCandidatesForRequiredComponent = async (input: {
     searchTerm,
     items: mapRankedCandidateItems({
       materials,
-      component,
+      component: {
+        ...component,
+        conceptCanonicalKeys: componentTaxonomy?.conceptCanonicalKeys ?? [],
+        satisfiedByFormKeys: componentTaxonomy?.satisfiedByFormKeys ?? [],
+      },
       searchTerms,
       learner,
       ownerCompletedHandoversByOwnerId,
+      materialConceptKeysById,
     }),
   };
 };
