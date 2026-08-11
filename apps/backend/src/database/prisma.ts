@@ -1,13 +1,23 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { PrismaClient } from "../generated/prisma/client.js";
-import { env } from "../config/env.js";
+import {
+  assertAllowedAutomatedTestDatabaseUrl,
+  env,
+  isAutomatedTestRuntime,
+} from "../config/env.js";
 import { logger } from "../observability/logger.js";
 
 const configuredPoolMax = Number.parseInt(process.env.DATABASE_POOL_MAX ?? '', 10);
 const poolMax = Number.isInteger(configuredPoolMax) && configuredPoolMax > 0
   ? configuredPoolMax
   : 10;
+
+// Defense in depth: refuse development DB if a test process somehow reaches
+// Prisma init with an unsafe connection string.
+if (isAutomatedTestRuntime()) {
+  assertAllowedAutomatedTestDatabaseUrl(env.databaseUrl);
+}
 
 export const databasePool = new Pool({
   connectionString: env.databaseUrl,

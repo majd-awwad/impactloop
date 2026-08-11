@@ -90,5 +90,6 @@ describe('test-database-guard', () => {
     assert.equal(ALLOWED_TEST_DATABASES.has(FORBIDDEN_DEVELOPMENT_DATABASE), false);
     assert.equal(ALLOWED_TEST_DATABASES.has('impactloop_test'), true);
     assert.equal(ALLOWED_TEST_DATABASES.has('impactloop_ci'), true);
+    assert.equal(ALLOWED_TEST_DATABASES.has('impactloop_driver_e2e'), true);
   });
 });

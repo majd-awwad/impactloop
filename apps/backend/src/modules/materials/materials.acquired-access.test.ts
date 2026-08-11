@@ -170,28 +170,104 @@ describe('materials acquired access', () => {
   });
 
   after(async () => {
-    if (ids.reservations.length > 0) {
-      await prisma.reservation.deleteMany({ where: { id: { in: ids.reservations } } });
-    }
+    // startProjectBuildById → resolveLearningSetupAfterBuildStart creates
+    // project_learning_packs / project_learning_questions that Restrict-reference
+    // project_steps. Those must be removed before learningProject (cascade→steps).
+    const cleanupErrors: Error[] = [];
+    const runCleanup = async (label: string, action: () => Promise<unknown>) => {
+      try {
+        await action();
+      } catch (error) {
+        cleanupErrors.push(
+          error instanceof Error
+            ? new Error(`${label}: ${error.message}`)
+            : new Error(`${label}: ${String(error)}`),
+        );
+      }
+    };
+
     if (ids.projects.length > 0) {
-      await prisma.projectBuild.deleteMany({
-        where: { projectId: { in: ids.projects } },
-      });
-      await prisma.learningProject.deleteMany({ where: { id: { in: ids.projects } } });
+      await runCleanup('unlink build items', () =>
+        prisma.projectBuildItem.updateMany({
+          where: { build: { projectId: { in: ids.projects } } },
+          data: { linkedMaterialId: null, linkedReservationId: null },
+        }),
+      );
     }
+
     if (ids.materials.length > 0) {
-      await prisma.material.deleteMany({ where: { id: { in: ids.materials } } });
+      await runCleanup('clear material reuse pointer', () =>
+        prisma.material.updateMany({
+          where: {
+            id: { in: ids.materials },
+            reusedByReservationId: { not: null },
+          },
+          data: { reusedByReservationId: null },
+        }),
+      );
+    }
+
+    if (ids.reservations.length > 0) {
+      await runCleanup('reservations', () =>
+        prisma.reservation.deleteMany({ where: { id: { in: ids.reservations } } }),
+      );
+    }
+
+    if (ids.projects.length > 0) {
+      await runCleanup('learning sessions by project', () =>
+        prisma.projectBuildLearningSession.deleteMany({
+          where: { build: { projectId: { in: ids.projects } } },
+        }),
+      );
+      await runCleanup('project builds', () =>
+        prisma.projectBuild.deleteMany({
+          where: { projectId: { in: ids.projects } },
+        }),
+      );
+      // Questions Restrict on project_step_id — delete before pack/project cascade.
+      await runCleanup('learning questions by project pack', () =>
+        prisma.projectLearningQuestion.deleteMany({
+          where: { pack: { projectId: { in: ids.projects } } },
+        }),
+      );
+      await runCleanup('learning packs', () =>
+        prisma.projectLearningPack.deleteMany({
+          where: { projectId: { in: ids.projects } },
+        }),
+      );
+      await runCleanup('learning projects', () =>
+        prisma.learningProject.deleteMany({ where: { id: { in: ids.projects } } }),
+      );
+    }
+
+    if (ids.materials.length > 0) {
+      await runCleanup('materials', () =>
+        prisma.material.deleteMany({ where: { id: { in: ids.materials } } }),
+      );
     }
     if (ids.locations.length > 0) {
-      await prisma.location.deleteMany({ where: { id: { in: ids.locations } } });
+      await runCleanup('locations', () =>
+        prisma.location.deleteMany({ where: { id: { in: ids.locations } } }),
+      );
     }
     if (ids.materialCategories.length > 0 || ids.categories.length > 0) {
-      await prisma.category.deleteMany({
-        where: { id: { in: [...ids.materialCategories, ...ids.categories] } },
-      });
+      await runCleanup('categories', () =>
+        prisma.category.deleteMany({
+          where: { id: { in: [...ids.materialCategories, ...ids.categories] } },
+        }),
+      );
     }
     if (ids.users.length > 0) {
-      await prisma.user.deleteMany({ where: { id: { in: ids.users } } });
+      await runCleanup('users', () =>
+        prisma.user.deleteMany({ where: { id: { in: ids.users } } }),
+      );
+    }
+
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(
+        cleanupErrors,
+        `acquired-access cleanup failed (${cleanupErrors.length} step(s))`,
+      );
     }
   });
 

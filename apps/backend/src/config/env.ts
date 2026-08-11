@@ -79,10 +79,68 @@ const digestEnvFile = (filePath: string): string | null => {
   }
 };
 
-const resolveNodeEnv = (): string => process.env.NODE_ENV?.trim() || 'development';
+const FORBIDDEN_DEVELOPMENT_DATABASE_NAME = 'impactloop';
+const ALLOWED_AUTOMATED_TEST_DATABASE_NAMES = new Set([
+  'impactloop_test',
+  'impactloop_ci',
+  // Disposable local Driver E2E database (scripts/run-driver-e2e.ts).
+  'impactloop_driver_e2e',
+]);
 
-export const shouldOverrideProcessEnvFromLocalFiles = (): boolean =>
-  resolveNodeEnv() !== 'production';
+/**
+ * True when this process is an automated Node test runtime.
+ * Covers NODE_ENV=test (npm runners) and Node's built-in NODE_TEST_CONTEXT
+ * (direct `node --test` / `node --import tsx --test` without a wrapper).
+ */
+export const isAutomatedTestRuntime = (
+  envVars: NodeJS.ProcessEnv = process.env,
+): boolean => {
+  if ((envVars.NODE_ENV ?? '').trim() === 'test') {
+    return true;
+  }
+  return Boolean(envVars.NODE_TEST_CONTEXT?.trim());
+};
+
+/**
+ * Local .env may override inherited process env in development so edited keys
+ * win. Never do that for production or automated tests — otherwise a local
+ * `.env` with NODE_ENV=development / DATABASE_URL=…/impactloop clobbers the
+ * test runner and routes DB-backed tests at the development database.
+ */
+export const shouldOverrideProcessEnvFromLocalFiles = (
+  envVars: NodeJS.ProcessEnv = process.env,
+): boolean => {
+  const nodeEnv = envVars.NODE_ENV?.trim() || 'development';
+  if (nodeEnv === 'production' || isAutomatedTestRuntime(envVars)) {
+    return false;
+  }
+  return true;
+};
+
+const parseDatabaseNameFromUrl = (raw: string): string => {
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error('TEST_DATABASE_URL is malformed and cannot be parsed as a URL.');
+  }
+  return decodeURIComponent(parsed.pathname.replace(/^\//, '').split('?')[0] ?? '');
+};
+
+export const assertAllowedAutomatedTestDatabaseUrl = (raw: string): void => {
+  const databaseName = parseDatabaseNameFromUrl(raw);
+  if (
+    !databaseName ||
+    databaseName === FORBIDDEN_DEVELOPMENT_DATABASE_NAME ||
+    !ALLOWED_AUTOMATED_TEST_DATABASE_NAMES.has(databaseName)
+  ) {
+    throw new Error(
+      'Refusing to run automated tests against the development database.\n' +
+        'Configure TEST_DATABASE_URL with a dedicated test database ' +
+        `(allowed names: ${[...ALLOWED_AUTOMATED_TEST_DATABASE_NAMES].join(', ')}).`,
+    );
+  }
+};
 
 export const bootstrapBackendEnvironment = (): void => {
   const override = shouldOverrideProcessEnvFromLocalFiles();
@@ -125,15 +183,17 @@ const parsePort = (value: string | undefined): number => {
 
 /**
  * Development/production use DATABASE_URL.
- * Automated tests (NODE_ENV=test) require TEST_DATABASE_URL with no fallback.
- * Also overwrite process.env.DATABASE_URL in test mode so Prisma/scripts that
- * still read the process env cannot silently target the development database.
+ * Automated tests (NODE_ENV=test or NODE_TEST_CONTEXT) require TEST_DATABASE_URL
+ * with no fallback, refuse the development database name `impactloop`, and
+ * overwrite process.env.DATABASE_URL so Prisma/scripts cannot silently target
+ * the development database.
  */
 export const resolveDatabaseUrl = (
   envVars: NodeJS.ProcessEnv = process.env,
 ): string => {
-  const nodeEnv = envVars.NODE_ENV?.trim() || 'development';
-  if (nodeEnv === 'test') {
+  if (isAutomatedTestRuntime(envVars)) {
+    // Align Node's direct --test context with the rest of the stack.
+    envVars.NODE_ENV = 'test';
     const testDatabaseUrl = envVars.TEST_DATABASE_URL?.trim();
     if (!testDatabaseUrl) {
       throw new Error(
@@ -143,6 +203,7 @@ export const resolveDatabaseUrl = (
           '(e.g. impactloop_test or impactloop_ci).',
       );
     }
+    assertAllowedAutomatedTestDatabaseUrl(testDatabaseUrl);
     envVars.DATABASE_URL = testDatabaseUrl;
     return testDatabaseUrl;
   }
@@ -321,7 +382,10 @@ export const GEMINI_CHAT_MODEL_FALLBACKS = [
 ] as const;
 
 const reloadDevEnvFromDisk = (): void => {
-  if (process.env.NODE_ENV === 'production' || process.env.NODE_TEST_CONTEXT) {
+  if (
+    process.env.NODE_ENV === 'production' ||
+    isAutomatedTestRuntime()
+  ) {
     return;
   }
 

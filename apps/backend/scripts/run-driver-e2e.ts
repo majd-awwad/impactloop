@@ -65,18 +65,25 @@ const writeTempEnv = (e2eUrl: string) => {
       if (/^\s*DATABASE_URL\s*=/.test(line)) {
         return `DATABASE_URL="${e2eUrl}"`;
       }
+      if (/^\s*TEST_DATABASE_URL\s*=/.test(line)) {
+        return `TEST_DATABASE_URL="${e2eUrl}"`;
+      }
+      if (/^\s*NODE_ENV\s*=/.test(line)) {
+        return 'NODE_ENV=test';
+      }
       return line;
     })
     .join('\n');
-  if (!/^\s*DATABASE_URL\s*=/m.test(rewritten)) {
-    writeFileSync(
-      tempEnvPath,
-      `${original}\nDATABASE_URL="${e2eUrl}"\n`,
-      'utf8',
-    );
-  } else {
-    writeFileSync(tempEnvPath, rewritten, 'utf8');
-  }
+  const withDatabaseUrl = /^\s*DATABASE_URL\s*=/m.test(rewritten)
+    ? rewritten
+    : `${rewritten}\nDATABASE_URL="${e2eUrl}"\n`;
+  const withTestDatabaseUrl = /^\s*TEST_DATABASE_URL\s*=/m.test(withDatabaseUrl)
+    ? withDatabaseUrl
+    : `${withDatabaseUrl}\nTEST_DATABASE_URL="${e2eUrl}"\n`;
+  const withNodeEnv = /^\s*NODE_ENV\s*=/m.test(withTestDatabaseUrl)
+    ? withTestDatabaseUrl
+    : `${withTestDatabaseUrl}\nNODE_ENV=test\n`;
+  writeFileSync(tempEnvPath, withNodeEnv, 'utf8');
 };
 
 const run = (command: string, args: string[], env: NodeJS.ProcessEnv) =>
@@ -153,7 +160,9 @@ const main = async () => {
   const childEnv = {
     ...process.env,
     IMPACTLOOP_BACKEND_ENV_FILE_PATH: tempEnvPath,
+    NODE_ENV: 'test',
     DATABASE_URL: e2eUrl,
+    TEST_DATABASE_URL: e2eUrl,
   };
 
   console.log('Loading fixture…');

@@ -25,6 +25,33 @@ const runHarness = (input: {
   }
   writeFileSync(envFilePath, `${lines.join('\n')}\n`, 'utf8');
 
+  const childEnv: NodeJS.ProcessEnv = {
+    ...process.env,
+    DATABASE_URL:
+      process.env.DATABASE_URL ??
+      'postgresql://postgres:password@127.0.0.1:5432/impactloop?schema=public',
+    JWT_ACCESS_SECRET:
+      process.env.JWT_ACCESS_SECRET && process.env.JWT_ACCESS_SECRET.length >= 128
+        ? process.env.JWT_ACCESS_SECRET
+        : 'x'.repeat(128),
+    JWT_REFRESH_SECRET:
+      process.env.JWT_REFRESH_SECRET && process.env.JWT_REFRESH_SECRET.length >= 128
+        ? process.env.JWT_REFRESH_SECRET
+        : 'y'.repeat(128),
+    HANDOVER_CODE_SECRET:
+      process.env.HANDOVER_CODE_SECRET && process.env.HANDOVER_CODE_SECRET.length >= 32
+        ? process.env.HANDOVER_CODE_SECRET
+        : 'z'.repeat(32),
+    PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER?.trim() || 'disabled',
+    NODE_ENV: input.nodeEnv,
+    GEMINI_API_KEY: input.inheritedGeminiKey,
+    IMPACTLOOP_BACKEND_ENV_FILE_PATH: envFilePath,
+    AI_CHAT_DEV_MOCK_FALLBACK_ENABLED: 'false',
+    ...(input.aiChatProvider ? { AI_CHAT_PROVIDER: input.aiChatProvider } : {}),
+  };
+  // Harness simulates app/dev/prod bootstraps, not an automated test process.
+  delete childEnv.NODE_TEST_CONTEXT;
+
   const result = spawnSync(
     process.execPath,
     [
@@ -34,19 +61,7 @@ const runHarness = (input: {
     ],
     {
       cwd: backendRoot,
-      env: {
-        ...process.env,
-        DATABASE_URL:
-          process.env.DATABASE_URL ??
-          'postgresql://postgres:password@127.0.0.1:5432/impactloop?schema=public',
-        JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET ?? 'test-access-secret',
-        JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET ?? 'test-refresh-secret',
-        NODE_ENV: input.nodeEnv,
-        GEMINI_API_KEY: input.inheritedGeminiKey,
-        IMPACTLOOP_BACKEND_ENV_FILE_PATH: envFilePath,
-        AI_CHAT_DEV_MOCK_FALLBACK_ENABLED: 'false',
-        ...(input.aiChatProvider ? { AI_CHAT_PROVIDER: input.aiChatProvider } : {}),
-      },
+      env: childEnv,
       encoding: 'utf8',
     },
   );

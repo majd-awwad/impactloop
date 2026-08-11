@@ -7,7 +7,11 @@
  */
 
 export const FORBIDDEN_DEVELOPMENT_DATABASE = 'impactloop';
-export const ALLOWED_TEST_DATABASES = new Set(['impactloop_test', 'impactloop_ci']);
+export const ALLOWED_TEST_DATABASES = new Set([
+  'impactloop_test',
+  'impactloop_ci',
+  'impactloop_driver_e2e',
+]);
 
 export const TEST_DATABASE_REFUSAL_MESSAGE =
   'Refusing to run automated tests against the development database.\n' +
