@@ -33,9 +33,14 @@ test('exports the complete reviewed LM-02 compatibility matrix', () => {
     ['INTEREST_RELEVANT_TO', 'interest:art-crafts', 'material-family:craft'],
     ['INTEREST_RELEVANT_TO', 'interest:recycling', 'material-family:reusable'],
     ['INTEREST_RELEVANT_TO', 'interest:home-diy', 'material-family:tools'],
+    ['INTEREST_RELEVANT_TO', 'interest:education', 'material-family:lab'],
     ['SATISFIED_BY', 'component:arduino-board', 'material-form:arduino-uno'],
     ['SATISFIED_BY', 'component:ultrasonic-distance-sensor', 'material-form:ultrasonic-sensor'],
     ['SATISFIED_BY', 'component:dc-gear-motors', 'material-form:dc-motor'],
+    ['SATISFIED_BY', 'component:servo-motor', 'material-form:servo-motor'],
+    ['SATISFIED_BY', 'component:stepper-motor', 'material-form:stepper-motor'],
+    ['SATISFIED_BY', 'component:raspberry-pi', 'material-form:raspberry-pi'],
+    ['SATISFIED_BY', 'component:motor-driver', 'material-form:motor-driver'],
     ['SATISFIED_BY', 'component:jumper-wires', 'material-form:jumper-wires'],
     ['SATISFIED_BY', 'component:rubber-wheels', 'material-form:rubber-wheels'],
     ['SATISFIED_BY', 'component:breadboard', 'material-form:breadboard'],
@@ -54,16 +59,16 @@ test('exports the complete reviewed LM-02 compatibility matrix', () => {
     ['SATISFIED_BY', 'component:wooden-dowel', 'material-form:wooden-dowels'],
     ['SATISFIED_BY', 'component:wood-glue', 'material-form:wood-glue'],
   ]);
-  assert.equal(TAXONOMY_COMPATIBILITY_RELATION_SEEDS.length, 32);
+  assert.equal(TAXONOMY_COMPATIBILITY_RELATION_SEEDS.length, 37);
   assert.equal(
     TAXONOMY_COMPATIBILITY_RELATION_SEEDS.filter(({ relationType }) =>
       relationType === 'INTEREST_RELEVANT_TO').length,
-    12,
+    13,
   );
   assert.equal(
     TAXONOMY_COMPATIBILITY_RELATION_SEEDS.filter(({ relationType }) =>
       relationType === 'SATISFIED_BY').length,
-    20,
+    24,
   );
 });
 

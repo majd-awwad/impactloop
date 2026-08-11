@@ -120,8 +120,8 @@ describe('LM-02 taxonomy compatibility seed integration', { concurrency: false }
     );
 
     const result = await seedTaxonomyCompatibilityRelations();
-    assert.equal(result.expectedCount, 32);
-    assert.equal(result.createdCount + result.existingCount, 32);
+    assert.equal(result.expectedCount, TAXONOMY_COMPATIBILITY_RELATION_SEEDS.length);
+    assert.equal(result.createdCount + result.existingCount, TAXONOMY_COMPATIBILITY_RELATION_SEEDS.length);
 
     const rows = await relationRows();
     assert.equal(rows.every(Boolean), true);
@@ -142,7 +142,11 @@ describe('LM-02 taxonomy compatibility seed integration', { concurrency: false }
     const result = await seedTaxonomyCompatibilityRelations();
     const exactAfter = (await relationRows())[0]!;
 
-    assert.deepEqual(result, { expectedCount: 32, existingCount: 32, createdCount: 0 });
+    assert.deepEqual(result, {
+      expectedCount: TAXONOMY_COMPATIBILITY_RELATION_SEEDS.length,
+      existingCount: TAXONOMY_COMPATIBILITY_RELATION_SEEDS.length,
+      createdCount: 0,
+    });
     assert.deepEqual(exactAfter, exactBefore);
   });
 

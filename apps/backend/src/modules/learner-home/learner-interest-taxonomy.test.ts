@@ -3,9 +3,11 @@ import { describe, test } from 'node:test';
 
 import {
   buildInterestMatchReason,
+  buildMaterialMatchHaystack,
   getLearnerInterestOptionsResponse,
   isCustomInterestKey,
   matchInterestKeyAgainstHaystack,
+  matchInterestKeyAgainstMaterial,
   matchLearnerInterestsAgainstHaystack,
   normalizeLearnerInterestKeys,
   resolveInterestKey,
@@ -52,6 +54,11 @@ describe('learner interest taxonomy', () => {
       ['electronics', 'art_crafts', 'audio_media', 'fabric_textiles'],
     );
     assert.equal(resolveInterestKey('Arduino'), 'arduino');
+    assert.equal(resolveInterestKey('education'), 'education');
+    assert.deepEqual(normalizeLearnerInterestKeys(['education', 'recycling']), [
+      'education',
+      'recycling',
+    ]);
     assert.equal(resolveInterestKey('unknown topic'), null);
   });
 
@@ -139,6 +146,45 @@ describe('learner interest taxonomy', () => {
     assert.ok(
       buildInterestMatchReason(match!).toLowerCase().includes('electronics'),
     );
+  });
+
+  test('education alias and Lab & Education category resolve through education interest', () => {
+    assert.equal(resolveInterestKey('education'), 'education');
+    assert.deepEqual(normalizeLearnerInterestKeys(['education', 'recycling']), [
+      'education',
+      'recycling',
+    ]);
+
+    const labParts = buildMaterialMatchHaystack({
+      title: 'Teaching Bench Accessory Pack',
+      description: 'Surplus accessories from department storage',
+      materialType: 'Accessory Pack',
+      categoryNameEn: 'Lab & Education Supplies',
+      tags: [],
+    });
+    const educationMatch = matchInterestKeyAgainstMaterial(labParts, 'education');
+    assert.ok(educationMatch);
+    assert.equal(educationMatch?.strength, 'group');
+    assert.deepEqual(educationMatch?.matchedSources, ['category']);
+
+    const probeTitleMatch = matchInterestKeyAgainstMaterial(
+      buildMaterialMatchHaystack({
+        title: 'Replacement Multimeter Probe Sets',
+        description: 'Surplus accessories',
+        materialType: 'Probe',
+        categoryNameEn: 'Electronics',
+        tags: [],
+      }),
+      'education',
+    );
+    assert.ok(probeTitleMatch);
+    assert.equal(probeTitleMatch?.strength, 'strong');
+
+    const electronicsMatch = matchInterestKeyAgainstMaterial(
+      labParts,
+      'electronics',
+    );
+    assert.equal(electronicsMatch, null);
   });
 
   test('scoreSuggestedMaterial uses precise audio media reasons only for real matches', () => {

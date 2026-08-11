@@ -84,6 +84,12 @@ const GROUPS: LearnerInterestGroupDefinition[] = [
   { key: 'art_crafts', labelEn: 'Art & Crafts', labelAr: null, sortOrder: 4 },
   { key: 'recycling', labelEn: 'Recycling', labelAr: null, sortOrder: 5 },
   { key: 'home_diy', labelEn: 'Home DIY', labelAr: null, sortOrder: 6 },
+  {
+    key: 'education',
+    labelEn: 'Lab & Education',
+    labelAr: null,
+    sortOrder: 7,
+  },
 ];
 
 const INTERESTS: LearnerInterestDefinition[] = [
@@ -384,6 +390,53 @@ const INTERESTS: LearnerInterestDefinition[] = [
     specificity: 74,
     sortOrder: 13,
     matchMode: 'keywords_only',
+  },
+  {
+    key: 'education',
+    labelEn: 'Lab & Education',
+    labelAr: null,
+    groupKey: 'education',
+    groupLabelEn: 'Lab & Education',
+    relatedMaterialCategoryNames: [
+      'Lab & Education Supplies',
+      'Paper & Cardboard',
+    ],
+    relatedProjectCategoryNames: [
+      'Electronics',
+      'Home Experiments',
+      'Robotics',
+    ],
+    tags: ['education', 'lab', 'learning'],
+    keywords: [
+      'lab',
+      'education',
+      'educational',
+      'learning',
+      'trainer',
+      'training',
+      'sample',
+      'beaker',
+      'pipette',
+      'syringe',
+      'classroom',
+      'kit',
+      // Common Lab & Education Supplies catalog vocabulary in this product.
+      'multimeter',
+      'probe',
+      'alligator',
+      'soldering',
+      'test lead',
+    ],
+    aliases: [
+      'lab education',
+      'lab & education',
+      'lab and education',
+      'educational',
+      'learning',
+    ],
+    specificity: 76,
+    sortOrder: 14,
+    matchMode: 'keywords_and_category',
   },
 ];
 
