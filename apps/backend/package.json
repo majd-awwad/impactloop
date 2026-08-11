@@ -12,7 +12,7 @@
     "seed:community-people": "tsx prisma/demo-data/seed-community-demo-people.ts",
     "seed:community-materials": "tsx prisma/demo-data/materials/seed-community-demo-materials.ts",
     "seed:learning-projects-sync": "tsx prisma/demo-data/projects/sync-learning-project-demo.ts",
-    "seed:learning-project-covers": "WWtsx prisma/demo-data/projects/sync-learning-project-demo.ts --sync-covers",
+    "seed:learning-project-covers": "tsx prisma/demo-data/projects/sync-learning-project-demo.ts --sync-covers",
     "seed:project-data-03": "tsx prisma/demo-data/projects/seed-project-data-03.ts",
     "seed:community-behavior": "tsx prisma/demo-data/behavior/seed-community-behavior.ts",
     "seed:behavior-data-02": "tsx prisma/demo-data/behavior/seed-behavior-data-02.ts",
