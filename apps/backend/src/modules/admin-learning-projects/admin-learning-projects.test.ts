@@ -284,34 +284,86 @@ before(() => {
 });
 
 after(async () => {
+  const run = async (label: string, fn: () => Promise<unknown>) => {
+    try {
+      await fn();
+    } catch (error) {
+      console.error(
+        `[${TEST_MARKER}] cleanup failed (${label}):`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+  };
+
   if (ids.activityLogs.length > 0) {
-    await prisma.adminActivityLog.deleteMany({
-      where: { id: { in: ids.activityLogs } },
-    });
+    await run('adminActivityLog', () =>
+      prisma.adminActivityLog.deleteMany({
+        where: { id: { in: ids.activityLogs } },
+      }),
+    );
   }
 
   if (ids.notifications.length > 0) {
-    await prisma.notification.deleteMany({
-      where: { id: { in: ids.notifications } },
-    });
+    await run('notification', () =>
+      prisma.notification.deleteMany({
+        where: { id: { in: ids.notifications } },
+      }),
+    );
   }
 
   if (ids.projects.length > 0) {
-    await prisma.learningProject.deleteMany({
-      where: { id: { in: ids.projects } },
-    });
+    await run('projectBuild', () =>
+      prisma.projectBuild.deleteMany({
+        where: { projectId: { in: ids.projects } },
+      }),
+    );
+    await run('projectLike', () =>
+      prisma.projectLike.deleteMany({
+        where: { projectId: { in: ids.projects } },
+      }),
+    );
+    await run('projectSave', () =>
+      prisma.projectSave.deleteMany({
+        where: { projectId: { in: ids.projects } },
+      }),
+    );
+    await run('projectFollow', () =>
+      prisma.projectFollow.deleteMany({
+        where: { projectId: { in: ids.projects } },
+      }),
+    );
+    await run('learningProjectAdminAiReview', () =>
+      prisma.learningProjectAdminAiReview.deleteMany({
+        where: { projectId: { in: ids.projects } },
+      }),
+    );
+    await run('learningProject by id', () =>
+      prisma.learningProject.deleteMany({
+        where: { id: { in: ids.projects } },
+      }),
+    );
   }
 
+  await run('learningProject by marker', () =>
+    prisma.learningProject.deleteMany({
+      where: { title: { contains: TEST_MARKER } },
+    }),
+  );
+
   if (ids.categories.length > 0) {
-    await prisma.category.deleteMany({
-      where: { id: { in: ids.categories } },
-    });
+    await run('category', () =>
+      prisma.category.deleteMany({
+        where: { id: { in: ids.categories } },
+      }),
+    );
   }
 
   if (ids.users.length > 0) {
-    await prisma.user.deleteMany({
-      where: { id: { in: ids.users } },
-    });
+    await run('user', () =>
+      prisma.user.deleteMany({
+        where: { id: { in: ids.users } },
+      }),
+    );
   }
 });
 

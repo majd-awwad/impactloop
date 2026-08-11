@@ -123,14 +123,35 @@ const parsePort = (value: string | undefined): number => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 4000;
 };
 
-const requireEnv = (key: string, fallback?: string): string => {
-  const value = process.env[key] ?? fallback;
-
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${key}`);
+/**
+ * Development/production use DATABASE_URL.
+ * Automated tests (NODE_ENV=test) require TEST_DATABASE_URL with no fallback.
+ * Also overwrite process.env.DATABASE_URL in test mode so Prisma/scripts that
+ * still read the process env cannot silently target the development database.
+ */
+export const resolveDatabaseUrl = (
+  envVars: NodeJS.ProcessEnv = process.env,
+): string => {
+  const nodeEnv = envVars.NODE_ENV?.trim() || 'development';
+  if (nodeEnv === 'test') {
+    const testDatabaseUrl = envVars.TEST_DATABASE_URL?.trim();
+    if (!testDatabaseUrl) {
+      throw new Error(
+        'Missing required environment variable: TEST_DATABASE_URL. ' +
+          'Automated tests must not use DATABASE_URL. ' +
+          'Configure TEST_DATABASE_URL with a dedicated test database ' +
+          '(e.g. impactloop_test or impactloop_ci).',
+      );
+    }
+    envVars.DATABASE_URL = testDatabaseUrl;
+    return testDatabaseUrl;
   }
 
-  return value;
+  const databaseUrl = envVars.DATABASE_URL?.trim();
+  if (!databaseUrl) {
+    throw new Error('Missing required environment variable: DATABASE_URL');
+  }
+  return databaseUrl;
 };
 
 const PLACEHOLDER_API_KEYS = new Set([
@@ -759,7 +780,7 @@ export const env = {
     process.env.RATE_LIMIT_SWEEP_INTERVAL_MS,
     60_000,
   ),
-  databaseUrl: requireEnv('DATABASE_URL'),
+  databaseUrl: resolveDatabaseUrl(),
   jwtAccessSecret: jwtSecrets.jwtAccessSecret,
   jwtRefreshSecret: jwtSecrets.jwtRefreshSecret,
   handoverCodeSecret: handoverCodeSecretConfig.handoverCodeSecret,

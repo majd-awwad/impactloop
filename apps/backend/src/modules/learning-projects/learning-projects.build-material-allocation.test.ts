@@ -224,33 +224,76 @@ describe('learning-projects.build-material-allocation', () => {
   });
 
   after(async () => {
-    await prisma.projectBuildItem.deleteMany({
-      where: { build: { projectId: { in: ids.projects } } },
-    });
-    await prisma.projectBuild.deleteMany({
-      where: { projectId: { in: ids.projects } },
-    });
-    await prisma.reservation.deleteMany({
-      where: { materialId: { in: ids.materials } },
-    });
-    await prisma.reservation.deleteMany({
-      where: { id: { in: ids.reservations } },
-    });
-    await prisma.material.deleteMany({ where: { id: { in: ids.materials } } });
-    await prisma.projectStep.deleteMany({
-      where: { projectId: { in: ids.projects } },
-    });
-    await prisma.projectRequiredComponent.deleteMany({
-      where: { projectId: { in: ids.projects } },
-    });
-    await prisma.learningProject.deleteMany({ where: { id: { in: ids.projects } } });
-    await prisma.category.deleteMany({
-      where: {
-        id: { in: [...ids.categories, ...ids.materialCategories] },
-      },
-    });
-    await prisma.location.deleteMany({ where: { id: { in: ids.locations } } });
-    await prisma.user.deleteMany({ where: { id: { in: ids.users } } });
+    const run = async (label: string, fn: () => Promise<unknown>) => {
+      try {
+        await fn();
+      } catch (error) {
+        console.error(
+          `[${TEST_MARKER}] cleanup failed (${label}):`,
+          error instanceof Error ? error.message : error,
+        );
+      }
+    };
+
+    await run('projectBuildItem', () =>
+      prisma.projectBuildItem.deleteMany({
+        where: { build: { projectId: { in: ids.projects } } },
+      }),
+    );
+    await run('projectBuild', () =>
+      prisma.projectBuild.deleteMany({
+        where: { projectId: { in: ids.projects } },
+      }),
+    );
+    await run('reservation by material', () =>
+      prisma.reservation.deleteMany({
+        where: { materialId: { in: ids.materials } },
+      }),
+    );
+    await run('reservation by id', () =>
+      prisma.reservation.deleteMany({
+        where: { id: { in: ids.reservations } },
+      }),
+    );
+    await run('material', () =>
+      prisma.material.deleteMany({ where: { id: { in: ids.materials } } }),
+    );
+    await run('material by marker', () =>
+      prisma.material.deleteMany({
+        where: { title: { contains: TEST_MARKER } },
+      }),
+    );
+    await run('projectStep', () =>
+      prisma.projectStep.deleteMany({
+        where: { projectId: { in: ids.projects } },
+      }),
+    );
+    await run('projectRequiredComponent', () =>
+      prisma.projectRequiredComponent.deleteMany({
+        where: { projectId: { in: ids.projects } },
+      }),
+    );
+    await run('learningProject', () =>
+      prisma.learningProject.deleteMany({ where: { id: { in: ids.projects } } }),
+    );
+    await run('learningProject by marker', () =>
+      prisma.learningProject.deleteMany({
+        where: { title: { contains: TEST_MARKER } },
+      }),
+    );
+    await run('category', () =>
+      prisma.category.deleteMany({
+        where: {
+          id: { in: [...ids.categories, ...ids.materialCategories] },
+        },
+      }),
+    );
+    await run('location', () =>
+      prisma.location.deleteMany({ where: { id: { in: ids.locations } } }),
+    );
+    await run('user', () =>
+      prisma.user.deleteMany({ where: { id: { in: ids.users } } }),
+    );
   });
 
   test('normalized units compare correctly', () => {
@@ -487,6 +530,7 @@ describe('learning-projects.build-material-allocation', () => {
         completedAt: new Date(),
       },
     });
+    ids.reservations.push(reservation.id);
 
     await prisma.projectBuildItem.update({
       where: { id: itemId },

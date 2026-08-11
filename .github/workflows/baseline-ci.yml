@@ -53,6 +53,7 @@ jobs:
       JWT_ACCESS_SECRET: ci-access-secret
       JWT_REFRESH_SECRET: ci-refresh-secret
       DATABASE_URL: postgresql://impactloop:impactloop@127.0.0.1:5432/impactloop_ci?schema=public
+      TEST_DATABASE_URL: postgresql://impactloop:impactloop@127.0.0.1:5432/impactloop_ci?schema=public
     services:
       postgres:
         image: postgis/postgis:16-3.5
@@ -135,6 +136,7 @@ jobs:
       PAYMENT_MOCK_WEBHOOK_SECRET: ci-payment-mock-webhook-secret
       PAYMENT_MOCK_CHECKOUT_TOKEN_SECRET: ci-payment-mock-checkout-token-secret
       DATABASE_URL: postgresql://impactloop:impactloop@127.0.0.1:5432/impactloop_ci?schema=public
+      TEST_DATABASE_URL: postgresql://impactloop:impactloop@127.0.0.1:5432/impactloop_ci?schema=public
     services:
       postgres:
         image: postgis/postgis:16-3.5

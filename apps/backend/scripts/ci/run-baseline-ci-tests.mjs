@@ -81,7 +81,10 @@ const runSuite = (suiteName, paths) => {
     {
       cwd: backendRoot,
       stdio: 'inherit',
-      env: process.env,
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+      },
     },
   );
 

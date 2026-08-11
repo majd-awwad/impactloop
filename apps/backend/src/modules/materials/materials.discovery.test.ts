@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { after, before, describe, test } from 'node:test';
+import { after, afterEach, before, describe, test } from 'node:test';
 
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
@@ -258,31 +258,77 @@ async function createMaterial(
   return material;
 }
 
-async function cleanup(ctx: TestContext) {
+async function cleanup(ctx: TestContext, options?: { includeSharedFixtures?: boolean }) {
+  const includeShared = options?.includeSharedFixtures ?? true;
+  const sharedUserIds = new Set(includeShared ? [] : [ctx.supplierId].filter(Boolean));
+  const sharedLocationIds = new Set(
+    includeShared ? [] : [ctx.locationId, ctx.areaLocationId].filter(Boolean),
+  );
+
+  const run = async (label: string, fn: () => Promise<unknown>) => {
+    try {
+      await fn();
+    } catch (error) {
+      console.error(
+        `[${TEST_MARKER}] cleanup failed (${label}):`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+  };
+
   if (ctx.createdOutboxDeduplicationKeys.length) {
-    await prisma.recommendationEventOutbox.deleteMany({
-      where: {
-        deduplicationKey: { in: ctx.createdOutboxDeduplicationKeys },
-      },
-    });
+    const keys = [...ctx.createdOutboxDeduplicationKeys];
+    ctx.createdOutboxDeduplicationKeys.length = 0;
+    await run('outbox', () =>
+      prisma.recommendationEventOutbox.deleteMany({
+        where: { deduplicationKey: { in: keys } },
+      }),
+    );
   }
 
-  if (ctx.createdMaterialIds.length) {
-    await prisma.material.deleteMany({
-      where: { id: { in: ctx.createdMaterialIds } },
-    });
+  const materialIds = [...ctx.createdMaterialIds];
+  ctx.createdMaterialIds.length = 0;
+  if (materialIds.length) {
+    await run('material by id', () =>
+      prisma.material.deleteMany({
+        where: { id: { in: materialIds } },
+      }),
+    );
+  }
+  await run('material by marker', () =>
+    prisma.material.deleteMany({
+      where: { title: { contains: TEST_MARKER } },
+    }),
+  );
+
+  const locationIds = ctx.createdLocationIds.filter((id) => !sharedLocationIds.has(id));
+  if (includeShared) {
+    ctx.createdLocationIds.length = 0;
+  } else {
+    ctx.createdLocationIds = ctx.createdLocationIds.filter((id) =>
+      sharedLocationIds.has(id),
+    );
+  }
+  if (locationIds.length) {
+    await run('location', () =>
+      prisma.location.deleteMany({
+        where: { id: { in: locationIds } },
+      }),
+    );
   }
 
-  if (ctx.createdLocationIds.length) {
-    await prisma.location.deleteMany({
-      where: { id: { in: ctx.createdLocationIds } },
-    });
+  const userIds = ctx.createdUserIds.filter((id) => !sharedUserIds.has(id));
+  if (includeShared) {
+    ctx.createdUserIds.length = 0;
+  } else {
+    ctx.createdUserIds = ctx.createdUserIds.filter((id) => sharedUserIds.has(id));
   }
-
-  if (ctx.createdUserIds.length) {
-    await prisma.user.deleteMany({
-      where: { id: { in: ctx.createdUserIds } },
-    });
+  if (userIds.length) {
+    await run('user', () =>
+      prisma.user.deleteMany({
+        where: { id: { in: userIds } },
+      }),
+    );
   }
 }
 
@@ -350,8 +396,14 @@ describe('public material discovery', () => {
     ctx.createdUserIds.push(supplier.id);
   });
 
+  afterEach(async () => {
+    // Drop per-test materials/users so a mid-suite failure cannot leave
+    // AVAILABLE listings in the shared test DB until file teardown.
+    await cleanup(ctx, { includeSharedFixtures: false });
+  });
+
   after(async () => {
-    await cleanup(ctx);
+    await cleanup(ctx, { includeSharedFixtures: true });
   });
 
   test('q filter matches title', async () => {

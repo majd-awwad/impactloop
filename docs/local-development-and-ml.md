@@ -51,12 +51,14 @@ This document is for **local development and local ML only**. It does not claim 
 3. Copy the committed example env to a developer-local untracked file:
    - From: `apps/backend/.env.example` (same content as `apps/backend/env.example`)
    - To: `apps/backend/.env` (gitignored via `.env` / `.env.*`)
-   - Set at least (values redacted here):
+     - Set at least (values redacted here):
      - `DATABASE_URL=<local PostgreSQL connection string>`
+     - `TEST_DATABASE_URL=<dedicated test database connection string>` (required for `npm test`; must use database name `impactloop_test`, never `impactloop`)
      - `NODE_ENV=development`
      - `PORT=4000` (if unset, `apps/backend/src/config/env.ts` also defaults to `4000`)
      - JWT placeholder names already present in the example file
    - Do not commit or publish real values.
+   - Automated backend tests refuse to start unless `TEST_DATABASE_URL` points at an isolated database. Create it once, then migrate with `npm run test:db:migrate -w apps/backend`.
 4. From the **repository root**:
 
 ```bash

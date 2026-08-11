@@ -4,11 +4,19 @@
  *
  * Fail-closed checks before migrate/DB recommendation tests.
  * Usage: recommendation-ci-guard.mjs database
+ *
+ * Validates both DATABASE_URL (Prisma migrate/seed) and TEST_DATABASE_URL
+ * (automated tests via env.ts) against the isolated CI database.
  */
+
+import {
+  assertSafeTestDatabaseUrl,
+  FORBIDDEN_DEVELOPMENT_DATABASE,
+  parsePostgresUrl,
+} from '../lib/test-database-guard.mjs';
 
 const ALLOWED_HOSTS = new Set(['127.0.0.1', 'localhost']);
 const ALLOWED_DATABASE = 'impactloop_ci';
-const FORBIDDEN_DATABASE = 'impactloop';
 
 const fail = (message) => {
   console.error(`recommendation-ci-guard: ${message}`);
@@ -23,38 +31,61 @@ const parseArgs = (argv) => {
   return { mode };
 };
 
-const sanitizeUrl = (raw) => {
+const sanitizeCiUrl = (raw, label) => {
   let parsed;
   try {
     parsed = new URL(raw);
   } catch {
-    fail('DATABASE_URL is malformed and cannot be parsed as a URL.');
+    fail(`${label} is malformed and cannot be parsed as a URL.`);
   }
 
   if (parsed.protocol !== 'postgresql:' && parsed.protocol !== 'postgres:') {
-    fail(`DATABASE_URL protocol must be postgresql/postgres (got ${parsed.protocol}).`);
+    fail(`${label} protocol must be postgresql/postgres (got ${parsed.protocol}).`);
   }
 
-  const databaseName = decodeURIComponent(parsed.pathname.replace(/^\//, '').split('?')[0] ?? '');
-  if (!databaseName) {
-    fail('DATABASE_URL is missing a database name.');
+  let identity;
+  try {
+    identity = parsePostgresUrl(raw);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    fail(`${label} is invalid: ${message}`);
   }
-  if (!parsed.hostname) {
-    fail('DATABASE_URL is missing a host.');
-  }
+
   if (!parsed.username) {
-    fail('DATABASE_URL is missing credentials (username).');
+    fail(`${label} is missing credentials (username).`);
   }
-  // URL.password is '' when omitted; require a non-empty password.
   if (!parsed.password) {
-    fail('DATABASE_URL is missing credentials (password).');
+    fail(`${label} is missing credentials (password).`);
   }
 
-  return {
-    hostname: parsed.hostname,
-    port: parsed.port || '5432',
-    databaseName,
-  };
+  return identity;
+};
+
+const assertCiDatabaseUrl = (raw, label) => {
+  if (!raw || !raw.trim()) {
+    fail(`${label} is missing.`);
+  }
+
+  const { hostname, port, databaseName } = sanitizeCiUrl(raw.trim(), label);
+
+  if (databaseName === FORBIDDEN_DEVELOPMENT_DATABASE) {
+    fail(
+      `${label} database name "${FORBIDDEN_DEVELOPMENT_DATABASE}" is forbidden (developer default).`,
+    );
+  }
+  if (databaseName !== ALLOWED_DATABASE) {
+    fail(
+      `${label} database name must be exactly "${ALLOWED_DATABASE}" (got "${databaseName}").`,
+    );
+  }
+
+  if (!ALLOWED_HOSTS.has(hostname)) {
+    fail(
+      `${label} host must be exactly one of ${[...ALLOWED_HOSTS].join(', ')} (got "${hostname}").`,
+    );
+  }
+
+  return { hostname, port, databaseName };
 };
 
 const assertDatabaseMode = () => {
@@ -65,26 +96,17 @@ const assertDatabaseMode = () => {
     fail('IMPACTLOOP_CI_DATABASE must be exactly "1" to authorize CI database mutations/tests.');
   }
 
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl || !databaseUrl.trim()) {
-    fail('DATABASE_URL is missing.');
-  }
+  const database = assertCiDatabaseUrl(process.env.DATABASE_URL, 'DATABASE_URL');
+  const testDatabase = assertCiDatabaseUrl(
+    process.env.TEST_DATABASE_URL,
+    'TEST_DATABASE_URL',
+  );
 
-  const { hostname, port, databaseName } = sanitizeUrl(databaseUrl.trim());
-
-  if (databaseName === FORBIDDEN_DATABASE) {
-    fail(`DATABASE_URL database name "${FORBIDDEN_DATABASE}" is forbidden (developer default).`);
-  }
-  if (databaseName !== ALLOWED_DATABASE) {
-    fail(
-      `DATABASE_URL database name must be exactly "${ALLOWED_DATABASE}" (got "${databaseName}").`,
-    );
-  }
-
-  if (!ALLOWED_HOSTS.has(hostname)) {
-    fail(
-      `DATABASE_URL host must be exactly one of ${[...ALLOWED_HOSTS].join(', ')} (got "${hostname}").`,
-    );
+  try {
+    assertSafeTestDatabaseUrl(process.env);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    fail(message);
   }
 
   console.log(
@@ -92,9 +114,10 @@ const assertDatabaseMode = () => {
       {
         guard: 'recommendation-ci-database',
         status: 'ok',
-        host: hostname,
-        port,
-        database: databaseName,
+        host: database.hostname,
+        port: database.port,
+        database: database.databaseName,
+        testDatabase: testDatabase.databaseName,
       },
       null,
       2,

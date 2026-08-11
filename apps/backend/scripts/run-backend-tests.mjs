@@ -2,9 +2,14 @@
 /**
  * Backend module test runner.
  *
- * Suite files share one DATABASE_URL and rely on targeted deleteMany cleanup,
- * so test files run serially (--test-concurrency=1) to avoid cross-file
- * deadlocks, data pollution, and flake. Matches baseline/recommendation CI.
+ * Fail-closed: NODE_ENV=test and TEST_DATABASE_URL must point at a dedicated
+ * database (impactloop_test / impactloop_ci). The development database name
+ * `impactloop` is rejected before any test file is imported.
+ *
+ * Suite files share one TEST_DATABASE_URL and rely on targeted deleteMany
+ * cleanup, so test files run serially (--test-concurrency=1) to avoid
+ * cross-file deadlocks, data pollution, and flake. Matches baseline /
+ * recommendation CI.
  *
  * Override with BACKEND_TEST_FILE_CONCURRENCY when intentionally isolating DB
  * access per file (e.g. disposable databases).
@@ -14,6 +19,11 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
+
+import {
+  assertSafeTestDatabaseUrl,
+} from './lib/test-database-guard.mjs';
 
 const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const modulesRoot = 'src/modules';
@@ -62,6 +72,48 @@ const discoverModuleTests = () => {
   return [...collected].sort((left, right) => left.localeCompare(right));
 };
 
+const loadBackendEnvFile = () => {
+  const envFilePath = process.env.IMPACTLOOP_BACKEND_ENV_FILE_PATH?.trim()
+    ? path.resolve(process.env.IMPACTLOOP_BACKEND_ENV_FILE_PATH)
+    : path.join(backendRoot, '.env');
+  dotenv.config({ path: envFilePath, override: false, quiet: true });
+};
+
+const establishTestEnvironment = () => {
+  // Force test mode before any application modules are imported by child tests.
+  process.env.NODE_ENV = 'test';
+  loadBackendEnvFile();
+
+  let validated;
+  try {
+    validated = assertSafeTestDatabaseUrl(process.env);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    fail(message);
+  }
+
+  // Ensure child processes inherit the isolated URL as DATABASE_URL as well,
+  // matching env.ts test-mode overwrite behavior.
+  process.env.DATABASE_URL = validated.testDatabaseUrl;
+  process.env.TEST_DATABASE_URL = validated.testDatabaseUrl;
+
+  console.log(
+    JSON.stringify(
+      {
+        guard: 'backend-test-database',
+        status: 'ok',
+        host: validated.hostname,
+        port: validated.port,
+        database: validated.databaseName,
+      },
+      null,
+      2,
+    ),
+  );
+};
+
+establishTestEnvironment();
+
 const explicitPaths = process.argv.slice(2).map((entry) => toPosix(entry));
 const files = explicitPaths.length > 0 ? explicitPaths : discoverModuleTests();
 
@@ -103,7 +155,12 @@ const result = spawnSync(
   {
     cwd: backendRoot,
     stdio: 'inherit',
-    env: process.env,
+    env: {
+      ...process.env,
+      NODE_ENV: 'test',
+      DATABASE_URL: process.env.TEST_DATABASE_URL,
+      TEST_DATABASE_URL: process.env.TEST_DATABASE_URL,
+    },
   },
 );
 
