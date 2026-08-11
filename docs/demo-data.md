@@ -2,45 +2,72 @@
 
 Durable guide for ImpactLoop’s community demo dataset: people, materials, learning projects, local assets, and deterministic behavior seeding.
 
+## Three seed paths (do not confuse)
+
+| Command | Purpose | Safety |
+|---|---|---|
+| `npm run prisma:seed -w apps/backend` | **Destructive** core catalog + workflow scenarios (truncates local DB) | Localhost + refuses CI/test/E2E/bench/prod-like DBs |
+| `npm run demo:seed -w apps/backend` | **Additive** graduation/community demo preparation | Each stage refuses non-local hosts |
+| `npm run seed:ci -w apps/backend` | **CI-only** minimal fixtures (`impactloop_ci`) | `guard:ci:database` + `IMPACTLOOP_CI_DATABASE=1` |
+
 ## Overview
 
 | Dataset | Count / shape | Identity |
 |---|---|---|
 | Community people | 100 (`@impactloop.demo`) | email uniqueness |
 | Community materials | 206 listings | `il-demo-mat:<seedKey>` |
-| Learning projects | 37 stable (30 English catalog + 7 Arabic PROJECT-DATA-03) | `demo-project-key:<key>` |
+| Learning projects | 37 stable (30 English catalog + 7 Arabic An-Najah) | `demo-project-key:<key>` |
 | Community behavior | 35 learners’ engagement graph | `cdb1` / `cdb2` ownership keys |
-| Material Request journeys | 3 OPEN demo requests | BEHAVIOR-DATA-02 plans |
+| Material Request journeys | 3 OPEN demo requests | behavior journey plans |
 
 Core scenario accounts from `prisma/seed.ts` (e.g. `learner@learner.com`, `majd@learner.com`) remain separate from the community demo pool.
 
-## Fresh setup order
+## Normal graduation path
 
-From a migrated local database (`DATABASE_URL` on localhost):
-
-```bash
-# From apps/backend
-npm run seed                      # core catalog + workflow scenarios (resets local DB)
-npm run seed:community-people     # 100 community people
-npm run seed:community-materials  # 206 materials + local images
-npm run seed:project-data-03      # 7 Arabic learning projects
-npm run seed:community-behavior   # deterministic likes/views/builds
-npm run seed:behavior-data-02     # viewsCount reconcile + 3 MR journeys
-```
-
-Optional live-DB helpers (no full reset):
+From a migrated local database (`DATABASE_URL` on localhost), after a core reset if needed:
 
 ```bash
-npm run seed:learning-projects-sync    # stamp demo-project-key tags / archive test pollution
-npm run seed:learning-project-covers   # validate + sync the 30 local catalog covers
+# From repository root (or apps/backend without -w)
+npm run prisma:seed -w apps/backend   # optional full reset — destructive
+npm run demo:seed -w apps/backend     # people → materials → projects → najah → behavior → journeys
 ```
 
-Community seed scripts refuse non-local database hosts.
+`demo:seed` runs these stages in order and fails fast on the first error:
+
+1. `demo:seed:people`
+2. `demo:seed:materials`
+3. `demo:seed:projects` (stamp `demo-project-key:` tags / archive test pollution)
+4. `demo:seed:projects:najah` (7 Arabic An-Najah projects)
+5. `demo:seed:behavior`
+6. `demo:seed:behavior:journeys`
+
+Optional (not part of `demo:seed`):
+
+```bash
+# After prisma:seed — ensures Majd's project-budget material set for Obstacle Avoidance Robot
+npm run demo:seed:project-budget -w apps/backend
+```
+
+## Advanced per-stage commands
+
+```bash
+npm run demo:seed:people -w apps/backend
+npm run demo:seed:materials -w apps/backend
+npm run demo:seed:projects -w apps/backend
+npm run demo:seed:projects -w apps/backend -- --sync-covers   # optional cover repair for the 30 catalog projects
+npm run demo:seed:projects:najah -w apps/backend
+npm run demo:seed:behavior -w apps/backend
+npm run demo:seed:behavior:journeys -w apps/backend
+npm run demo:seed:project-budget -w apps/backend   # optional Project Budget UI materials
+```
+
+Community / demo seed scripts (including project sync and covers) refuse non-local database hosts.
+Core `prisma:seed` also refuses non-local hosts and reserved CI/test/E2E/bench databases before truncate.
 
 ## People (100)
 
 - Source: `prisma/demo-data/impactloop-demo-people.csv` and `community-demo-people.data.ts`
-- Seed: `npm run seed:community-people`
+- Seed: `npm run demo:seed:people -w apps/backend`
 - Result: 65 suppliers (27 organizations + 38 individuals) and 35 learners
 - Password for newly created demo accounts: `password`
 - Reruns skip existing emails/phones; does not replace core seed users
@@ -50,7 +77,7 @@ Community seed scripts refuse non-local database hosts.
 - Canonical CSV: `prisma/demo-data/materials/canonical-materials.csv`
 - Provenance map: `owner-map.csv` (batch → owner lineage; not required at runtime)
 - Quality layer: `community-materials-quality.ts` (condition mix, titles, ownership spread, `createdAt`)
-- Seed: `npm run seed:community-materials` (idempotent upsert by `il-demo-mat:<seedKey>`)
+- Seed: `npm run demo:seed:materials -w apps/backend` (idempotent upsert by `il-demo-mat:<seedKey>`)
 
 ### Local material images
 
@@ -63,7 +90,7 @@ Community seed scripts refuse non-local database hosts.
 
 - Selected `prisma/seed.ts` materials (stable `MaterialSeed.key`) use curated files under `source-images/seed-catalog/`
 - Mapping source of truth: `prisma/demo-data/materials/seed-catalog-images.data.ts`
-- `npx prisma migrate reset` / `npm run seed` recreates those Materials with the same demo URLs
+- `npx prisma migrate reset` / `npm run prisma:seed` recreates those Materials with the same demo URLs
 - Runtime uploads still use `UPLOAD_ROOT_DIR` (`POST /api/uploads/material-images`) — keep demo assets and user uploads separate
 
 ## Learning projects (37)
@@ -73,12 +100,14 @@ Community seed scripts refuse non-local database hosts.
 - Defined in `prisma/seed.ts`; covers from `legacy-project-covers.data.ts`
 - Local files: `prisma/demo-data/projects/source-images/covers/legacy/`
 - Public URLs: `/demo-assets/community-projects/covers/legacy/<key>.jpg|png|...`
-- Validate: `npx tsx prisma/demo-data/projects/validate-legacy-project-covers.ts`
+- Stamp / archive: `npm run demo:seed:projects -w apps/backend`
+- Cover repair: `npm run demo:seed:projects -w apps/backend -- --sync-covers`
+- Validate disk only: `npx tsx prisma/demo-data/projects/validate-legacy-project-covers.ts`
 
-### PROJECT-DATA-03 (7 Arabic)
+### An-Najah Arabic projects (7)
 
-- Data: `prisma/demo-data/projects/project-data-03.data.ts`
-- Seed: `npm run seed:project-data-03` (upsert by `demo-project-key:<key>`; does not rewrite the original 30)
+- Data: `prisma/demo-data/projects/najah-projects.data.ts` (batch tag string remains `project-data-03` in DB)
+- Seed: `npm run demo:seed:projects:najah -w apps/backend` (upsert by `demo-project-key:<key>`; does not rewrite the original 30)
 - Covers: `prisma/demo-data/projects/source-images/covers/najah-*-cover.png`
 - Public URLs: `/demo-assets/community-projects/covers/<filename>.png`
 
@@ -86,12 +115,12 @@ Expected publish mix after full demo setup: **36 PUBLISHED**, **1 PENDING_REVIEW
 
 ## Behavior & personalization
 
-### BEHAVIOR-DATA-01
+### Community behavior engagement
 
 ```bash
-npm run seed:community-behavior
-npm run behavior:audit
-npm run behavior:personalization-smoke
+npm run demo:seed:behavior -w apps/backend
+npm run demo:audit:behavior -w apps/backend
+npm run demo:smoke:personalization -w apps/backend
 ```
 
 - Deterministic RNG (mulberry32 from `cdb1|{email}|{purpose}`); no `Math.random()`
@@ -102,10 +131,10 @@ npm run behavior:personalization-smoke
 
 Learner activity tiers: HIGH 6 / MEDIUM 14 / LIGHT 11 / DORMANT 4.
 
-### BEHAVIOR-DATA-02
+### Behavior journeys (viewsCount + MR journeys)
 
 ```bash
-npm run seed:behavior-data-02
+npm run demo:seed:behavior:journeys -w apps/backend
 ```
 
 - Reconciles core-catalog `viewsCount` to retained `MaterialView` counts (community rows untouched)
@@ -115,18 +144,29 @@ npm run seed:behavior-data-02
   3. OAK-D Camera — OPEN, DISMISSED Pi Camera suggestion
 - Does not create reservations, deliveries, payments, or strikes
 
+## Project Budget demo materials (optional)
+
+Project Budget estimation remains a live product path. The additive helper:
+
+```bash
+npm run demo:seed:project-budget -w apps/backend
+```
+
+requires a prior `prisma:seed` (Majd supplier + Obstacle Avoidance Robot) and upserts the small Majd AVAILABLE material set used by that UI. It is **not** included in the default `demo:seed` orchestrator because the canonical graduation demo does not require it.
+
 ## QA commands worth keeping
 
 | Command | Purpose |
 |---|---|
-| `npm run behavior:audit` | Engagement count / distribution report |
-| `npm run behavior:personalization-smoke` | Learner Home persona matrix |
-| `npm run tax01:resolution-matrix` | Live-DB material reference resolution matrix |
-| `npm run seed:learning-project-covers` | Local cover validation + DB sync for the 30 |
+| `npm run demo:audit:behavior` | Engagement count / distribution report |
+| `npm run demo:smoke:personalization` | Learner Home persona matrix |
+| `npm run taxonomy:resolution-matrix` | Read-only live-DB material reference resolution matrix (does not mutate aliases; use `demo:seed:materials` for alias ensure/repair) |
+| `npm run demo:seed:projects -- --sync-covers` | Local cover validation + DB sync for the 30 |
 | `npx tsx prisma/demo-data/projects/validate-legacy-project-covers.ts` | Disk-only cover decode check |
+| `npm run demo:seed:project-budget` | Optional Majd Project Budget material set |
 
 ## Safe reruns
 
 - Community people/materials/projects/behavior scripts are idempotent on localhost
-- `npm run seed` truncates the local database — use only for a full reset
-- After a full `seed`, re-run the community/project/behavior commands in the fresh-setup order above
+- `npm run prisma:seed` truncates the local database — use only for a full reset
+- After a full `prisma:seed`, re-run `demo:seed` (or the per-stage commands above)

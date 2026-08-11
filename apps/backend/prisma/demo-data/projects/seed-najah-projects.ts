@@ -1,45 +1,26 @@
 /**
- * Idempotent PROJECT-DATA-03 seeder.
+ * Idempotent An-Najah Arabic Learning Projects seeder (historical PROJECT-DATA-03).
  *
  * Identity: ProjectTag `demo-project-key:<key>`
  * Creates/updates the 7 curated Arabic Learning Projects without touching
  * the existing 30 demo projects' content.
  *
  * Usage:
- *   npx tsx prisma/demo-data/projects/seed-project-data-03.ts
+ *   npm run demo:seed:projects:najah -w apps/backend
  */
 import fs from 'node:fs';
 import { prisma } from '../../../src/database/prisma.js';
 import { communityDemoProjectImageDiskPath } from '../../../src/constants/community-demo-projects.js';
 import { seedTaxonomyFoundation } from '../../../src/modules/taxonomy/taxonomy-foundation.repository.js';
 import { seedTaxonomyCompatibilityRelations } from '../../../src/modules/taxonomy/taxonomy-compatibility-relations.seed.js';
+import { assertLocalDemoDatabaseUrl } from '../../../scripts/lib/local-database-guard.mjs';
 import {
   DEMO_PROJECT_KEY_PREFIX,
   PROJECT_DATA_03_BATCH_TAG,
   PROJECT_DATA_03_IMAGE_MANIFEST,
   PROJECT_DATA_03_PROJECTS,
   type ProjectData03Project,
-} from './project-data-03.data.js';
-
-const LOCAL_DATABASE_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
-
-const assertLocalDatabaseHost = () => {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL is required for PROJECT-DATA-03 seeding.');
-  }
-  let hostname: string;
-  try {
-    hostname = new URL(databaseUrl).hostname.toLowerCase();
-  } catch {
-    throw new Error('DATABASE_URL must be a valid URL.');
-  }
-  if (!LOCAL_DATABASE_HOSTS.has(hostname)) {
-    throw new Error(
-      `Refusing PROJECT-DATA-03 seed against non-local host: ${hostname}`,
-    );
-  }
-};
+} from './najah-projects.data.js';
 
 const assertProjectCoverAssetsExist = () => {
   const missing: string[] = [];
@@ -415,7 +396,10 @@ const syncOne = async (input: {
 };
 
 const main = async () => {
-  assertLocalDatabaseHost();
+  assertLocalDemoDatabaseUrl(
+    process.env.DATABASE_URL,
+    'An-Najah learning projects seeding',
+  );
   assertProjectCoverAssetsExist();
   await seedTaxonomyFoundation();
   await seedTaxonomyCompatibilityRelations();

@@ -45,6 +45,7 @@ const PURE = [
   'scripts/evaluate-interaction-readiness.test.ts',
   'scripts/evaluate-normalized-retrieval.test.ts',
   'scripts/evaluate-ranking-delta.test.ts',
+  'scripts/recommendation-evaluation-report.test.ts',
 ];
 
 const DB = [
@@ -70,8 +71,6 @@ const EXCLUDED = [
   'src/modules/recommendations/project-mapping-readiness.test.ts',
   'src/modules/recommendations/project-serving.test.ts',
   'src/modules/recommendations/recommendation-feature-readiness.test.ts',
-  'scripts/evaluate-slice-4j-a-ephemeral-fixtures.integration.test.ts',
-  'scripts/evaluate-slice-4j-a.test.ts',
   'scripts/export-local-ml-training-snapshot.recommendation-db.test.ts',
   'scripts/recommendations-demo-preflight.test.ts',
   'scripts/recommendations-ml-smoke-local.recommendation-db.test.ts',
@@ -268,3 +267,5 @@ if (mode === 'pure') {
 } else {
   runSuite('db', membership.db);
 }
+
+

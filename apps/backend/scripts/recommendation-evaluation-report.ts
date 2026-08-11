@@ -160,7 +160,7 @@ export type QualityProxyBlock = {
   top10: Record<string, number>;
 };
 
-export type Slice4jAReport = {
+export type RecommendationEvaluationReport = {
   runMetadata: Record<string, unknown>;
   artifactVersions: Record<string, string>;
   featureSchemaVersions: Record<string, string>;
@@ -1176,7 +1176,7 @@ export const redactReport = <T>(value: T): T => {
   return value;
 };
 
-export const buildStableHash = (report: Slice4jAReport) => {
+export const buildStableHash = (report: RecommendationEvaluationReport) => {
   const stablePayload = {
     evaluatedArchetypes: report.evaluatedArchetypes,
     modeComparisons: report.modeComparisons.map((entry) => ({
@@ -1232,7 +1232,7 @@ export const classifyReleaseReadiness = (input: {
   return "READY_FOR_CONTROLLED_LOCAL_DEMO";
 };
 
-export const buildMarkdownSummary = (report: Slice4jAReport) => {
+export const buildMarkdownSummary = (report: RecommendationEvaluationReport) => {
   const lines = [
     "# Slice 4J-A Evaluation Summary",
     "",

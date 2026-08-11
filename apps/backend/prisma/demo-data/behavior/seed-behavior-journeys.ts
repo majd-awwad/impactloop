@@ -1,8 +1,8 @@
 /**
- * BEHAVIOR-DATA-02 — Demo behavior consistency, education taxonomy follow-up,
- * and Material Request journeys.
+ * BEHAVIOR journeys — Demo behavior consistency, education taxonomy follow-up,
+ * and Material Request journeys (historical BEHAVIOR-DATA-02).
  *
- * Run: npm run seed:behavior-data-02
+ * Run: npm run demo:seed:behavior:journeys -w apps/backend
  *
  * Safe to re-run:
  * - Core viewsCount reconcile is absolute (set to COUNT(MaterialView))
@@ -22,33 +22,15 @@ import { createLearnerMaterialRequest } from "../../../src/modules/learner-mater
 import { dismissLearnerMaterialRequestMatch } from "../../../src/modules/learner-material-requests/learner-material-requests.service.js";
 import { suggestMaterialForRequest } from "../../../src/modules/supplier-material-requests/supplier-material-requests.service.js";
 import { AppError } from "../../../src/utils/app-error.js";
+import { assertLocalDemoDatabaseUrl } from "../../../scripts/lib/local-database-guard.mjs";
 import {
   BD02_MARKER,
   BD02_OP_PREFIX,
   MR_JOURNEY_PLANS,
   type MrJourneyPlan,
-} from "./behavior-data-02.data.js";
+} from "./behavior-journeys.data.js";
 
-const LOCAL_DATABASE_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 const DEMO_PROJECT_KEY_PREFIX = "demo-project-key:";
-
-const assertLocalDatabaseHost = () => {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL is required for BEHAVIOR-DATA-02 seeding.");
-  }
-  let hostname: string;
-  try {
-    hostname = new URL(databaseUrl).hostname.toLowerCase();
-  } catch {
-    throw new Error("DATABASE_URL must be a valid URL.");
-  }
-  if (!LOCAL_DATABASE_HOSTS.has(hostname)) {
-    throw new Error(
-      `Refusing to seed BEHAVIOR-DATA-02 against non-local DB host "${hostname}".`,
-    );
-  }
-};
 
 type ViewReconcileStats = {
   coreMaterialsScanned: number;
@@ -643,7 +625,10 @@ const countDemoMrNotifications = async () => {
 };
 
 async function main() {
-  assertLocalDatabaseHost();
+  assertLocalDemoDatabaseUrl(
+    process.env.DATABASE_URL,
+    'behavior journeys seeding',
+  );
 
   console.log(
     JSON.stringify(

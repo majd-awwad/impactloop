@@ -4,11 +4,12 @@
  * Stable identity: ProjectTag `demo-project-key:<key>` (e.g. demo-project-key:simple-led-circuit).
  *
  * Usage:
- *   npx tsx prisma/demo-data/projects/sync-learning-project-demo.ts
- *   npx tsx prisma/demo-data/projects/sync-learning-project-demo.ts --stamp-keys --archive-tests
- *   npx tsx prisma/demo-data/projects/sync-learning-project-demo.ts --sync-covers
+ *   npm run demo:seed:projects -w apps/backend
+ *   npm run demo:seed:projects -w apps/backend -- --stamp-keys --archive-tests
+ *   npm run demo:seed:projects -w apps/backend -- --sync-covers
  */
 import { prisma } from '../../../src/database/prisma.js';
+import { assertLocalDemoDatabaseUrl } from '../../../scripts/lib/local-database-guard.mjs';
 import { LEGACY_PROJECT_COVERS } from './legacy-project-covers.data.js';
 import { validateLegacyProjectCovers } from './validate-legacy-project-covers.js';
 
@@ -230,6 +231,13 @@ const syncCatalogCovers = async () => {
 };
 
 const main = async () => {
+  // Fail-closed before stamp/archive/cover mutations (same local-host policy as
+  // other additive demo seeders).
+  assertLocalDemoDatabaseUrl(
+    process.env.DATABASE_URL,
+    'learning project demo sync',
+  );
+
   const args = new Set(process.argv.slice(2));
   const syncCoversOnly = args.has('--sync-covers');
   const doStamp =

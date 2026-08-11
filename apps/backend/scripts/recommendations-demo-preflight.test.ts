@@ -25,7 +25,7 @@ import {
   createBaselineRequestProof,
   redactReport,
   resolveArtifactPaths,
-} from "./evaluate-slice-4j-a-report.js";
+} from "./recommendation-evaluation-report.js";
 import {
   ACCEPTED_FEATURE_SCHEMA,
   ACCEPTED_MODEL_VERSION,

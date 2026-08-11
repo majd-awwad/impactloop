@@ -526,7 +526,7 @@ export const parseAuditCliArgs = (argv: string[]): AuditCliOptions => {
 
   if (!profile || !email || !evaluationTimeUtc || !reportDir) {
     throw new Error(
-      'Usage: audit-learner-home-performance.ts --profile <configured-runtime|canonical-isolated> --email <email> --evaluation-time <ISO-Z> --report-dir <dir>',
+      'Usage: npx tsx scripts/audit-learner-home-performance.ts --profile <configured-runtime|canonical-isolated> --email <email> --evaluation-time <ISO-Z> --report-dir <dir>',
     );
   }
 

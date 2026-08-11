@@ -76,7 +76,10 @@ CREATE INDEX "locations_lower_area_idx" ON "locations" (lower("area"));
 ```
 
 Migration: `20260802180000_driver_available_jobs_waiting_index`
-Verify: `npm run verify:driver-available-jobs-waiting-index`
+
+Permanent schema/index invariants are covered by automated DB tests:
+
+`apps/backend/src/modules/driver/driver-available-jobs.indexes.integration.test.ts`
 
 Requires PostGIS (`CREATE EXTENSION IF NOT EXISTS postgis`). Local/CI already use
 PostGIS-capable PostgreSQL (`postgis/postgis` in recommendation CI; local docs require
@@ -104,8 +107,12 @@ PostgreSQL + PostGIS).
 
 ```bash
 cd apps/backend
-npm run bench:driver-query-scale
+npm run bench:driver:query-scale
 ```
+
+Safety: localhost-only source `DATABASE_URL`, clones only into disposable
+`impactloop_dr04_bench`, never terminates the source/developer database (fails
+if source clients are still open), and only terminate/drops the bench DB.
 
 Compares:
 

@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { PrismaClient } from "../../../src/generated/prisma/client.js";
 import { prisma } from "../../../src/database/prisma.js";
+import { assertLocalDemoDatabaseUrl } from "../../../scripts/lib/local-database-guard.mjs";
 import { normalizeSearchText } from "../../../src/utils/normalize-search-text.js";
 import {
   COMMUNITY_DEMO_MATERIALS_PUBLIC_PREFIX,
@@ -22,7 +23,6 @@ import {
 import { ensureProductionMaterialTypeAliases } from "../../../src/modules/material-types/ensure-production-material-type-aliases.js";
 
 const CURRENCY = "NIS";
-const LOCAL_DATABASE_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 const COMMUNITY_PRICE_RULE_NOTE_PREFIX = "Community demo materials seed";
 
 type OwnerRecord = {
@@ -60,28 +60,6 @@ export type SeedCommunityDemoMaterialsResult = {
   qualitySummary: ReturnType<typeof summarizeQuality>;
   sampleMaterialIds: string[];
   note: string;
-};
-
-const assertLocalDatabaseHost = () => {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL is required for community demo materials seeding.");
-  }
-
-  let hostname: string;
-  try {
-    hostname = new URL(databaseUrl).hostname.toLowerCase();
-  } catch {
-    throw new Error(
-      "DATABASE_URL must be a valid URL for community demo materials seeding.",
-    );
-  }
-
-  if (!LOCAL_DATABASE_HOSTS.has(hostname)) {
-    throw new Error(
-      `Refusing community demo materials seed on non-local database host "${hostname}".`,
-    );
-  }
 };
 
 const sameDecimal = (
@@ -442,7 +420,10 @@ const cleanupOrphanCommunityTypes = async (
 export const seedCommunityDemoMaterials = async (
   db: PrismaClient = prisma,
 ): Promise<SeedCommunityDemoMaterialsResult> => {
-  assertLocalDatabaseHost();
+  assertLocalDemoDatabaseUrl(
+    process.env.DATABASE_URL,
+    "community demo materials seeding",
+  );
 
   const validation = loadAndValidateCanonicalMaterials();
   writeExpectedImageManifest();

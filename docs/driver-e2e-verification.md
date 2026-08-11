@@ -11,8 +11,8 @@
 
 ```bash
 cd apps/backend
-npx tsx scripts/run-driver-e2e.ts
-npx tsx scripts/run-driver-e2e.ts --live-flutter
+npm run test:driver:e2e
+npm run test:driver:e2e -- --live-flutter
 node --import tsx --test scripts/driver-e2e-db.test.ts
 ```
 
@@ -180,7 +180,7 @@ Regression: `test/driver_responsive_overflow_test.dart` (**4/4**).
 ## Cleanup
 
 ```bash
-npx tsx scripts/run-driver-e2e.ts
+npm run test:driver:e2e
 # drops disposable DB on success; never terminates source DB clients
 
 # Manual leftovers:

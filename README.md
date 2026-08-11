@@ -48,7 +48,8 @@ From repo root via workspace (`-w apps/backend`), or from `apps/backend/`:
 
 - `npm run dev` — development server
 - `npm run prisma:migrate` — run migrations
-- `npm run prisma:seed` — seed demo data
+- `npm run prisma:seed` — destructive core seed (local reset)
+- `npm run demo:seed` — graduation/community demo data (additive; see `docs/demo-data.md`)
 - `npm test` — module tests
 
 **Needs verification:** exact `.env` variables — inspect `apps/backend/.env.example` and `apps/backend/src/config/env.ts` before first run.

@@ -5,6 +5,7 @@ import type {
   PrismaClient,
 } from "../../src/generated/prisma/client.js";
 import { prisma } from "../../src/database/prisma.js";
+import { assertLocalDemoDatabaseUrl } from "../../scripts/lib/local-database-guard.mjs";
 import { hashPassword } from "../../src/utils/password.js";
 import {
   COMMUNITY_DEMO_PEOPLE,
@@ -12,7 +13,6 @@ import {
 } from "./community-demo-people.data.js";
 
 const SEED_PASSWORD = "password";
-const LOCAL_DATABASE_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 const ORGANIZATION_TYPES = new Set<OrganizationType>([
   "WORKSHOP",
   "FACTORY",
@@ -31,28 +31,6 @@ export type SeedCommunityDemoPeopleResult = {
   createdIndividualSuppliers: number;
   createdLearners: number;
   note: string;
-};
-
-const assertLocalDatabaseHost = () => {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL is required for community demo people seeding.");
-  }
-
-  let hostname: string;
-  try {
-    hostname = new URL(databaseUrl).hostname.toLowerCase();
-  } catch {
-    throw new Error(
-      "DATABASE_URL must be a valid URL for community demo people seeding.",
-    );
-  }
-
-  if (!LOCAL_DATABASE_HOSTS.has(hostname)) {
-    throw new Error(
-      `Refusing community demo people seed on non-local database host "${hostname}".`,
-    );
-  }
 };
 
 const resolveOrganizationType = (
@@ -227,7 +205,10 @@ const seedSupplier = async (
 export const seedCommunityDemoPeople = async (
   db: PrismaClient = prisma,
 ): Promise<SeedCommunityDemoPeopleResult> => {
-  assertLocalDatabaseHost();
+  assertLocalDemoDatabaseUrl(
+    process.env.DATABASE_URL,
+    "community demo people seeding",
+  );
 
   if (COMMUNITY_DEMO_PEOPLE.length !== 100) {
     throw new Error(

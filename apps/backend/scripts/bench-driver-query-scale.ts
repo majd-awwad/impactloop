@@ -10,22 +10,39 @@
  * the database unless --keep is passed.
  *
  * Local numbers are not production guarantees.
+ *
+ * Safety:
+ * - localhost-only source DATABASE_URL
+ * - never targets CI/test/E2E/production-like sources
+ * - never terminates the source/developer database (fail if busy)
+ * - only terminate/drop the disposable bench database
  */
 import 'dotenv/config';
 import { performance } from 'node:perf_hooks';
 import { createHash, randomBytes } from 'node:crypto';
 import pg from 'pg';
 
-const SOURCE_URL = process.env.DATABASE_URL;
-if (!SOURCE_URL) throw new Error('DATABASE_URL required');
+import {
+  assertBenchmarkDatabaseNameForDestructiveOps,
+  assertSafeDriverBenchmarkSource,
+} from './lib/local-database-guard.mjs';
+import {
+  adminDatabaseUrl,
+  assertDisposableDatabaseName,
+  databaseUrlFor,
+  prepareTemplateClone,
+  terminateDatabaseConnections,
+} from './driver-e2e-db.js';
 
+const SOURCE_URL = process.env.DATABASE_URL;
 const BENCH_DB = 'impactloop_dr04_bench';
-const source = new URL(SOURCE_URL);
-const adminUrl = new URL(SOURCE_URL);
-adminUrl.pathname = '/postgres';
-const benchUrl = new URL(SOURCE_URL);
-benchUrl.pathname = `/${BENCH_DB}`;
-const sourceDbName = decodeURIComponent(source.pathname.replace(/^\//, ''));
+
+const benchSafety = assertSafeDriverBenchmarkSource(SOURCE_URL, BENCH_DB);
+assertDisposableDatabaseName(BENCH_DB);
+
+const adminUrl = new URL(adminDatabaseUrl(SOURCE_URL!));
+const benchUrl = new URL(databaseUrlFor(SOURCE_URL!, BENCH_DB));
+const sourceDbName = benchSafety.sourceDatabaseName;
 const keep = process.argv.includes('--keep');
 
 const cuid = (() => {
@@ -78,28 +95,23 @@ const withAdmin = async <T>(fn: (client: pg.Client) => Promise<T>) => {
   }
 };
 
-const terminate = async (admin: pg.Client, dbName: string) => {
-  await admin.query(
-    `SELECT pg_terminate_backend(pid) FROM pg_stat_activity
-     WHERE datname = $1 AND pid <> pg_backend_pid()`,
-    [dbName],
-  );
-};
-
 const ensureBenchDb = async () => {
   await withAdmin(async (admin) => {
-    await terminate(admin, BENCH_DB);
-    await admin.query(`DROP DATABASE IF EXISTS ${BENCH_DB}`);
-    await terminate(admin, sourceDbName);
-    await admin.query(`CREATE DATABASE ${BENCH_DB} TEMPLATE "${sourceDbName}"`);
+    // Reuse DR-05 TEMPLATE clone safety: terminate only the disposable bench DB;
+    // refuse if the source/developer DB still has open clients.
+    await prepareTemplateClone(admin, {
+      sourceDb: sourceDbName,
+      e2eDatabaseName: BENCH_DB,
+    });
   });
-  console.log('CREATED', BENCH_DB);
+  console.log('CREATED', BENCH_DB, '(template from', sourceDbName + ')');
 };
 
 const dropBenchDb = async () => {
+  assertBenchmarkDatabaseNameForDestructiveOps(BENCH_DB);
   await withAdmin(async (admin) => {
-    await terminate(admin, BENCH_DB);
-    await admin.query(`DROP DATABASE IF EXISTS ${BENCH_DB}`);
+    await terminateDatabaseConnections(admin, BENCH_DB);
+    await admin.query(`DROP DATABASE IF EXISTS "${BENCH_DB}"`);
   });
   console.log('DROPPED', BENCH_DB);
 };
@@ -735,6 +747,9 @@ const measure = async (
 };
 
 const main = async () => {
+  assertBenchmarkDatabaseNameForDestructiveOps(
+    decodeURIComponent(benchUrl.pathname.replace(/^\//, '')),
+  );
   await ensureBenchDb();
   const client = new pg.Client({ connectionString: benchUrl.toString() });
   await client.connect();

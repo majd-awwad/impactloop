@@ -83,6 +83,14 @@ npm run prisma:migrate -w apps/backend
 npm run prisma:seed -w apps/backend
 ```
 
+Destructive core catalog reset only. For graduation/community demo data afterward:
+
+```bash
+npm run demo:seed -w apps/backend
+```
+
+Do not confuse with CI fixtures (`npm run seed:ci -w apps/backend`). See `docs/demo-data.md`.
+
 8. Install Flutter dependencies:
 
 ```bash
@@ -349,7 +357,8 @@ Use seeded learner identities only (no passwords in this document):
 | Install workspace deps | `npm ci` | repository root |
 | Prisma generate | `npm run prisma:generate -w apps/backend` | repository root |
 | Migrate (local) | `npm run prisma:migrate -w apps/backend` | repository root |
-| Seed | `npm run prisma:seed -w apps/backend` | repository root |
+| Seed (destructive core) | `npm run prisma:seed -w apps/backend` | repository root |
+| Demo seed (graduation/community) | `npm run demo:seed -w apps/backend` | repository root |
 | Flutter deps | `flutter pub get` | `apps/frontend` |
 | LM-04 snapshot | `npm run recommendations:ml:snapshot:local -- --evaluation-time <ISO-Z>` | `apps/backend` or `-w apps/backend` |
 | LM-06 train | `npm run recommendations:ml:train:local -- --evaluation-time <ISO-Z> --python wsl:<Distro>:</absolute/linux/python>` | repository root or `apps/backend` |

@@ -1,7 +1,7 @@
 /**
- * BEHAVIOR-DATA-01 — personalization smoke against Learner Home sections.
- * Run after seed:community-behavior:
- *   npx tsx prisma/demo-data/behavior/personalization-smoke.ts
+ * Community behavior — personalization smoke against Learner Home sections.
+ * Run after demo:seed:behavior:
+ *   npm run demo:smoke:personalization -w apps/backend
  */
 import { prisma } from "../../../src/database/prisma.js";
 import {

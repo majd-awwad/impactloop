@@ -1,9 +1,11 @@
 /**
  * TAX-01 production resolution matrix against the live DB catalog.
- * Read-only matcher + ensure aliases (idempotent). Does not create materials.
+ *
+ * Read-only matcher QA. Does not create materials, delete aliases, or call
+ * ensureProductionMaterialTypeAliases. Canonical alias ensure/repair belongs in
+ * `demo:seed:materials` (and related seed paths).
  */
 import { prisma } from '../../../src/database/prisma.js';
-import { ensureProductionMaterialTypeAliases } from '../../../src/modules/material-types/ensure-production-material-type-aliases.js';
 import { matchMaterialReference } from '../../../src/services/material-reference-matching.service.js';
 import {
   compactMaterialReferenceText,
@@ -122,21 +124,20 @@ const CASES: CaseSpec[] = [
 ];
 
 const main = async () => {
-  // Remove known-bad accessory alias created by community title fragments.
+  // Report known-bad accessory alias if present; do not delete it here.
   const piKit = await prisma.materialType.findFirst({
     where: { nameEn: 'Raspberry Pi Kit', isActive: true },
     select: { id: true },
   });
+  let knownBadHeatsinkAliasOnPiKit = 0;
   if (piKit) {
-    await prisma.materialTypeAlias.deleteMany({
+    knownBadHeatsinkAliasOnPiKit = await prisma.materialTypeAlias.count({
       where: {
         materialTypeId: piKit.id,
         normalizedAlias: normalizeMaterialReferenceText('Heatsink'),
       },
     });
   }
-
-  const aliases = await ensureProductionMaterialTypeAliases(prisma);
 
   const categories = await prisma.category.findMany({
     where: { isActive: true },
@@ -227,7 +228,10 @@ const main = async () => {
   console.log(
     JSON.stringify(
       {
-        aliasesEnsured: aliases,
+        mode: 'read-only',
+        note:
+          'Does not mutate aliases. Run npm run demo:seed:materials to ensure/repair production material-type aliases.',
+        knownBadHeatsinkAliasOnPiKit,
         communityMaterialsTagged: communityCount,
         passed: rows.length - failed.length,
         failed: failed.length,

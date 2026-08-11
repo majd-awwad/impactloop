@@ -152,7 +152,7 @@ jobs:
         run: npm ci
 
       - name: Database isolation guard
-        run: npm run guard:recommendations:ci:database -w apps/backend
+        run: npm run guard:ci:database -w apps/backend
 
       - name: Generate Prisma client
         run: npm run prisma:generate -w apps/backend

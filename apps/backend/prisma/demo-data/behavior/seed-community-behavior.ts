@@ -1,7 +1,7 @@
 /**
  * BEHAVIOR-DATA-01 — seed realistic community learner engagement + builds.
  *
- * Run: npm run seed:community-behavior
+ * Run: npm run demo:seed:behavior
  * Safe to re-run: unique upserts + deterministic MaterialView operationKeys.
  * Does NOT create reservations, deliveries, payments, or rewrite catalog content.
  */
@@ -12,6 +12,7 @@ import type {
   ProjectBuildItemStatus,
   ProjectBuildStatus,
 } from "../../../src/generated/prisma/client.js";
+import { assertLocalDemoDatabaseUrl } from "../../../scripts/lib/local-database-guard.mjs";
 import {
   BEHAVIOR_EPOCH_END,
   BEHAVIOR_NOTE_PREFIX,
@@ -35,7 +36,6 @@ import {
   type BuildPlan,
 } from "./community-behavior.data.js";
 
-const LOCAL_DATABASE_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 const DEMO_PROJECT_KEY_PREFIX = "demo-project-key:";
 const COMMUNITY_MAT_PREFIX = "il-demo-mat:";
 
@@ -91,24 +91,6 @@ type SeedCounts = {
   buildsSkipped: number;
   buildsCompleted: number;
   cachesInvalidated: number;
-};
-
-const assertLocalDatabaseHost = () => {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL is required for community behavior seeding.");
-  }
-  let hostname: string;
-  try {
-    hostname = new URL(databaseUrl).hostname.toLowerCase();
-  } catch {
-    throw new Error("DATABASE_URL must be a valid URL.");
-  }
-  if (!LOCAL_DATABASE_HOSTS.has(hostname)) {
-    throw new Error(
-      `Refusing to seed community behavior against non-local DB host "${hostname}".`,
-    );
-  }
 };
 
 const norm = (value: string) => value.trim().toLowerCase();
@@ -229,7 +211,7 @@ const loadLearners = async (): Promise<LearnerRow[]> => {
   }
   if (rows.length !== 35) {
     throw new Error(
-      `Expected 35 community learners, found ${rows.length}. Run seed:community-people first.`,
+      `Expected 35 community learners, found ${rows.length}. Run demo:seed:people first.`,
     );
   }
   return rows;
@@ -823,7 +805,10 @@ const seedBuild = async (
 };
 
 export const seedCommunityBehavior = async () => {
-  assertLocalDatabaseHost();
+  assertLocalDemoDatabaseUrl(
+    process.env.DATABASE_URL,
+    'community behavior seeding',
+  );
 
   const counts: SeedCounts = {
     materialViewsCreated: 0,

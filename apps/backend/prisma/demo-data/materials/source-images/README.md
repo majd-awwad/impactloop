@@ -26,7 +26,7 @@ Do not replace these with Unsplash or other stock imagery.
 `seed-catalog/` holds curated real photos for selected `MaterialSeed.key` entries
 (Majd electronics + Israa crafts). Mapping lives in
 `../seed-catalog-images.data.ts` and is applied by `prisma/seed.ts` on every
-`migrate reset` / `npm run seed`.
+`migrate reset` / `npm run prisma:seed`.
 
 Public URL prefix (served by the backend): `/demo-assets/community-materials/...`
 

@@ -14,6 +14,7 @@ import { resolveNoShowReportIncidentKey } from "../src/modules/no-show-reports/n
 import { isAllowedSeedImageUrl } from "../src/utils/allowed-seed-image-url.js";
 import { SEED_CATALOG_REAL_IMAGE_PATHS } from "./demo-data/materials/seed-catalog-images.data.js";
 import { LEGACY_PROJECT_COVERS } from "./demo-data/projects/legacy-project-covers.data.js";
+import { assertSafeDestructiveSeedTarget } from "../scripts/lib/local-database-guard.mjs";
 
 const SEED_PASSWORD = "password";
 const CURRENCY = "NIS";
@@ -72,23 +73,9 @@ const applySeedCatalogRealImages = <
 const jsonArray = (value: string[] | undefined): Prisma.InputJsonValue =>
   value == null ? Prisma.JsonNull : value;
 
-const shouldBlockReset = (): boolean => {
-  const nodeEnv = process.env.NODE_ENV?.toLowerCase();
-  const databaseUrl = process.env.DATABASE_URL?.toLowerCase() ?? "";
-
-  return (
-    nodeEnv === "production" ||
-    databaseUrl.includes("prod") ||
-    databaseUrl.includes("production")
-  );
-};
-
 const resetDatabase = async () => {
-  if (shouldBlockReset()) {
-    throw new Error(
-      "Refusing to reset database because NODE_ENV/DATABASE_URL looks like production.",
-    );
-  }
+  // Fail-closed before any TRUNCATE: localhost-only, never CI/test/E2E/bench/prod.
+  assertSafeDestructiveSeedTarget(process.env);
 
   const tables = await prisma.$queryRaw<Array<{ tablename: string }>>`
     SELECT tablename
@@ -4201,262 +4188,6 @@ const MATERIALS: MaterialSeed[] = applySeedCatalogRealImages([
   ...CORE_MATERIALS,
   ...ADDITIONAL_MATERIALS,
 ]);
-
-const PROJECT_BUDGET_DEMO_MATERIAL_KEYS = [
-  'majd-arduino-student-salvage',
-  'majd-arduino-uno-r3',
-  'majd-ultrasonic-free-lab',
-  'majd-ultrasonic-hcsr04',
-  'majd-dc-motors-surplus',
-  'majd-dc-gear-motors',
-  'majd-jumper-wires-free-pieces',
-  'majd-jumper-wires',
-] as const;
-
-const LOCAL_DATABASE_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
-
-const assertLocalDatabaseHost = () => {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL is required for project budget demo seeding.');
-  }
-
-  let hostname: string;
-  try {
-    hostname = new URL(databaseUrl).hostname.toLowerCase();
-  } catch {
-    throw new Error('DATABASE_URL must be a valid URL for project budget demo seeding.');
-  }
-
-  if (!LOCAL_DATABASE_HOSTS.has(hostname)) {
-    throw new Error(
-      `Refusing project budget demo seed on non-local database host "${hostname}".`,
-    );
-  }
-};
-
-const findCategoryIdBySeedKey = async (categoryKey: string): Promise<string> => {
-  const categorySeed = MATERIAL_CATEGORIES.find((category) => category.key === categoryKey);
-  if (!categorySeed) {
-    throw new Error(`Missing material category seed definition for ${categoryKey}.`);
-  }
-
-  const category = await prisma.category.findFirst({
-    where: {
-      nameEn: categorySeed.nameEn,
-      categoryType: { in: ['MATERIAL', 'BOTH'] },
-      isActive: true,
-    },
-    select: { id: true },
-  });
-
-  if (!category) {
-    throw new Error(
-      `Missing active material category "${categorySeed.nameEn}" required for project budget demo seeding.`,
-    );
-  }
-
-  return category.id;
-};
-
-const findExistingMaterialTypeInfo = async (input: {
-  categoryId: string;
-  material: MaterialSeed;
-}) => {
-  const normalizedName = normalizeSearchText(input.material.materialType);
-  const existing = await prisma.materialType.findFirst({
-    where: {
-      categoryId: input.categoryId,
-      normalizedName,
-      isActive: true,
-    },
-    select: { id: true },
-  });
-
-  if (existing) {
-    return { materialTypeId: existing.id, priceRuleId: null as string | null };
-  }
-
-  const fallbackContext: SeedContext = {
-    users: new Map(),
-    suppliers: new Map(),
-    drivers: new Map(),
-    categories: new Map([[input.material.categoryKey, input.categoryId]]),
-    materials: new Map(),
-    materialTypes: new Map(),
-    projects: new Map(),
-    reservations: new Map(),
-    learnerDropoffs: new Map(),
-  };
-
-  return ensureMaterialTypeWithPriceRule(fallbackContext, input.material);
-};
-
-const upsertProjectBudgetDemoMaterial = async (input: {
-  supplier: { userId: string; profileId: string; pickupLocationId: string };
-  categoryId: string;
-  material: MaterialSeed;
-}) => {
-  input.material.imageUrls.forEach((url, index) =>
-    assertImage(`${input.material.title} image ${index + 1}`, url),
-  );
-
-  const typeInfo = await findExistingMaterialTypeInfo({
-    categoryId: input.categoryId,
-    material: input.material,
-  });
-
-  const existing = await prisma.material.findFirst({
-    where: {
-      ownerId: input.supplier.userId,
-      title: input.material.title,
-    },
-    select: { id: true },
-  });
-
-  const materialData = {
-    ownerId: input.supplier.userId,
-    supplierProfileId: input.supplier.profileId,
-    categoryId: input.categoryId,
-    materialTypeId: typeInfo.materialTypeId,
-    priceRuleId: typeInfo.priceRuleId,
-    title: input.material.title,
-    description: input.material.description,
-    materialType: input.material.materialType,
-    quantity: input.material.quantity,
-    unit: input.material.unit,
-    condition: input.material.condition,
-    sourceType: input.material.sourceType,
-    status: 'AVAILABLE' as const,
-    isFree: input.material.isFree,
-    price: input.material.price,
-    currency: CURRENCY,
-    locationId: input.supplier.pickupLocationId,
-    pickupAllowed: input.material.pickupAllowed,
-    deliveryAllowed: input.material.deliveryAllowed,
-    pickupNotes: 'Pickup details are confirmed after reservation acceptance.',
-    suggestedUses: input.material.suggestedUses,
-    // viewsCount is a denormalized lifetime counter maintained by MaterialView
-    // writes / BEHAVIOR-DATA-02 reconcile — do not re-inflate from seed defs.
-  };
-
-  if (existing) {
-    await prisma.material.update({
-      where: { id: existing.id },
-      data: materialData,
-    });
-    return { id: existing.id, created: false, key: input.material.key };
-  }
-
-  const created = await prisma.material.create({
-    data: {
-      ...materialData,
-      viewsCount: 0,
-      images: {
-        create: input.material.imageUrls.map((imageUrl, index) => ({
-          imageUrl,
-          sortOrder: index,
-          isCover: index === 0,
-        })),
-      },
-      tags: {
-        create: input.material.tags.map((tag) => ({ tag })),
-      },
-    },
-    select: { id: true },
-  });
-
-  return { id: created.id, created: true, key: input.material.key };
-};
-
-const seedProjectBudgetDemo = async () => {
-  assertLocalDatabaseHost();
-
-  const supplierUser = await prisma.user.findUnique({
-    where: { email: 'majd@supplier.com' },
-    select: {
-      id: true,
-      supplierProfile: {
-        select: {
-          id: true,
-          defaultPickupLocationId: true,
-        },
-      },
-    },
-  });
-
-  if (!supplierUser?.supplierProfile?.defaultPickupLocationId) {
-    throw new Error(
-      'Missing majd@supplier.com supplier profile or pickup location required for project budget demo seeding.',
-    );
-  }
-
-  const project = await prisma.learningProject.findFirst({
-    where: {
-      title: 'Obstacle Avoidance Robot',
-      status: 'PUBLISHED',
-      hiddenAt: null,
-      archivedAt: null,
-    },
-    select: { id: true, title: true },
-  });
-
-  if (!project) {
-    throw new Error(
-      'Missing published project "Obstacle Avoidance Robot" required for project budget demo seeding.',
-    );
-  }
-
-  const supplier = {
-    userId: supplierUser.id,
-    profileId: supplierUser.supplierProfile.id,
-    pickupLocationId: supplierUser.supplierProfile.defaultPickupLocationId,
-  };
-
-  const categoryIds = new Map<string, string>();
-  for (const categoryKey of new Set(
-    PROJECT_BUDGET_DEMO_MATERIAL_KEYS.map(
-      (key) => MATERIALS.find((material) => material.key === key)?.categoryKey,
-    ).filter((value): value is string => Boolean(value)),
-  )) {
-    categoryIds.set(categoryKey, await findCategoryIdBySeedKey(categoryKey));
-  }
-
-  const results = [];
-  for (const materialKey of PROJECT_BUDGET_DEMO_MATERIAL_KEYS) {
-    const material = MATERIALS.find((entry) => entry.key === materialKey);
-    if (!material) {
-      throw new Error(`Missing demo material seed definition for ${materialKey}.`);
-    }
-
-    const categoryId = categoryIds.get(material.categoryKey);
-    if (!categoryId) {
-      throw new Error(`Missing category mapping for demo material ${materialKey}.`);
-    }
-
-    results.push(
-      await upsertProjectBudgetDemoMaterial({
-        supplier,
-        categoryId,
-        material,
-      }),
-    );
-  }
-
-  const materialIds = results.map((result) => result.id);
-  const uniqueMaterialIds = new Set(materialIds);
-
-  return {
-    mode: 'project-budget-demo',
-    projectId: project.id,
-    projectTitle: project.title,
-    demoMaterialCount: uniqueMaterialIds.size,
-    createdCount: results.filter((result) => result.created).length,
-    updatedCount: results.filter((result) => !result.created).length,
-    materialKeys: results.map((result) => result.key),
-    materialIds: [...uniqueMaterialIds],
-  };
-};
 
 type ProjectSeed = {
   key: string;
@@ -9085,19 +8816,14 @@ const main = async () => {
     learningProjectsSeeded: PROJECTS.length,
     reservationsSeeded: RESERVATIONS.length,
     deliveriesSeeded: DELIVERIES.length,
-    command: "cd apps/backend && npm run seed",
+    command: "cd apps/backend && npm run prisma:seed",
   };
 
   console.log(JSON.stringify(summary, null, 2));
 };
 
 try {
-  if (process.argv.includes('--project-budget-demo')) {
-    const summary = await seedProjectBudgetDemo();
-    console.log(JSON.stringify(summary, null, 2));
-  } else {
-    await main();
-  }
+  await main();
 } catch (error) {
   console.error(error);
   process.exitCode = 1;

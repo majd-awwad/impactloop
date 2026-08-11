@@ -38,7 +38,7 @@ import {
   schemasCompatible,
   type RecommendationFlagState,
   type ShadowObservation,
-} from "./evaluate-slice-4j-a-report.js";
+} from "./recommendation-evaluation-report.js";
 
 export const ACCEPTED_MODEL_VERSION = "slice-4c-runtime-v2";
 export const ACCEPTED_FEATURE_SCHEMA = "runtime-approved-features-v2";
