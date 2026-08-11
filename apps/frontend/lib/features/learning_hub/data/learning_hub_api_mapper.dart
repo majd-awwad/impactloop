@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/config/api_config.dart';
 import '../domain/models/learning_project.dart';
 import '../domain/models/project_material_coverage.dart';
 import '../domain/models/learning_project_draft_component.dart';
@@ -8,6 +9,14 @@ import '../domain/models/project_build.dart';
 
 class LearningHubApiMapper {
   const LearningHubApiMapper._();
+
+  static String? _resolveMediaUrl(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+    return ApiConfig.resolveMediaUrl(trimmed);
+  }
 
   static LearningProject fromListItemJson(Map<String, dynamic> json) {
     return _mapProject(json, includeDetailFields: false);
@@ -50,7 +59,7 @@ class LearningHubApiMapper {
           projectJson['shortDescription'],
           fallback: '',
         ),
-        coverImageUrl: _nullableString(projectJson['coverImageUrl']),
+        coverImageUrl: _resolveMediaUrl(projectJson['coverImageUrl']?.toString()),
       ),
       progress: ProjectBuildProgress(
         total: _intFromDynamic(progressJson['total']) ?? 0,
@@ -214,7 +223,7 @@ class LearningHubApiMapper {
       estimatedDurationMinutes: _intFromDynamic(
         json['estimatedDurationMinutes'] ?? json['estimatedTimeMinutes'],
       ),
-      coverImageUrl: _nullableString(json['coverImageUrl']),
+      coverImageUrl: _resolveMediaUrl(_nullableString(json['coverImageUrl'])),
       submittedAt: _dateTimeFromDynamic(json['submittedAt']),
       reviewedAt: _dateTimeFromDynamic(json['reviewedAt']),
       createdAt: _dateTimeFromDynamic(json['createdAt']),
@@ -280,7 +289,7 @@ class LearningHubApiMapper {
       fallback: 'BEGINNER',
     );
     final durationMinutes = _intFromDynamic(json['estimatedDurationMinutes']);
-    final coverImageUrl = _nullableString(json['coverImageUrl']);
+    final coverImageUrl = _resolveMediaUrl(_nullableString(json['coverImageUrl']));
     final rating = _parseRatingSummary(json['ratingSummary']);
     final likesCount = _intFromDynamic(json['likesCount']) ?? 0;
     final isLiked = json['isLiked'] == true;
@@ -956,7 +965,7 @@ class LearningHubApiMapper {
 
     for (final item in raw) {
       if (item is Map) {
-        final url = _nullableString(item['imageUrl']);
+        final url = _resolveMediaUrl(_nullableString(item['imageUrl']));
         if (url != null) {
           return url;
         }
