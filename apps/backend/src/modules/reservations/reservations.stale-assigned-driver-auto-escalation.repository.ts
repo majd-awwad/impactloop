@@ -112,6 +112,7 @@ const findStaleAssignedDriverEscalationCandidates = async (
   client: typeof prisma | Prisma.TransactionClient,
   where: Prisma.ReservationWhereInput,
   now: Date = new Date(),
+  take?: number,
 ) =>
   client.reservation.findMany({
     where: {
@@ -133,7 +134,31 @@ const findStaleAssignedDriverEscalationCandidates = async (
       },
     },
     select: staleAssignedDriverEscalationSelect,
+    orderBy: [{ id: 'asc' as const }],
+    ...(take != null ? { take } : {}),
   });
+
+const runAssignedDriverEscalation = async (
+  candidates: StaleAssignedDriverEscalationReservationRecord[],
+): Promise<string[]> => {
+  if (candidates.length === 0) {
+    return [];
+  }
+
+  const result = await runSerializableTransaction(async (tx) =>
+    escalateStaleAssignedDriverPickupsInTransaction(tx, candidates),
+  );
+
+  if (result.reservationIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition(
+      'ACCEPTED',
+      'AWAITING_RESOLUTION',
+    );
+  }
+  await notifyEscalatedDrivers(result.driverNotifications);
+
+  return result.reservationIds;
+};
 
 const notifyEscalatedDrivers = async (
   notifications: Array<{ deliveryId: string; driverUserId: string }>,
@@ -156,23 +181,33 @@ export const escalateStaleAssignedDriverPickupsByIds = async (
     id: { in: reservationIds },
   });
 
-  if (candidates.length === 0) {
-    return [];
-  }
+  return runAssignedDriverEscalation(candidates);
+};
 
-  const result = await runSerializableTransaction(async (tx) =>
-    escalateStaleAssignedDriverPickupsInTransaction(tx, candidates),
+export const escalateDueAssignedDriverPickupsBatch = async (
+  batchSize: number,
+  now: Date = new Date(),
+): Promise<string[]> => {
+  const candidates = await findStaleAssignedDriverEscalationCandidates(
+    prisma,
+    {},
+    now,
+    batchSize,
   );
+  return runAssignedDriverEscalation(candidates);
+};
 
-  if (result.reservationIds.length > 0) {
-    invalidateLearnerHomeForReservationTransition(
-      'ACCEPTED',
-      'AWAITING_RESOLUTION',
-    );
-  }
-  await notifyEscalatedDrivers(result.driverNotifications);
-
-  return result.reservationIds;
+export const findDueAssignedDriverEscalationIds = async (
+  batchSize: number,
+  now: Date = new Date(),
+): Promise<string[]> => {
+  const candidates = await findStaleAssignedDriverEscalationCandidates(
+    prisma,
+    {},
+    now,
+    batchSize,
+  );
+  return candidates.map((row) => row.id);
 };
 
 export const escalateStaleAssignedDriverPickupsForRequester = async (
@@ -182,23 +217,7 @@ export const escalateStaleAssignedDriverPickupsForRequester = async (
     requesterId,
   });
 
-  if (candidates.length === 0) {
-    return [];
-  }
-
-  const result = await runSerializableTransaction(async (tx) =>
-    escalateStaleAssignedDriverPickupsInTransaction(tx, candidates),
-  );
-
-  if (result.reservationIds.length > 0) {
-    invalidateLearnerHomeForReservationTransition(
-      'ACCEPTED',
-      'AWAITING_RESOLUTION',
-    );
-  }
-  await notifyEscalatedDrivers(result.driverNotifications);
-
-  return result.reservationIds;
+  return runAssignedDriverEscalation(candidates);
 };
 
 export const escalateStaleAssignedDriverPickupsForOwner = async (
@@ -208,21 +227,5 @@ export const escalateStaleAssignedDriverPickupsForOwner = async (
     ownerId,
   });
 
-  if (candidates.length === 0) {
-    return [];
-  }
-
-  const result = await runSerializableTransaction(async (tx) =>
-    escalateStaleAssignedDriverPickupsInTransaction(tx, candidates),
-  );
-
-  if (result.reservationIds.length > 0) {
-    invalidateLearnerHomeForReservationTransition(
-      'ACCEPTED',
-      'AWAITING_RESOLUTION',
-    );
-  }
-  await notifyEscalatedDrivers(result.driverNotifications);
-
-  return result.reservationIds;
+  return runAssignedDriverEscalation(candidates);
 };

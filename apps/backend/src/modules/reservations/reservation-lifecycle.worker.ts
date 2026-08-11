@@ -1,17 +1,20 @@
-import { databasePool, prisma } from '../../database/prisma.js';
+import { databasePool } from '../../database/prisma.js';
 import { logger } from '../../observability/logger.js';
 import type { PoolClient } from 'pg';
-import { expireStalePendingReservationsForMaterials } from './reservations.service.js';
-import { expireStaleMissedPickupsForOwner } from './reservations.missed-pickup-expiry.repository.js';
-import { expireStalePendingReservationsForOwner } from './reservations.pending-expiry.repository.js';
-import { escalateStaleNoDriverDeliveriesForOwner } from './reservations.no-driver-auto-escalation.repository.js';
-import { escalateStaleAssignedDriverPickupsForOwner } from './reservations.stale-assigned-driver-auto-escalation.repository.js';
-import { escalateStaleNoDriverDeliveriesForRequester } from './reservations.no-driver-auto-escalation.repository.js';
-import { escalateStaleAssignedDriverPickupsForRequester } from './reservations.stale-assigned-driver-auto-escalation.repository.js';
+
 import { syncDueDriverTimeRemindersForActiveAssignments } from '../notifications/driver-notification-events.service.js';
+import { expireDuePendingReservationsBatch } from './reservations.pending-expiry.repository.js';
+import { expireDueMissedPickupsBatch } from './reservations.missed-pickup-expiry.repository.js';
+import { escalateDueNoDriverDeliveriesBatch } from './reservations.no-driver-auto-escalation.repository.js';
+import { escalateDueAssignedDriverPickupsBatch } from './reservations.stale-assigned-driver-auto-escalation.repository.js';
 
 const LOCK_NAME = 'impactloop:reservation-lifecycle';
 const CONSECUTIVE_FAILURE_THRESHOLD = 3;
+
+/** Default: 5 minutes — expiry/escalation deadlines are measured in hours/days. */
+const DEFAULT_LIFECYCLE_INTERVAL_MS = 300_000;
+/** Default: 1 minute — driver reminder lookahead is 15 minutes. */
+const DEFAULT_REMINDER_INTERVAL_MS = 60_000;
 
 export type ReservationLifecycleWorkerState =
   | 'STARTING'
@@ -31,19 +34,42 @@ export type ReservationLifecycleHealthSnapshot = {
   consecutiveFailures: number;
   batchInFlight: boolean;
   intervalMs: number;
+  reminderIntervalMs: number;
   staleAfterMs: number;
   stale: boolean;
   reasonCodes: string[];
   ready: boolean;
 };
 
+export type ReservationLifecycleBatchResult = {
+  dueCount: number;
+  processedCount: number;
+  transitionCount: number;
+  pendingExpired: number;
+  missedPickupExpired: number;
+  noDriverEscalated: number;
+  assignedDriverEscalated: number;
+  durationMs: number;
+};
+
+export type ReservationReminderBatchResult = {
+  dueCount: number;
+  reminderDeliveryCount: number;
+  durationMs: number;
+};
+
 const deriveStaleAfterMs = (intervalMs: number): number =>
   Math.max(intervalMs * 3, 10_000);
 
+const parsePositiveInt = (raw: string | undefined, fallback: number): number => {
+  const parsed = Number.parseInt(raw ?? '', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
 export class ReservationLifecycleWorker {
-  private timer: NodeJS.Timeout | null = null;
+  private lifecycleTimer: NodeJS.Timeout | null = null;
+  private reminderTimer: NodeJS.Timeout | null = null;
   private running = false;
-  private candidateCursor: { createdAt: Date; id: string } | null = null;
   private state: ReservationLifecycleWorkerState = 'STARTING';
   private startedAtMs: number | null = null;
   private lastBatchStartedAtMs: number | null = null;
@@ -54,34 +80,53 @@ export class ReservationLifecycleWorker {
   private consecutiveFailures = 0;
   private readonly staleAfterMs: number;
   private readonly startupGraceMs: number;
+  private readonly reminderIntervalMs: number;
 
   constructor(
-    private readonly intervalMs = Number.parseInt(
-      process.env.RESERVATION_LIFECYCLE_INTERVAL_MS ?? '30000',
-      10,
+    private readonly intervalMs = parsePositiveInt(
+      process.env.RESERVATION_LIFECYCLE_INTERVAL_MS,
+      DEFAULT_LIFECYCLE_INTERVAL_MS,
     ),
-    private readonly batchSize = Number.parseInt(
-      process.env.RESERVATION_LIFECYCLE_BATCH_SIZE ?? '100',
-      10,
+    private readonly batchSize = parsePositiveInt(
+      process.env.RESERVATION_LIFECYCLE_BATCH_SIZE,
+      100,
+    ),
+    reminderIntervalMs = parsePositiveInt(
+      process.env.RESERVATION_LIFECYCLE_REMINDER_INTERVAL_MS,
+      DEFAULT_REMINDER_INTERVAL_MS,
     ),
     private readonly now: () => number = Date.now,
   ) {
+    this.reminderIntervalMs = reminderIntervalMs;
     this.staleAfterMs = deriveStaleAfterMs(this.intervalMs);
     this.startupGraceMs = this.staleAfterMs;
   }
 
   start(): void {
-    if (this.timer || this.state === 'STOPPED') return;
+    if (this.lifecycleTimer || this.state === 'STOPPED') return;
     this.startedAtMs = this.now();
     this.state = 'STARTING';
-    void this.runOnce();
-    this.timer = setInterval(() => void this.runOnce(), this.intervalMs);
-    this.timer.unref();
+    void (async () => {
+      await this.runOnce();
+      await this.runReminderOnce();
+    })();
+    this.lifecycleTimer = setInterval(
+      () => void this.runOnce(),
+      this.intervalMs,
+    );
+    this.lifecycleTimer.unref();
+    this.reminderTimer = setInterval(
+      () => void this.runReminderOnce(),
+      this.reminderIntervalMs,
+    );
+    this.reminderTimer.unref();
   }
 
   stop(): void {
-    if (this.timer) clearInterval(this.timer);
-    this.timer = null;
+    if (this.lifecycleTimer) clearInterval(this.lifecycleTimer);
+    if (this.reminderTimer) clearInterval(this.reminderTimer);
+    this.lifecycleTimer = null;
+    this.reminderTimer = null;
     this.state = 'STOPPED';
   }
 
@@ -101,6 +146,7 @@ export class ReservationLifecycleWorker {
       consecutiveFailures: this.consecutiveFailures,
       batchInFlight: this.running,
       intervalMs: this.intervalMs,
+      reminderIntervalMs: this.reminderIntervalMs,
       staleAfterMs: this.staleAfterMs,
       stale,
       reasonCodes,
@@ -108,8 +154,12 @@ export class ReservationLifecycleWorker {
     };
   }
 
-  async runOnce(): Promise<void> {
-    if (this.running || this.state === 'STOPPED') return;
+  /**
+   * Persistence sweep: due-only PENDING/missed-pickup expiry and delivery escalations.
+   * Driver reminders use {@link runReminderOnce} on a separate cadence.
+   */
+  async runOnce(): Promise<ReservationLifecycleBatchResult | null> {
+    if (this.running || this.state === 'STOPPED') return null;
     this.running = true;
     this.lastBatchStartedAtMs = this.now();
     const startedAt = performance.now();
@@ -123,72 +173,159 @@ export class ReservationLifecycleWorker {
       );
       if (lock.rows[0]?.acquired !== true) {
         this.recordSuccessfulBatch();
-        return;
+        return null;
       }
       lockAcquired = true;
 
-      let candidates = await this.findCandidatesAfterCursor();
-      if (candidates.length === 0 && this.candidateCursor) {
-        this.candidateCursor = null;
-        candidates = await this.findCandidatesAfterCursor();
+      const result = await this.executeDueLifecycleBatch();
+      if (result.transitionCount > 0) {
+        logger.debug(
+          {
+            operation: 'reservation.lifecycle.batch',
+            durationMs: result.durationMs,
+            dueCount: result.dueCount,
+            processedCount: result.processedCount,
+            transitionCount: result.transitionCount,
+            pendingExpired: result.pendingExpired,
+            missedPickupExpired: result.missedPickupExpired,
+            noDriverEscalated: result.noDriverEscalated,
+            assignedDriverEscalated: result.assignedDriverEscalated,
+          },
+          'Reservation lifecycle batch completed',
+        );
       }
-      const lastCandidate = candidates.at(-1);
-      this.candidateCursor = lastCandidate
-        ? { createdAt: lastCandidate.createdAt, id: lastCandidate.id }
-        : null;
-      const materialIds = [...new Set(candidates.map((item) => item.materialId))];
-      const requesterIds = [...new Set(candidates.map((item) => item.requesterId))];
-      const ownerIds = [...new Set(candidates.map((item) => item.ownerId))];
-      await expireStalePendingReservationsForMaterials(materialIds);
-      for (const requesterId of requesterIds) {
-        await escalateStaleNoDriverDeliveriesForRequester(requesterId);
-        await escalateStaleAssignedDriverPickupsForRequester(requesterId);
-      }
-      for (const ownerId of ownerIds) {
-        await expireStalePendingReservationsForOwner(ownerId);
-        await expireStaleMissedPickupsForOwner(ownerId);
-        await escalateStaleNoDriverDeliveriesForOwner(ownerId);
-        await escalateStaleAssignedDriverPickupsForOwner(ownerId);
-      }
-      await syncDueDriverTimeRemindersForActiveAssignments();
-      logger.debug(
-        {
-          operation: 'reservation.lifecycle.batch',
-          durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
-          candidateCount: candidates.length,
-        },
-        'Reservation lifecycle batch completed',
-      );
       this.recordSuccessfulBatch();
+      return result;
     } catch (error) {
       this.recordFailedBatch('batch_failed');
       logger.error(
-        { operation: 'reservation.lifecycle.batch', err: { message: String(error) } },
+        {
+          operation: 'reservation.lifecycle.batch',
+          err: { message: String(error) },
+          durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+        },
         'Reservation lifecycle batch failed',
       );
+      return null;
     } finally {
-      if (lockClient) {
-        if (lockAcquired) {
-          try {
-            await lockClient.query('SELECT pg_advisory_unlock(hashtext($1))', [
-              LOCK_NAME,
-            ]);
-          } catch (error) {
-            logger.warn(
-              {
-                operation: 'reservation.lifecycle.unlock',
-                err: { message: String(error) },
-              },
-              'Reservation lifecycle advisory lock release failed',
-            );
-          }
-        }
-        lockClient.release();
-      }
+      await this.releaseLock(lockClient, lockAcquired);
       this.lastBatchCompletedAtMs = this.now();
       this.running = false;
       this.applyStaleIfNeeded(this.now());
     }
+  }
+
+  async runReminderOnce(): Promise<ReservationReminderBatchResult | null> {
+    if (this.running || this.state === 'STOPPED') return null;
+    this.running = true;
+    const startedAt = performance.now();
+    let lockClient: PoolClient | null = null;
+    let lockAcquired = false;
+    try {
+      lockClient = await databasePool.connect();
+      const lock = await lockClient.query<{ acquired: boolean }>(
+        'SELECT pg_try_advisory_lock(hashtext($1)) AS acquired',
+        [LOCK_NAME],
+      );
+      if (lock.rows[0]?.acquired !== true) {
+        return null;
+      }
+      lockAcquired = true;
+
+      const { dueDeliveryCount } =
+        await syncDueDriverTimeRemindersForActiveAssignments();
+      const durationMs =
+        Math.round((performance.now() - startedAt) * 100) / 100;
+      const result: ReservationReminderBatchResult = {
+        dueCount: dueDeliveryCount,
+        reminderDeliveryCount: dueDeliveryCount,
+        durationMs,
+      };
+      if (dueDeliveryCount > 0) {
+        logger.debug(
+          {
+            operation: 'reservation.lifecycle.reminders',
+            durationMs,
+            dueCount: dueDeliveryCount,
+            reminderCount: dueDeliveryCount,
+          },
+          'Reservation lifecycle reminder sync completed',
+        );
+      }
+      return result;
+    } catch (error) {
+      logger.error(
+        {
+          operation: 'reservation.lifecycle.reminders',
+          err: { message: String(error) },
+          durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+        },
+        'Reservation lifecycle reminder sync failed',
+      );
+      return null;
+    } finally {
+      await this.releaseLock(lockClient, lockAcquired);
+      this.running = false;
+    }
+  }
+
+  private async executeDueLifecycleBatch(): Promise<ReservationLifecycleBatchResult> {
+    const startedAt = performance.now();
+
+    const pendingExpired = await expireDuePendingReservationsBatch(
+      this.batchSize,
+    );
+    const missedPickupExpired = await expireDueMissedPickupsBatch(
+      this.batchSize,
+    );
+    const noDriverEscalated = await escalateDueNoDriverDeliveriesBatch(
+      this.batchSize,
+    );
+    const assignedDriverEscalated = await escalateDueAssignedDriverPickupsBatch(
+      this.batchSize,
+    );
+
+    const transitionCount =
+      pendingExpired.length +
+      missedPickupExpired.length +
+      noDriverEscalated.length +
+      assignedDriverEscalated.length;
+
+    return {
+      dueCount: transitionCount,
+      processedCount: transitionCount,
+      transitionCount,
+      pendingExpired: pendingExpired.length,
+      missedPickupExpired: missedPickupExpired.length,
+      noDriverEscalated: noDriverEscalated.length,
+      assignedDriverEscalated: assignedDriverEscalated.length,
+      durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+    };
+  }
+
+  private async releaseLock(
+    lockClient: PoolClient | null,
+    lockAcquired: boolean,
+  ): Promise<void> {
+    if (!lockClient) {
+      return;
+    }
+    if (lockAcquired) {
+      try {
+        await lockClient.query('SELECT pg_advisory_unlock(hashtext($1))', [
+          LOCK_NAME,
+        ]);
+      } catch (error) {
+        logger.warn(
+          {
+            operation: 'reservation.lifecycle.unlock',
+            err: { message: String(error) },
+          },
+          'Reservation lifecycle advisory lock release failed',
+        );
+      }
+    }
+    lockClient.release();
   }
 
   private recordSuccessfulBatch(): void {
@@ -296,39 +433,5 @@ export class ReservationLifecycleWorker {
 
   private toIso(value: number | null): string | null {
     return value === null ? null : new Date(value).toISOString();
-  }
-
-  private findCandidatesAfterCursor() {
-    const cursor = this.candidateCursor;
-    return prisma.reservation.findMany({
-      where: {
-        status: {
-          in: [
-            'PENDING',
-            'AWAITING_LEARNER_CONFIRMATION',
-            'AWAITING_SUPPLIER_CONFIRMATION',
-            'ACCEPTED',
-            'AWAITING_RESOLUTION',
-          ],
-        },
-        ...(cursor
-          ? {
-              OR: [
-                { createdAt: { gt: cursor.createdAt } },
-                { createdAt: cursor.createdAt, id: { gt: cursor.id } },
-              ],
-            }
-          : {}),
-      },
-      select: {
-        id: true,
-        createdAt: true,
-        materialId: true,
-        requesterId: true,
-        ownerId: true,
-      },
-      take: this.batchSize,
-      orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],
-    });
   }
 }

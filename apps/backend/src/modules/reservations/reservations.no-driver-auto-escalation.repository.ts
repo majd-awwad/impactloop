@@ -101,6 +101,7 @@ const findNoDriverEscalationCandidates = async (
   client: typeof prisma | Prisma.TransactionClient,
   where: Prisma.ReservationWhereInput,
   now: Date = new Date(),
+  take?: number,
 ) =>
   client.reservation.findMany({
     where: {
@@ -125,7 +126,30 @@ const findNoDriverEscalationCandidates = async (
       },
     },
     select: noDriverEscalationSelect,
+    orderBy: [{ id: 'asc' as const }],
+    ...(take != null ? { take } : {}),
   });
+
+const runNoDriverEscalation = async (
+  candidates: NoDriverEscalationReservationRecord[],
+): Promise<string[]> => {
+  if (candidates.length === 0) {
+    return [];
+  }
+
+  const escalatedIds = await runSerializableTransaction(async (tx) =>
+    escalateStaleNoDriverDeliveriesInTransaction(tx, candidates),
+  );
+
+  if (escalatedIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition(
+      'ACCEPTED',
+      'AWAITING_RESOLUTION',
+    );
+  }
+
+  return escalatedIds;
+};
 
 export const escalateStaleNoDriverDeliveriesByIds = async (
   reservationIds: string[],
@@ -138,22 +162,33 @@ export const escalateStaleNoDriverDeliveriesByIds = async (
     id: { in: reservationIds },
   });
 
-  if (candidates.length === 0) {
-    return [];
-  }
+  return runNoDriverEscalation(candidates);
+};
 
-  const escalatedIds = await runSerializableTransaction(async (tx) =>
-    escalateStaleNoDriverDeliveriesInTransaction(tx, candidates),
+export const escalateDueNoDriverDeliveriesBatch = async (
+  batchSize: number,
+  now: Date = new Date(),
+): Promise<string[]> => {
+  const candidates = await findNoDriverEscalationCandidates(
+    prisma,
+    {},
+    now,
+    batchSize,
   );
+  return runNoDriverEscalation(candidates);
+};
 
-  if (escalatedIds.length > 0) {
-    invalidateLearnerHomeForReservationTransition(
-      'ACCEPTED',
-      'AWAITING_RESOLUTION',
-    );
-  }
-
-  return escalatedIds;
+export const findDueNoDriverEscalationIds = async (
+  batchSize: number,
+  now: Date = new Date(),
+): Promise<string[]> => {
+  const candidates = await findNoDriverEscalationCandidates(
+    prisma,
+    {},
+    now,
+    batchSize,
+  );
+  return candidates.map((row) => row.id);
 };
 
 export const escalateStaleNoDriverDeliveriesForRequester = async (
@@ -163,22 +198,7 @@ export const escalateStaleNoDriverDeliveriesForRequester = async (
     requesterId,
   });
 
-  if (candidates.length === 0) {
-    return [];
-  }
-
-  const escalatedIds = await runSerializableTransaction(async (tx) =>
-    escalateStaleNoDriverDeliveriesInTransaction(tx, candidates),
-  );
-
-  if (escalatedIds.length > 0) {
-    invalidateLearnerHomeForReservationTransition(
-      'ACCEPTED',
-      'AWAITING_RESOLUTION',
-    );
-  }
-
-  return escalatedIds;
+  return runNoDriverEscalation(candidates);
 };
 
 export const escalateStaleNoDriverDeliveriesForOwner = async (
@@ -188,20 +208,5 @@ export const escalateStaleNoDriverDeliveriesForOwner = async (
     ownerId,
   });
 
-  if (candidates.length === 0) {
-    return [];
-  }
-
-  const escalatedIds = await runSerializableTransaction(async (tx) =>
-    escalateStaleNoDriverDeliveriesInTransaction(tx, candidates),
-  );
-
-  if (escalatedIds.length > 0) {
-    invalidateLearnerHomeForReservationTransition(
-      'ACCEPTED',
-      'AWAITING_RESOLUTION',
-    );
-  }
-
-  return escalatedIds;
+  return runNoDriverEscalation(candidates);
 };

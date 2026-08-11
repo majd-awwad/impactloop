@@ -6,6 +6,7 @@ import {
   pendingReservationExpiredNote,
   type PendingReservationExpiryRecord,
 } from './reservation-pending-expiry.js';
+import { PENDING_SUPPLIER_RESPONSE_HOURS } from './reservation-timing-policy.js';
 import { notifyReservationsExpired } from '../notifications/reservation-notifications.js';
 import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 import {
@@ -74,6 +75,82 @@ export const expireStalePendingReservationsInTransaction = async (
   return expiredIds;
 };
 
+const runPendingExpiry = async (
+  pending: PendingExpiryReservationRecord[],
+  changedBy: string | null,
+): Promise<string[]> => {
+  if (pending.length === 0) {
+    return [];
+  }
+
+  const expiredIds = await runSerializableTransaction(async (tx) =>
+    expireStalePendingReservationsInTransaction(tx, pending, changedBy),
+  );
+
+  if (expiredIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition('PENDING', 'EXPIRED');
+  }
+  void notifyReservationsExpired(expiredIds);
+
+  return expiredIds;
+};
+
+/**
+ * Due-only PENDING discovery matching resolvePendingReservationDeadline:
+ * now > min(createdAt + 48h, latest preferred window end).
+ * Timeout path is SQL-filtered; preferred-window early expiry uses the shared
+ * in-memory deadline helper on young PENDING rows only (not all active statuses).
+ */
+export const findDuePendingExpiryCandidates = async (
+  batchSize: number,
+  now: Date = new Date(),
+): Promise<PendingExpiryReservationRecord[]> => {
+  const timeoutCutoff = new Date(
+    now.getTime() - PENDING_SUPPLIER_RESPONSE_HOURS * 60 * 60 * 1000,
+  );
+
+  const timedOut = await prisma.reservation.findMany({
+    where: {
+      status: 'PENDING',
+      createdAt: { lte: timeoutCutoff },
+    },
+    select: pendingExpirySelect,
+    orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],
+    take: batchSize,
+  });
+
+  if (timedOut.length >= batchSize) {
+    return timedOut;
+  }
+
+  const remaining = batchSize - timedOut.length;
+  // Only PENDING younger than the 48h timeout can still be early-due via windows.
+  const youngPending = await prisma.reservation.findMany({
+    where: {
+      status: 'PENDING',
+      createdAt: { gt: timeoutCutoff },
+    },
+    select: pendingExpirySelect,
+    orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],
+    take: Math.max(remaining * 10, 200),
+  });
+
+  const earlyDue = youngPending
+    .filter((row) => isPendingReservationExpired(row, now))
+    .slice(0, remaining);
+
+  return [...timedOut, ...earlyDue];
+};
+
+export const expireDuePendingReservationsBatch = async (
+  batchSize: number,
+  changedBy: string | null = null,
+  now: Date = new Date(),
+): Promise<string[]> => {
+  const pending = await findDuePendingExpiryCandidates(batchSize, now);
+  return runPendingExpiry(pending, changedBy);
+};
+
 export const expireStalePendingReservationsByIds = async (
   reservationIds: string[],
   changedBy: string | null = null,
@@ -90,20 +167,7 @@ export const expireStalePendingReservationsByIds = async (
     select: pendingExpirySelect,
   });
 
-  if (pending.length === 0) {
-    return [];
-  }
-
-  const expiredIds = await runSerializableTransaction(async (tx) =>
-    expireStalePendingReservationsInTransaction(tx, pending, changedBy),
-  );
-
-  if (expiredIds.length > 0) {
-    invalidateLearnerHomeForReservationTransition('PENDING', 'EXPIRED');
-  }
-  void notifyReservationsExpired(expiredIds);
-
-  return expiredIds;
+  return runPendingExpiry(pending, changedBy);
 };
 
 export const expireStalePendingReservationsForMaterialIds = async (
@@ -122,20 +186,7 @@ export const expireStalePendingReservationsForMaterialIds = async (
     select: pendingExpirySelect,
   });
 
-  if (pending.length === 0) {
-    return [];
-  }
-
-  const expiredIds = await runSerializableTransaction(async (tx) =>
-    expireStalePendingReservationsInTransaction(tx, pending, changedBy),
-  );
-
-  if (expiredIds.length > 0) {
-    invalidateLearnerHomeForReservationTransition('PENDING', 'EXPIRED');
-  }
-  void notifyReservationsExpired(expiredIds);
-
-  return expiredIds;
+  return runPendingExpiry(pending, changedBy);
 };
 
 export const expireStalePendingReservationsForOwner = async (
@@ -150,20 +201,7 @@ export const expireStalePendingReservationsForOwner = async (
     select: pendingExpirySelect,
   });
 
-  if (pending.length === 0) {
-    return [];
-  }
-
-  const expiredIds = await runSerializableTransaction(async (tx) =>
-    expireStalePendingReservationsInTransaction(tx, pending, changedBy),
-  );
-
-  if (expiredIds.length > 0) {
-    invalidateLearnerHomeForReservationTransition('PENDING', 'EXPIRED');
-  }
-  void notifyReservationsExpired(expiredIds);
-
-  return expiredIds;
+  return runPendingExpiry(pending, changedBy);
 };
 
 export const expireStalePendingReservationsForLearnerMaterial = async (

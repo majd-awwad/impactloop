@@ -128,6 +128,7 @@ const findMissedPickupExpiryCandidates = async (
   client: typeof prisma | Prisma.TransactionClient,
   where: Prisma.ReservationWhereInput,
   now: Date = new Date(),
+  take?: number,
 ) =>
   client.reservation.findMany({
     where: {
@@ -140,6 +141,8 @@ const findMissedPickupExpiryCandidates = async (
       },
     },
     select: missedPickupExpirySelect,
+    orderBy: [{ id: 'asc' as const }],
+    ...(take != null ? { take } : {}),
   });
 
 const runMissedPickupExpiry = async (
@@ -181,6 +184,33 @@ export const expireStaleMissedPickupsByIds = async (
   });
 
   return runMissedPickupExpiry(candidates, changedBy);
+};
+
+export const expireDueMissedPickupsBatch = async (
+  batchSize: number,
+  changedBy: string | null = null,
+  now: Date = new Date(),
+): Promise<string[]> => {
+  const candidates = await findMissedPickupExpiryCandidates(
+    prisma,
+    {},
+    now,
+    batchSize,
+  );
+  return runMissedPickupExpiry(candidates, changedBy);
+};
+
+export const findDueMissedPickupExpiryIds = async (
+  batchSize: number,
+  now: Date = new Date(),
+): Promise<string[]> => {
+  const candidates = await findMissedPickupExpiryCandidates(
+    prisma,
+    {},
+    now,
+    batchSize,
+  );
+  return candidates.map((row) => row.id);
 };
 
 export const expireStaleMissedPickupsForMaterialIds = async (

@@ -450,7 +450,9 @@ export const syncDueDriverTimeRemindersForUser = async (userId: string) => {
  * isReminderDue). Avoids scanning every non-terminal assignment every tick.
  * Uses createNotificationIfMissing idempotency.
  */
-export const syncDueDriverTimeRemindersForActiveAssignments = async () => {
+export const syncDueDriverTimeRemindersForActiveAssignments = async (): Promise<{
+  dueDeliveryCount: number;
+}> => {
   const now = new Date();
   const lookaheadEnd = new Date(now.getTime() + REMINDER_LOOKAHEAD_MS);
 
@@ -498,6 +500,8 @@ export const syncDueDriverTimeRemindersForActiveAssignments = async () => {
     await notifyDriverPickupTime(id);
     await notifyDriverDropoffTime(id);
   }
+
+  return { dueDeliveryCount: assignedDeliveries.length };
 };
 
 /** Remove stale unread job alerts once a delivery is accepted. */

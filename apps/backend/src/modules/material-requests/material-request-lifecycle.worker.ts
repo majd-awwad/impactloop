@@ -9,6 +9,14 @@ import { fulfillRequestFromCompletedReservation } from '../learner-material-requ
 
 const LOCK_NAME = 'impactloop:material-request-lifecycle';
 
+/** Default: 5 minutes — OPEN TTL is days; worker is a safety sweeper. */
+const DEFAULT_INTERVAL_MS = 300_000;
+
+const parsePositiveInt = (raw: string | undefined, fallback: number): number => {
+  const parsed = Number.parseInt(raw ?? '', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
 export class MaterialRequestLifecycleWorker {
   private timer: NodeJS.Timeout | null = null;
   private running = false;
@@ -16,13 +24,13 @@ export class MaterialRequestLifecycleWorker {
   private buildSyncCursor: { updatedAt: Date; id: string } | null = null;
 
   constructor(
-    private readonly intervalMs = Number.parseInt(
-      process.env.MATERIAL_REQUEST_LIFECYCLE_INTERVAL_MS ?? '30000',
-      10,
+    private readonly intervalMs = parsePositiveInt(
+      process.env.MATERIAL_REQUEST_LIFECYCLE_INTERVAL_MS,
+      DEFAULT_INTERVAL_MS,
     ),
-    private readonly batchSize = Number.parseInt(
-      process.env.MATERIAL_REQUEST_LIFECYCLE_BATCH_SIZE ?? '100',
-      10,
+    private readonly batchSize = parsePositiveInt(
+      process.env.MATERIAL_REQUEST_LIFECYCLE_BATCH_SIZE,
+      100,
     ),
   ) {}
 
@@ -89,18 +97,31 @@ export class MaterialRequestLifecycleWorker {
       }
       this.buildSyncCursor = buildSyncBatch.nextCursor;
 
-      logger.debug(
-        {
-          operation: 'materialRequest.lifecycle.batch',
-          durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
-          expiredRequestCount,
-          matchProcessed: matchBatch.processed,
-          matchMarked: matchBatch.marked.length,
-          buildSyncProcessed: buildSyncBatch.processed,
-          buildSyncRepaired: buildSyncBatch.repairedCount,
-        },
-        'Material request lifecycle batch completed',
-      );
+      const transitionCount =
+        expiredRequestCount +
+        matchBatch.marked.length +
+        buildSyncBatch.repairedCount;
+
+      if (transitionCount > 0) {
+        logger.debug(
+          {
+            operation: 'materialRequest.lifecycle.batch',
+            durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+            dueCount: transitionCount,
+            processedCount:
+              expiredRequestCount +
+              matchBatch.processed +
+              buildSyncBatch.processed,
+            transitionCount,
+            expiredRequestCount,
+            matchProcessed: matchBatch.processed,
+            matchMarked: matchBatch.marked.length,
+            buildSyncProcessed: buildSyncBatch.processed,
+            buildSyncRepaired: buildSyncBatch.repairedCount,
+          },
+          'Material request lifecycle batch completed',
+        );
+      }
     } catch (error) {
       logger.error(
         {
