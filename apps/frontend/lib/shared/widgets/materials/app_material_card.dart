@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../models/localized_text.dart';
+import '../entity_attribution_footer.dart';
 import 'material_condition_badge.dart';
 import 'material_price_badge.dart';
 import 'material_status_badge.dart';
 import 'materials_ui_palette.dart';
-import '../supplier/supplier_identity_widgets.dart';
 
 enum AppMaterialCardVariant { standard, compact, desktopCompact }
 
@@ -1269,30 +1269,12 @@ class _MaterialSupplierAttributionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-    final padding = compact ? AppSpacing.sm + AppSpacing.xs : AppSpacing.md;
-
-    return Material(
-      color: palette.cardSurfaceAlt,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: EdgeInsetsDirectional.fromSTEB(
-            padding,
-            AppSpacing.sm,
-            padding,
-            AppSpacing.sm,
-          ),
-          child: SupplierAttributionRow(
-            displayName: displayName,
-            avatarUrl: avatarUrl,
-            isVerified: isVerified,
-            compact: compact,
-            onTap: null,
-            showChevron: onTap != null,
-          ),
-        ),
-      ),
+    return EntityAttributionFooter(
+      displayName: displayName,
+      avatarUrl: avatarUrl,
+      isVerified: isVerified,
+      compact: compact,
+      onTap: onTap,
     );
   }
 }

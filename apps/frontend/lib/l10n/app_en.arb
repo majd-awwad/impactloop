@@ -4447,5 +4447,20 @@
   "homeSuggestedMaterialsLoadError": "Unable to load suggested materials",
   "homeSuggestedMaterialsLoadErrorSubtitle": "The home page is still available. Try again when the materials API is running.",
   "homeLearningSpotlightLoadError": "Unable to load learning projects",
-  "homeLearningSpotlightLoadErrorSubtitle": "The home page is still available. Try again when the Learning Hub API is running."
-}
+  "homeLearningSpotlightLoadErrorSubtitle": "The home page is still available. Try again when the Learning Hub API is running.",
+  "learningProjectCreator": "Project creator",
+  "learningViewProfile": "View profile",
+  "learningViewCreatorProfile": "View the public profile for {name}",
+  "@learningViewCreatorProfile": {"placeholders": {"name": {"type": "String"}}},
+  "learningSearchProjectsHint": "Search by title, summary, component, or creator",
+  "publicUserPublishedProjects": "Published projects",
+  "publicUserNoPublishedProjects": "No published projects yet",
+  "publicUserNoPublishedProjectsBody": "This user has not published any public projects yet.",
+  "publicUserSupplierActivity": "Supplier activity",
+  "publicUserViewSupplierProfile": "View supplier profile",
+  "publicUserAvailableMaterials": "{count} available materials",
+  "@publicUserAvailableMaterials": {"placeholders": {"count": {"type": "int"}}},
+  "publicRoleLearner": "Learner",
+  "publicRoleSupplier": "Supplier",
+  "publicUserProfileUnavailable": "Profile unavailable",
+  "publicUserProfileUnavailableBody": "This public profile may no longer be available."}

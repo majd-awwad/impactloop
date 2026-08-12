@@ -16876,38 +16876,88 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The home page is still available. Try again when the Learning Hub API is running.'**
   String get homeLearningSpotlightLoadErrorSubtitle;
-}
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
-  const _AppLocalizationsDelegate();
+  /// No description provided for @learningProjectCreator.
+  ///
+  /// In en, this message translates to:
+  /// **'Project creator'**
+  String get learningProjectCreator;
 
-  @override
-  Future<AppLocalizations> load(Locale locale) {
-    return SynchronousFuture<AppLocalizations>(lookupAppLocalizations(locale));
-  }
+  /// No description provided for @learningViewProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'View profile'**
+  String get learningViewProfile;
 
-  @override
-  bool isSupported(Locale locale) =>
-      <String>['ar', 'en'].contains(locale.languageCode);
+  /// No description provided for @learningViewCreatorProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'View the public profile for {name}'**
+  String learningViewCreatorProfile(String name);
 
-  @override
-  bool shouldReload(_AppLocalizationsDelegate old) => false;
-}
+  /// No description provided for @learningSearchProjectsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by title, summary, component, or creator'**
+  String get learningSearchProjectsHint;
 
-AppLocalizations lookupAppLocalizations(Locale locale) {
-  // Lookup logic when only language code is specified.
-  switch (locale.languageCode) {
-    case 'ar':
-      return AppLocalizationsAr();
-    case 'en':
-      return AppLocalizationsEn();
-  }
+  /// No description provided for @publicUserPublishedProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Published projects'**
+  String get publicUserPublishedProjects;
 
-  throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
-  );
+  /// No description provided for @publicUserNoPublishedProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'No published projects yet'**
+  String get publicUserNoPublishedProjects;
+
+  /// No description provided for @publicUserNoPublishedProjectsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This user has not published any public projects yet.'**
+  String get publicUserNoPublishedProjectsBody;
+
+  /// No description provided for @publicUserSupplierActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier activity'**
+  String get publicUserSupplierActivity;
+
+  /// No description provided for @publicUserViewSupplierProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'View supplier profile'**
+  String get publicUserViewSupplierProfile;
+
+  /// No description provided for @publicUserAvailableMaterials.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} available materials'**
+  String publicUserAvailableMaterials(int count);
+
+  /// No description provided for @publicRoleLearner.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner'**
+  String get publicRoleLearner;
+
+  /// No description provided for @publicRoleSupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier'**
+  String get publicRoleSupplier;
+
+  /// No description provided for @publicUserProfileUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile unavailable'**
+  String get publicUserProfileUnavailable;
+
+  /// No description provided for @publicUserProfileUnavailableBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This public profile may no longer be available.'**
+  String get publicUserProfileUnavailableBody;
 }

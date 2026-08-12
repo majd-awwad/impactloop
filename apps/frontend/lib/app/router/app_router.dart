@@ -54,6 +54,7 @@ import '../../features/material_discovery/presentation/pages/material_details_pa
 import '../../features/material_discovery/presentation/pages/liked_materials_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
 import '../../features/material_discovery/presentation/pages/public_supplier_page.dart';
+import '../../features/public_user_profiles/presentation/public_user_profile_page.dart';
 import '../../features/profile/presentation/pages/learner_profile_edit_page.dart';
 import '../../features/profile/presentation/pages/account_settings_page.dart';
 import '../../features/profile/presentation/pages/learning_profile_page.dart';
@@ -894,6 +895,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
           return PublicSupplierPage(supplierProfileId: supplierProfileId);
         },
+      ),
+      GoRoute(
+        path: '/users/:userId',
+        builder: (context, state) =>
+            PublicUserProfilePage(userId: state.pathParameters['userId']!),
       ),
       GoRoute(
         path: loginRoute,

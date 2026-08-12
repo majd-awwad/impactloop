@@ -4446,5 +4446,18 @@
   "homeSuggestedMaterialsLoadError": "تعذر تحميل المواد المقترحة",
   "homeSuggestedMaterialsLoadErrorSubtitle": "الصفحة الرئيسية ما زالت متاحة. أعد المحاولة عندما يعمل واجهة برمجة المواد.",
   "homeLearningSpotlightLoadError": "تعذر تحميل مشاريع التعلم",
-  "homeLearningSpotlightLoadErrorSubtitle": "الصفحة الرئيسية ما زالت متاحة. أعد المحاولة عندما يعمل واجهة برمجة مركز التعلم."
-}
+  "homeLearningSpotlightLoadErrorSubtitle": "الصفحة الرئيسية ما زالت متاحة. أعد المحاولة عندما يعمل واجهة برمجة مركز التعلم.",
+  "learningProjectCreator": "صاحب المشروع",
+  "learningViewProfile": "عرض الملف",
+  "learningViewCreatorProfile": "عرض الملف العام لـ {name}",
+  "learningSearchProjectsHint": "ابحث بالعنوان أو الملخص أو المكوّن أو صاحب المشروع",
+  "publicUserPublishedProjects": "المشاريع المنشورة",
+  "publicUserNoPublishedProjects": "لا توجد مشاريع منشورة بعد",
+  "publicUserNoPublishedProjectsBody": "لم ينشر هذا المستخدم مشاريع عامة بعد.",
+  "publicUserSupplierActivity": "نشاط المورد",
+  "publicUserViewSupplierProfile": "عرض ملف المورد",
+  "publicUserAvailableMaterials": "{count} مواد متاحة",
+  "publicRoleLearner": "متعلم",
+  "publicRoleSupplier": "مورد",
+  "publicUserProfileUnavailable": "الملف غير متاح",
+  "publicUserProfileUnavailableBody": "قد لا يكون هذا الملف العام متاحاً بعد الآن."}

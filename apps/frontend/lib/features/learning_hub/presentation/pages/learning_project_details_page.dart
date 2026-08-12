@@ -19,6 +19,7 @@ import '../theme/learning_project_visuals.dart';
 import '../theme/learning_ui_palette.dart';
 import '../widgets/project_build_actions_panel.dart';
 import '../widgets/project_components_section.dart';
+import '../widgets/project_creator_identity.dart';
 import '../widgets/project_material_coverage_chip.dart';
 import '../widgets/project_link_list.dart';
 import '../widgets/project_reviews_section.dart';
@@ -332,6 +333,10 @@ class _DetailsSummaryCard extends StatelessWidget {
                 ).copyWith(color: palette.textPrimary),
                 textAlign: TextAlign.start,
               ),
+              if (project.creator case final creator?) ...[
+                const SizedBox(height: AppSpacing.sm),
+                LearningProjectCreatorRow(creator: creator),
+              ],
               const SizedBox(height: AppSpacing.sm),
               Text(
                 project.summary.resolve(context),

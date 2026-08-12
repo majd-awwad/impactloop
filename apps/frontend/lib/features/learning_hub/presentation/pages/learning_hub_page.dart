@@ -10,6 +10,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
@@ -1334,10 +1335,7 @@ class _LearningHubFiltersState extends State<_LearningHubFilters> {
           focusNode: widget.searchFocusNode,
           onChanged: widget.onSearchChanged,
           onSubmitted: widget.onSearchSubmitted,
-          hintText: const LocalizedText(
-            en: 'Search projects by title, summary, or component',
-            ar: 'ابحث في المشاريع بالعنوان أو الملخص أو المكوّن',
-          ).resolve(context),
+          hintText: context.l10n.learningSearchProjectsHint,
         ),
         const SizedBox(height: AppSpacing.sm),
         LearnerChipRow(

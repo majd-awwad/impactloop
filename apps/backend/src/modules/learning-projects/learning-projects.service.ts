@@ -115,10 +115,21 @@ const resolveAuthorName = (
   project: {
     createdByUser: {
       displayName: string;
-      email: string;
     };
   },
-) => project.createdByUser.displayName || project.createdByUser.email;
+) => project.createdByUser.displayName;
+
+const mapPublicCreator = (project: {
+  createdByUser: {
+    id: string;
+    displayName: string;
+    profileImageUrl: string | null;
+  };
+}) => ({
+  id: project.createdByUser.id,
+  displayName: project.createdByUser.displayName,
+  avatarUrl: project.createdByUser.profileImageUrl,
+});
 
 const mapCategory = (category: {
   id: string;
@@ -187,6 +198,7 @@ const mapLearningProjectListItem = (
   estimatedDurationMinutes: project.estimatedDurationMinutes,
   coverImageUrl: project.coverImageUrl,
   authorName: resolveAuthorName(project),
+  creator: mapPublicCreator(project),
   tags: project.tags.map((tag) => tag.tag),
   ratingSummary: mapRatingSummary(engagement.ratingSummary),
   likesCount: engagement.likesCount ?? 0,
@@ -324,6 +336,7 @@ const mapLearningProjectDetail = (
   estimatedDurationMinutes: project.estimatedDurationMinutes,
   coverImageUrl: project.coverImageUrl,
   authorName: resolveAuthorName(project),
+  creator: mapPublicCreator(project),
   images: project.images.map((image) => ({
     id: image.id,
     imageUrl: image.imageUrl,
