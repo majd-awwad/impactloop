@@ -115,6 +115,13 @@ final projectHelpSessionAvailabilityProvider = FutureProvider.autoDispose
   return ref.read(projectHelpSessionsApiProvider).fetchAvailability(projectId);
 });
 
+final projectHelpSessionProjectOptionsProvider = FutureProvider.autoDispose
+    .family<ProjectHelpSessionProjectOptionsResult, String?>((ref, query) async {
+  await ensureLearnerBuildsSessionReady(ref);
+  return ref
+      .read(projectHelpSessionsApiProvider)
+      .fetchProjectOptions(query: query);
+});
 final activeHelpSessionForBuildProvider = FutureProvider.autoDispose
     .family<ProjectHelpSession?, String>((ref, buildId) async {
   await ensureLearnerBuildsSessionReady(ref);

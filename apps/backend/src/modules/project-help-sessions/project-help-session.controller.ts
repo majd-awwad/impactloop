@@ -23,6 +23,7 @@ import {
   listLearnerProjectHelpSessionViews,
 } from './project-help-session.service.js';
 import { ensureProjectHelpSessionNotebookPage } from './project-help-session-notebook-handoff.service.js';
+import { listLearnerHelpSessionProjectOptions } from './project-help-session-project-options.service.js';
 import {
   getAuthorProjectHelpSessionZoomStart,
   getLearnerProjectHelpSessionZoomJoin,
@@ -35,10 +36,26 @@ import type {
   DeclineProjectHelpSessionInput,
   ListAuthorProjectHelpSessionsQuery,
   ListLearnerProjectHelpSessionsQuery,
+  LearnerHelpSessionProjectOptionsQuery,
   ProposeProjectHelpSessionAlternativeInput,
   UpdateProjectHelpSessionSettingsInput,
 } from './project-help-session.validation.js';
 
+export const listLearnerHelpSessionProjectOptionsHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  const query = readValidatedQuery<LearnerHelpSessionProjectOptionsQuery>(req);
+  const result = await listLearnerHelpSessionProjectOptions({
+    learnerId: req.auth!.sub,
+    q: query.q,
+    page: query.page,
+    limit: query.limit,
+  });
+  res.json(
+    successResponse('Eligible help session projects fetched successfully', result),
+  );
+};
 export const getProjectHelpSessionAvailabilityHandler = async (
   req: Request,
   res: Response,

@@ -30,6 +30,23 @@ class ProjectHelpSessionsApi {
     );
   }
 
+  Future<ProjectHelpSessionProjectOptionsResult> fetchProjectOptions({
+    String? query,
+    int page = 1,
+    int limit = 20,
+  }) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_learnerSessionsPath/project-options',
+        queryParameters: {
+          'page': page,
+          'limit': limit,
+          if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+        },
+      ),
+      ProjectHelpSessionProjectOptionsResult.fromJson,
+    );
+  }
   Future<ProjectHelpSession> createRequest({
     required String buildId,
     required CreateProjectHelpSessionRequestPayload payload,

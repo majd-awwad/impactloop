@@ -8,6 +8,9 @@ import 'package:frontend/features/learning_hub/domain/learning_projects_result.d
 import 'package:frontend/features/learning_hub/domain/models/learning_project.dart';
 import 'package:frontend/features/learning_hub/presentation/widgets/learning_project_card.dart';
 import 'package:frontend/features/learning_hub/presentation/widgets/project_creator_identity.dart';
+import 'package:frontend/features/project_help_sessions/application/project_help_sessions_providers.dart';
+import 'package:frontend/features/project_help_sessions/data/models/project_help_session_models.dart';
+import 'package:frontend/features/project_help_sessions/presentation/widgets/help_session_project_picker.dart';
 import 'package:frontend/features/public_user_profiles/application/public_user_profile_providers.dart';
 import 'package:frontend/features/public_user_profiles/data/public_user_profile_models.dart';
 import 'package:frontend/features/public_user_profiles/presentation/public_user_profile_page.dart';
@@ -224,6 +227,65 @@ void main() {
     expect(find.text('SUPPLIER PROFILE'), findsOneWidget);
   });
 
+  testWidgets(
+    'PHS picker shows creator, searches by creator, and selects build',
+    (tester) async {
+      const option = ProjectHelpSessionProjectOption(
+        buildId: 'build-1',
+        projectId: 'project-1',
+        title: 'CNC Henna Project',
+        creator: ProjectHelpSessionProjectOptionCreator(
+          id: 'creator-1',
+          displayName: 'Majd Awad',
+        ),
+      );
+      const result = ProjectHelpSessionProjectOptionsResult(
+        items: [option],
+        page: 1,
+        total: 1,
+        totalPages: 1,
+      );
+      String? selected;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            projectHelpSessionProjectOptionsProvider(
+              null,
+            ).overrideWith((ref) async => result),
+            projectHelpSessionProjectOptionsProvider(
+              'Majd',
+            ).overrideWith((ref) async => result),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: _delegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: FilledButton(
+                  onPressed: () async {
+                    selected = (await showHelpSessionProjectPicker(
+                      context,
+                    ))?.buildId;
+                  },
+                  child: const Text('OPEN'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('OPEN'));
+      await tester.pumpAndSettle();
+      expect(find.text('CNC Henna Project'), findsOneWidget);
+      expect(find.text('By Majd Awad'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'Majd');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CNC Henna Project'));
+      await tester.pumpAndSettle();
+      expect(selected, 'build-1');
+    },
+  );
 }
 
 Future<void> _pumpPublicProfile(

@@ -24,6 +24,7 @@ import {
   learnerRejectProjectHelpSessionAlternativeHandler,
   listAuthorProjectHelpSessionsHandler,
   listLearnerProjectHelpSessionsHandler,
+  listLearnerHelpSessionProjectOptionsHandler,
 } from './project-help-session.controller.js';
 import {
   acceptProjectHelpSessionOptionSchema,
@@ -32,6 +33,7 @@ import {
   declineProjectHelpSessionSchema,
   listAuthorProjectHelpSessionsQuerySchema,
   listLearnerProjectHelpSessionsQuerySchema,
+  learnerHelpSessionProjectOptionsQuerySchema,
   projectHelpSessionBuildIdParamSchema,
   projectHelpSessionIdParamSchema,
   proposeProjectHelpSessionAlternativeSchema,
@@ -39,6 +41,14 @@ import {
 
 export const projectHelpSessionsRouter = Router();
 
+projectHelpSessionsRouter.get(
+  '/learner/project-options',
+  privateNoStoreMiddleware,
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learnerHelpSessionProjectOptionsQuerySchema, 'query'),
+  asyncHandler(listLearnerHelpSessionProjectOptionsHandler),
+);
 projectHelpSessionsRouter.post(
   '/learner/builds/:buildId/request',
   privateNoStoreMiddleware,

@@ -4460,4 +4460,9 @@
   "publicRoleLearner": "متعلم",
   "publicRoleSupplier": "مورد",
   "publicUserProfileUnavailable": "الملف غير متاح",
-  "publicUserProfileUnavailableBody": "قد لا يكون هذا الملف العام متاحاً بعد الآن."}
+  "publicUserProfileUnavailableBody": "قد لا يكون هذا الملف العام متاحاً بعد الآن.",
+  "phsNewRequest": "طلب جلسة مساعدة",
+  "phsChooseProject": "اختر المشروع",
+  "phsSearchEligibleProjects": "ابحث بعنوان المشروع أو اسم صاحبه",
+  "phsByCreator": "بواسطة {name}"
+}

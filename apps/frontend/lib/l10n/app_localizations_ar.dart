@@ -9991,4 +9991,17 @@ class AppLocalizationsAr extends AppLocalizations {
   String get publicUserProfileUnavailableBody =>
       'قد لا يكون هذا الملف العام متاحاً بعد الآن.';
 
+  @override
+  String get phsNewRequest => 'طلب جلسة مساعدة';
+
+  @override
+  String get phsChooseProject => 'اختر المشروع';
+
+  @override
+  String get phsSearchEligibleProjects => 'ابحث بعنوان المشروع أو اسم صاحبه';
+
+  @override
+  String phsByCreator(String name) {
+    return 'بواسطة $name';
+  }
 }

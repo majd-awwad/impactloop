@@ -4463,4 +4463,10 @@
   "publicRoleLearner": "Learner",
   "publicRoleSupplier": "Supplier",
   "publicUserProfileUnavailable": "Profile unavailable",
-  "publicUserProfileUnavailableBody": "This public profile may no longer be available."}
+  "publicUserProfileUnavailableBody": "This public profile may no longer be available.",
+  "phsNewRequest": "Request help session",
+  "phsChooseProject": "Choose a project",
+  "phsSearchEligibleProjects": "Search by project title or creator",
+  "phsByCreator": "By {name}",
+  "@phsByCreator": {"placeholders": {"name": {"type": "String"}}}
+}

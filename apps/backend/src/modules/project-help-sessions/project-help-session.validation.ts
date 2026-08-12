@@ -62,6 +62,15 @@ export const projectHelpSessionBuildIdParamSchema = z.object({
   buildId: z.string().cuid(),
 });
 
+export const learnerHelpSessionProjectOptionsQuerySchema =
+  paginationQuerySchema.extend({
+    q: z.string().trim().min(1).max(120).optional(),
+  });
+
+export type LearnerHelpSessionProjectOptionsQuery = z.infer<
+  typeof learnerHelpSessionProjectOptionsQuerySchema
+>;
+
 export const createProjectHelpSessionRequestSchema = z
   .object({
     problemDescription: z.string(),

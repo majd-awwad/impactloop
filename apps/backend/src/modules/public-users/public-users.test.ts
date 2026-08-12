@@ -4,6 +4,8 @@ import { after, before, describe, test } from 'node:test';
 import { prisma } from '../../database/prisma.js';
 import { hashPassword } from '../../utils/password.js';
 import { getLearningProjectById, getLearningProjects } from '../learning-projects/learning-projects.service.js';
+import { resolveProjectHelpSessionAuthor } from '../project-help-sessions/project-help-session-author.js';
+import { listLearnerHelpSessionProjectOptions } from '../project-help-sessions/project-help-session-project-options.service.js';
 import {
   getPublicUserProfile,
   getPublicUserProjects,
@@ -13,6 +15,7 @@ const marker = `[test-public-users-${Date.now()}]`;
 const ids = {
   users: [] as string[],
   projects: [] as string[],
+  builds: [] as string[],
   category: '',
 };
 
@@ -74,6 +77,7 @@ const createProject = async (input: {
 
 let creator: Awaited<ReturnType<typeof createUser>>;
 let arabicCreator: Awaited<ReturnType<typeof createUser>>;
+let requester: Awaited<ReturnType<typeof createUser>>;
 let publishedProject: Awaited<ReturnType<typeof createProject>>;
 
 describe('public user creator discoverability', () => {
@@ -97,6 +101,10 @@ describe('public user creator discoverability', () => {
       displayName: `${marker} إسراء حداد`,
       roles: ['LEARNER'],
     });
+    requester = await createUser({
+      displayName: `${marker} Requester`,
+      roles: ['LEARNER'],
+    });
 
     publishedProject = await createProject({
       creatorId: creator.id,
@@ -117,9 +125,27 @@ describe('public user creator discoverability', () => {
       title: `${marker} Arabic project`,
     });
 
+    const build = await prisma.projectBuild.create({
+      data: {
+        projectId: publishedProject.id,
+        learnerId: requester.id,
+        status: 'IN_PROGRESS',
+      },
+    });
+    ids.builds.push(build.id);
+    await prisma.projectHelpSessionOffering.create({
+      data: {
+        projectId: publishedProject.id,
+        authorId: creator.id,
+        isEnabled: true,
+        allow15Minutes: true,
+        weeklyLimit: 3,
+      },
+    });
   });
 
   after(async () => {
+    await prisma.projectBuild.deleteMany({ where: { id: { in: ids.builds } } });
     await prisma.learningProject.deleteMany({
       where: { id: { in: ids.projects } },
     });
@@ -195,4 +221,17 @@ describe('public user creator discoverability', () => {
     assert.deepEqual(projects.items.map((item) => item.id), [publishedProject.id]);
   });
 
+  test('PHS picker searches canonical creator and keeps canonical author', async () => {
+    const options = await listLearnerHelpSessionProjectOptions({
+      learnerId: requester.id,
+      q: 'Majd Awad',
+      page: 1,
+      limit: 20,
+    });
+    assert.equal(options.items.length, 1);
+    assert.equal(options.items[0]?.project.creator.id, creator.id);
+    const author = await resolveProjectHelpSessionAuthor(publishedProject.id);
+    assert.equal(author.available, true);
+    assert.equal(author.available && author.authorId, creator.id);
+  });
 });

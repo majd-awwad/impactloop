@@ -1,3 +1,96 @@
+class ProjectHelpSessionProjectOptionCreator {
+  const ProjectHelpSessionProjectOptionCreator({
+    required this.id,
+    required this.displayName,
+    this.avatarUrl,
+  });
+
+  final String id;
+  final String displayName;
+  final String? avatarUrl;
+
+  factory ProjectHelpSessionProjectOptionCreator.fromJson(
+    Map<String, dynamic> json,
+  ) => ProjectHelpSessionProjectOptionCreator(
+    id: json['id']?.toString() ?? '',
+    displayName: json['displayName']?.toString() ?? '',
+    avatarUrl: json['avatarUrl']?.toString(),
+  );
+}
+
+class ProjectHelpSessionProjectOption {
+  const ProjectHelpSessionProjectOption({
+    required this.buildId,
+    required this.projectId,
+    required this.title,
+    required this.creator,
+    this.coverImageUrl,
+    this.difficulty,
+    this.estimatedDurationMinutes,
+  });
+
+  final String buildId;
+  final String projectId;
+  final String title;
+  final String? coverImageUrl;
+  final String? difficulty;
+  final int? estimatedDurationMinutes;
+  final ProjectHelpSessionProjectOptionCreator creator;
+
+  factory ProjectHelpSessionProjectOption.fromJson(Map<String, dynamic> json) {
+    final project =
+        (json['project'] as Map?)?.cast<String, dynamic>() ?? const {};
+    return ProjectHelpSessionProjectOption(
+      buildId: json['buildId']?.toString() ?? '',
+      projectId: project['id']?.toString() ?? '',
+      title: project['title']?.toString() ?? '',
+      coverImageUrl: project['coverImageUrl']?.toString(),
+      difficulty: project['difficulty']?.toString(),
+      estimatedDurationMinutes: (project['estimatedDurationMinutes'] as num?)
+          ?.toInt(),
+      creator: ProjectHelpSessionProjectOptionCreator.fromJson(
+        (project['creator'] as Map?)?.cast<String, dynamic>() ?? const {},
+      ),
+    );
+  }
+}
+
+class ProjectHelpSessionProjectOptionsResult {
+  const ProjectHelpSessionProjectOptionsResult({
+    required this.items,
+    required this.page,
+    required this.total,
+    required this.totalPages,
+  });
+
+  final List<ProjectHelpSessionProjectOption> items;
+  final int page;
+  final int total;
+  final int totalPages;
+
+  factory ProjectHelpSessionProjectOptionsResult.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    final pagination =
+        (json['pagination'] as Map?)?.cast<String, dynamic>() ?? const {};
+    return ProjectHelpSessionProjectOptionsResult(
+      items:
+          (json['items'] as List?)
+              ?.whereType<Map>()
+              .map(
+                (item) => ProjectHelpSessionProjectOption.fromJson(
+                  item.cast<String, dynamic>(),
+                ),
+              )
+              .toList(growable: false) ??
+          const [],
+      page: (pagination['page'] as num?)?.toInt() ?? 1,
+      total: (pagination['total'] as num?)?.toInt() ?? 0,
+      totalPages: (pagination['totalPages'] as num?)?.toInt() ?? 1,
+    );
+  }
+}
+
 class ProjectHelpSessionAvailability {
   const ProjectHelpSessionAvailability({
     required this.available,

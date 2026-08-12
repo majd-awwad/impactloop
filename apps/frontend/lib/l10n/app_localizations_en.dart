@@ -10036,4 +10036,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get publicUserProfileUnavailableBody =>
       'This public profile may no longer be available.';
 
+  @override
+  String get phsNewRequest => 'Request help session';
+
+  @override
+  String get phsChooseProject => 'Choose a project';
+
+  @override
+  String get phsSearchEligibleProjects => 'Search by project title or creator';
+
+  @override
+  String phsByCreator(String name) {
+    return 'By $name';
+  }
 }
