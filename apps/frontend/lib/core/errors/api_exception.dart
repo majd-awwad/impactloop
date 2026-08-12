@@ -139,6 +139,9 @@ String localizedApiErrorMessage(
       return l10n.driverHandoverWindowNotStarted;
     case 'HANDOVER_WINDOW_EXPIRED':
       return l10n.driverHandoverWindowExpired;
+    case 'HANDOVER_CREDENTIAL_INVALID':
+      // Privacy-safe: do not distinguish wrong supplier / expired / used.
+      return l10n.supplierPickupQrCredentialUnavailable;
     case 'DRIVER_PARTIAL_PICKUP_SELECTION_INVALID':
       return l10n.driverPartialPickupSelectionInvalid;
     case 'DRIVER_GROUPED_DELIVERY_SPLIT_CONFLICT':

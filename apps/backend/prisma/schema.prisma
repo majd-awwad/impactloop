@@ -1917,6 +1917,11 @@ model Reservation {
   completedAt                       DateTime?                     @map("completed_at")
   selfPickupCodeHash                String?                       @map("self_pickup_code_hash")
   selfPickupCodeGeneratedAt         DateTime?                     @map("self_pickup_code_generated_at")
+  /// SHA-256 hash of the opaque QR handover credential (raw token never stored).
+  handoverTokenHash                 String?                       @unique @map("handover_token_hash")
+  handoverTokenIssuedAt             DateTime?                     @map("handover_token_issued_at")
+  handoverTokenExpiresAt            DateTime?                     @map("handover_token_expires_at")
+  handoverTokenUsedAt               DateTime?                     @map("handover_token_used_at")
   createdAt                         DateTime                      @default(now()) @map("created_at")
   updatedAt                         DateTime                      @updatedAt @map("updated_at")
   material                          Material                      @relation(fields: [materialId], references: [id], onDelete: Cascade)

@@ -2462,6 +2462,60 @@ abstract class AppLocalizations {
   /// **'Pickup code does not apply to this reservation.'**
   String get pickupCodeNotApplicable;
 
+  /// No description provided for @showPickupQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Pickup QR'**
+  String get showPickupQr;
+
+  /// No description provided for @pickupQrDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup QR'**
+  String get pickupQrDialogTitle;
+
+  /// No description provided for @pickupQrInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Show this QR code to the supplier when receiving your material.'**
+  String get pickupQrInstructions;
+
+  /// No description provided for @pickupQrMaterialLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Material: {title}'**
+  String pickupQrMaterialLabel(String title);
+
+  /// No description provided for @pickupQrValidUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Valid until {expiresAt}'**
+  String pickupQrValidUntil(String expiresAt);
+
+  /// No description provided for @pickupQrExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'QR expired'**
+  String get pickupQrExpired;
+
+  /// No description provided for @pickupQrGenerateNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate a new QR'**
+  String get pickupQrGenerateNew;
+
+  /// No description provided for @pickupQrIssueFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to generate pickup QR'**
+  String get pickupQrIssueFailed;
+
+  /// No description provided for @pickupQrManualFallbackNote.
+  ///
+  /// In en, this message translates to:
+  /// **'If scanning fails, use the manual pickup code below on this page.'**
+  String get pickupQrManualFallbackNote;
+
   /// No description provided for @pickupWindowNotStarted.
   ///
   /// In en, this message translates to:
@@ -10796,6 +10850,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter the 6-digit pickup code from the learner.'**
   String get supplierPickupConfirmationCodeError;
+
+  /// No description provided for @supplierPickupVerificationIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify pickup with the learner\'\'s QR code or confirmation code.'**
+  String get supplierPickupVerificationIntro;
+
+  /// No description provided for @supplierPickupVerificationOr.
+  ///
+  /// In en, this message translates to:
+  /// **'or'**
+  String get supplierPickupVerificationOr;
+
+  /// No description provided for @supplierScanPickupQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan Pickup QR'**
+  String get supplierScanPickupQr;
+
+  /// No description provided for @supplierPickupQrPointCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Point the camera at the learner\'\'s pickup QR.'**
+  String get supplierPickupQrPointCamera;
+
+  /// No description provided for @supplierPickupQrVerifying.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying pickup QR…'**
+  String get supplierPickupQrVerifying;
+
+  /// No description provided for @supplierPickupQrVerifiedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'QR verified'**
+  String get supplierPickupQrVerifiedTitle;
+
+  /// No description provided for @supplierPickupQrLearnerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner'**
+  String get supplierPickupQrLearnerLabel;
+
+  /// No description provided for @supplierPickupQrQuantityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity'**
+  String get supplierPickupQrQuantityLabel;
+
+  /// No description provided for @supplierPickupQrConfirmHandover.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm handover'**
+  String get supplierPickupQrConfirmHandover;
+
+  /// No description provided for @supplierPickupQrInvalidPayload.
+  ///
+  /// In en, this message translates to:
+  /// **'This is not a valid ImpactLoop pickup QR.'**
+  String get supplierPickupQrInvalidPayload;
+
+  /// No description provided for @supplierPickupQrCredentialUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This pickup QR is invalid or no longer available.'**
+  String get supplierPickupQrCredentialUnavailable;
+
+  /// No description provided for @supplierPickupQrVerifyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to verify pickup QR.'**
+  String get supplierPickupQrVerifyFailed;
+
+  /// No description provided for @supplierPickupQrConfirmFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to confirm handover. Try again or use the confirmation code.'**
+  String get supplierPickupQrConfirmFailed;
+
+  /// No description provided for @supplierPickupQrCameraPermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera permission is required to scan the pickup QR.'**
+  String get supplierPickupQrCameraPermissionRequired;
+
+  /// No description provided for @supplierPickupQrCameraUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera is unavailable on this device.'**
+  String get supplierPickupQrCameraUnavailable;
+
+  /// No description provided for @supplierPickupQrScanAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan again'**
+  String get supplierPickupQrScanAgain;
+
+  /// No description provided for @supplierPickupQrUseCodeInstead.
+  ///
+  /// In en, this message translates to:
+  /// **'Use confirmation code instead'**
+  String get supplierPickupQrUseCodeInstead;
+
+  /// No description provided for @supplierPickupQrTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get supplierPickupQrTryAgain;
+
+  /// No description provided for @supplierPickupQrHandoverCompletedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Handover completed'**
+  String get supplierPickupQrHandoverCompletedTitle;
+
+  /// No description provided for @supplierPickupQrHandoverCompletedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The material has been handed over successfully.'**
+  String get supplierPickupQrHandoverCompletedBody;
 
   /// No description provided for @supplierDeliveryWindowMustStartFuture.
   ///

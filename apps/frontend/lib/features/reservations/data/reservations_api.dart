@@ -4,6 +4,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_response.dart';
 import 'models/create_reservation_request.dart';
 import 'models/created_reservation.dart';
+import 'models/handover_credential.dart';
 import 'models/learner_reservation.dart';
 import 'models/reservation_message.dart';
 import 'models/reservation_quote.dart';
@@ -227,6 +228,15 @@ class ReservationsApi {
           json['reviews'] as Map? ?? const <String, dynamic>{},
         ),
       ),
+    );
+  }
+
+  Future<HandoverCredential> issueHandoverCredential(String reservationId) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/reservations/$reservationId/handover-credential',
+      ),
+      HandoverCredential.fromJson,
     );
   }
 }

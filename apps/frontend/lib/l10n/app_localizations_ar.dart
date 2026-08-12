@@ -1451,6 +1451,39 @@ class AppLocalizationsAr extends AppLocalizations {
   String get pickupCodeNotApplicable => 'رمز الاستلام لا ينطبق على هذا الحجز.';
 
   @override
+  String get showPickupQr => 'إظهار رمز QR للاستلام';
+
+  @override
+  String get pickupQrDialogTitle => 'رمز QR للاستلام';
+
+  @override
+  String get pickupQrInstructions =>
+      'اعرض رمز QR هذا للمورّد عند استلام المادة.';
+
+  @override
+  String pickupQrMaterialLabel(String title) {
+    return 'المادة: $title';
+  }
+
+  @override
+  String pickupQrValidUntil(String expiresAt) {
+    return 'صالح حتى $expiresAt';
+  }
+
+  @override
+  String get pickupQrExpired => 'انتهت صلاحية رمز QR';
+
+  @override
+  String get pickupQrGenerateNew => 'إنشاء رمز QR جديد';
+
+  @override
+  String get pickupQrIssueFailed => 'تعذر إنشاء رمز QR للاستلام';
+
+  @override
+  String get pickupQrManualFallbackNote =>
+      'إذا تعذّر المسح، استخدم رمز الاستلام اليدوي في هذه الصفحة.';
+
+  @override
   String get pickupWindowNotStarted => 'لم تبدأ بعد';
 
   @override
@@ -6242,6 +6275,74 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get supplierPickupConfirmationCodeError =>
       'أدخل رمز الاستلام المكوّن من 6 أرقام من المتعلم.';
+
+  @override
+  String get supplierPickupVerificationIntro =>
+      'تحقق من الاستلام عبر رمز QR الخاص بالمتعلم أو رمز التأكيد.';
+
+  @override
+  String get supplierPickupVerificationOr => 'أو';
+
+  @override
+  String get supplierScanPickupQr => 'مسح رمز QR للاستلام';
+
+  @override
+  String get supplierPickupQrPointCamera =>
+      'وجّه الكاميرا نحو رمز QR للاستلام.';
+
+  @override
+  String get supplierPickupQrVerifying => 'جارٍ التحقق من رمز QR للاستلام…';
+
+  @override
+  String get supplierPickupQrVerifiedTitle => 'تم التحقق من رمز QR';
+
+  @override
+  String get supplierPickupQrLearnerLabel => 'المتعلم';
+
+  @override
+  String get supplierPickupQrQuantityLabel => 'الكمية';
+
+  @override
+  String get supplierPickupQrConfirmHandover => 'تأكيد تسليم المادة';
+
+  @override
+  String get supplierPickupQrInvalidPayload =>
+      'رمز QR هذا ليس رمز استلام صالحًا في ImpactLoop.';
+
+  @override
+  String get supplierPickupQrCredentialUnavailable =>
+      'رمز QR للاستلام غير صالح أو لم يعد متاحًا.';
+
+  @override
+  String get supplierPickupQrVerifyFailed => 'تعذر التحقق من رمز QR للاستلام.';
+
+  @override
+  String get supplierPickupQrConfirmFailed =>
+      'تعذر تأكيد التسليم. حاول مرة أخرى أو استخدم رمز التأكيد.';
+
+  @override
+  String get supplierPickupQrCameraPermissionRequired =>
+      'يلزم السماح باستخدام الكاميرا لمسح رمز الاستلام.';
+
+  @override
+  String get supplierPickupQrCameraUnavailable =>
+      'الكاميرا غير متاحة على هذا الجهاز.';
+
+  @override
+  String get supplierPickupQrScanAgain => 'مسح رمز آخر';
+
+  @override
+  String get supplierPickupQrUseCodeInstead =>
+      'استخدام رمز التأكيد بدلًا من ذلك';
+
+  @override
+  String get supplierPickupQrTryAgain => 'إعادة المحاولة';
+
+  @override
+  String get supplierPickupQrHandoverCompletedTitle => 'تم التسليم بنجاح';
+
+  @override
+  String get supplierPickupQrHandoverCompletedBody => 'تم تسليم المادة بنجاح.';
 
   @override
   String get supplierDeliveryWindowMustStartFuture =>

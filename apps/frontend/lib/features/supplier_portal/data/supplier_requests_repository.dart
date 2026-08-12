@@ -1,4 +1,5 @@
 import '../../reservations/data/models/reservation_message.dart';
+import 'models/handover_verify_preview.dart';
 import 'models/supplier_incoming_request.dart';
 
 /// API-ready contract for supplier reservation requests.
@@ -31,6 +32,14 @@ abstract class SupplierRequestsRepository {
     String requestId, {
     required String confirmationCode,
   });
+
+  /// Verifies a scanned pickup QR without completing the reservation.
+  Future<HandoverVerifyPreview> verifyHandoverCredential(String handoverToken);
+
+  /// Explicitly confirms handover after a successful verify preview.
+  Future<SupplierIncomingRequest> confirmHandoverCredential(
+    String handoverToken,
+  );
 
   Future<SupplierIncomingRequest> rescheduleRequest(
     String requestId,

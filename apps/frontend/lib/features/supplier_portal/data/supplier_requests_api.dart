@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/errors/api_exception.dart';
 import '../../../core/network/api_response.dart';
+import 'models/handover_verify_preview.dart';
 import 'models/supplier_incoming_request.dart';
 
 class SupplierRequestsApi {
@@ -146,6 +147,53 @@ class SupplierRequestsApi {
       final response = await _client.patch<Map<String, dynamic>>(
         '/api/supplier/reservations/$requestId/complete',
         data: {'confirmationCode': confirmationCode},
+      );
+
+      return _parseReservationResponse(response);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
+  Future<HandoverVerifyPreview> verifyHandoverCredential(
+    String handoverToken,
+  ) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        '/api/supplier/reservations/handover/verify',
+        data: {'handoverToken': handoverToken},
+      );
+
+      final body = response.data;
+      if (body == null || body['success'] != true) {
+        throw ApiException(
+          message: body?['message'] as String? ?? 'Could not verify pickup QR',
+          statusCode: response.statusCode,
+        );
+      }
+
+      final data = body['data'];
+      if (data is! Map) {
+        throw const ApiException(message: 'Unexpected handover verify response');
+      }
+
+      return HandoverVerifyPreview.fromJson(Map<String, dynamic>.from(data));
+    } on ApiException {
+      rethrow;
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
+  Future<SupplierIncomingRequest> confirmHandoverCredential(
+    String handoverToken,
+  ) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        '/api/supplier/reservations/handover/confirm',
+        data: {'handoverToken': handoverToken},
       );
 
       return _parseReservationResponse(response);

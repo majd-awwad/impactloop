@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../application/handover_credential_controller.dart';
 import '../../data/models/learner_reservation.dart';
+import 'pickup_qr_dialog.dart';
 import 'reservation_detail_pickup_code_presentation.dart';
 import 'reservation_detail_semantic.dart';
 
-class ReservationDetailPickupCodeCard extends StatelessWidget {
+class ReservationDetailPickupCodeCard extends ConsumerWidget {
   const ReservationDetailPickupCodeCard({
     super.key,
     required this.reservation,
@@ -20,13 +23,19 @@ class ReservationDetailPickupCodeCard extends StatelessWidget {
   final VoidCallback? onPayNow;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final palette = MaterialsUiPalette.of(context);
     final presentation = resolvePickupCodePresentation(reservation);
 
     if (presentation.state == ReservationDetailPickupCodeState.notApplicable) {
       return const SizedBox.shrink();
+    }
+
+    // Keep a still-valid issued credential alive while this card is mounted so
+    // reopening the QR dialog does not accidentally reissue.
+    if (presentation.state == ReservationDetailPickupCodeState.available) {
+      ref.watch(handoverCredentialControllerProvider(reservation.id));
     }
 
     final summary = reservation.paymentSummary;
@@ -50,6 +59,29 @@ class ReservationDetailPickupCodeCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
+              SizedBox(
+                height: 44,
+                child: OutlinedButton.icon(
+                  key: const Key('reservation-detail-show-pickup-qr'),
+                  onPressed: ref
+                          .watch(
+                            handoverCredentialControllerProvider(reservation.id),
+                          )
+                          .isLoading
+                      ? null
+                      : () {
+                          showPickupQrDialog(
+                            context: context,
+                            ref: ref,
+                            reservationId: reservation.id,
+                            materialTitle: reservation.material.title,
+                          );
+                        },
+                  icon: const Icon(Icons.qr_code_2_rounded, size: 18),
+                  label: Text(l10n.showPickupQr),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
               Semantics(
                 label: l10n.pickupCodeTitle,
                 child: HandoverConfirmationCodePanel(

@@ -12,11 +12,10 @@ import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
 import '../controllers/supplier_pickup_schedule_providers.dart';
-import '../controllers/supplier_requests_providers.dart';
 import '../theme/supplier_theme_extension.dart';
-import '../widgets/complete_pickup_dialog.dart';
 import '../widgets/reservation_follow_up_flow.dart';
 import '../widgets/supplier_delivery_incident_flow.dart';
+import '../widgets/supplier_pickup_completion_flow.dart';
 import '../../../../l10n/l10n.dart';
 
 const _contentMaxWidth = 1440.0;
@@ -280,14 +279,14 @@ class _SupplierPickupSchedulePageState
 
     switch (action.value) {
       case SupplierReservationAction.completeSelfPickup:
-        final code = await CompletePickupDialog.show(context);
-        if (code == null || code.trim().isEmpty || !context.mounted) return;
         try {
-          await completeIncomingRequest(
+          final completed = await runSupplierPickupCompletionFlow(
+            context,
             ref,
-            requestId: reservationId,
-            confirmationCode: code.trim(),
+            reservationId: reservationId,
+            showSuccessSnackBar: false,
           );
+          if (!completed && context.mounted) return;
         } catch (error) {
           if (context.mounted) {
             _showActionError(context, error);

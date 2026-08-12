@@ -16,11 +16,11 @@ import '../supplier_reservation_history_notes.dart';
 import '../supplier_reservation_ui_helpers.dart';
 import '../theme/supplier_theme_extension.dart';
 import '../widgets/accept_incoming_request_dialog.dart';
-import '../widgets/complete_pickup_dialog.dart';
 import '../widgets/decline_incoming_request_dialog.dart';
 import '../widgets/reservation_follow_up_flow.dart';
 import '../widgets/supplier_delivery_incident_flow.dart';
 import '../widgets/supplier_feedback.dart';
+import '../widgets/supplier_pickup_completion_flow.dart';
 
 class SupplierReservationDetailPage extends ConsumerStatefulWidget {
   const SupplierReservationDetailPage({super.key, required this.reservationId});
@@ -259,16 +259,12 @@ class _SupplierReservationDetailPageState
               showSupplierInfoSnackBar(context, context.s.requestDeclined);
           }
         case SupplierReservationAction.completeSelfPickup:
-          final code = await CompletePickupDialog.show(context);
-          if (code != null && code.trim().isNotEmpty && mounted) {
-            await completeIncomingRequest(
-              ref,
-              requestId: reservation.id,
-              confirmationCode: code.trim(),
-            );
-            if (mounted)
-              showSupplierInfoSnackBar(context, context.s.pickupCompleted);
-          }
+          final completed = await runSupplierPickupCompletionFlow(
+            context,
+            ref,
+            reservationId: reservation.id,
+          );
+          if (!completed) break;
         case SupplierReservationAction.acceptLearnerReschedule:
           await handleAcceptLearnerReschedule(
             context,

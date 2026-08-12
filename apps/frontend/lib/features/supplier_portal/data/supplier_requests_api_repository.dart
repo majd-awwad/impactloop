@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../reservations/data/models/reservation_message.dart';
+import 'models/handover_verify_preview.dart';
 import 'models/supplier_incoming_request.dart';
 import 'supplier_requests_api.dart';
 import 'supplier_requests_repository.dart';
@@ -75,6 +76,18 @@ class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
     required String confirmationCode,
   }) {
     return _api.completeRequest(requestId, confirmationCode: confirmationCode);
+  }
+
+  @override
+  Future<HandoverVerifyPreview> verifyHandoverCredential(String handoverToken) {
+    return _api.verifyHandoverCredential(handoverToken);
+  }
+
+  @override
+  Future<SupplierIncomingRequest> confirmHandoverCredential(
+    String handoverToken,
+  ) {
+    return _api.confirmHandoverCredential(handoverToken);
   }
 
   @override

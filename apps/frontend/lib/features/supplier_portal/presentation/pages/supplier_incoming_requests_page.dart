@@ -10,12 +10,12 @@ import '../controllers/supplier_requests_providers.dart';
 import '../supplier_reservation_ui_helpers.dart';
 import '../theme/supplier_theme_extension.dart';
 import '../widgets/accept_incoming_request_dialog.dart';
-import '../widgets/complete_pickup_dialog.dart';
 import '../widgets/decline_incoming_request_dialog.dart';
 import '../widgets/incoming_request_card.dart';
 import '../widgets/reservation_follow_up_flow.dart';
 import '../widgets/supplier_delivery_incident_flow.dart';
 import '../widgets/supplier_feedback.dart';
+import '../widgets/supplier_pickup_completion_flow.dart';
 import '../../../../l10n/l10n.dart';
 
 const _contentMaxWidth = 1440.0;
@@ -419,19 +419,15 @@ class _SupplierIncomingRequestsPageState
     BuildContext context,
     SupplierIncomingRequest request,
   ) async {
-    final code = await CompletePickupDialog.show(context);
-    if (code == null || code.trim().isEmpty || !context.mounted) return;
     ref
         .read(completingReservationIdProvider.notifier)
         .setCompleting(request.id);
     try {
-      await completeIncomingRequest(
+      await runSupplierPickupCompletionFlow(
+        context,
         ref,
-        requestId: request.id,
-        confirmationCode: code.trim(),
+        reservationId: request.id,
       );
-      if (context.mounted)
-        showSupplierInfoSnackBar(context, context.s.pickupCompleted);
     } catch (error) {
       if (context.mounted) {
         showSupplierErrorSnackBar(

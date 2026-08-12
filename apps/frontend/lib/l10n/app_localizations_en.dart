@@ -1469,6 +1469,39 @@ class AppLocalizationsEn extends AppLocalizations {
       'Pickup code does not apply to this reservation.';
 
   @override
+  String get showPickupQr => 'Show Pickup QR';
+
+  @override
+  String get pickupQrDialogTitle => 'Pickup QR';
+
+  @override
+  String get pickupQrInstructions =>
+      'Show this QR code to the supplier when receiving your material.';
+
+  @override
+  String pickupQrMaterialLabel(String title) {
+    return 'Material: $title';
+  }
+
+  @override
+  String pickupQrValidUntil(String expiresAt) {
+    return 'Valid until $expiresAt';
+  }
+
+  @override
+  String get pickupQrExpired => 'QR expired';
+
+  @override
+  String get pickupQrGenerateNew => 'Generate a new QR';
+
+  @override
+  String get pickupQrIssueFailed => 'Unable to generate pickup QR';
+
+  @override
+  String get pickupQrManualFallbackNote =>
+      'If scanning fails, use the manual pickup code below on this page.';
+
+  @override
   String get pickupWindowNotStarted => 'Not started yet';
 
   @override
@@ -6314,6 +6347,74 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get supplierPickupConfirmationCodeError =>
       'Enter the 6-digit pickup code from the learner.';
+
+  @override
+  String get supplierPickupVerificationIntro =>
+      'Verify pickup with the learner\'s QR code or confirmation code.';
+
+  @override
+  String get supplierPickupVerificationOr => 'or';
+
+  @override
+  String get supplierScanPickupQr => 'Scan Pickup QR';
+
+  @override
+  String get supplierPickupQrPointCamera =>
+      'Point the camera at the learner\'s pickup QR.';
+
+  @override
+  String get supplierPickupQrVerifying => 'Verifying pickup QR…';
+
+  @override
+  String get supplierPickupQrVerifiedTitle => 'QR verified';
+
+  @override
+  String get supplierPickupQrLearnerLabel => 'Learner';
+
+  @override
+  String get supplierPickupQrQuantityLabel => 'Quantity';
+
+  @override
+  String get supplierPickupQrConfirmHandover => 'Confirm handover';
+
+  @override
+  String get supplierPickupQrInvalidPayload =>
+      'This is not a valid ImpactLoop pickup QR.';
+
+  @override
+  String get supplierPickupQrCredentialUnavailable =>
+      'This pickup QR is invalid or no longer available.';
+
+  @override
+  String get supplierPickupQrVerifyFailed => 'Unable to verify pickup QR.';
+
+  @override
+  String get supplierPickupQrConfirmFailed =>
+      'Unable to confirm handover. Try again or use the confirmation code.';
+
+  @override
+  String get supplierPickupQrCameraPermissionRequired =>
+      'Camera permission is required to scan the pickup QR.';
+
+  @override
+  String get supplierPickupQrCameraUnavailable =>
+      'Camera is unavailable on this device.';
+
+  @override
+  String get supplierPickupQrScanAgain => 'Scan again';
+
+  @override
+  String get supplierPickupQrUseCodeInstead => 'Use confirmation code instead';
+
+  @override
+  String get supplierPickupQrTryAgain => 'Try again';
+
+  @override
+  String get supplierPickupQrHandoverCompletedTitle => 'Handover completed';
+
+  @override
+  String get supplierPickupQrHandoverCompletedBody =>
+      'The material has been handed over successfully.';
 
   @override
   String get supplierDeliveryWindowMustStartFuture =>

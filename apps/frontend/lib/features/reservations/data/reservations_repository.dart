@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import 'models/create_reservation_request.dart';
 import 'models/created_reservation.dart';
+import 'models/handover_credential.dart';
 import 'models/learner_reservation.dart';
 import 'models/reservation_message.dart';
 import 'models/reservation_quote.dart';
@@ -137,5 +138,9 @@ class ReservationsRepository {
       reservationId: reservationId,
       targetType: targetType,
     );
+  }
+
+  Future<HandoverCredential> issueHandoverCredential(String reservationId) {
+    return _api.issueHandoverCredential(reservationId);
   }
 }

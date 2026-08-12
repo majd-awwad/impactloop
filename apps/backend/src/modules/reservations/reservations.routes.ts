@@ -37,6 +37,8 @@ import { requestDeliveryForReservationHandler } from '../deliveries/deliveries.c
 import {
   requestDeliverySchema,
 } from '../deliveries/deliveries.validation.js';
+import { issueHandoverCredentialHandler } from '../handover-credentials/handover-credentials.controller.js';
+import { handoverCredentialReservationParamsSchema } from '../handover-credentials/handover-credentials.validation.js';
 
 export const reservationsRouter = Router();
 reservationsRouter.use(privateNoStoreMiddleware);
@@ -70,6 +72,14 @@ reservationsRouter.post(
   requireRoles('LEARNER'),
   validate(createReservationSchema),
   asyncHandler(createReservationHandler),
+);
+
+reservationsRouter.post(
+  '/:id/handover-credential',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(handoverCredentialReservationParamsSchema, 'params'),
+  asyncHandler(issueHandoverCredentialHandler),
 );
 
 reservationsRouter.patch(

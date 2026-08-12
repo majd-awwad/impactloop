@@ -8,13 +8,36 @@ import '../../../../shared/widgets/app_close_button.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
-class CompletePickupDialog extends StatefulWidget {
-  const CompletePickupDialog({super.key});
+/// Result of the supplier pickup verification dialog.
+sealed class CompletePickupChoice {
+  const CompletePickupChoice();
+}
 
-  static Future<String?> show(BuildContext context) {
-    return showDialog<String>(
+class CompletePickupManualCode extends CompletePickupChoice {
+  const CompletePickupManualCode(this.code);
+  final String code;
+}
+
+class CompletePickupScanQr extends CompletePickupChoice {
+  const CompletePickupScanQr();
+}
+
+class CompletePickupDialog extends StatefulWidget {
+  const CompletePickupDialog({
+    super.key,
+    this.allowScan = true,
+  });
+
+  /// When false, only the manual confirmation-code path is shown.
+  final bool allowScan;
+
+  static Future<CompletePickupChoice?> show(
+    BuildContext context, {
+    bool allowScan = true,
+  }) {
+    return showDialog<CompletePickupChoice>(
       context: context,
-      builder: (context) => const CompletePickupDialog(),
+      builder: (context) => CompletePickupDialog(allowScan: allowScan),
     );
   }
 
@@ -41,7 +64,7 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
       return;
     }
 
-    Navigator.of(context).pop(code);
+    Navigator.of(context).pop(CompletePickupManualCode(code));
   }
 
   @override
@@ -90,13 +113,52 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
+                context.l10n.supplierPickupVerificationIntro,
+                style: context.supplierBody().copyWith(
+                  color: colors.textSecondary,
+                  fontSize: 14,
+                ),
+              ),
+              if (widget.allowScan) ...[
+                const SizedBox(height: AppSpacing.lg),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        Navigator.of(context).pop(const CompletePickupScanQr()),
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: Text(context.l10n.supplierScanPickupQr),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: colors.border)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                      ),
+                      child: Text(
+                        context.l10n.supplierPickupVerificationOr,
+                        style: context.supplierBody().copyWith(
+                          color: colors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: colors.border)),
+                  ],
+                ),
+              ],
+              const SizedBox(height: AppSpacing.md),
+              Text(
                 context.l10n.supplierPickupConfirmationCodeHint,
                 style: context.supplierBody().copyWith(
                   color: colors.textSecondary,
                   fontSize: 14,
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                 controller: _codeController,
                 keyboardType: TextInputType.number,

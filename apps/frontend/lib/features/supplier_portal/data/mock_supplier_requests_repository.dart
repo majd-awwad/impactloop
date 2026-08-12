@@ -1,4 +1,5 @@
 import '../../reservations/data/models/reservation_message.dart';
+import 'models/handover_verify_preview.dart';
 import 'models/supplier_incoming_request.dart';
 import 'supplier_requests_repository.dart';
 
@@ -121,6 +122,50 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
     );
     _requests[index] = updated;
     return updated;
+  }
+
+  @override
+  Future<HandoverVerifyPreview> verifyHandoverCredential(
+    String handoverToken,
+  ) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    SupplierIncomingRequest? accepted;
+    for (final request in _requests) {
+      if (request.status == SupplierIncomingRequestStatus.accepted) {
+        accepted = request;
+        break;
+      }
+    }
+    if (accepted == null) {
+      throw StateError('No accepted reservation to verify');
+    }
+    return HandoverVerifyPreview(
+      reservationId: accepted.id,
+      materialId: '',
+      materialTitle: accepted.materialTitle,
+      quantity: accepted.quantityRequested,
+      unit: accepted.unit,
+      learnerDisplayName: accepted.learnerName,
+      expiresAt: DateTime.now().add(const Duration(hours: 1)),
+    );
+  }
+
+  @override
+  Future<SupplierIncomingRequest> confirmHandoverCredential(
+    String handoverToken,
+  ) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    SupplierIncomingRequest? accepted;
+    for (final request in _requests) {
+      if (request.status == SupplierIncomingRequestStatus.accepted) {
+        accepted = request;
+        break;
+      }
+    }
+    if (accepted == null) {
+      throw StateError('No accepted reservation to confirm');
+    }
+    return completeRequest(accepted.id, confirmationCode: '000000');
   }
 
   @override

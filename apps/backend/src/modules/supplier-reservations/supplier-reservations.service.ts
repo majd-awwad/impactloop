@@ -2,6 +2,7 @@ import type {
   ReservationFulfillmentMethod,
   ReservationStatus,
 } from '../../generated/prisma/client.js';
+import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 
 import {
@@ -1134,6 +1135,82 @@ export const completeSupplierReservation = async (
         );
       if (!existingReservation) {
         throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+      }
+      return mapSupplierReservation(existingReservation);
+    }
+
+    throw new AppError(
+      'Only accepted self-pickup reservations can be completed by the supplier.',
+      409,
+      'CONFLICT',
+    );
+  }
+
+  invalidateLearnerHomeForReservationTransition('ACCEPTED', 'COMPLETED');
+  const { fulfillRequestFromCompletedReservation } = await import(
+    '../learner-material-requests/learner-material-requests.service.js'
+  );
+  await fulfillRequestFromCompletedReservation(result.reservation.id);
+  return mapSupplierReservation(result.reservation);
+};
+
+export const confirmHandoverCredential = async (
+  ownerId: string,
+  handoverToken: string,
+) => {
+  const {
+    invalidHandoverCredentialError,
+    resolveHandoverTokenHashOrThrow,
+  } = await import('../handover-credentials/handover-credentials.service.js');
+
+  const tokenHash = resolveHandoverTokenHashOrThrow(handoverToken);
+
+  const matched = await prisma.reservation.findMany({
+    where: { handoverTokenHash: tokenHash },
+    select: { id: true },
+  });
+  await expireStaleMissedPickupsByIds(
+    matched.map((row) => row.id),
+    ownerId,
+  );
+
+  const result =
+    await supplierReservationsRepository.completeSupplierReservationByHandoverToken(
+      {
+        ownerId,
+        tokenHash,
+      },
+    );
+
+  if ('invalidCredential' in result && result.invalidCredential) {
+    throw invalidHandoverCredentialError();
+  }
+
+  if ('expiredCredential' in result && result.expiredCredential) {
+    throw invalidHandoverCredentialError();
+  }
+
+  if ('windowNotStarted' in result && result.windowNotStarted) {
+    throw new AppError(pickupWindowNotStartedMessage(), 400, 'VALIDATION_ERROR');
+  }
+
+  if ('windowExpired' in result && result.windowExpired) {
+    throw new AppError(pickupWindowPassedMessage(), 400, 'VALIDATION_ERROR');
+  }
+
+  if ('conflict' in result && result.conflict) {
+    if (result.reservation.status === 'COMPLETED') {
+      const { fulfillRequestFromCompletedReservation } = await import(
+        '../learner-material-requests/learner-material-requests.service.js'
+      );
+      await fulfillRequestFromCompletedReservation(result.reservation.id);
+      const existingReservation =
+        await supplierReservationsRepository.findSupplierReservationForOwner(
+          ownerId,
+          result.reservation.id,
+        );
+      if (!existingReservation) {
+        throw invalidHandoverCredentialError();
       }
       return mapSupplierReservation(existingReservation);
     }

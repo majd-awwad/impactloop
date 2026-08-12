@@ -39,6 +39,7 @@ const DB = [
   'src/modules/payments/payments.pay06-http-auth.test.ts',
   'src/modules/deliveries/deliveries.service.test.ts',
   'src/modules/handover-codes/handover-codes.test.ts',
+  'src/modules/handover-credentials/handover-credentials.test.ts',
   'src/modules/ai/ai.test.ts',
   'src/modules/driver/driver-accepting-new-jobs.schema.integration.test.ts',
   'src/modules/driver/driver-available-jobs.indexes.integration.test.ts',

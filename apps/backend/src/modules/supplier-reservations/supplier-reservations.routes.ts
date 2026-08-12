@@ -40,6 +40,11 @@ import {
 } from './supplier-reservations.validation.js';
 import { listSupplierScheduleHandler } from './supplier-reservations-schedule.controller.js';
 import { listSupplierScheduleQuerySchema } from './supplier-reservations-schedule.validation.js';
+import {
+  confirmHandoverCredentialHandler,
+  verifyHandoverCredentialHandler,
+} from '../handover-credentials/handover-credentials.controller.js';
+import { handoverCredentialTokenBodySchema } from '../handover-credentials/handover-credentials.validation.js';
 
 export const supplierReservationsRouter = Router();
 
@@ -57,6 +62,22 @@ supplierReservationsRouter.get(
   requireRoles('SUPPLIER'),
   validate(listSupplierScheduleQuerySchema, 'query'),
   asyncHandler(listSupplierScheduleHandler),
+);
+
+supplierReservationsRouter.post(
+  '/handover/verify',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(handoverCredentialTokenBodySchema),
+  asyncHandler(verifyHandoverCredentialHandler),
+);
+
+supplierReservationsRouter.post(
+  '/handover/confirm',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(handoverCredentialTokenBodySchema),
+  asyncHandler(confirmHandoverCredentialHandler),
 );
 
 supplierReservationsRouter.get(
