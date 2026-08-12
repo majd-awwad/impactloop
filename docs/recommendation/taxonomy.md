@@ -74,7 +74,7 @@ It upserts concepts by canonical key and inserts aliases/mappings with duplicate
 
 The local validation database currently contains 199 materials, but 199 is not the Phase 2A frozen baseline. The comparable seeded set is 159 rows: 150 primary seeded materials plus 9 explicitly named `(Spare Batch)` workflow copies. The additional 40 rows are test materials owned by three `[test-internal-delivery]`/`[test-handover-codes]` supplier accounts, created on 2026-07-17; the seeded rows were created on 2026-07-15. No user-created material rows were identified in this classification. The current local status distribution is AVAILABLE 160, PENDING_RESERVATION 6, RESERVED 30, and REUSED 3. There are no duplicate title/material-type/category groups.
 
-Coverage must therefore be read as both 159/159 for the comparable seeded set and 199/199 for the current local database. Component coverage is reported separately by role in [`phase-2b-validation.md`](phase-2b-validation.md).
+Coverage must therefore be read as both 159/159 for the comparable seeded set and 199/199 for the current local database. Historical Phase 2B component-role coverage evidence is preserved in [`phase-2b-validation.md`](../history/recommendation/phase-2b-validation.md) (historical validation report, not current runtime architecture).
 
 The final three-run audit preserved all existing material, learner-profile interest arrays, project, component, category, and tag values. It also preserved canonical taxonomy IDs and existing inactive status; an existing inactive concept is not reactivated by a later backfill.
 

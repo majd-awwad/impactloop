@@ -69,8 +69,6 @@ Add-material uses category-scoped material type/name autocomplete backed by `GET
 | Theme | `presentation/theme/supplier_*` |
 | Listing support | `features/materials/data/*` (categories, types, price-check, uploads, category-requests) |
 
-**Unwired:** `supplier_coming_soon_page.dart`
-
 ## Backend files
 
 | Module | Path |

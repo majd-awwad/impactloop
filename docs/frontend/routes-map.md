@@ -176,7 +176,6 @@ Mobile bottom nav (`supplierMobileNavItems`): overview, myMaterials, addMaterial
 | File | Status |
 |------|--------|
 | `auth/presentation/pages/choose_role_page.dart` | **Unwired** — legacy; registration uses `RegistrationWizard` with intent chips |
-| `supplier_portal/presentation/pages/supplier_coming_soon_page.dart` | **Unwired** |
 
 ## Query parameters
 

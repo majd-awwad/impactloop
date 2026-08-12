@@ -52,8 +52,8 @@ Role-scope framing: see [roles-and-capabilities](roles-and-capabilities.md).
 | Data | `data/learner_home_api.dart`, `data/learner_home_item_mapper.dart` |
 | Models | `domain/learner_home_models.dart` |
 | Browse page | `presentation/pages/learner_home_recommendations_page.dart` |
-| Widgets | `presentation/widgets/learner_home_feed_sections.dart`, `home_material_recommendation_grid.dart`, `home_continue_project_card.dart`, `learning_spotlight_section.dart` (`HomeLearningProjectCard`), `home_action_card.dart`, `coming_soon_card.dart`, `empty_activity_card.dart`, `home_section_header.dart` |
-| Legacy (unused on home) | `application/home_suggested_materials_provider.dart`, `suggested_materials_section.dart`, `learning_spotlight_section.dart` |
+| Widgets | `presentation/widgets/learner_home_feed_sections.dart`, `home_material_recommendation_grid.dart`, `home_continue_project_card.dart`, `learning_spotlight_section.dart` (`HomeLearningProjectCard`), `home_action_card.dart`, `empty_activity_card.dart`, `home_section_header.dart` |
+| Related (not feed UI) | `application/home_suggested_materials_provider.dart` (still used for cache invalidation outside home feed) |
 | Shared nav helper | `auth/application/auth_navigation.dart` |
 | Router | `app/router/app_router.dart` — `/home`, `/learner/reservations` |
 

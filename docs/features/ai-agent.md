@@ -31,7 +31,7 @@ This is **not** the same as the shipped ImpactLoop Assistant (general learning c
 | AI **material matching** for learners/projects | **Not implemented** | No matching service, credit enforcement, or match cards |
 | AI **price suggestion** (listing / price-rule review) | **Partial** | `ai-price-suggestion.service.ts`, `price-rule-requests.service.ts` |
 | `ai_price_lookup_logs` | **Partial** | Table + `ai-price-lookup.repository.ts`; listing-internal only |
-| Flutter home “AI material helper” placeholder | **Frontend-only** | `ComingSoonCard` — not wired to matching API |
+| Flutter home “AI material helper” placeholder | **Not implemented** | No matching UI; ImpactLoop Assistant is separate (`/ai/assistant`) |
 | Flutter learning hub material matching | **Not implemented** | Build checklist uses deterministic ranking/linking, not LLM matching |
 
 **Overall:** Material-matching **AI agent** is **not implemented**. ImpactLoop Assistant and internal price AI are separate, partially shipped surfaces.
@@ -115,6 +115,7 @@ These are planned/future capabilities and should not be documented as shipped un
 ## Related docs
 
 - [General learning chat](../ai/01-general-learning-chat.md) — shipped assistant (partial)
-- [Historical AI architecture plan](../ai/00-ai-system-architecture-plan.md) — Phase 0 planning doc
+- [Recommendation ML vs conversational AI](../architecture/ai-system.md) — current subsystem boundary
+- [Historical AI architecture plan](../history/ai/00-ai-system-architecture-plan.md) — Phase 0 planning doc (not current architecture)
 - [Learning hub](learning-hub.md) — current non-AI project planning context
 - [Materials listing](materials-listing.md) — price-rule AI overlap
