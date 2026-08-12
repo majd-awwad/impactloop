@@ -20,7 +20,9 @@ class ProjectHelpSessionMutationFailure implements Exception {
   String toString() => error.toString();
 }
 
-Future<T?> runProjectHelpSessionMutation<T>(Future<T?> Function() mutate) async {
+Future<T?> runProjectHelpSessionMutation<T>(
+  Future<T?> Function() mutate,
+) async {
   try {
     return await mutate();
   } catch (error) {
@@ -66,23 +68,22 @@ Future<void> completeHelpSessionSettingsMutation({
     onNavigate?.call();
   } catch (error, stackTrace) {
     if (kDebugMode) {
-      debugPrint('help-session settings navigation failed: $error\n$stackTrace');
+      debugPrint(
+        'help-session settings navigation failed: $error\n$stackTrace',
+      );
     }
   }
 }
 
 /// Zoom URL launch failures are not API mutation failures.
-void showHelpSessionZoomLaunchFailure(
-  BuildContext context, {
-  required bool isStart,
-}) {
+void showHelpSessionZoomLaunchFailure(BuildContext context) {
   if (!context.mounted) {
     return;
   }
-  final message = isStart
-      ? ProjectHelpSessionsL10n.startLaunchFailed.resolve(context)
-      : ProjectHelpSessionsL10n.joinLaunchFailed.resolve(context);
-  showInfoSnackBar(context, message);
+  showInfoSnackBar(
+    context,
+    ProjectHelpSessionsL10n.joinLaunchFailed.resolve(context),
+  );
 }
 
 bool isHelpSessionMutationGuardNoOp(Object? result, bool controllerBusy) {
@@ -151,19 +152,16 @@ Future<ProjectHelpSession?> recoverHelpSessionAfterMutationFailure({
     try {
       if (authorView) {
         ref.invalidate(authorHelpSessionDetailProvider(sessionId));
-        final session =
-            await ref.read(authorHelpSessionDetailProvider(sessionId).future);
-        if (session != null) {
-          return session;
-        }
-        continue;
-      }
-      ref.invalidate(learnerHelpSessionDetailProvider(sessionId));
-      final session =
-          await ref.read(learnerHelpSessionDetailProvider(sessionId).future);
-      if (session != null) {
+        final session = await ref.read(
+          authorHelpSessionDetailProvider(sessionId).future,
+        );
         return session;
       }
+      ref.invalidate(learnerHelpSessionDetailProvider(sessionId));
+      final session = await ref.read(
+        learnerHelpSessionDetailProvider(sessionId).future,
+      );
+      return session;
     } catch (error, stackTrace) {
       if (kDebugMode) {
         debugPrint(
@@ -214,7 +212,7 @@ Future<ProjectHelpSession?> runProjectHelpSessionMutationWithRecovery({
   }
 
   if (mutationError != null) {
-    throw mutationError!;
+    throw mutationError;
   }
   throw helpSessionMutationGuardFailure();
 }

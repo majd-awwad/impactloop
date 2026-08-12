@@ -21,13 +21,15 @@ import {
   learnerRejectProjectHelpSessionAlternative,
   listAuthorProjectHelpSessionViews,
   listLearnerProjectHelpSessionViews,
+  reportProjectHelpSessionNoShow,
 } from './project-help-session.service.js';
 import { ensureProjectHelpSessionNotebookPage } from './project-help-session-notebook-handoff.service.js';
 import {
-  getAuthorProjectHelpSessionZoomStart,
+  getAuthorProjectHelpSessionZoomJoin,
   getLearnerProjectHelpSessionZoomJoin,
 } from './project-help-session-zoom.service.js';
 import { retryZoomProvisioningForAuthor } from './project-help-session-zoom-provisioning.service.js';
+import { listLearnerHelpSessionProjectOptions } from './project-help-session-project-options.service.js';
 import type {
   AcceptProjectHelpSessionOptionInput,
   CancelProjectHelpSessionInput,
@@ -35,9 +37,26 @@ import type {
   DeclineProjectHelpSessionInput,
   ListAuthorProjectHelpSessionsQuery,
   ListLearnerProjectHelpSessionsQuery,
+  LearnerHelpSessionProjectOptionsQuery,
   ProposeProjectHelpSessionAlternativeInput,
   UpdateProjectHelpSessionSettingsInput,
 } from './project-help-session.validation.js';
+
+export const listLearnerHelpSessionProjectOptionsHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  const query = readValidatedQuery<LearnerHelpSessionProjectOptionsQuery>(req);
+  const result = await listLearnerHelpSessionProjectOptions({
+    learnerId: req.auth!.sub,
+    q: query.q,
+    page: query.page,
+    limit: query.limit,
+  });
+  res.json(
+    successResponse('Eligible help session projects fetched successfully', result),
+  );
+};
 
 export const getProjectHelpSessionAvailabilityHandler = async (
   req: Request,
@@ -256,13 +275,39 @@ export const learnerJoinProjectHelpSessionZoomHandler = async (
   res.json(successResponse('Help session join details fetched successfully', join));
 };
 
-export const authorStartProjectHelpSessionZoomHandler = async (
+export const learnerReportProjectHelpSessionNoShowHandler = async (
   req: Request,
   res: Response,
 ) => {
   const { sessionId } = readValidatedParams<{ sessionId: string }>(req);
-  const start = await getAuthorProjectHelpSessionZoomStart(req.auth!.sub, sessionId);
-  res.json(successResponse('Help session start details fetched successfully', start));
+  const session = await reportProjectHelpSessionNoShow({
+    sessionId,
+    actorId: req.auth!.sub,
+    actorRole: 'learner',
+  });
+  res.json(successResponse('Author no-show reported successfully', session));
+};
+
+export const authorJoinProjectHelpSessionZoomHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  const { sessionId } = readValidatedParams<{ sessionId: string }>(req);
+  const join = await getAuthorProjectHelpSessionZoomJoin(req.auth!.sub, sessionId);
+  res.json(successResponse('Help session join details fetched successfully', join));
+};
+
+export const authorReportProjectHelpSessionNoShowHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  const { sessionId } = readValidatedParams<{ sessionId: string }>(req);
+  const session = await reportProjectHelpSessionNoShow({
+    sessionId,
+    actorId: req.auth!.sub,
+    actorRole: 'author',
+  });
+  res.json(successResponse('Learner no-show reported successfully', session));
 };
 
 export const authorCancelProjectHelpSessionHandler = async (

@@ -17,12 +17,10 @@ export type ZoomMeetingDetails = {
   joinUrl: string;
   startsAt: Date;
   durationMinutes: number;
-  hostStartUrl: string;
 };
 
 export interface ZoomMeetingProvider {
   createMeeting(input: CreateZoomMeetingInput): Promise<CreatedZoomMeeting>;
   getMeeting(meetingId: string): Promise<ZoomMeetingDetails>;
-  getFreshHostStartUrl(meetingId: string): Promise<string>;
   deleteMeeting(meetingId: string): Promise<void>;
 }

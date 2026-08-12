@@ -98,6 +98,14 @@ const buildSearchClauses = (q: string): Prisma.LearningProjectWhereInput[] => [
       },
     },
   },
+  {
+    createdByUser: {
+      displayName: {
+        contains: q,
+        mode: 'insensitive',
+      },
+    },
+  },
 ];
 
 const buildLearningProjectsWhere = (
@@ -109,6 +117,10 @@ const buildLearningProjectsWhere = (
 
   if (query.categoryId) {
     where.categoryId = query.categoryId;
+  }
+
+  if (query.creatorId) {
+    where.createdBy = query.creatorId;
   }
 
   if (query.difficulty) {
@@ -160,8 +172,9 @@ const learningProjectListInclude = {
   },
   createdByUser: {
     select: {
+      id: true,
       displayName: true,
-      email: true,
+      profileImageUrl: true,
     },
   },
   tags: {
@@ -186,8 +199,9 @@ const learningProjectDetailInclude = {
   },
   createdByUser: {
     select: {
+      id: true,
       displayName: true,
-      email: true,
+      profileImageUrl: true,
     },
   },
   images: {

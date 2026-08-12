@@ -34,6 +34,7 @@ const LEARNING_PROJECT_STATUSES = [
 
 export const learningProjectsQuerySchema = paginationQuerySchema.extend({
   q: z.string().trim().min(1).max(120).optional(),
+  creatorId: z.string().trim().min(1).max(80).optional(),
   categoryId: z.string().trim().min(1).optional(),
   difficulty: z.enum(PROJECT_DIFFICULTIES, {
     error:

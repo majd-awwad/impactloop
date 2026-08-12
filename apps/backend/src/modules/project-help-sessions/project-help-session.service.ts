@@ -19,6 +19,7 @@ import {
 } from './project-help-session-notifications.js';
 import { getProjectHelpSessionNow, setProjectHelpSessionNowForTests } from './project-help-session-clock.js';
 import { deriveProjectHelpSessionCompletionState } from './project-help-session-completion.js';
+import { deriveProjectHelpSessionAllowedActions } from './project-help-session-actions.js';
 import {
   HELP_SESSION_INVALID_STATE,
   transitionProjectHelpSessionStatus,
@@ -35,7 +36,10 @@ import {
   listLearnerProjectHelpSessions,
 } from './project-help-session.repository.js';
 import { mapProjectHelpSessionListResponse, mapProjectHelpSessionPrivateDto } from './project-help-session.dto.js';
-import { buildProjectHelpSessionActiveKey } from './project-help-session-status.js';
+import {
+  buildProjectHelpSessionActiveKey,
+  isProjectHelpSessionCancellableStatus,
+} from './project-help-session-status.js';
 import { ensureZoomMeetingForProjectHelpSession } from './project-help-session-zoom-provisioning.service.js';
 import { deleteZoomMeetingForSession } from './project-help-session-zoom.service.js';
 import { isZoomError } from './zoom/zoom-errors.js';
@@ -68,6 +72,11 @@ const notFoundHelpSession = () =>
 export const PROJECT_HELP_SESSION_NOT_FOUND = 'PROJECT_HELP_SESSION_NOT_FOUND';
 export const SESSION_NOT_COMPLETABLE_YET = 'SESSION_NOT_COMPLETABLE_YET';
 export const INVALID_SESSION_STATE = 'INVALID_SESSION_STATE';
+export const SESSION_CANCELLATION_WINDOW_CLOSED =
+  'SESSION_CANCELLATION_WINDOW_CLOSED';
+export const SESSION_NO_SHOW_NOT_AVAILABLE = 'SESSION_NO_SHOW_NOT_AVAILABLE';
+export const SESSION_RESOLUTION_WINDOW_CLOSED =
+  'SESSION_RESOLUTION_WINDOW_CLOSED';
 
 const notFoundHelpSessionForCompletion = () =>
   new AppError('Help session not found.', 404, PROJECT_HELP_SESSION_NOT_FOUND);
@@ -673,6 +682,28 @@ export const cancelProjectHelpSession = async (input: {
     );
   }
 
+  if (!isProjectHelpSessionCancellableStatus(session.status)) {
+    throw new AppError(
+      'Help session is not in a valid state for this action.',
+      409,
+      HELP_SESSION_INVALID_STATE,
+    );
+  }
+
+  const now = getProjectHelpSessionNow();
+  const allowedActions = deriveProjectHelpSessionAllowedActions(
+    session,
+    input.actorRole,
+    now,
+  );
+  if (!allowedActions.canCancel) {
+    throw new AppError(
+      'The session can no longer be cancelled.',
+      409,
+      SESSION_CANCELLATION_WINDOW_CLOSED,
+    );
+  }
+
   const trimmedReason = input.reason?.trim() || null;
   const requiresReason =
     session.status === 'ZOOM_PENDING' ||
@@ -725,7 +756,7 @@ export const cancelProjectHelpSession = async (input: {
       data: {
         cancelledBy: { connect: { id: input.actorId } },
         cancellationReason: trimmedReason,
-        cancelledAt: new Date(),
+        cancelledAt: now,
         ...(session.status === 'SCHEDULED' ? { zoomJoinUrl: null } : {}),
       },
       buildId: session.buildId,
@@ -746,6 +777,88 @@ export const cancelProjectHelpSession = async (input: {
     updated,
     input.actorRole === 'learner' ? 'learner' : 'author',
   );
+};
+
+export const reportProjectHelpSessionNoShow = async (input: {
+  sessionId: string;
+  actorId: string;
+  actorRole: 'learner' | 'author';
+}) => {
+  const loadOwnedSession = () =>
+    input.actorRole === 'learner'
+      ? findLearnerProjectHelpSessionDetail(input.sessionId, input.actorId)
+      : findAuthorProjectHelpSessionDetail(input.sessionId, input.actorId);
+  const session = await loadOwnedSession();
+  if (!session) {
+    throw notFoundHelpSession();
+  }
+
+  if (session.status !== 'SCHEDULED') {
+    throw new AppError(
+      'Help session is not in a valid state for this action.',
+      409,
+      INVALID_SESSION_STATE,
+    );
+  }
+
+  const alreadyReported =
+    input.actorRole === 'learner'
+      ? session.learnerReportedAuthorNoShowAt
+      : session.authorReportedLearnerNoShowAt;
+  if (alreadyReported) {
+    return mapProjectHelpSessionPrivateDto(session, input.actorRole);
+  }
+
+  const now = getProjectHelpSessionNow();
+  const allowedActions = deriveProjectHelpSessionAllowedActions(
+    session,
+    input.actorRole,
+    now,
+  );
+  if (!allowedActions.canReportNoShow) {
+    throw new AppError(
+      'No-show reporting is available after the join window closes.',
+      409,
+      SESSION_NO_SHOW_NOT_AVAILABLE,
+    );
+  }
+
+  if (input.actorRole === 'learner') {
+    await prisma.projectHelpSession.updateMany({
+      where: {
+        id: input.sessionId,
+        status: 'SCHEDULED',
+        learnerReportedAuthorNoShowAt: null,
+      },
+      data: { learnerReportedAuthorNoShowAt: now },
+    });
+  } else {
+    await prisma.projectHelpSession.updateMany({
+      where: {
+        id: input.sessionId,
+        status: 'SCHEDULED',
+        authorReportedLearnerNoShowAt: null,
+      },
+      data: { authorReportedLearnerNoShowAt: now },
+    });
+  }
+
+  const updated = await loadOwnedSession();
+  if (!updated) {
+    throw notFoundHelpSession();
+  }
+  const persisted =
+    input.actorRole === 'learner'
+      ? updated.learnerReportedAuthorNoShowAt
+      : updated.authorReportedLearnerNoShowAt;
+  if (!persisted) {
+    throw new AppError(
+      'Help session is not in a valid state for this action.',
+      409,
+      INVALID_SESSION_STATE,
+    );
+  }
+  return mapProjectHelpSessionPrivateDto(updated, input.actorRole);
 };
 
 export const authorCompleteProjectHelpSession = async (
@@ -774,6 +887,13 @@ export const authorCompleteProjectHelpSession = async (
   }
 
   if (!completionState.isCompletable) {
+    if (session.autoFinalizeAt && now >= session.autoFinalizeAt) {
+      throw new AppError(
+        'The resolution window has closed and the session is awaiting automatic finalization.',
+        409,
+        SESSION_RESOLUTION_WINDOW_CLOSED,
+      );
+    }
     throw new AppError(
       'The session can be completed after its scheduled end time.',
       409,

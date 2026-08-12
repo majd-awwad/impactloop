@@ -10,10 +10,6 @@ export class DisabledZoomMeetingProvider implements ZoomMeetingProvider {
     throw new ZoomError('Zoom integration is disabled.', 503, 'ZOOM_DISABLED');
   }
 
-  async getFreshHostStartUrl(): Promise<never> {
-    throw new ZoomError('Zoom integration is disabled.', 503, 'ZOOM_DISABLED');
-  }
-
   async deleteMeeting(): Promise<void> {
     return;
   }

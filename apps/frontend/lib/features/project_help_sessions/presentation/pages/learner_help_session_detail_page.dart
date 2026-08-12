@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,11 +7,13 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../application/help_session_mutation_feedback.dart';
 import '../../application/project_help_session_canonical_cache.dart';
 import '../../application/project_help_session_mutation.dart';
+import '../../application/project_help_session_private_zoom_action.dart';
 import '../../application/project_help_session_zoom_launcher.dart';
 import '../../application/project_help_sessions_providers.dart';
 import '../../data/models/project_help_session_models.dart';
 import '../l10n/project_help_sessions_l10n.dart';
 import '../widgets/detail/help_session_action_panel.dart';
+import '../widgets/detail/help_session_action_state.dart';
 import '../widgets/detail/help_session_detail_shell.dart';
 import '../widgets/detail/help_session_hero_header.dart';
 import '../widgets/detail/help_session_problem_section.dart';
@@ -22,8 +23,11 @@ import '../widgets/detail/help_session_status_copy.dart';
 import '../widgets/detail/help_session_terminal_state_card.dart';
 import '../widgets/detail/help_session_timeline_section.dart';
 import '../widgets/help_session_cancel_dialog.dart';
+import '../widgets/help_session_no_show_dialog.dart';
+import '../widgets/help_session_boundary_refresh.dart';
 import '../widgets/help_session_live_refresh.dart';
 import '../widgets/help_session_request_flow.dart';
+import '../widgets/help_session_status_utils.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 
@@ -40,7 +44,7 @@ class LearnerHelpSessionDetailPage extends ConsumerStatefulWidget {
 class _LearnerHelpSessionDetailPageState
     extends ConsumerState<LearnerHelpSessionDetailPage> {
   bool _joinInFlight = false;
-  bool _notebookInFlight = false;
+  bool _noShowInFlight = false;
 
   @override
   void initState() {
@@ -184,19 +188,24 @@ class _LearnerHelpSessionDetailPageState
     if (_joinInFlight || !actions.canJoin) {
       return;
     }
+    final authSnapshot = captureProjectHelpSessionAuthSnapshot(ref);
+    if (authSnapshot == null) {
+      return;
+    }
     setState(() => _joinInFlight = true);
     try {
-      final cachedJoinUrl = session.joinUrl?.trim();
-      final joinUrl = cachedJoinUrl != null && cachedJoinUrl.isNotEmpty
-          ? cachedJoinUrl
-          : (await ref.read(projectHelpSessionsApiProvider).joinZoom(session.id))
+      final joinUrl =
+          (await ref.read(projectHelpSessionsApiProvider).joinZoom(session.id))
               .joinUrl;
-      if (!mounted) {
+      if (!mounted ||
+          !projectHelpSessionAuthSnapshotIsCurrent(ref, authSnapshot)) {
         return;
       }
-      final launched = await launchProjectHelpSessionZoomUrl(joinUrl);
+      final launched = await ref.read(
+        projectHelpSessionZoomJoinLauncherProvider,
+      )(joinUrl);
       if (!launched && mounted) {
-        showHelpSessionZoomLaunchFailure(context, isStart: false);
+        showHelpSessionZoomLaunchFailure(context);
       }
     } catch (error) {
       if (mounted) {
@@ -209,93 +218,63 @@ class _LearnerHelpSessionDetailPageState
     }
   }
 
-  Future<void> _openNotebookNotes(ProjectHelpSession session) async {
-    if (_notebookInFlight ||
-        session.status != ProjectHelpSessionStatus.completed) {
+  Future<void> _reportNoShow(ProjectHelpSession session) async {
+    final state = resolveHelpSessionActionState(
+      session: session,
+      authorView: false,
+    );
+    if (_noShowInFlight || !state.canReportNoShow) {
       return;
     }
-    setState(() => _notebookInFlight = true);
-    Object? mutationError;
-    ProjectHelpSessionNotebookHandoff? handoff;
+    if (!await showHelpSessionNoShowDialog(context) || !mounted) {
+      return;
+    }
+    setState(() => _noShowInFlight = true);
     try {
-      final locale = Localizations.localeOf(context).languageCode;
-      handoff = await runProjectHelpSessionMutation(
-        () => ref
+      await _runLearnerSessionMutation(
+        session: session,
+        mutate: () => ref
             .read(projectHelpSessionActionControllerProvider.notifier)
-            .ensureNotebookNotes(sessionId: session.id, localeCode: locale),
+            .reportAuthorNoShow(session.id),
+        recoveryMatches: (updated) => updated.noShowReportedAt != null,
       );
-    } on ProjectHelpSessionMutationFailure catch (failure) {
-      mutationError = failure.error;
     } finally {
       if (mounted) {
-        setState(() => _notebookInFlight = false);
+        setState(() => _noShowInFlight = false);
       }
     }
-    if (!mounted) {
-      return;
-    }
-    if (mutationError != null) {
-      await handleHelpSessionRequestError(context, mutationError);
-      return;
-    }
-    if (handoff == null) {
-      return;
-    }
-    try {
-      context.go(
-        learnerBuildNotebookRoute(
-          handoff.buildId,
-          pageId: handoff.pageId,
-        ),
-      );
-    } catch (error, stackTrace) {
-      if (kDebugMode) {
-        debugPrint('help-session notebook navigation failed: $error\n$stackTrace');
-      }
-    }
-  }
-
-  void _openNotebook(ProjectHelpSession session) {
-    context.go(learnerBuildNotebookRoute(session.build.id));
   }
 
   HelpSessionActionPanel _buildActionPanel(ProjectHelpSession session) {
     final actions = effectiveLearnerAllowedActions(session);
-
-    if (session.status == ProjectHelpSessionStatus.completed) {
-      return HelpSessionActionPanel(
-        title: ProjectHelpSessionsL10n.nextStep.resolve(context),
-        primary: HelpSessionActionSpec(
-          label: ProjectHelpSessionsL10n.addSessionNotesToNotebook.resolve(
-            context,
-          ),
-          onPressed: _notebookInFlight ? null : () => _openNotebookNotes(session),
-          inFlight: _notebookInFlight,
-        ),
-        secondary: [
-          HelpSessionActionSpec(
-            label: ProjectHelpSessionsL10n.openProjectNotebook.resolve(context),
-            onPressed: () => _openNotebook(session),
-          ),
-        ],
-      );
-    }
+    final actionState = resolveHelpSessionActionState(
+      session: session,
+      authorView: false,
+    );
 
     HelpSessionActionSpec? primary;
     final secondary = <HelpSessionActionSpec>[];
     final management = <HelpSessionActionSpec>[];
 
-    if (actions.canJoin) {
+    if (actionState.canJoin) {
       primary = HelpSessionActionSpec(
         label: ProjectHelpSessionsL10n.joinZoom.resolve(context),
         onPressed: _joinInFlight ? null : () => _join(session),
         inFlight: _joinInFlight,
       );
-    } else if (session.status == ProjectHelpSessionStatus.scheduled) {
+    } else if (actionState.showDisabledJoin) {
       primary = HelpSessionActionSpec(
         label: ProjectHelpSessionsL10n.joinZoom.resolve(context),
         onPressed: null,
-        disabledHint: ProjectHelpSessionsL10n.joinOpensLater.resolve(context),
+        disabledHint: session.joinAvailableAt == null
+            ? ProjectHelpSessionsL10n.joinOpensLater.resolve(context)
+            : ProjectHelpSessionsL10n.joinOpensAt(
+                formatHelpSessionDateTime(
+                  context,
+                  session.joinAvailableAt!,
+                  session.learnerTimeZone,
+                ),
+              ).resolve(context),
       );
     }
 
@@ -310,29 +289,22 @@ class _LearnerHelpSessionDetailPageState
           onPressed: actions.canRejectAlternative
               ? () => _rejectAlternative(session)
               : null,
-          destructive: true,
         ),
       );
     }
 
-    if (actions.canCancel &&
-        !actions.canRejectAlternative &&
-        session.status != ProjectHelpSessionStatus.alternativeProposed) {
-      management.add(
+    if (actionState.canReportNoShow) {
+      secondary.add(
         HelpSessionActionSpec(
-          label: ProjectHelpSessionsL10n.cancelRequest.resolve(context),
-          onPressed: () => _cancelSession(session),
+          label: ProjectHelpSessionsL10n.reportAuthorNoShow.resolve(context),
+          onPressed: _noShowInFlight ? null : () => _reportNoShow(session),
+          inFlight: _noShowInFlight,
+          warning: true,
         ),
       );
-    } else if (actions.canCancel &&
-        session.status == ProjectHelpSessionStatus.alternativeProposed) {
-      management.add(
-        HelpSessionActionSpec(
-          label: ProjectHelpSessionsL10n.cancelRequest.resolve(context),
-          onPressed: () => _cancelSession(session),
-        ),
-      );
-    } else if (actions.canCancel) {
+    }
+
+    if (actionState.canCancel) {
       management.add(
         HelpSessionActionSpec(
           label: ProjectHelpSessionsL10n.cancelRequest.resolve(context),
@@ -369,6 +341,16 @@ class _LearnerHelpSessionDetailPageState
           ? ProjectHelpSessionsL10n.sessionManagement.resolve(context)
           : null,
       progressChild: progressChild,
+      notices: [
+        if (actionState.showNoShowHint)
+          ProjectHelpSessionsL10n.noShowWindowHint.resolve(context),
+        if (actionState.noShowReported)
+          ProjectHelpSessionsL10n.noShowReported.resolve(context),
+        if (actionState.isResolutionWindow)
+          ProjectHelpSessionsL10n.resolutionWindowAutoCloseHint.resolve(
+            context,
+          ),
+      ],
     );
   }
 
@@ -386,22 +368,22 @@ class _LearnerHelpSessionDetailPageState
                 session.status == ProjectHelpSessionStatus.alternativeProposed,
           ),
         if (session.selectedStartsAt != null &&
-            session.status != ProjectHelpSessionStatus.pending)
-          ...[
-            const SizedBox(height: AppSpacing.md),
-            HelpSessionSelectedTimeCard(
-              session: session,
-              joinAvailableAt: session.joinAvailableAt,
-              joinClosesAt: session.joinClosesAt,
-              availabilityNote: session.status == ProjectHelpSessionStatus.scheduled &&
-                      !session.allowedActions.canJoin
-                  ? ProjectHelpSessionsL10n.joinOpensLater.resolve(context)
-                  : session.status == ProjectHelpSessionStatus.schedulingFailed
-                      ? ProjectHelpSessionsL10n.zoomDelayedBody.resolve(context)
-                      : null,
-              emphasize: session.status == ProjectHelpSessionStatus.scheduled,
-            ),
-          ],
+            session.status != ProjectHelpSessionStatus.pending) ...[
+          const SizedBox(height: AppSpacing.md),
+          HelpSessionSelectedTimeCard(
+            session: session,
+            joinAvailableAt: session.joinAvailableAt,
+            joinClosesAt: session.joinClosesAt,
+            availabilityNote:
+                session.status == ProjectHelpSessionStatus.scheduled &&
+                    !session.allowedActions.canJoin
+                ? ProjectHelpSessionsL10n.joinOpensLater.resolve(context)
+                : session.status == ProjectHelpSessionStatus.schedulingFailed
+                ? ProjectHelpSessionsL10n.zoomDelayedBody.resolve(context)
+                : null,
+            emphasize: session.status == ProjectHelpSessionStatus.scheduled,
+          ),
+        ],
         const SizedBox(height: AppSpacing.md),
         HelpSessionTimelineSection(session: session),
       ],
@@ -410,8 +392,9 @@ class _LearnerHelpSessionDetailPageState
 
   @override
   Widget build(BuildContext context) {
-    final sessionAsync =
-        ref.watch(learnerHelpSessionDetailProvider(widget.sessionId));
+    final sessionAsync = ref.watch(
+      learnerHelpSessionDetailProvider(widget.sessionId),
+    );
 
     return sessionAsync.when(
       loading: () => HelpSessionDetailShell(
@@ -438,52 +421,69 @@ class _LearnerHelpSessionDetailPageState
           authorView: false,
         );
         final buildRoute = '/learning/${session.project.id}/build';
-        final isTerminal = session.status == ProjectHelpSessionStatus.declined ||
+        final isTerminal =
+            session.status == ProjectHelpSessionStatus.declined ||
             session.status == ProjectHelpSessionStatus.cancelled ||
             session.status == ProjectHelpSessionStatus.completed;
+
+        final actionState = resolveHelpSessionActionState(
+          session: session,
+          authorView: false,
+        );
+        final boundaryAt = switch (actionState.phase) {
+          HelpSessionActionPhase.beforeJoinWindow => session.joinAvailableAt,
+          HelpSessionActionPhase.joinWindowActive => session.joinClosesAt,
+          HelpSessionActionPhase.afterJoinWindow => session.autoFinalizeAt,
+          _ => null,
+        };
 
         return HelpSessionLiveRefresh(
           sessionId: widget.sessionId,
           authorView: false,
           status: session.status,
-          child: HelpSessionDetailShell(
-          homeRoute: learnerHelpSessionsRoute,
-          listTitle: ProjectHelpSessionsL10n.listTitle.resolve(context),
-          backRoute: learnerHelpSessionsRoute,
-          buildRoute: buildRoute,
-          buildRouteLabel: ProjectHelpSessionsL10n.backToProject.resolve(context),
-          isLoading: false,
-          isError: false,
-          onRetry: _refresh,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              HelpSessionHeroHeader(
-                session: session,
-                role: HelpSessionDetailRole.learner,
+          child: HelpSessionBoundaryRefresh(
+            boundaryAt: boundaryAt,
+            isBoundaryReached: false,
+            onBoundary: () => ref.invalidate(
+              learnerHelpSessionDetailProvider(widget.sessionId),
+            ),
+            child: HelpSessionDetailShell(
+              homeRoute: learnerHelpSessionsRoute,
+              listTitle: ProjectHelpSessionsL10n.listTitle.resolve(context),
+              backRoute: learnerHelpSessionsRoute,
+              buildRoute: buildRoute,
+              buildRouteLabel: ProjectHelpSessionsL10n.backToProject.resolve(
+                context,
               ),
-              const SizedBox(height: AppSpacing.md),
-              if (isTerminal)
-                HelpSessionTerminalStateCard(
-                  session: session,
-                  viewerIsLearner: true,
-                  onBackToBuild: session.status == ProjectHelpSessionStatus.declined
-                      ? () => context.go(buildRoute)
-                      : null,
-                )
-              else
-                HelpSessionDetailLayout(
-                  main: _buildMainContent(session),
-                  sidebar: _buildActionPanel(session),
-                ),
-              if (isTerminal &&
-                  session.status == ProjectHelpSessionStatus.completed) ...[
-                const SizedBox(height: AppSpacing.md),
-                _buildActionPanel(session),
-              ],
-            ],
+              isLoading: false,
+              isError: false,
+              onRetry: _refresh,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  HelpSessionHeroHeader(
+                    session: session,
+                    role: HelpSessionDetailRole.learner,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  if (isTerminal)
+                    HelpSessionTerminalStateCard(
+                      session: session,
+                      viewerIsLearner: true,
+                      onBackToBuild:
+                          session.status == ProjectHelpSessionStatus.declined
+                          ? () => context.go(buildRoute)
+                          : null,
+                    )
+                  else
+                    HelpSessionDetailLayout(
+                      main: _buildMainContent(session),
+                      sidebar: _buildActionPanel(session),
+                    ),
+                ],
+              ),
+            ),
           ),
-        ),
         );
       },
     );

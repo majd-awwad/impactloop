@@ -19,18 +19,18 @@ import 'package:frontend/features/learning_hub/domain/models/project_build.dart'
 class _AuthorAuth extends AuthController {
   @override
   AuthState build() => AuthState(
-        user: User(
-          id: 'author-1',
-          email: 'majd@learner.com',
-          displayName: 'Majd Learner',
-          accountStatus: 'ACTIVE',
-          activeRole: 'LEARNER',
-          roles: const ['LEARNER'],
-          createdAt: DateTime.utc(2026),
-        ),
-        accessToken: 'token',
-        hasBootstrapped: true,
-      );
+    user: User(
+      id: 'author-1',
+      email: 'majd@learner.com',
+      displayName: 'Majd Learner',
+      accountStatus: 'ACTIVE',
+      activeRole: 'LEARNER',
+      roles: const ['LEARNER'],
+      createdAt: DateTime.utc(2026),
+    ),
+    accessToken: 'token',
+    hasBootstrapped: true,
+  );
 }
 
 final _slot1 = DateTime.utc(2026, 8, 7, 7);
@@ -39,21 +39,21 @@ ProjectHelpSession _session({
   ProjectHelpSessionStatus status = ProjectHelpSessionStatus.pending,
   ProjectHelpSessionAuthorAllowedActions authorAllowedActions =
       const ProjectHelpSessionAuthorAllowedActions(
-    canAcceptOption: true,
-    canProposeAlternative: true,
-    canDecline: true,
-    canCancel: true,
-    canStart: false,
-    canRetryZoom: false,
-    canComplete: false,
-  ),
+        canAcceptOption: true,
+        canProposeAlternative: true,
+        canDecline: true,
+        canCancel: true,
+        canJoin: false,
+        canRetryZoom: false,
+        canComplete: false,
+      ),
   ProjectHelpSessionLearnerAllowedActions learnerAllowedActions =
       const ProjectHelpSessionLearnerAllowedActions(
-    canAcceptAlternative: false,
-    canRejectAlternative: false,
-    canCancel: true,
-    canJoin: false,
-  ),
+        canAcceptAlternative: false,
+        canRejectAlternative: false,
+        canCancel: true,
+        canJoin: false,
+      ),
   ProjectHelpSessionCancelledByRole? cancelledByRole,
   List<ProjectHelpSessionTimeOption>? timeOptions,
   DateTime? selectedStartsAt,
@@ -67,7 +67,10 @@ ProjectHelpSession _session({
       id: 'project-1',
       title: 'Fabric Pencil Case',
     ),
-    build: const ProjectHelpSessionBuildSummary(id: 'build-1', attemptNumber: 1),
+    build: const ProjectHelpSessionBuildSummary(
+      id: 'build-1',
+      attemptNumber: 1,
+    ),
     learner: const ProjectHelpSessionUserSummary(
       id: 'learner-1',
       displayName: 'Majd Learner',
@@ -79,7 +82,8 @@ ProjectHelpSession _session({
     problemDescription: 'Need help with the fabric layout.',
     durationMinutes: 15,
     learnerTimeZone: 'Asia/Hebron',
-    timeOptions: timeOptions ??
+    timeOptions:
+        timeOptions ??
         [
           ProjectHelpSessionTimeOption(
             id: 'opt-1',
@@ -102,23 +106,6 @@ ProjectHelpSession _session({
     cancelledAt: cancelledByRole != null ? DateTime.utc(2026, 8, 7) : null,
     cancellationReason: cancelledByRole != null ? 'Changed plans' : null,
   );
-}
-
-class _FakeAcceptController extends ProjectHelpSessionActionController {
-  _FakeAcceptController(this.onAccept);
-
-  final Future<ProjectHelpSession?> Function({
-    required String sessionId,
-    required String timeOptionId,
-  }) onAccept;
-
-  @override
-  Future<ProjectHelpSession?> acceptOption({
-    required String sessionId,
-    required String timeOptionId,
-  }) {
-    return onAccept(sessionId: sessionId, timeOptionId: timeOptionId);
-  }
 }
 
 class _FakeCancelController extends ProjectHelpSessionActionController {
@@ -236,20 +223,24 @@ void main() {
         selectedTimeOptionId: 'opt-1',
         selectedStartsAt: _slot1,
       );
-      container.read(projectHelpSessionCanonicalCacheProvider.notifier).put(
-            scheduled,
-            authorView: true,
-          );
+      container
+          .read(projectHelpSessionCanonicalCacheProvider.notifier)
+          .put(scheduled, authorView: true);
       expect(
-        container.read(projectHelpSessionCanonicalCacheProvider)[
-            helpSessionCanonicalCacheKey('session-1', authorView: true)]?.status,
+        container
+            .read(
+              projectHelpSessionCanonicalCacheProvider,
+            )[helpSessionCanonicalCacheKey('session-1', authorView: true)]
+            ?.status,
         ProjectHelpSessionStatus.scheduled,
       );
-      container.read(activeHelpSessionByBuildCacheProvider.notifier).apply(
-            scheduled,
-          );
+      container
+          .read(activeHelpSessionByBuildCacheProvider.notifier)
+          .apply(scheduled);
       expect(
-        container.read(activeHelpSessionByBuildCacheProvider)['build-1']?.status,
+        container
+            .read(activeHelpSessionByBuildCacheProvider)['build-1']
+            ?.status,
         ProjectHelpSessionStatus.scheduled,
       );
     });
@@ -262,7 +253,7 @@ void main() {
           canProposeAlternative: false,
           canDecline: false,
           canCancel: true,
-          canStart: false,
+          canJoin: false,
           canRetryZoom: false,
           canComplete: false,
         ),
@@ -282,7 +273,7 @@ void main() {
           canProposeAlternative: false,
           canDecline: false,
           canCancel: true,
-          canStart: true,
+          canJoin: true,
           canRetryZoom: false,
           canComplete: false,
         ),
@@ -294,28 +285,28 @@ void main() {
         _wrap(
           const CreatorHelpSessionDetailPage(sessionId: 'session-1'),
           overrides: [
-            authorHelpSessionDetailProvider('session-1').overrideWith(
-              (ref) async => _session(),
-            ),
+            authorHelpSessionDetailProvider(
+              'session-1',
+            ).overrideWith((ref) async => _session()),
           ],
         ),
       );
       await tester.pumpAndSettle();
       expect(find.text('Pending'), findsWidgets);
 
-      final element = tester.element(
-        find.byType(CreatorHelpSessionDetailPage),
-      );
+      final element = tester.element(find.byType(CreatorHelpSessionDetailPage));
       final container = ProviderScope.containerOf(element);
-      container.read(projectHelpSessionCanonicalCacheProvider.notifier).put(
-            scheduled,
-            authorView: true,
-          );
+      container
+          .read(projectHelpSessionCanonicalCacheProvider.notifier)
+          .put(scheduled, authorView: true);
       await tester.pump();
 
       expect(find.text('Scheduled'), findsWidgets);
       expect(find.text('Accept selected time'), findsNothing);
-      expect(find.text('Something went wrong. Please try again.'), findsNothing);
+      expect(
+        find.text('Something went wrong. Please try again.'),
+        findsNothing,
+      );
     });
 
     testWidgets('build section shows cached active session immediately', (
@@ -332,9 +323,9 @@ void main() {
                 allowedDurations: [15, 30],
               ),
             ),
-            activeHelpSessionForBuildProvider('build-1').overrideWith(
-              (ref) async => null,
-            ),
+            activeHelpSessionForBuildProvider(
+              'build-1',
+            ).overrideWith((ref) async => null),
           ],
         ),
       );
@@ -343,9 +334,9 @@ void main() {
 
       final element = tester.element(find.byType(BuildHelpSessionSection));
       final container = ProviderScope.containerOf(element);
-      container.read(activeHelpSessionByBuildCacheProvider.notifier).apply(
-            pending,
-          );
+      container
+          .read(activeHelpSessionByBuildCacheProvider.notifier)
+          .apply(pending);
       await tester.pump();
 
       expect(find.text('Send session request'), findsNothing);
@@ -370,9 +361,9 @@ void main() {
         _wrap(
           const CreatorHelpSessionDetailPage(sessionId: 'session-1'),
           overrides: [
-            authorHelpSessionDetailProvider('session-1').overrideWith(
-              (ref) async => _session(),
-            ),
+            authorHelpSessionDetailProvider(
+              'session-1',
+            ).overrideWith((ref) async => _session()),
           ],
         ),
       );
@@ -382,20 +373,24 @@ void main() {
         find.text('Select one of the proposed times to enable acceptance.'),
         findsNothing,
       );
-      expect(find.widgetWithText(FilledButton, 'Accept selected time'), findsOneWidget);
+      expect(
+        find.widgetWithText(FilledButton, 'Accept selected time'),
+        findsOneWidget,
+      );
       final button = tester.widget<FilledButton>(
         find.widgetWithText(FilledButton, 'Accept selected time'),
       );
       expect(button.onPressed, isNotNull);
     });
 
-    testWidgets('completeLearnerHelpSessionCancel recovers server-side cancel', (
-      tester,
-    ) async {
-      final container = ProviderContainer(
-        overrides: [
-          learnerHelpSessionDetailProvider('session-1').overrideWith(
-            (ref) async {
+    testWidgets(
+      'completeLearnerHelpSessionCancel recovers server-side cancel',
+      (tester) async {
+        final container = ProviderContainer(
+          overrides: [
+            learnerHelpSessionDetailProvider('session-1').overrideWith((
+              ref,
+            ) async {
               if (_cancelRecoveryReady) {
                 return _session(
                   status: ProjectHelpSessionStatus.cancelled,
@@ -404,43 +399,46 @@ void main() {
                 );
               }
               return _session();
-            },
-          ),
-          projectHelpSessionActionControllerProvider.overrideWith(
-            _RecoveringCancelController.new,
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
+            }),
+            projectHelpSessionActionControllerProvider.overrideWith(
+              _RecoveringCancelController.new,
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      late WidgetRef widgetRef;
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: Consumer(
-            builder: (context, ref, _) {
-              widgetRef = ref;
-              return const SizedBox.shrink();
-            },
+        late WidgetRef widgetRef;
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: Consumer(
+              builder: (context, ref, _) {
+                widgetRef = ref;
+                return const SizedBox.shrink();
+              },
+            ),
           ),
-        ),
-      );
+        );
 
-      final result = await completeLearnerHelpSessionCancel(
-        ref: widgetRef,
-        sessionId: 'session-1',
-        mutate: () => widgetRef
-            .read(projectHelpSessionActionControllerProvider.notifier)
-            .cancelSession(sessionId: 'session-1'),
-      );
+        final result = await completeLearnerHelpSessionCancel(
+          ref: widgetRef,
+          sessionId: 'session-1',
+          mutate: () => widgetRef
+              .read(projectHelpSessionActionControllerProvider.notifier)
+              .cancelSession(sessionId: 'session-1'),
+        );
 
-      expect(result?.status, ProjectHelpSessionStatus.cancelled);
-      expect(
-        container.read(projectHelpSessionCanonicalCacheProvider)[
-            helpSessionCanonicalCacheKey('session-1', authorView: false)]?.status,
-        ProjectHelpSessionStatus.cancelled,
-      );
-    });
+        expect(result?.status, ProjectHelpSessionStatus.cancelled);
+        expect(
+          container
+              .read(
+                projectHelpSessionCanonicalCacheProvider,
+              )[helpSessionCanonicalCacheKey('session-1', authorView: false)]
+              ?.status,
+          ProjectHelpSessionStatus.cancelled,
+        );
+      },
+    );
 
     testWidgets('learner cancel recovers when server already cancelled', (
       tester,
@@ -449,26 +447,25 @@ void main() {
         _wrap(
           const LearnerHelpSessionDetailPage(sessionId: 'session-1'),
           overrides: [
-            learnerHelpSessionDetailProvider('session-1').overrideWith(
-              (ref) async {
-                if (_cancelRecoveryReady) {
-                  return _session(
-                    status: ProjectHelpSessionStatus.cancelled,
-                    cancelledByRole:
-                        ProjectHelpSessionCancelledByRole.learner,
-                    learnerAllowedActions:
-                        const ProjectHelpSessionLearnerAllowedActions(
-                      canAcceptAlternative: false,
-                      canRejectAlternative: false,
-                      canCancel: false,
-                      canJoin: false,
-                    ),
-                    updatedAt: DateTime.utc(2026, 8, 6, 12),
-                  );
-                }
-                return _session();
-              },
-            ),
+            learnerHelpSessionDetailProvider('session-1').overrideWith((
+              ref,
+            ) async {
+              if (_cancelRecoveryReady) {
+                return _session(
+                  status: ProjectHelpSessionStatus.cancelled,
+                  cancelledByRole: ProjectHelpSessionCancelledByRole.learner,
+                  learnerAllowedActions:
+                      const ProjectHelpSessionLearnerAllowedActions(
+                        canAcceptAlternative: false,
+                        canRejectAlternative: false,
+                        canCancel: false,
+                        canJoin: false,
+                      ),
+                  updatedAt: DateTime.utc(2026, 8, 6, 12),
+                );
+              }
+              return _session();
+            }),
             projectHelpSessionActionControllerProvider.overrideWith(
               _RecoveringCancelController.new,
             ),
@@ -491,13 +488,14 @@ void main() {
       );
     });
 
-    testWidgets('runProjectHelpSessionMutationWithRecovery recovers alternative propose', (
-      tester,
-    ) async {
-      final container = ProviderContainer(
-        overrides: [
-          authorHelpSessionDetailProvider('session-1').overrideWith(
-            (ref) async {
+    testWidgets(
+      'runProjectHelpSessionMutationWithRecovery recovers alternative propose',
+      (tester) async {
+        final container = ProviderContainer(
+          overrides: [
+            authorHelpSessionDetailProvider('session-1').overrideWith((
+              ref,
+            ) async {
               if (_cancelRecoveryReady) {
                 return _session(
                   status: ProjectHelpSessionStatus.alternativeProposed,
@@ -516,53 +514,53 @@ void main() {
                 );
               }
               return _session();
-            },
-          ),
-          projectHelpSessionActionControllerProvider.overrideWith(
-            _RecoveringProposeController.new,
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      late WidgetRef widgetRef;
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: Consumer(
-            builder: (context, ref, _) {
-              widgetRef = ref;
-              return const SizedBox.shrink();
-            },
-          ),
-        ),
-      );
-
-      final result = await runProjectHelpSessionMutationWithRecovery(
-        ref: widgetRef,
-        sessionId: 'session-1',
-        authorView: true,
-        mutate: () => widgetRef
-            .read(projectHelpSessionActionControllerProvider.notifier)
-            .proposeAlternative(
-              sessionId: 'session-1',
-              startsAtUtc: DateTime.utc(2026, 8, 8, 7),
+            }),
+            projectHelpSessionActionControllerProvider.overrideWith(
+              _RecoveringProposeController.new,
             ),
-        recoveryMatches: helpSessionRecoveryAlternativeProposed,
-      );
+          ],
+        );
+        addTearDown(container.dispose);
 
-      expect(result?.status, ProjectHelpSessionStatus.alternativeProposed);
-      expect(helpSessionHasAuthorAlternative(result!), isTrue);
-    });
+        late WidgetRef widgetRef;
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: Consumer(
+              builder: (context, ref, _) {
+                widgetRef = ref;
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+
+        final result = await runProjectHelpSessionMutationWithRecovery(
+          ref: widgetRef,
+          sessionId: 'session-1',
+          authorView: true,
+          mutate: () => widgetRef
+              .read(projectHelpSessionActionControllerProvider.notifier)
+              .proposeAlternative(
+                sessionId: 'session-1',
+                startsAtUtc: DateTime.utc(2026, 8, 8, 7),
+              ),
+          recoveryMatches: helpSessionRecoveryAlternativeProposed,
+        );
+
+        expect(result?.status, ProjectHelpSessionStatus.alternativeProposed);
+        expect(helpSessionHasAuthorAlternative(result!), isTrue);
+      },
+    );
 
     testWidgets('real API failure keeps cancel dialog open', (tester) async {
       await tester.pumpWidget(
         _wrap(
           const LearnerHelpSessionDetailPage(sessionId: 'session-1'),
           overrides: [
-            learnerHelpSessionDetailProvider('session-1').overrideWith(
-              (ref) async => _session(),
-            ),
+            learnerHelpSessionDetailProvider(
+              'session-1',
+            ).overrideWith((ref) async => _session()),
             projectHelpSessionActionControllerProvider.overrideWith(
               _FakeCancelController.new,
             ),
@@ -608,7 +606,10 @@ void main() {
       await tester.tap(find.text('Save settings'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Something went wrong. Please try again.'), findsNothing);
+      expect(
+        find.text('Something went wrong. Please try again.'),
+        findsNothing,
+      );
       expect(find.text('Help session settings saved.'), findsOneWidget);
     });
   });

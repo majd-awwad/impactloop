@@ -3,6 +3,7 @@ import { logger } from '../../observability/logger.js';
 import type { PoolClient } from 'pg';
 
 import { syncDueDriverTimeRemindersForActiveAssignments } from '../notifications/driver-notification-events.service.js';
+import { autoFinalizeDueProjectHelpSessionsBatch } from '../project-help-sessions/project-help-session-auto-finalization.service.js';
 import { expireDuePendingReservationsBatch } from './reservations.pending-expiry.repository.js';
 import { expireDueMissedPickupsBatch } from './reservations.missed-pickup-expiry.repository.js';
 import { escalateDueNoDriverDeliveriesBatch } from './reservations.no-driver-auto-escalation.repository.js';
@@ -49,6 +50,7 @@ export type ReservationLifecycleBatchResult = {
   missedPickupExpired: number;
   noDriverEscalated: number;
   assignedDriverEscalated: number;
+  projectHelpSessionsAutoCompleted: number;
   durationMs: number;
 };
 
@@ -190,6 +192,8 @@ export class ReservationLifecycleWorker {
             missedPickupExpired: result.missedPickupExpired,
             noDriverEscalated: result.noDriverEscalated,
             assignedDriverEscalated: result.assignedDriverEscalated,
+            projectHelpSessionsAutoCompleted:
+              result.projectHelpSessionsAutoCompleted,
           },
           'Reservation lifecycle batch completed',
         );
@@ -284,21 +288,36 @@ export class ReservationLifecycleWorker {
     const assignedDriverEscalated = await escalateDueAssignedDriverPickupsBatch(
       this.batchSize,
     );
+    const projectHelpSessionsAutoFinalized =
+      await autoFinalizeDueProjectHelpSessionsBatch(
+        this.batchSize,
+        new Date(this.now()),
+      );
 
     const transitionCount =
       pendingExpired.length +
       missedPickupExpired.length +
       noDriverEscalated.length +
-      assignedDriverEscalated.length;
+      assignedDriverEscalated.length +
+      projectHelpSessionsAutoFinalized.transitionCount;
+
+    const dueCount =
+      pendingExpired.length +
+      missedPickupExpired.length +
+      noDriverEscalated.length +
+      assignedDriverEscalated.length +
+      projectHelpSessionsAutoFinalized.dueCount;
 
     return {
-      dueCount: transitionCount,
-      processedCount: transitionCount,
+      dueCount,
+      processedCount: dueCount,
       transitionCount,
       pendingExpired: pendingExpired.length,
       missedPickupExpired: missedPickupExpired.length,
       noDriverEscalated: noDriverEscalated.length,
       assignedDriverEscalated: assignedDriverEscalated.length,
+      projectHelpSessionsAutoCompleted:
+        projectHelpSessionsAutoFinalized.transitionCount,
       durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
     };
   }

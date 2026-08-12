@@ -9,11 +9,17 @@ import '../../domain/models/learning_project.dart';
 import 'learning_project_card_layout.dart';
 import 'project_engagement_strip.dart';
 import 'project_material_coverage_chip.dart';
+import 'project_creator_identity.dart';
 
 class LearningProjectCard extends StatelessWidget {
-  const LearningProjectCard({super.key, required this.project});
+  const LearningProjectCard({
+    super.key,
+    required this.project,
+    this.showCreatorAttribution = true,
+  });
 
   final LearningProject project;
+  final bool showCreatorAttribution;
 
   @override
   Widget build(BuildContext context) {
@@ -22,88 +28,101 @@ class LearningProjectCard extends StatelessWidget {
 
     return SizedBox(
       height: LearningProjectCardLayout.gridCardHeight,
-      child: InkWell(
-        borderRadius: AppRadius.lgAll,
-        onTap: () => context.push('/learning/${project.id}'),
-        child: Container(
-          decoration: BoxDecoration(
-            color: palette.cardSurface,
-            borderRadius: AppRadius.lgAll,
-            border: Border.all(color: palette.borderSubtle),
-            boxShadow: [
-              BoxShadow(
-                color: palette.cardShadow.withValues(alpha: 0.08),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _ProjectCardHeader(project: project),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _ProjectTitleRow(project: project),
-                      const SizedBox(height: AppSpacing.sm),
-                      Expanded(
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: palette.cardSurface,
+          borderRadius: AppRadius.lgAll,
+          border: Border.all(color: palette.borderSubtle),
+          boxShadow: [
+            BoxShadow(
+              color: palette.cardShadow.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: InkWell(
+                onTap: () => context.push('/learning/${project.id}'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _ProjectCardHeader(project: project),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.all(AppSpacing.md),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              project.summary.resolve(context),
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: palette.textSecondary,
-                                height: 1.35,
-                              ),
-                              textAlign: TextAlign.start,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const Spacer(),
-                            Wrap(
-                              spacing: AppSpacing.sm,
-                              runSpacing: AppSpacing.xs,
-                              children: [
-                                _ProjectMetaChip(
-                                  label: project.category.resolve(context),
-                                ),
-                                _ProjectMetaChip(
-                                  label: project.duration.resolve(context),
-                                ),
-                                if (project.componentCountLabel.en
-                                    .trim()
-                                    .isNotEmpty)
-                                  _ProjectMetaChip(
-                                    label: project.componentCountLabel.resolve(
-                                      context,
-                                    ),
-                                  ),
-                              ],
-                            ),
+                            _ProjectTitleRow(project: project),
                             const SizedBox(height: AppSpacing.sm),
-                            ProjectMaterialCoverageChip(
-                              project: project,
-                              compact: true,
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            ProjectEngagementStrip(
-                              project: project,
-                              density: ProjectEngagementDensity.compact,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    project.summary.resolve(context),
+                                    style: textTheme.bodyMedium?.copyWith(
+                                      color: palette.textSecondary,
+                                      height: 1.35,
+                                    ),
+                                    textAlign: TextAlign.start,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const Spacer(),
+                                  Wrap(
+                                    spacing: AppSpacing.sm,
+                                    runSpacing: AppSpacing.xs,
+                                    children: [
+                                      _ProjectMetaChip(
+                                        label: project.category.resolve(
+                                          context,
+                                        ),
+                                      ),
+                                      _ProjectMetaChip(
+                                        label: project.duration.resolve(
+                                          context,
+                                        ),
+                                      ),
+                                      if (project.componentCountLabel.en
+                                          .trim()
+                                          .isNotEmpty)
+                                        _ProjectMetaChip(
+                                          label: project.componentCountLabel
+                                              .resolve(context),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  ProjectMaterialCoverageChip(
+                                    project: project,
+                                    compact: true,
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  ProjectEngagementStrip(
+                                    project: project,
+                                    density: ProjectEngagementDensity.compact,
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+            if (showCreatorAttribution)
+              if (project.creator case final creator?)
+                LearningProjectCreatorFooter(creator: creator),
+          ],
         ),
       ),
     );
@@ -450,6 +469,13 @@ class LearningProjectCompactCard extends StatelessWidget {
                         project: project,
                         density: ProjectEngagementDensity.compact,
                       ),
+                      if (project.creator case final creator?) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        LearningProjectCreatorFooter(
+                          creator: creator,
+                          compact: true,
+                        ),
+                      ],
                     ],
                   ),
                 ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/shared/widgets/entity_attribution_footer.dart';
 
 import 'package:frontend/shared/widgets/materials/app_material_card.dart';
 import 'package:frontend/shared/widgets/materials/material_condition_badge.dart';
@@ -124,6 +125,8 @@ void main() {
     );
 
     expect(find.text('Workshop One'), findsOneWidget);
+    expect(find.byType(EntityAttributionFooter), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
 
     await tester.tap(find.text('Workshop One'));
     await tester.pump();

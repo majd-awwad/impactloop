@@ -10042,4 +10042,67 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get homeLearningSpotlightLoadErrorSubtitle =>
       'الصفحة الرئيسية ما زالت متاحة. أعد المحاولة عندما يعمل واجهة برمجة مركز التعلم.';
+
+  @override
+  String get learningProjectCreator => 'صاحب المشروع';
+
+  @override
+  String get learningViewProfile => 'عرض الملف';
+
+  @override
+  String learningViewCreatorProfile(String name) {
+    return 'عرض الملف العام لـ $name';
+  }
+
+  @override
+  String get learningSearchProjectsHint =>
+      'ابحث بالعنوان أو الملخص أو المكوّن أو صاحب المشروع';
+
+  @override
+  String get publicUserPublishedProjects => 'المشاريع المنشورة';
+
+  @override
+  String get publicUserNoPublishedProjects => 'لا توجد مشاريع منشورة بعد';
+
+  @override
+  String get publicUserNoPublishedProjectsBody =>
+      'لم ينشر هذا المستخدم مشاريع عامة بعد.';
+
+  @override
+  String get publicUserSupplierActivity => 'نشاط المورد';
+
+  @override
+  String get publicUserViewSupplierProfile => 'عرض ملف المورد';
+
+  @override
+  String publicUserAvailableMaterials(int count) {
+    return '$count مواد متاحة';
+  }
+
+  @override
+  String get publicRoleLearner => 'متعلم';
+
+  @override
+  String get publicRoleSupplier => 'مورد';
+
+  @override
+  String get publicUserProfileUnavailable => 'الملف غير متاح';
+
+  @override
+  String get publicUserProfileUnavailableBody =>
+      'قد لا يكون هذا الملف العام متاحاً بعد الآن.';
+
+  @override
+  String get phsNewRequest => 'طلب جلسة مساعدة';
+
+  @override
+  String get phsChooseProject => 'اختر المشروع';
+
+  @override
+  String get phsSearchEligibleProjects => 'ابحث بعنوان المشروع أو اسم صاحبه';
+
+  @override
+  String phsByCreator(String name) {
+    return 'بواسطة $name';
+  }
 }

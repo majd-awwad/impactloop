@@ -7,68 +7,94 @@ import {
 } from './project-help-session.repository.js';
 import { computeProjectHelpSessionMeetingWindow } from './project-help-session-zoom-windows.js';
 import { getZoomMeetingProvider } from './zoom/zoom-meeting-provider.factory.js';
-import { isZoomError } from './zoom/zoom-errors.js';
 
 const notFoundHelpSession = () =>
+  new AppError('Help session not found.', 404, COMMON_ERROR_CODES.notFound);
+
+const invalidSessionState = () =>
   new AppError(
-    'Help session not found.',
-    404,
-    COMMON_ERROR_CODES.notFound,
+    'Help session is not in a valid state for this action.',
+    409,
+    'HELP_SESSION_INVALID_STATE',
   );
 
-const loadScheduledSessionForLearner = async (learnerId: string, sessionId: string) => {
+const zoomNotReady = () =>
+  new AppError('Zoom meeting is not ready.', 409, 'ZOOM_NOT_READY');
+
+const loadScheduledSessionForLearner = async (
+  learnerId: string,
+  sessionId: string,
+) => {
   const session = await findLearnerProjectHelpSessionDetail(sessionId, learnerId);
   if (!session) {
     throw notFoundHelpSession();
   }
-  if (session.status !== 'SCHEDULED' || !session.zoomJoinUrl || !session.selectedTimeOption) {
-    throw new AppError(
-      'Help session is not in a valid state for this action.',
-      409,
-      'HELP_SESSION_INVALID_STATE',
-    );
+  if (session.status !== 'SCHEDULED' || !session.selectedTimeOption) {
+    throw invalidSessionState();
+  }
+  if (!session.zoomJoinUrl) {
+    throw zoomNotReady();
   }
   return session;
 };
 
-const loadScheduledSessionForAuthor = async (authorId: string, sessionId: string) => {
+const loadScheduledSessionForAuthor = async (
+  authorId: string,
+  sessionId: string,
+) => {
   const session = await findAuthorProjectHelpSessionDetail(sessionId, authorId);
   if (!session) {
     throw notFoundHelpSession();
   }
-  if (session.status !== 'SCHEDULED' || !session.zoomMeetingId || !session.selectedTimeOption) {
-    throw new AppError(
-      'Help session is not in a valid state for this action.',
-      409,
-      'HELP_SESSION_INVALID_STATE',
-    );
+  if (session.status !== 'SCHEDULED' || !session.selectedTimeOption) {
+    throw invalidSessionState();
+  }
+  if (!session.zoomJoinUrl) {
+    throw zoomNotReady();
   }
   return session;
 };
 
 const assertMeetingWindow = (
-  session: { selectedTimeOption: { startsAt: Date } | null; durationMinutes: number },
-  input: { beforeCode: string; afterCode: string; now?: Date },
+  session: {
+    selectedTimeOption: { startsAt: Date } | null;
+    durationMinutes: number;
+  },
+  now?: Date,
 ) => {
   if (!session.selectedTimeOption) {
-    throw new AppError(
-      'Help session is not in a valid state for this action.',
-      409,
-      'HELP_SESSION_INVALID_STATE',
-    );
+    throw invalidSessionState();
   }
   const window = computeProjectHelpSessionMeetingWindow({
     startsAt: session.selectedTimeOption.startsAt,
     durationMinutes: session.durationMinutes,
-    now: input.now,
+    now,
   });
   if (window.isBeforeWindow) {
-    throw new AppError('Help session is not open yet.', 409, input.beforeCode);
+    throw new AppError(
+      'Help session is not open yet.',
+      409,
+      'SESSION_NOT_JOINABLE_YET',
+    );
   }
   if (window.isAfterWindow) {
-    throw new AppError('Help session window has closed.', 409, input.afterCode);
+    throw new AppError(
+      'Help session window has closed.',
+      409,
+      'SESSION_JOIN_WINDOW_CLOSED',
+    );
   }
 };
+
+const mapPrivateJoinCapability = (session: {
+  zoomJoinUrl: string | null;
+  selectedTimeOption: { startsAt: Date } | null;
+  durationMinutes: number;
+}) => ({
+  joinUrl: session.zoomJoinUrl!,
+  startsAt: session.selectedTimeOption!.startsAt.toISOString(),
+  durationMinutes: session.durationMinutes,
+});
 
 export const getLearnerProjectHelpSessionZoomJoin = async (
   learnerId: string,
@@ -76,48 +102,20 @@ export const getLearnerProjectHelpSessionZoomJoin = async (
   now?: Date,
 ) => {
   const session = await loadScheduledSessionForLearner(learnerId, sessionId);
-  assertMeetingWindow(session, {
-    beforeCode: 'SESSION_NOT_JOINABLE_YET',
-    afterCode: 'SESSION_JOIN_WINDOW_CLOSED',
-    now,
-  });
-
-  return {
-    joinUrl: session.zoomJoinUrl!,
-    startsAt: session.selectedTimeOption!.startsAt.toISOString(),
-    durationMinutes: session.durationMinutes,
-  };
+  assertMeetingWindow(session, now);
+  return mapPrivateJoinCapability(session);
 };
 
-export const getAuthorProjectHelpSessionZoomStart = async (
+export const getAuthorProjectHelpSessionZoomJoin = async (
   authorId: string,
   sessionId: string,
   now?: Date,
 ) => {
   const session = await loadScheduledSessionForAuthor(authorId, sessionId);
-  assertMeetingWindow(session, {
-    beforeCode: 'SESSION_NOT_STARTABLE_YET',
-    afterCode: 'SESSION_START_WINDOW_CLOSED',
-    now,
-  });
-
-  const provider = getZoomMeetingProvider();
-  try {
-    const startUrl = await provider.getFreshHostStartUrl(session.zoomMeetingId!);
-    return {
-      startUrl,
-      startsAt: session.selectedTimeOption!.startsAt.toISOString(),
-      durationMinutes: session.durationMinutes,
-    };
-  } catch (error) {
-    if (isZoomError(error) && error.code === 'ZOOM_MEETING_NOT_FOUND') {
-      throw new AppError('Zoom meeting was not found.', 404, 'ZOOM_MEETING_NOT_FOUND');
-    }
-    throw error;
-  }
+  assertMeetingWindow(session, now);
+  return mapPrivateJoinCapability(session);
 };
 
 export const deleteZoomMeetingForSession = async (meetingId: string) => {
-  const provider = getZoomMeetingProvider();
-  await provider.deleteMeeting(meetingId);
+  await getZoomMeetingProvider().deleteMeeting(meetingId);
 };

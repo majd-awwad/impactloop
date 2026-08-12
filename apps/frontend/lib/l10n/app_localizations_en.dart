@@ -10087,4 +10087,67 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get homeLearningSpotlightLoadErrorSubtitle =>
       'The home page is still available. Try again when the Learning Hub API is running.';
+
+  @override
+  String get learningProjectCreator => 'Project creator';
+
+  @override
+  String get learningViewProfile => 'View profile';
+
+  @override
+  String learningViewCreatorProfile(String name) {
+    return 'View the public profile for $name';
+  }
+
+  @override
+  String get learningSearchProjectsHint =>
+      'Search by title, summary, component, or creator';
+
+  @override
+  String get publicUserPublishedProjects => 'Published projects';
+
+  @override
+  String get publicUserNoPublishedProjects => 'No published projects yet';
+
+  @override
+  String get publicUserNoPublishedProjectsBody =>
+      'This user has not published any public projects yet.';
+
+  @override
+  String get publicUserSupplierActivity => 'Supplier activity';
+
+  @override
+  String get publicUserViewSupplierProfile => 'View supplier profile';
+
+  @override
+  String publicUserAvailableMaterials(int count) {
+    return '$count available materials';
+  }
+
+  @override
+  String get publicRoleLearner => 'Learner';
+
+  @override
+  String get publicRoleSupplier => 'Supplier';
+
+  @override
+  String get publicUserProfileUnavailable => 'Profile unavailable';
+
+  @override
+  String get publicUserProfileUnavailableBody =>
+      'This public profile may no longer be available.';
+
+  @override
+  String get phsNewRequest => 'Request help session';
+
+  @override
+  String get phsChooseProject => 'Choose a project';
+
+  @override
+  String get phsSearchEligibleProjects => 'Search by project title or creator';
+
+  @override
+  String phsByCreator(String name) {
+    return 'By $name';
+  }
 }

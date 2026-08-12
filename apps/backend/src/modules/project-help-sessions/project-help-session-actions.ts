@@ -30,6 +30,8 @@ export type ProjectHelpSessionLearnerAllowedActions = {
 
   canJoin: boolean;
 
+  canReportNoShow: boolean;
+
 };
 
 
@@ -44,7 +46,9 @@ export type ProjectHelpSessionAuthorAllowedActions = {
 
   canCancel: boolean;
 
-  canStart: boolean;
+  canJoin: boolean;
+
+  canReportNoShow: boolean;
 
   canRetryZoom: boolean;
 
@@ -82,6 +86,10 @@ export const deriveProjectHelpSessionMeetingState = (
 
       inWindow: false,
 
+      isBeforeWindow: false,
+
+      isAfterWindow: false,
+
     };
 
   }
@@ -110,6 +118,10 @@ export const deriveProjectHelpSessionMeetingState = (
 
     inWindow: window.isJoinable,
 
+    isBeforeWindow: window.isBeforeWindow,
+
+    isAfterWindow: window.isAfterWindow,
+
   };
 
 };
@@ -130,9 +142,11 @@ export const deriveProjectHelpSessionAllowedActions = (
 
   | ProjectHelpSessionAuthorAllowedActions => {
 
-  const canCancel = isProjectHelpSessionCancellableStatus(session.status);
-
   const meetingState = deriveProjectHelpSessionMeetingState(session, now);
+
+  const canCancel =
+    isProjectHelpSessionCancellableStatus(session.status) &&
+    (session.status !== 'SCHEDULED' || meetingState.isBeforeWindow);
 
   const completionState = deriveProjectHelpSessionCompletionState(session, now);
 
@@ -149,6 +163,12 @@ export const deriveProjectHelpSessionAllowedActions = (
       canCancel,
 
       canJoin: meetingState.meetingReady && meetingState.inWindow,
+
+      canReportNoShow:
+        session.status === 'SCHEDULED' &&
+        meetingState.isAfterWindow &&
+        (session.autoFinalizeAt === null || now < session.autoFinalizeAt) &&
+        session.learnerReportedAuthorNoShowAt === null,
 
     };
 
@@ -168,7 +188,13 @@ export const deriveProjectHelpSessionAllowedActions = (
 
     canCancel,
 
-    canStart: meetingState.meetingReady && meetingState.inWindow,
+    canJoin: meetingState.meetingReady && meetingState.inWindow,
+
+    canReportNoShow:
+      session.status === 'SCHEDULED' &&
+      meetingState.isAfterWindow &&
+      (session.autoFinalizeAt === null || now < session.autoFinalizeAt) &&
+      session.authorReportedLearnerNoShowAt === null,
 
     canRetryZoom: session.status === 'SCHEDULING_FAILED',
 

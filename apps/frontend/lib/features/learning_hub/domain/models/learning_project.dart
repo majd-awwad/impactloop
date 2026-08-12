@@ -113,6 +113,7 @@ class LearningProject {
     this.materialCoverage,
     this.personalBuildReadiness,
     this.componentCoverage = const <ProjectComponentCoverageItem>[],
+    this.creator,
   });
 
   final String id;
@@ -147,6 +148,7 @@ class LearningProject {
   final ProjectMaterialCoverageSummary? materialCoverage;
   final ProjectPersonalBuildReadiness? personalBuildReadiness;
   final List<ProjectComponentCoverageItem> componentCoverage;
+  final LearningProjectCreator? creator;
 
   LearningProject copyWith({
     int? likesCount,
@@ -192,6 +194,19 @@ class LearningProject {
       materialCoverage: materialCoverage,
       personalBuildReadiness: personalBuildReadiness,
       componentCoverage: componentCoverage,
+      creator: creator,
     );
   }
+}
+
+class LearningProjectCreator {
+  const LearningProjectCreator({
+    required this.id,
+    required this.displayName,
+    this.avatarUrl,
+  });
+
+  final String id;
+  final String displayName;
+  final String? avatarUrl;
 }

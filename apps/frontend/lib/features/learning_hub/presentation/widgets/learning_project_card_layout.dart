@@ -5,8 +5,8 @@ class LearningProjectCardLayout {
   const LearningProjectCardLayout._();
 
   static const double coverHeight = 168;
-  static const double gridCardHeight = 436;
-  static const double compactCardHeight = 156;
+  static const double gridCardHeight = 484;
+  static const double compactCardHeight = 188;
   static const double compactImageWidth = 112;
 
   static int columnsForWidth(double width) {

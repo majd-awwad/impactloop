@@ -286,8 +286,9 @@ void main() {
               _LivingAuthorSessionApi(),
             ),
             authorHelpSessionDetailProvider('session-author-1').overrideWith(
-              (ref) async => _LivingAuthorSessionApi()
-                  .fetchAuthorSession('session-author-1'),
+              (ref) async => _LivingAuthorSessionApi().fetchAuthorSession(
+                'session-author-1',
+              ),
             ),
           ],
           child: MaterialApp.router(
@@ -318,10 +319,7 @@ void main() {
       await pumpNotifications(tester);
       await tester.tap(find.text('New help session request'));
       await tester.pumpAndSettle();
-      expect(
-        router.state.uri.path,
-        '/creator/help-sessions/session-author-1',
-      );
+      expect(router.state.uri.path, '/creator/help-sessions/session-author-1');
       expect(find.byType(CreatorHelpSessionDetailPage), findsOneWidget);
     });
 
@@ -334,10 +332,7 @@ void main() {
       await pumpNotifications(tester);
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
-      expect(
-        router.state.uri.path,
-        '/creator/help-sessions/session-author-1',
-      );
+      expect(router.state.uri.path, '/creator/help-sessions/session-author-1');
     });
 
     testWidgets('mark-read failure does not block navigation', (tester) async {
@@ -345,10 +340,7 @@ void main() {
       await pumpNotifications(tester);
       await tester.tap(find.text('New help session request'));
       await tester.pumpAndSettle();
-      expect(
-        router.state.uri.path,
-        '/creator/help-sessions/session-author-1',
-      );
+      expect(router.state.uri.path, '/creator/help-sessions/session-author-1');
     });
 
     testWidgets('no duplicate navigation occurs', (tester) async {
@@ -356,10 +348,7 @@ void main() {
       await tester.tap(find.text('New help session request'));
       await tester.tap(find.text('New help session request'));
       await tester.pumpAndSettle();
-      expect(
-        router.state.uri.path,
-        '/creator/help-sessions/session-author-1',
-      );
+      expect(router.state.uri.path, '/creator/help-sessions/session-author-1');
     });
 
     testWidgets('already-read notification still navigates', (tester) async {
@@ -385,8 +374,9 @@ void main() {
               _LivingAuthorSessionApi(),
             ),
             authorHelpSessionDetailProvider('session-author-1').overrideWith(
-              (ref) async => _LivingAuthorSessionApi()
-                  .fetchAuthorSession('session-author-1'),
+              (ref) async => _LivingAuthorSessionApi().fetchAuthorSession(
+                'session-author-1',
+              ),
             ),
           ],
           child: MaterialApp.router(
@@ -495,10 +485,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(orphanRouter.state.uri.path, '/creator/help-sessions');
       expect(find.byType(CreatorHelpSessionDetailPage), findsNothing);
-      expect(
-        find.text('The help session could not be found.'),
-        findsOneWidget,
-      );
+      expect(find.text('The help session could not be found.'), findsOneWidget);
     });
   });
 
@@ -559,28 +546,29 @@ void main() {
       expect(find.text('View help requests'), findsOneWidget);
     });
 
-    testWidgets('profile author quick action is visible with authored project', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            authorHelpSessionsEntryVisibleProvider.overrideWith(
-              (ref) async => true,
-            ),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: AuthorHelpSessionsQuickActionRow(
-                onOpen: (_, {refreshOnReturn = false}) {},
+    testWidgets(
+      'profile author quick action is visible with authored project',
+      (tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authorHelpSessionsEntryVisibleProvider.overrideWith(
+                (ref) async => true,
+              ),
+            ],
+            child: MaterialApp(
+              home: Scaffold(
+                body: AuthorHelpSessionsQuickActionRow(
+                  onOpen: (_, {refreshOnReturn = false}) {},
+                ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Project help requests'), findsOneWidget);
-    });
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Project help requests'), findsOneWidget);
+      },
+    );
 
     testWidgets('user without authored projects hides author quick action', (
       tester,
@@ -617,7 +605,10 @@ void main() {
           id: 'project-1',
           title: 'Electronic LED Dice',
         ),
-        build: const ProjectHelpSessionBuildSummary(id: 'build-1', attemptNumber: 1),
+        build: const ProjectHelpSessionBuildSummary(
+          id: 'build-1',
+          attemptNumber: 1,
+        ),
         learner: const ProjectHelpSessionUserSummary(
           id: 'learner-1',
           displayName: 'Israa Learner',
@@ -636,7 +627,7 @@ void main() {
           canProposeAlternative: true,
           canDecline: true,
           canCancel: true,
-          canStart: false,
+          canJoin: false,
           canRetryZoom: false,
           canComplete: false,
         ),
@@ -674,9 +665,9 @@ void main() {
                 totalPages: 1,
               ),
             ),
-            authorHelpSessionDetailProvider('session-author-1').overrideWith(
-              (ref) async => session,
-            ),
+            authorHelpSessionDetailProvider(
+              'session-author-1',
+            ).overrideWith((ref) async => session),
           ],
           child: MaterialApp.router(
             theme: AppTheme.light,
@@ -690,10 +681,7 @@ void main() {
       expect(find.text('Israa Learner'), findsWidgets);
       await tester.tap(find.byType(AuthorHelpSessionListCard));
       await tester.pumpAndSettle();
-      expect(
-        router.state.uri.path,
-        '/creator/help-sessions/session-author-1',
-      );
+      expect(router.state.uri.path, '/creator/help-sessions/session-author-1');
       expect(find.byType(CreatorHelpSessionDetailPage), findsOneWidget);
     });
 
@@ -748,18 +736,18 @@ void main() {
 class _AuthorAuth extends AuthController {
   @override
   AuthState build() => AuthState(
-        user: User(
-          id: 'author-1',
-          email: 'author@test.com',
-          displayName: 'Author',
-          accountStatus: 'ACTIVE',
-          activeRole: 'LEARNER',
-          roles: const ['LEARNER'],
-          createdAt: DateTime.utc(2026),
-        ),
-        accessToken: 'token',
-        hasBootstrapped: true,
-      );
+    user: User(
+      id: 'author-1',
+      email: 'author@test.com',
+      displayName: 'Author',
+      accountStatus: 'ACTIVE',
+      activeRole: 'LEARNER',
+      roles: const ['LEARNER'],
+      createdAt: DateTime.utc(2026),
+    ),
+    accessToken: 'token',
+    hasBootstrapped: true,
+  );
 }
 
 class _FixedUnreadCountNotifier extends NotificationUnreadCountNotifier {

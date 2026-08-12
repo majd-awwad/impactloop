@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_response.dart';
+import '../../../core/auth/auth_interceptor.dart';
 import 'models/project_help_session_models.dart';
 
 class ProjectHelpSessionsApi {
@@ -11,10 +12,18 @@ class ProjectHelpSessionsApi {
   static const _learnerSessionsPath = '/api/project-help-sessions/learner';
   static const _authorSessionsPath = '/api/project-help-sessions/author';
 
-  /// Zoom start/join can call the real Zoom API and exceed the default client timeout.
+  /// Provisioning retries can call the real Zoom API and exceed the default timeout.
   static final _zoomRequestOptions = Options(
     sendTimeout: const Duration(seconds: 60),
     receiveTimeout: const Duration(seconds: 60),
+  );
+
+  static final _privateZoomCapabilityRequestOptions = Options(
+    sendTimeout: const Duration(seconds: 60),
+    receiveTimeout: const Duration(seconds: 60),
+    // Private capability actions must never be replayed after an auth switch.
+    // A 401 is surfaced and the user may retry after re-authentication.
+    extra: const {AuthInterceptor.skipAuthRefreshExtraKey: true},
   );
 
   String _availabilityPath(String projectId) =>
@@ -27,6 +36,24 @@ class ProjectHelpSessionsApi {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>(_availabilityPath(projectId)),
       ProjectHelpSessionAvailability.fromJson,
+    );
+  }
+
+  Future<ProjectHelpSessionProjectOptionsResult> fetchProjectOptions({
+    String? query,
+    int page = 1,
+    int limit = 20,
+  }) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_learnerSessionsPath/project-options',
+        queryParameters: {
+          'page': page,
+          'limit': limit,
+          if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+        },
+      ),
+      ProjectHelpSessionProjectOptionsResult.fromJson,
     );
   }
 
@@ -49,10 +76,7 @@ class ProjectHelpSessionsApi {
     String? status,
     String? buildId,
   }) {
-    final queryParameters = <String, dynamic>{
-      'page': page,
-      'limit': limit,
-    };
+    final queryParameters = <String, dynamic>{'page': page, 'limit': limit};
     if (status != null) {
       queryParameters['status'] = status;
     }
@@ -112,9 +136,18 @@ class ProjectHelpSessionsApi {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '$_learnerSessionsPath/$sessionId/zoom/join',
-        options: _zoomRequestOptions,
+        options: _privateZoomCapabilityRequestOptions,
       ),
       ProjectHelpSessionJoinResult.fromJson,
+    );
+  }
+
+  Future<ProjectHelpSession> reportAuthorNoShow(String sessionId) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_learnerSessionsPath/$sessionId/no-show',
+      ),
+      ProjectHelpSession.fromJson,
     );
   }
 
@@ -144,10 +177,7 @@ class ProjectHelpSessionsApi {
     String? status,
     String? projectId,
   }) {
-    final queryParameters = <String, dynamic>{
-      'page': page,
-      'limit': limit,
-    };
+    final queryParameters = <String, dynamic>{'page': page, 'limit': limit};
     if (status != null) {
       queryParameters['status'] = status;
     }
@@ -234,13 +264,22 @@ class ProjectHelpSessionsApi {
     );
   }
 
-  Future<ProjectHelpSessionStartResult> startZoom(String sessionId) {
+  Future<ProjectHelpSessionJoinResult> joinAuthorZoom(String sessionId) {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
-        '$_authorSessionsPath/$sessionId/zoom/start',
-        options: _zoomRequestOptions,
+        '$_authorSessionsPath/$sessionId/zoom/join',
+        options: _privateZoomCapabilityRequestOptions,
       ),
-      ProjectHelpSessionStartResult.fromJson,
+      ProjectHelpSessionJoinResult.fromJson,
+    );
+  }
+
+  Future<ProjectHelpSession> reportLearnerNoShow(String sessionId) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_authorSessionsPath/$sessionId/no-show',
+      ),
+      ProjectHelpSession.fromJson,
     );
   }
 

@@ -40,7 +40,8 @@ class LearningHubApiMapper {
       projectId: _stringOrFallback(json['projectId'], fallback: ''),
       status: _mapBuildStatus(json['status']),
       attemptNumber: _intFromDynamic(json['attemptNumber']) ?? 1,
-      isReadOnly: json['isReadOnly'] == true ||
+      isReadOnly:
+          json['isReadOnly'] == true ||
           _mapBuildStatus(json['status']) == ProjectBuildStatus.completed ||
           _mapBuildStatus(json['status']) == ProjectBuildStatus.archived,
       startedAt: _dateTimeFromDynamic(json['startedAt']),
@@ -59,7 +60,9 @@ class LearningHubApiMapper {
           projectJson['shortDescription'],
           fallback: '',
         ),
-        coverImageUrl: _resolveMediaUrl(projectJson['coverImageUrl']?.toString()),
+        coverImageUrl: _resolveMediaUrl(
+          projectJson['coverImageUrl']?.toString(),
+        ),
       ),
       progress: ProjectBuildProgress(
         total: _intFromDynamic(progressJson['total']) ?? 0,
@@ -74,7 +77,8 @@ class LearningHubApiMapper {
         linked: _intFromDynamic(materialReadinessJson['linked']) ?? 0,
         reserved: _intFromDynamic(materialReadinessJson['reserved']) ?? 0,
         missing: _intFromDynamic(materialReadinessJson['missing']) ?? 0,
-        total: _intFromDynamic(materialReadinessJson['total']) ??
+        total:
+            _intFromDynamic(materialReadinessJson['total']) ??
             (_intFromDynamic(progressJson['total']) ?? 0),
       ),
       stepProgress: _mapBuildStepProgress(stepProgressJson),
@@ -105,10 +109,14 @@ class LearningHubApiMapper {
       conversationId: _stringOrFallback(conversationJson['id'], fallback: ''),
       buildContext: BuildGuideContext(
         buildId: _stringOrFallback(buildContextJson['buildId'], fallback: ''),
-        projectId:
-            _stringOrFallback(buildContextJson['projectId'], fallback: ''),
-        projectTitle:
-            _stringOrFallback(buildContextJson['projectTitle'], fallback: ''),
+        projectId: _stringOrFallback(
+          buildContextJson['projectId'],
+          fallback: '',
+        ),
+        projectTitle: _stringOrFallback(
+          buildContextJson['projectTitle'],
+          fallback: '',
+        ),
         buildStatus: _mapBuildStatus(buildContextJson['buildStatus']),
         materialReadiness: ProjectBuildMaterialReadiness(
           ready: _intFromDynamic(materialReadinessJson['ready']) ?? 0,
@@ -125,7 +133,10 @@ class LearningHubApiMapper {
                   fallback: '',
                 ),
                 stepNumber: _intFromDynamic(currentStepJson['stepNumber']) ?? 0,
-                title: _stringOrFallback(currentStepJson['title'], fallback: ''),
+                title: _stringOrFallback(
+                  currentStepJson['title'],
+                  fallback: '',
+                ),
               ),
         stepProgress: ProjectBuildStepProgressSummary(
           completed: _intFromDynamic(stepProgressJson['completed']) ?? 0,
@@ -150,7 +161,10 @@ class LearningHubApiMapper {
       currentStep: currentStepJson == null
           ? null
           : ProjectBuildCurrentStep(
-              stepId: _stringOrFallback(currentStepJson['stepId'], fallback: ''),
+              stepId: _stringOrFallback(
+                currentStepJson['stepId'],
+                fallback: '',
+              ),
               stepNumber: _intFromDynamic(currentStepJson['stepNumber']) ?? 0,
               title: _stringOrFallback(currentStepJson['title'], fallback: ''),
             ),
@@ -289,7 +303,9 @@ class LearningHubApiMapper {
       fallback: 'BEGINNER',
     );
     final durationMinutes = _intFromDynamic(json['estimatedDurationMinutes']);
-    final coverImageUrl = _resolveMediaUrl(_nullableString(json['coverImageUrl']));
+    final coverImageUrl = _resolveMediaUrl(
+      _nullableString(json['coverImageUrl']),
+    );
     final rating = _parseRatingSummary(json['ratingSummary']);
     final likesCount = _intFromDynamic(json['likesCount']) ?? 0;
     final isLiked = json['isLiked'] == true;
@@ -305,6 +321,9 @@ class LearningHubApiMapper {
     final viewerReview = includeDetailFields
         ? _mapProjectReview(json['viewerReview'])
         : null;
+    final creatorJson = _asMap(json['creator']);
+    final creatorId = _nullableString(creatorJson?['id']);
+    final creatorName = _nullableString(creatorJson?['displayName']);
 
     final requiredComponents = includeDetailFields
         ? _mapRequiredComponents(json['requiredComponents'])
@@ -381,6 +400,15 @@ class LearningHubApiMapper {
           ? null
           : ProjectPersonalBuildReadiness.fromJson(personalReadinessJson),
       componentCoverage: componentCoverage,
+      creator: creatorId == null || creatorName == null
+          ? null
+          : LearningProjectCreator(
+              id: creatorId,
+              displayName: creatorName,
+              avatarUrl: _resolveMediaUrl(
+                _nullableString(creatorJson?['avatarUrl']),
+              ),
+            ),
     );
   }
 
@@ -459,9 +487,7 @@ class LearningHubApiMapper {
         .toList(growable: false);
   }
 
-  static List<ProjectComponentCoverageItem> _mapComponentCoverage(
-    Object? raw,
-  ) {
+  static List<ProjectComponentCoverageItem> _mapComponentCoverage(Object? raw) {
     if (raw is! List) {
       return const [];
     }
@@ -794,7 +820,10 @@ class LearningHubApiMapper {
       _mapCompletionStory(raw);
 
   static ProjectBuildStatus _mapBuildStatus(Object? raw) {
-    return switch (_stringOrFallback(raw, fallback: 'IN_PROGRESS').toUpperCase()) {
+    return switch (_stringOrFallback(
+      raw,
+      fallback: 'IN_PROGRESS',
+    ).toUpperCase()) {
       'COMPLETED' => ProjectBuildStatus.completed,
       'ARCHIVED' => ProjectBuildStatus.archived,
       'PAUSED' => ProjectBuildStatus.paused,
@@ -1123,9 +1152,13 @@ class LearningHubApiMapper {
     final setupJson = _asMap(json['learningSetup']);
 
     return LearningSessionBundle(
-      session: sessionJson == null ? null : fromLearningSessionJson(sessionJson),
+      session: sessionJson == null
+          ? null
+          : fromLearningSessionJson(sessionJson),
       learningSetup: setupJson == null
-          ? const ProjectBuildLearningSetup(status: LearningSetupStatus.notRequested)
+          ? const ProjectBuildLearningSetup(
+              status: LearningSetupStatus.notRequested,
+            )
           : _mapLearningSetup(setupJson)!,
     );
   }
@@ -1153,9 +1186,8 @@ class LearningHubApiMapper {
           ? assignmentsJson
                 .whereType<Map>()
                 .map(
-                  (item) => _mapLearningAssignment(
-                    Map<String, dynamic>.from(item),
-                  ),
+                  (item) =>
+                      _mapLearningAssignment(Map<String, dynamic>.from(item)),
                 )
                 .toList(growable: false)
           : const <LearningAssignment>[],
@@ -1241,10 +1273,14 @@ class LearningHubApiMapper {
     return LearningAnswerAttempt(
       id: _stringOrFallback(json['id'], fallback: ''),
       attemptNumber: _intFromDynamic(json['attemptNumber']) ?? 1,
-      selectedOptionKey: _stringOrFallback(json['selectedOptionKey'], fallback: ''),
+      selectedOptionKey: _stringOrFallback(
+        json['selectedOptionKey'],
+        fallback: '',
+      ),
       isCorrect: json['isCorrect'] == true,
       submittedAt:
-          _dateTimeFromDynamic(json['submittedAt']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+          _dateTimeFromDynamic(json['submittedAt']) ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 
@@ -1275,7 +1311,9 @@ class LearningHubApiMapper {
     return fromStepLearningCheckJson(checkJson);
   }
 
-  static StepLearningCheck fromStepLearningCheckJson(Map<String, dynamic> json) {
+  static StepLearningCheck fromStepLearningCheckJson(
+    Map<String, dynamic> json,
+  ) {
     final questionJson = _asMap(json['question']) ?? const <String, dynamic>{};
     final attemptsJson = json['answerAttempts'];
     final latestResultJson = _asMap(json['latestResult']);

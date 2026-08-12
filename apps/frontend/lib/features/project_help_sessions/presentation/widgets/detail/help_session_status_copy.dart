@@ -21,16 +21,19 @@ class HelpSessionStatusCopy {
       ProjectHelpSessionStatus.pending =>
         role == HelpSessionDetailRole.learner
             ? (isArabic
-                ? 'بانتظار صاحب المشروع لاختيار موعد من الخيارات المقترحة.'
-                : 'Waiting for the project creator to choose a time from your proposed options.')
+                  ? 'بانتظار صاحب المشروع لاختيار موعد من الخيارات المقترحة.'
+                  : 'Waiting for the project creator to choose a time from your proposed options.')
             : (isArabic
-                ? 'اختر أحد المواعيد المقترحة أو اقترح بديلًا أو ارفض الطلب.'
-                : 'Choose one of the proposed times, suggest an alternative, or decline the request.'),
+                  ? 'اختر أحد المواعيد المقترحة أو اقترح بديلًا أو ارفض الطلب.'
+                  : 'Choose one of the proposed times, suggest an alternative, or decline the request.'),
       ProjectHelpSessionStatus.alternativeProposed =>
         role == HelpSessionDetailRole.learner
-            ? ProjectHelpSessionsL10n.creatorSuggestedDifferentTime
-                .resolve(context)
-            : ProjectHelpSessionsL10n.waitingLearnerAlternative.resolve(context),
+            ? ProjectHelpSessionsL10n.creatorSuggestedDifferentTime.resolve(
+                context,
+              )
+            : ProjectHelpSessionsL10n.waitingLearnerAlternative.resolve(
+                context,
+              ),
       ProjectHelpSessionStatus.zoomPending =>
         role == HelpSessionDetailRole.learner
             ? ProjectHelpSessionsL10n.meetingBeingPrepared.resolve(context)
@@ -42,11 +45,11 @@ class HelpSessionStatusCopy {
       ProjectHelpSessionStatus.scheduled =>
         role == HelpSessionDetailRole.learner
             ? (learnerActions.canJoin
-                ? ProjectHelpSessionsL10n.joinZoom.resolve(context)
-                : ProjectHelpSessionsL10n.joinOpensLater.resolve(context))
-            : (authorActions.canStart
-                ? ProjectHelpSessionsL10n.startZoom.resolve(context)
-                : ProjectHelpSessionsL10n.startZoomSoon.resolve(context)),
+                  ? ProjectHelpSessionsL10n.joinZoom.resolve(context)
+                  : ProjectHelpSessionsL10n.joinOpensLater.resolve(context))
+            : (authorActions.canJoin
+                  ? ProjectHelpSessionsL10n.joinZoom.resolve(context)
+                  : ProjectHelpSessionsL10n.joinOpensLater.resolve(context)),
       ProjectHelpSessionStatus.declined =>
         ProjectHelpSessionsL10n.declinedTitle.resolve(context),
       ProjectHelpSessionStatus.cancelled =>

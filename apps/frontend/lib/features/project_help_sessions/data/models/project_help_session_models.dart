@@ -1,3 +1,96 @@
+class ProjectHelpSessionProjectOptionCreator {
+  const ProjectHelpSessionProjectOptionCreator({
+    required this.id,
+    required this.displayName,
+    this.avatarUrl,
+  });
+
+  final String id;
+  final String displayName;
+  final String? avatarUrl;
+
+  factory ProjectHelpSessionProjectOptionCreator.fromJson(
+    Map<String, dynamic> json,
+  ) => ProjectHelpSessionProjectOptionCreator(
+    id: json['id']?.toString() ?? '',
+    displayName: json['displayName']?.toString() ?? '',
+    avatarUrl: json['avatarUrl']?.toString(),
+  );
+}
+
+class ProjectHelpSessionProjectOption {
+  const ProjectHelpSessionProjectOption({
+    required this.buildId,
+    required this.projectId,
+    required this.title,
+    required this.creator,
+    this.coverImageUrl,
+    this.difficulty,
+    this.estimatedDurationMinutes,
+  });
+
+  final String buildId;
+  final String projectId;
+  final String title;
+  final String? coverImageUrl;
+  final String? difficulty;
+  final int? estimatedDurationMinutes;
+  final ProjectHelpSessionProjectOptionCreator creator;
+
+  factory ProjectHelpSessionProjectOption.fromJson(Map<String, dynamic> json) {
+    final project =
+        (json['project'] as Map?)?.cast<String, dynamic>() ?? const {};
+    return ProjectHelpSessionProjectOption(
+      buildId: json['buildId']?.toString() ?? '',
+      projectId: project['id']?.toString() ?? '',
+      title: project['title']?.toString() ?? '',
+      coverImageUrl: project['coverImageUrl']?.toString(),
+      difficulty: project['difficulty']?.toString(),
+      estimatedDurationMinutes: (project['estimatedDurationMinutes'] as num?)
+          ?.toInt(),
+      creator: ProjectHelpSessionProjectOptionCreator.fromJson(
+        (project['creator'] as Map?)?.cast<String, dynamic>() ?? const {},
+      ),
+    );
+  }
+}
+
+class ProjectHelpSessionProjectOptionsResult {
+  const ProjectHelpSessionProjectOptionsResult({
+    required this.items,
+    required this.page,
+    required this.total,
+    required this.totalPages,
+  });
+
+  final List<ProjectHelpSessionProjectOption> items;
+  final int page;
+  final int total;
+  final int totalPages;
+
+  factory ProjectHelpSessionProjectOptionsResult.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    final pagination =
+        (json['pagination'] as Map?)?.cast<String, dynamic>() ?? const {};
+    return ProjectHelpSessionProjectOptionsResult(
+      items:
+          (json['items'] as List?)
+              ?.whereType<Map>()
+              .map(
+                (item) => ProjectHelpSessionProjectOption.fromJson(
+                  item.cast<String, dynamic>(),
+                ),
+              )
+              .toList(growable: false) ??
+          const [],
+      page: (pagination['page'] as num?)?.toInt() ?? 1,
+      total: (pagination['total'] as num?)?.toInt() ?? 0,
+      totalPages: (pagination['totalPages'] as num?)?.toInt() ?? 1,
+    );
+  }
+}
+
 class ProjectHelpSessionAvailability {
   const ProjectHelpSessionAvailability({
     required this.available,
@@ -55,25 +148,24 @@ enum ProjectHelpSessionStatus {
   }
 
   String get apiValue => switch (this) {
-        ProjectHelpSessionStatus.pending => 'PENDING',
-        ProjectHelpSessionStatus.alternativeProposed => 'ALTERNATIVE_PROPOSED',
-        ProjectHelpSessionStatus.zoomPending => 'ZOOM_PENDING',
-        ProjectHelpSessionStatus.schedulingFailed => 'SCHEDULING_FAILED',
-        ProjectHelpSessionStatus.scheduled => 'SCHEDULED',
-        ProjectHelpSessionStatus.declined => 'DECLINED',
-        ProjectHelpSessionStatus.cancelled => 'CANCELLED',
-        ProjectHelpSessionStatus.completed => 'COMPLETED',
-      };
+    ProjectHelpSessionStatus.pending => 'PENDING',
+    ProjectHelpSessionStatus.alternativeProposed => 'ALTERNATIVE_PROPOSED',
+    ProjectHelpSessionStatus.zoomPending => 'ZOOM_PENDING',
+    ProjectHelpSessionStatus.schedulingFailed => 'SCHEDULING_FAILED',
+    ProjectHelpSessionStatus.scheduled => 'SCHEDULED',
+    ProjectHelpSessionStatus.declined => 'DECLINED',
+    ProjectHelpSessionStatus.cancelled => 'CANCELLED',
+    ProjectHelpSessionStatus.completed => 'COMPLETED',
+  };
 
   bool get isActive => switch (this) {
-        ProjectHelpSessionStatus.pending ||
-        ProjectHelpSessionStatus.alternativeProposed ||
-        ProjectHelpSessionStatus.zoomPending ||
-        ProjectHelpSessionStatus.schedulingFailed ||
-        ProjectHelpSessionStatus.scheduled =>
-          true,
-        _ => false,
-      };
+    ProjectHelpSessionStatus.pending ||
+    ProjectHelpSessionStatus.alternativeProposed ||
+    ProjectHelpSessionStatus.zoomPending ||
+    ProjectHelpSessionStatus.schedulingFailed ||
+    ProjectHelpSessionStatus.scheduled => true,
+    _ => false,
+  };
 }
 
 enum ProjectHelpSessionTimeOptionType { learnerProposed, authorAlternative }
@@ -130,7 +222,8 @@ class ProjectHelpSessionTimeOption {
       type: typeValue == 'AUTHOR_ALTERNATIVE'
           ? ProjectHelpSessionTimeOptionType.authorAlternative
           : ProjectHelpSessionTimeOptionType.learnerProposed,
-      startsAt: _parseDate(json['startsAt']) ??
+      startsAt:
+          _parseDate(json['startsAt']) ??
           DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       proposedBy: ProjectHelpSessionUserSummary.fromJson(
         (json['proposedBy'] as Map?)?.cast<String, dynamic>() ?? const {},
@@ -145,12 +238,14 @@ class ProjectHelpSessionLearnerAllowedActions {
     required this.canRejectAlternative,
     required this.canCancel,
     required this.canJoin,
+    this.canReportNoShow = false,
   });
 
   final bool canAcceptAlternative;
   final bool canRejectAlternative;
   final bool canCancel;
   final bool canJoin;
+  final bool canReportNoShow;
 
   factory ProjectHelpSessionLearnerAllowedActions.fromJson(
     Map<String, dynamic> json,
@@ -160,6 +255,7 @@ class ProjectHelpSessionLearnerAllowedActions {
       canRejectAlternative: json['canRejectAlternative'] == true,
       canCancel: json['canCancel'] == true,
       canJoin: json['canJoin'] == true,
+      canReportNoShow: json['canReportNoShow'] == true,
     );
   }
 
@@ -168,6 +264,7 @@ class ProjectHelpSessionLearnerAllowedActions {
     canRejectAlternative: false,
     canCancel: false,
     canJoin: false,
+    canReportNoShow: false,
   );
 }
 
@@ -177,7 +274,8 @@ class ProjectHelpSessionAuthorAllowedActions {
     required this.canProposeAlternative,
     required this.canDecline,
     required this.canCancel,
-    required this.canStart,
+    required this.canJoin,
+    this.canReportNoShow = false,
     required this.canRetryZoom,
     required this.canComplete,
   });
@@ -186,7 +284,8 @@ class ProjectHelpSessionAuthorAllowedActions {
   final bool canProposeAlternative;
   final bool canDecline;
   final bool canCancel;
-  final bool canStart;
+  final bool canJoin;
+  final bool canReportNoShow;
   final bool canRetryZoom;
   final bool canComplete;
 
@@ -198,7 +297,8 @@ class ProjectHelpSessionAuthorAllowedActions {
       canProposeAlternative: json['canProposeAlternative'] == true,
       canDecline: json['canDecline'] == true,
       canCancel: json['canCancel'] == true,
-      canStart: json['canStart'] == true,
+      canJoin: json['canJoin'] == true,
+      canReportNoShow: json['canReportNoShow'] == true,
       canRetryZoom: json['canRetryZoom'] == true,
       canComplete: json['canComplete'] == true,
     );
@@ -209,7 +309,8 @@ class ProjectHelpSessionAuthorAllowedActions {
     canProposeAlternative: false,
     canDecline: false,
     canCancel: false,
-    canStart: false,
+    canJoin: false,
+    canReportNoShow: false,
     canRetryZoom: false,
     canComplete: false,
   );
@@ -241,11 +342,11 @@ class ProjectHelpSessionSettings {
   }
 
   Map<String, dynamic> toJson() => {
-        'isEnabled': isEnabled,
-        'allow15Minutes': allow15Minutes,
-        'allow30Minutes': allow30Minutes,
-        'weeklyLimit': weeklyLimit,
-      };
+    'isEnabled': isEnabled,
+    'allow15Minutes': allow15Minutes,
+    'allow30Minutes': allow30Minutes,
+    'weeklyLimit': weeklyLimit,
+  };
 
   ProjectHelpSessionSettings copyWith({
     bool? isEnabled,
@@ -350,12 +451,14 @@ class ProjectHelpSession {
     this.completedAt,
     this.scheduledEndsAt,
     this.completionAvailableAt,
+    this.autoFinalizeAt,
+    this.autoFinalizationBlocked = false,
     required this.meetingReady,
     this.provider,
     this.joinAvailableAt,
     this.joinClosesAt,
+    this.noShowReportedAt,
     this.zoomFailureState,
-    this.joinUrl,
   });
 
   final String id;
@@ -388,19 +491,21 @@ class ProjectHelpSession {
   final DateTime? completedAt;
   final DateTime? scheduledEndsAt;
   final DateTime? completionAvailableAt;
+  final DateTime? autoFinalizeAt;
+  final bool autoFinalizationBlocked;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool meetingReady;
   final String? provider;
   final DateTime? joinAvailableAt;
   final DateTime? joinClosesAt;
+  final DateTime? noShowReportedAt;
   final String? zoomFailureState;
-  final String? joinUrl;
 
   factory ProjectHelpSession.fromJson(Map<String, dynamic> json) {
     final status =
         ProjectHelpSessionStatus.fromApi(json['status']?.toString()) ??
-            ProjectHelpSessionStatus.pending;
+        ProjectHelpSessionStatus.pending;
     final options = json['timeOptions'];
     return ProjectHelpSession(
       id: json['id']?.toString() ?? '',
@@ -427,17 +532,19 @@ class ProjectHelpSession {
       learnerTimeZone: json['learnerTimeZone']?.toString() ?? 'UTC',
       timeOptions: options is List
           ? options
-              .whereType<Map>()
-              .map(
-                (item) => ProjectHelpSessionTimeOption.fromJson(
-                  item.cast<String, dynamic>(),
-                ),
-              )
-              .toList()
+                .whereType<Map>()
+                .map(
+                  (item) => ProjectHelpSessionTimeOption.fromJson(
+                    item.cast<String, dynamic>(),
+                  ),
+                )
+                .toList()
           : const [],
       selectedTimeOptionId: json['selectedTimeOptionId']?.toString(),
       selectedStartsAt: _parseDate(json['selectedStartsAt']),
-      learnerAllowedActions: _parseLearnerAllowedActions(json['allowedActions']),
+      learnerAllowedActions: _parseLearnerAllowedActions(
+        json['allowedActions'],
+      ),
       authorAllowedActions: _parseAuthorAllowedActions(json['allowedActions']),
       alternativeProposedAt: _parseDate(json['alternativeProposedAt']),
       confirmedAt: _parseDate(json['confirmedAt']),
@@ -452,16 +559,20 @@ class ProjectHelpSession {
       completedAt: _parseDate(json['completedAt']),
       scheduledEndsAt: _parseDate(json['scheduledEndsAt']),
       completionAvailableAt: _parseDate(json['completionAvailableAt']),
+      autoFinalizeAt: _parseDate(json['autoFinalizeAt']),
+      autoFinalizationBlocked: json['autoFinalizationBlocked'] == true,
       createdAt:
-          _parseDate(json['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+          _parseDate(json['createdAt']) ??
+          DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt:
-          _parseDate(json['updatedAt']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+          _parseDate(json['updatedAt']) ??
+          DateTime.fromMillisecondsSinceEpoch(0),
       meetingReady: json['meetingReady'] == true,
       provider: json['provider']?.toString(),
       joinAvailableAt: _parseDate(json['joinAvailableAt']),
       joinClosesAt: _parseDate(json['joinClosesAt']),
+      noShowReportedAt: _parseDate(json['noShowReportedAt']),
       zoomFailureState: json['zoomFailureState']?.toString(),
-      joinUrl: json['joinUrl']?.toString(),
     );
   }
 }
@@ -476,6 +587,7 @@ ProjectHelpSessionLearnerAllowedActions effectiveLearnerAllowedActions(
       canRejectAlternative: true,
       canCancel: true,
       canJoin: false,
+      canReportNoShow: false,
     );
   }
   return session.learnerAllowedActions;
@@ -494,7 +606,8 @@ ProjectHelpSessionAuthorAllowedActions effectiveAuthorAllowedActions(
       canProposeAlternative: !hasAuthorAlternative,
       canDecline: true,
       canCancel: session.authorAllowedActions.canCancel,
-      canStart: session.authorAllowedActions.canStart,
+      canJoin: session.authorAllowedActions.canJoin,
+      canReportNoShow: session.authorAllowedActions.canReportNoShow,
       canRetryZoom: session.authorAllowedActions.canRetryZoom,
       canComplete: session.authorAllowedActions.canComplete,
     );
@@ -524,13 +637,12 @@ class ProjectHelpSessionListResult {
     return ProjectHelpSessionListResult(
       items: items is List
           ? items
-              .whereType<Map>()
-              .map(
-                (item) => ProjectHelpSession.fromJson(
-                  item.cast<String, dynamic>(),
-                ),
-              )
-              .toList()
+                .whereType<Map>()
+                .map(
+                  (item) =>
+                      ProjectHelpSession.fromJson(item.cast<String, dynamic>()),
+                )
+                .toList()
           : const [],
       page: (pagination['page'] as num?)?.toInt() ?? 1,
       limit: (pagination['limit'] as num?)?.toInt() ?? 20,
@@ -582,28 +694,10 @@ class CreateProjectHelpSessionRequestPayload {
       if (projectStepId != null) 'projectStepId': projectStepId,
       'durationMinutes': durationMinutes,
       'learnerTimeZone': learnerTimeZone,
-      'proposedTimes': sorted.map((time) => time.toUtc().toIso8601String()).toList(),
+      'proposedTimes': sorted
+          .map((time) => time.toUtc().toIso8601String())
+          .toList(),
     };
-  }
-}
-
-class ProjectHelpSessionStartResult {
-  const ProjectHelpSessionStartResult({
-    required this.startUrl,
-    required this.startsAt,
-    required this.durationMinutes,
-  });
-
-  final String startUrl;
-  final DateTime startsAt;
-  final int durationMinutes;
-
-  factory ProjectHelpSessionStartResult.fromJson(Map<String, dynamic> json) {
-    return ProjectHelpSessionStartResult(
-      startUrl: json['startUrl']?.toString() ?? '',
-      startsAt: DateTime.parse(json['startsAt']?.toString() ?? ''),
-      durationMinutes: (json['durationMinutes'] as num?)?.toInt() ?? 15,
-    );
   }
 }
 
@@ -616,7 +710,9 @@ class ProjectHelpSessionNotebookHandoff {
   final String buildId;
   final String pageId;
 
-  factory ProjectHelpSessionNotebookHandoff.fromJson(Map<String, dynamic> json) {
+  factory ProjectHelpSessionNotebookHandoff.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return ProjectHelpSessionNotebookHandoff(
       buildId: json['buildId']?.toString() ?? '',
       pageId: json['pageId']?.toString() ?? '',
@@ -624,7 +720,9 @@ class ProjectHelpSessionNotebookHandoff {
   }
 }
 
-ProjectHelpSessionLearnerAllowedActions _parseLearnerAllowedActions(Object? raw) {
+ProjectHelpSessionLearnerAllowedActions _parseLearnerAllowedActions(
+  Object? raw,
+) {
   if (raw is! Map) {
     return ProjectHelpSessionLearnerAllowedActions.empty;
   }

@@ -7,6 +7,17 @@ export const computeProjectHelpSessionScheduledEnd = (input: {
 }) =>
   new Date(input.startsAt.getTime() + input.durationMinutes * 60 * 1000);
 
+export const PROJECT_HELP_SESSION_RESOLUTION_WINDOW_HOURS = 24;
+
+export const computeProjectHelpSessionAutoFinalizeAt = (input: {
+  startsAt: Date;
+  durationMinutes: number;
+}) =>
+  new Date(
+    computeProjectHelpSessionScheduledEnd(input).getTime() +
+      PROJECT_HELP_SESSION_RESOLUTION_WINDOW_HOURS * 60 * 60 * 1000,
+  );
+
 export const deriveProjectHelpSessionCompletionState = (
   session: ProjectHelpSessionDetailRecord,
   now: Date,
@@ -36,6 +47,9 @@ export const deriveProjectHelpSessionCompletionState = (
     scheduledEndsAt,
     completionAvailableAt: scheduledEndsAt,
     isCompletable:
-      session.status === 'SCHEDULED' && now.getTime() >= scheduledEndsAt.getTime(),
+      session.status === 'SCHEDULED' &&
+      now.getTime() >= scheduledEndsAt.getTime() &&
+      (session.autoFinalizeAt === null ||
+        now.getTime() < session.autoFinalizeAt.getTime()),
   };
 };

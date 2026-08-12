@@ -19,6 +19,7 @@ import { reservationsRouter } from './modules/reservations/reservations.routes.j
 import { adminRouter } from './modules/admin/admin.routes.js';
 import { notificationsRouter } from './modules/notifications/notifications.routes.js';
 import { publicSuppliersRouter } from './modules/public-suppliers/public-suppliers.routes.js';
+import { publicUsersRouter } from './modules/public-users/public-users.routes.js';
 import { supplierRouter } from './modules/supplier/supplier.routes.js';
 import { supplierMaterialRequestsRouter } from './modules/supplier-material-requests/supplier-material-requests.routes.js';
 import { locationsRouter } from './modules/locations/locations.routes.js';
@@ -157,6 +158,7 @@ export const createApp = (options: CreateAppOptions): Express => {
   app.use('/api/ai/v1', aiRouter);
   app.use('/api/notifications', notificationsRouter);
   app.use('/api/suppliers', publicSuppliersRouter);
+  app.use('/api/users', publicUsersRouter);
   app.use('/api/supplier/material-requests', supplierMaterialRequestsRouter);
   app.use('/api/supplier', supplierRouter);
   app.use('/api/admin', adminRouter);

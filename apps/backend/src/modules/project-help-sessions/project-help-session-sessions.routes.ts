@@ -13,7 +13,8 @@ import {
   authorDeclineProjectHelpSessionHandler,
   authorProposeProjectHelpSessionAlternativeHandler,
   authorRetryProjectHelpSessionZoomHandler,
-  authorStartProjectHelpSessionZoomHandler,
+  authorJoinProjectHelpSessionZoomHandler,
+  authorReportProjectHelpSessionNoShowHandler,
   createProjectHelpSessionRequestHandler,
   getAuthorProjectHelpSessionHandler,
   getLearnerProjectHelpSessionHandler,
@@ -21,9 +22,11 @@ import {
   learnerCancelProjectHelpSessionHandler,
   learnerEnsureProjectHelpSessionNotebookPageHandler,
   learnerJoinProjectHelpSessionZoomHandler,
+  learnerReportProjectHelpSessionNoShowHandler,
   learnerRejectProjectHelpSessionAlternativeHandler,
   listAuthorProjectHelpSessionsHandler,
   listLearnerProjectHelpSessionsHandler,
+  listLearnerHelpSessionProjectOptionsHandler,
 } from './project-help-session.controller.js';
 import {
   acceptProjectHelpSessionOptionSchema,
@@ -32,12 +35,22 @@ import {
   declineProjectHelpSessionSchema,
   listAuthorProjectHelpSessionsQuerySchema,
   listLearnerProjectHelpSessionsQuerySchema,
+  learnerHelpSessionProjectOptionsQuerySchema,
   projectHelpSessionBuildIdParamSchema,
   projectHelpSessionIdParamSchema,
   proposeProjectHelpSessionAlternativeSchema,
 } from './project-help-session.validation.js';
 
 export const projectHelpSessionsRouter = Router();
+
+projectHelpSessionsRouter.get(
+  '/learner/project-options',
+  privateNoStoreMiddleware,
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learnerHelpSessionProjectOptionsQuerySchema, 'query'),
+  asyncHandler(listLearnerHelpSessionProjectOptionsHandler),
+);
 
 projectHelpSessionsRouter.post(
   '/learner/builds/:buildId/request',
@@ -111,6 +124,15 @@ projectHelpSessionsRouter.post(
   requireRoles('LEARNER'),
   validate(projectHelpSessionIdParamSchema, 'params'),
   asyncHandler(learnerJoinProjectHelpSessionZoomHandler),
+);
+
+projectHelpSessionsRouter.post(
+  '/learner/:sessionId/no-show',
+  privateNoStoreMiddleware,
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectHelpSessionIdParamSchema, 'params'),
+  asyncHandler(learnerReportProjectHelpSessionNoShowHandler),
 );
 
 projectHelpSessionsRouter.get(
@@ -190,10 +212,19 @@ projectHelpSessionsRouter.post(
 );
 
 projectHelpSessionsRouter.post(
-  '/author/:sessionId/zoom/start',
+  '/author/:sessionId/zoom/join',
   privateNoStoreMiddleware,
   authMiddleware,
   requireRoles('LEARNER'),
   validate(projectHelpSessionIdParamSchema, 'params'),
-  asyncHandler(authorStartProjectHelpSessionZoomHandler),
+  asyncHandler(authorJoinProjectHelpSessionZoomHandler),
+);
+
+projectHelpSessionsRouter.post(
+  '/author/:sessionId/no-show',
+  privateNoStoreMiddleware,
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectHelpSessionIdParamSchema, 'params'),
+  asyncHandler(authorReportProjectHelpSessionNoShowHandler),
 );

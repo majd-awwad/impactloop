@@ -16,51 +16,56 @@ import 'package:frontend/features/project_help_sessions/presentation/pages/learn
 import 'package:frontend/features/project_help_sessions/presentation/widgets/build_help_session_section.dart';
 
 List<ProjectHelpSessionTimeOption> _threeOptions() => [
-      ProjectHelpSessionTimeOption(
-        id: 'opt-1',
-        type: ProjectHelpSessionTimeOptionType.learnerProposed,
-        startsAt: DateTime.utc(2026, 3, 1, 8),
-        proposedBy: const ProjectHelpSessionUserSummary(
-          id: 'learner-1',
-          displayName: 'Learner One',
-        ),
-      ),
-      ProjectHelpSessionTimeOption(
-        id: 'opt-2',
-        type: ProjectHelpSessionTimeOptionType.learnerProposed,
-        startsAt: DateTime.utc(2026, 3, 2, 8),
-        proposedBy: const ProjectHelpSessionUserSummary(
-          id: 'learner-1',
-          displayName: 'Learner One',
-        ),
-      ),
-      ProjectHelpSessionTimeOption(
-        id: 'opt-3',
-        type: ProjectHelpSessionTimeOptionType.learnerProposed,
-        startsAt: DateTime.utc(2026, 3, 3, 8),
-        proposedBy: const ProjectHelpSessionUserSummary(
-          id: 'learner-1',
-          displayName: 'Learner One',
-        ),
-      ),
-    ];
+  ProjectHelpSessionTimeOption(
+    id: 'opt-1',
+    type: ProjectHelpSessionTimeOptionType.learnerProposed,
+    startsAt: DateTime.utc(2026, 3, 1, 8),
+    proposedBy: const ProjectHelpSessionUserSummary(
+      id: 'learner-1',
+      displayName: 'Learner One',
+    ),
+  ),
+  ProjectHelpSessionTimeOption(
+    id: 'opt-2',
+    type: ProjectHelpSessionTimeOptionType.learnerProposed,
+    startsAt: DateTime.utc(2026, 3, 2, 8),
+    proposedBy: const ProjectHelpSessionUserSummary(
+      id: 'learner-1',
+      displayName: 'Learner One',
+    ),
+  ),
+  ProjectHelpSessionTimeOption(
+    id: 'opt-3',
+    type: ProjectHelpSessionTimeOptionType.learnerProposed,
+    startsAt: DateTime.utc(2026, 3, 3, 8),
+    proposedBy: const ProjectHelpSessionUserSummary(
+      id: 'learner-1',
+      displayName: 'Learner One',
+    ),
+  ),
+];
 
 ProjectHelpSession _session({
   String id = 'session-1',
   ProjectHelpSessionStatus status = ProjectHelpSessionStatus.pending,
   ProjectHelpSessionLearnerAllowedActions learnerAllowedActions =
       const ProjectHelpSessionLearnerAllowedActions(
-    canAcceptAlternative: false,
-    canRejectAlternative: false,
-    canCancel: true,
-    canJoin: false,
-  ),
+        canAcceptAlternative: false,
+        canRejectAlternative: false,
+        canCancel: true,
+        canJoin: false,
+      ),
   ProjectHelpSessionAuthorAllowedActions authorAllowedActions =
       ProjectHelpSessionAuthorAllowedActions.empty,
   List<ProjectHelpSessionTimeOption> timeOptions = const [],
   DateTime? selectedStartsAt,
   DateTime? joinAvailableAt,
+  DateTime? joinClosesAt,
+  DateTime? noShowReportedAt,
   DateTime? completionAvailableAt,
+  DateTime? scheduledEndsAt,
+  DateTime? autoFinalizeAt,
+  bool autoFinalizationBlocked = false,
   DateTime? completedAt,
   DateTime? cancelledAt,
   ProjectHelpSessionCancelledByRole? cancelledByRole,
@@ -76,7 +81,10 @@ ProjectHelpSession _session({
       id: 'project-1',
       title: 'Electronic LED Dice with a very long project title for layout',
     ),
-    build: const ProjectHelpSessionBuildSummary(id: 'build-1', attemptNumber: 1),
+    build: const ProjectHelpSessionBuildSummary(
+      id: 'build-1',
+      attemptNumber: 1,
+    ),
     learner: const ProjectHelpSessionUserSummary(
       id: 'learner-1',
       displayName: 'Israa Learner',
@@ -96,7 +104,12 @@ ProjectHelpSession _session({
     meetingReady: false,
     selectedStartsAt: selectedStartsAt,
     joinAvailableAt: joinAvailableAt,
+    joinClosesAt: joinClosesAt,
+    noShowReportedAt: noShowReportedAt,
     completionAvailableAt: completionAvailableAt,
+    scheduledEndsAt: scheduledEndsAt,
+    autoFinalizeAt: autoFinalizeAt,
+    autoFinalizationBlocked: autoFinalizationBlocked,
     completedAt: completedAt,
     cancelledAt: cancelledAt,
     cancelledByRole: cancelledByRole,
@@ -108,35 +121,35 @@ ProjectHelpSession _session({
 class _LearnerAuth extends AuthController {
   @override
   AuthState build() => AuthState(
-        user: User(
-          id: 'learner-1',
-          email: 'israa@learner.com',
-          displayName: 'Israa Learner',
-          accountStatus: 'ACTIVE',
-          activeRole: 'LEARNER',
-          roles: const ['LEARNER'],
-          createdAt: DateTime.utc(2026),
-        ),
-        accessToken: 'token',
-        hasBootstrapped: true,
-      );
+    user: User(
+      id: 'learner-1',
+      email: 'israa@learner.com',
+      displayName: 'Israa Learner',
+      accountStatus: 'ACTIVE',
+      activeRole: 'LEARNER',
+      roles: const ['LEARNER'],
+      createdAt: DateTime.utc(2026),
+    ),
+    accessToken: 'token',
+    hasBootstrapped: true,
+  );
 }
 
 class _AuthorAuth extends AuthController {
   @override
   AuthState build() => AuthState(
-        user: User(
-          id: 'author-1',
-          email: 'author@test.com',
-          displayName: 'Majd Learner',
-          accountStatus: 'ACTIVE',
-          activeRole: 'LEARNER',
-          roles: const ['LEARNER'],
-          createdAt: DateTime.utc(2026),
-        ),
-        accessToken: 'token',
-        hasBootstrapped: true,
-      );
+    user: User(
+      id: 'author-1',
+      email: 'author@test.com',
+      displayName: 'Majd Learner',
+      accountStatus: 'ACTIVE',
+      activeRole: 'LEARNER',
+      roles: const ['LEARNER'],
+      createdAt: DateTime.utc(2026),
+    ),
+    accessToken: 'token',
+    hasBootstrapped: true,
+  );
 }
 
 Widget _wrap(
@@ -267,12 +280,13 @@ void main() {
               (ref) async => _session(
                 status: ProjectHelpSessionStatus.scheduled,
                 selectedStartsAt: DateTime.utc(2026, 6, 1, 12),
-                learnerAllowedActions: const ProjectHelpSessionLearnerAllowedActions(
-                  canCancel: true,
-                  canJoin: false,
-                  canAcceptAlternative: false,
-                  canRejectAlternative: false,
-                ),
+                learnerAllowedActions:
+                    const ProjectHelpSessionLearnerAllowedActions(
+                      canCancel: true,
+                      canJoin: false,
+                      canAcceptAlternative: false,
+                      canRejectAlternative: false,
+                    ),
               ),
             ),
           ],
@@ -342,12 +356,13 @@ void main() {
                     ),
                   ),
                 ],
-                learnerAllowedActions: const ProjectHelpSessionLearnerAllowedActions(
-                  canAcceptAlternative: true,
-                  canRejectAlternative: true,
-                  canCancel: true,
-                  canJoin: false,
-                ),
+                learnerAllowedActions:
+                    const ProjectHelpSessionLearnerAllowedActions(
+                      canAcceptAlternative: true,
+                      canRejectAlternative: true,
+                      canCancel: true,
+                      canJoin: false,
+                    ),
               ),
             ),
           ],
@@ -371,12 +386,13 @@ void main() {
               (ref) async => _session(
                 status: ProjectHelpSessionStatus.zoomPending,
                 selectedStartsAt: DateTime.utc(2026, 6, 1, 12),
-                learnerAllowedActions: const ProjectHelpSessionLearnerAllowedActions(
-                  canCancel: true,
-                  canJoin: false,
-                  canAcceptAlternative: false,
-                  canRejectAlternative: false,
-                ),
+                learnerAllowedActions:
+                    const ProjectHelpSessionLearnerAllowedActions(
+                      canCancel: true,
+                      canJoin: false,
+                      canAcceptAlternative: false,
+                      canRejectAlternative: false,
+                    ),
               ),
             ),
           ],
@@ -416,19 +432,23 @@ void main() {
                 status: ProjectHelpSessionStatus.scheduled,
                 selectedStartsAt: DateTime.utc(2026, 6, 1, 12),
                 joinAvailableAt: DateTime.utc(2026, 6, 1, 11, 45),
-                learnerAllowedActions: const ProjectHelpSessionLearnerAllowedActions(
-                  canJoin: false,
-                  canCancel: true,
-                  canAcceptAlternative: false,
-                  canRejectAlternative: false,
-                ),
+                learnerAllowedActions:
+                    const ProjectHelpSessionLearnerAllowedActions(
+                      canJoin: false,
+                      canCancel: true,
+                      canAcceptAlternative: false,
+                      canRejectAlternative: false,
+                    ),
               ),
             ),
           ],
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Join opens closer to the session start time.'), findsWidgets);
+      expect(
+        find.text('Join opens closer to the session start time.'),
+        findsWidgets,
+      );
     });
 
     testWidgets('SCHEDULED inside window join', (tester) async {
@@ -440,12 +460,13 @@ void main() {
               (ref) async => _session(
                 status: ProjectHelpSessionStatus.scheduled,
                 selectedStartsAt: DateTime.utc(2026, 6, 1, 12),
-                learnerAllowedActions: const ProjectHelpSessionLearnerAllowedActions(
-                  canJoin: true,
-                  canCancel: true,
-                  canAcceptAlternative: false,
-                  canRejectAlternative: false,
-                ),
+                learnerAllowedActions:
+                    const ProjectHelpSessionLearnerAllowedActions(
+                      canJoin: true,
+                      canCancel: true,
+                      canAcceptAlternative: false,
+                      canRejectAlternative: false,
+                    ),
               ),
             ),
           ],
@@ -453,6 +474,83 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.widgetWithText(FilledButton, 'Join Zoom'), findsOneWidget);
+    });
+
+    testWidgets('SCHEDULED active window hides cancel and shows no-show hint', (
+      tester,
+    ) async {
+      final now = DateTime.now().toUtc();
+      await tester.pumpWidget(
+        _wrap(
+          const LearnerHelpSessionDetailPage(sessionId: 'session-1'),
+          overrides: [
+            learnerHelpSessionDetailProvider('session-1').overrideWith(
+              (ref) async => _session(
+                status: ProjectHelpSessionStatus.scheduled,
+                joinAvailableAt: now.subtract(const Duration(minutes: 1)),
+                joinClosesAt: now.add(const Duration(minutes: 30)),
+                learnerAllowedActions:
+                    const ProjectHelpSessionLearnerAllowedActions(
+                      canJoin: true,
+                      canCancel: false,
+                      canAcceptAlternative: false,
+                      canRejectAlternative: false,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(FilledButton, 'Join Zoom'), findsOneWidget);
+      expect(find.text('Cancel request'), findsNothing);
+      expect(
+        find.textContaining('reporting will become available'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('SCHEDULED after window shows author no-show action only', (
+      tester,
+    ) async {
+      final now = DateTime.now().toUtc();
+      await tester.pumpWidget(
+        _wrap(
+          const LearnerHelpSessionDetailPage(sessionId: 'session-1'),
+          overrides: [
+            learnerHelpSessionDetailProvider('session-1').overrideWith(
+              (ref) async => _session(
+                status: ProjectHelpSessionStatus.scheduled,
+                joinAvailableAt: now.subtract(const Duration(hours: 2)),
+                joinClosesAt: now.subtract(const Duration(minutes: 1)),
+                scheduledEndsAt: now.subtract(const Duration(hours: 1)),
+                autoFinalizeAt: now.add(const Duration(hours: 23)),
+                learnerAllowedActions:
+                    const ProjectHelpSessionLearnerAllowedActions(
+                      canJoin: false,
+                      canCancel: false,
+                      canReportNoShow: true,
+                      canAcceptAlternative: false,
+                      canRejectAlternative: false,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Join Zoom'), findsNothing);
+      expect(find.text('Cancel request'), findsNothing);
+      expect(
+        find.text('Report that the project creator did not attend'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'If you take no action, the session will close automatically after 24 hours.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('DECLINED terminal', (tester) async {
@@ -464,7 +562,8 @@ void main() {
               (ref) async => _session(
                 status: ProjectHelpSessionStatus.declined,
                 declinedReason: 'Not available this week',
-                learnerAllowedActions: ProjectHelpSessionLearnerAllowedActions.empty,
+                learnerAllowedActions:
+                    ProjectHelpSessionLearnerAllowedActions.empty,
               ),
             ),
           ],
@@ -486,7 +585,8 @@ void main() {
                 cancelledByRole: ProjectHelpSessionCancelledByRole.learner,
                 cancelledAt: DateTime.utc(2026, 2, 2),
                 cancellationReason: 'Changed plans',
-                learnerAllowedActions: ProjectHelpSessionLearnerAllowedActions.empty,
+                learnerAllowedActions:
+                    ProjectHelpSessionLearnerAllowedActions.empty,
               ),
             ),
           ],
@@ -497,7 +597,9 @@ void main() {
       expect(find.text('Changed plans'), findsOneWidget);
     });
 
-    testWidgets('COMPLETED notebook handoff', (tester) async {
+    testWidgets('COMPLETED shows summary without sidebar actions', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrap(
           const LearnerHelpSessionDetailPage(sessionId: 'session-1'),
@@ -507,24 +609,29 @@ void main() {
                 status: ProjectHelpSessionStatus.completed,
                 completedAt: DateTime.utc(2026, 6, 1, 13),
                 selectedStartsAt: DateTime.utc(2026, 6, 1, 12),
-                learnerAllowedActions: ProjectHelpSessionLearnerAllowedActions.empty,
+                learnerAllowedActions:
+                    ProjectHelpSessionLearnerAllowedActions.empty,
               ),
             ),
           ],
         ),
       );
       await tester.pumpAndSettle();
+      expect(find.text('Help session completed'), findsWidgets);
+      expect(find.text('Join Zoom'), findsNothing);
+      expect(find.text('Cancel request'), findsNothing);
+      expect(find.text('Mark session as completed'), findsNothing);
       expect(
-        find.text('Add session notes to Project Notebook'),
-        findsOneWidget,
+        find.text('Report that the project creator did not attend'),
+        findsNothing,
       );
-      expect(find.text('Start Zoom session'), findsNothing);
     });
   });
 
   group('PHS-11 creator states', () {
-    testWidgets('PENDING selectable options accept disabled until selection',
-        (tester) async {
+    testWidgets('PENDING selectable options accept disabled until selection', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _authorWrap(
           const CreatorHelpSessionDetailPage(sessionId: 'session-1'),
@@ -532,15 +639,16 @@ void main() {
             authorHelpSessionDetailProvider('session-1').overrideWith(
               (ref) async => _session(
                 timeOptions: _threeOptions(),
-                authorAllowedActions: const ProjectHelpSessionAuthorAllowedActions(
-                  canAcceptOption: true,
-                  canProposeAlternative: true,
-                  canDecline: true,
-                  canCancel: true,
-                  canStart: false,
-                  canRetryZoom: false,
-                  canComplete: false,
-                ),
+                authorAllowedActions:
+                    const ProjectHelpSessionAuthorAllowedActions(
+                      canAcceptOption: true,
+                      canProposeAlternative: true,
+                      canDecline: true,
+                      canCancel: true,
+                      canJoin: false,
+                      canRetryZoom: false,
+                      canComplete: false,
+                    ),
               ),
             ),
           ],
@@ -561,7 +669,7 @@ void main() {
       );
     });
 
-    testWidgets('creator never sees Join', (tester) async {
+    testWidgets('creator receives the same normal Join action', (tester) async {
       await tester.pumpWidget(
         _authorWrap(
           const CreatorHelpSessionDetailPage(sessionId: 'session-1'),
@@ -570,26 +678,24 @@ void main() {
               (ref) async => _session(
                 status: ProjectHelpSessionStatus.scheduled,
                 selectedStartsAt: DateTime.utc(2026, 6, 1, 12),
-                authorAllowedActions: const ProjectHelpSessionAuthorAllowedActions(
-                  canStart: true,
-                  canComplete: false,
-                  canCancel: true,
-                  canAcceptOption: false,
-                  canProposeAlternative: false,
-                  canDecline: false,
-                  canRetryZoom: false,
-                ),
+                authorAllowedActions:
+                    const ProjectHelpSessionAuthorAllowedActions(
+                      canJoin: true,
+                      canComplete: false,
+                      canCancel: true,
+                      canAcceptOption: false,
+                      canProposeAlternative: false,
+                      canDecline: false,
+                      canRetryZoom: false,
+                    ),
               ),
             ),
           ],
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Join Zoom'), findsNothing);
-      expect(
-        find.widgetWithText(FilledButton, 'Start Zoom session'),
-        findsOneWidget,
-      );
+      expect(find.text('Join Zoom'), findsWidgets);
+      expect(find.widgetWithText(FilledButton, 'Join Zoom'), findsOneWidget);
     });
 
     testWidgets('SCHEDULING_FAILED retry', (tester) async {
@@ -601,15 +707,16 @@ void main() {
               (ref) async => _session(
                 status: ProjectHelpSessionStatus.schedulingFailed,
                 selectedStartsAt: DateTime.utc(2026, 6, 1, 12),
-                authorAllowedActions: const ProjectHelpSessionAuthorAllowedActions(
-                  canRetryZoom: true,
-                  canCancel: true,
-                  canAcceptOption: false,
-                  canProposeAlternative: false,
-                  canDecline: false,
-                  canStart: false,
-                  canComplete: false,
-                ),
+                authorAllowedActions:
+                    const ProjectHelpSessionAuthorAllowedActions(
+                      canRetryZoom: true,
+                      canCancel: true,
+                      canAcceptOption: false,
+                      canProposeAlternative: false,
+                      canDecline: false,
+                      canJoin: false,
+                      canComplete: false,
+                    ),
               ),
             ),
           ],
@@ -619,7 +726,7 @@ void main() {
       expect(find.text('Retry creating meeting'), findsOneWidget);
     });
 
-    testWidgets('complete blocked before end', (tester) async {
+    testWidgets('complete hidden before end', (tester) async {
       await tester.pumpWidget(
         _authorWrap(
           const CreatorHelpSessionDetailPage(sessionId: 'session-1'),
@@ -629,25 +736,23 @@ void main() {
                 status: ProjectHelpSessionStatus.scheduled,
                 selectedStartsAt: DateTime.utc(2026, 6, 1, 12),
                 completionAvailableAt: DateTime.utc(2026, 6, 1, 12, 30),
-                authorAllowedActions: const ProjectHelpSessionAuthorAllowedActions(
-                  canStart: false,
-                  canComplete: false,
-                  canCancel: true,
-                  canAcceptOption: false,
-                  canProposeAlternative: false,
-                  canDecline: false,
-                  canRetryZoom: false,
-                ),
+                authorAllowedActions:
+                    const ProjectHelpSessionAuthorAllowedActions(
+                      canJoin: false,
+                      canComplete: false,
+                      canCancel: true,
+                      canAcceptOption: false,
+                      canProposeAlternative: false,
+                      canDecline: false,
+                      canRetryZoom: false,
+                    ),
               ),
             ),
           ],
         ),
       );
       await tester.pumpAndSettle();
-      final complete = tester.widget<OutlinedButton>(
-        find.widgetWithText(OutlinedButton, 'Mark session as completed'),
-      );
-      expect(complete.onPressed, isNull);
+      expect(find.text('Mark session as completed'), findsNothing);
     });
 
     testWidgets('complete available after end', (tester) async {
@@ -659,15 +764,16 @@ void main() {
               (ref) async => _session(
                 status: ProjectHelpSessionStatus.scheduled,
                 selectedStartsAt: DateTime.utc(2026, 6, 1, 12),
-                authorAllowedActions: const ProjectHelpSessionAuthorAllowedActions(
-                  canStart: false,
-                  canComplete: true,
-                  canCancel: false,
-                  canAcceptOption: false,
-                  canProposeAlternative: false,
-                  canDecline: false,
-                  canRetryZoom: false,
-                ),
+                authorAllowedActions:
+                    const ProjectHelpSessionAuthorAllowedActions(
+                      canJoin: false,
+                      canComplete: true,
+                      canCancel: false,
+                      canAcceptOption: false,
+                      canProposeAlternative: false,
+                      canDecline: false,
+                      canRetryZoom: false,
+                    ),
               ),
             ),
           ],
@@ -678,6 +784,128 @@ void main() {
         find.widgetWithText(OutlinedButton, 'Mark session as completed'),
       );
       expect(complete.onPressed, isNotNull);
+    });
+
+    testWidgets(
+      'SCHEDULED author before window shows disabled Join and cancel',
+      (tester) async {
+        final now = DateTime.now().toUtc();
+        await tester.pumpWidget(
+          _authorWrap(
+            const CreatorHelpSessionDetailPage(sessionId: 'session-1'),
+            overrides: [
+              authorHelpSessionDetailProvider('session-1').overrideWith(
+                (ref) async => _session(
+                  status: ProjectHelpSessionStatus.scheduled,
+                  joinAvailableAt: now.add(const Duration(hours: 1)),
+                  joinClosesAt: now.add(const Duration(hours: 2)),
+                  authorAllowedActions:
+                      const ProjectHelpSessionAuthorAllowedActions(
+                        canJoin: false,
+                        canComplete: false,
+                        canCancel: true,
+                        canAcceptOption: false,
+                        canProposeAlternative: false,
+                        canDecline: false,
+                        canRetryZoom: false,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+        final join = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Join Zoom'),
+        );
+        expect(join.onPressed, isNull);
+        expect(find.text('Cancel request'), findsOneWidget);
+        expect(find.text('Mark session as completed'), findsNothing);
+      },
+    );
+
+    testWidgets('SCHEDULED author active window joins without cancel', (
+      tester,
+    ) async {
+      final now = DateTime.now().toUtc();
+      await tester.pumpWidget(
+        _authorWrap(
+          const CreatorHelpSessionDetailPage(sessionId: 'session-1'),
+          overrides: [
+            authorHelpSessionDetailProvider('session-1').overrideWith(
+              (ref) async => _session(
+                status: ProjectHelpSessionStatus.scheduled,
+                joinAvailableAt: now.subtract(const Duration(minutes: 1)),
+                joinClosesAt: now.add(const Duration(minutes: 30)),
+                authorAllowedActions:
+                    const ProjectHelpSessionAuthorAllowedActions(
+                      canJoin: true,
+                      canComplete: false,
+                      canCancel: false,
+                      canAcceptOption: false,
+                      canProposeAlternative: false,
+                      canDecline: false,
+                      canRetryZoom: false,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(FilledButton, 'Join Zoom'), findsOneWidget);
+      expect(find.text('Cancel request'), findsNothing);
+      expect(
+        find.textContaining('reporting will become available'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('SCHEDULED author after window shows complete and no-show', (
+      tester,
+    ) async {
+      final now = DateTime.now().toUtc();
+      await tester.pumpWidget(
+        _authorWrap(
+          const CreatorHelpSessionDetailPage(sessionId: 'session-1'),
+          overrides: [
+            authorHelpSessionDetailProvider('session-1').overrideWith(
+              (ref) async => _session(
+                status: ProjectHelpSessionStatus.scheduled,
+                joinAvailableAt: now.subtract(const Duration(hours: 2)),
+                joinClosesAt: now.subtract(const Duration(minutes: 1)),
+                scheduledEndsAt: now.subtract(const Duration(hours: 1)),
+                autoFinalizeAt: now.add(const Duration(hours: 23)),
+                authorAllowedActions:
+                    const ProjectHelpSessionAuthorAllowedActions(
+                      canJoin: false,
+                      canComplete: true,
+                      canCancel: false,
+                      canReportNoShow: true,
+                      canAcceptOption: false,
+                      canProposeAlternative: false,
+                      canDecline: false,
+                      canRetryZoom: false,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Join Zoom'), findsNothing);
+      expect(find.text('Cancel request'), findsNothing);
+      expect(find.text('Mark session as completed'), findsOneWidget);
+      expect(
+        find.text('Report that the learner did not attend'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'If you take no action, the session will close automatically after 24 hours.',
+        ),
+        findsOneWidget,
+      );
     });
   });
 
@@ -699,14 +927,15 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.text('Start Zoom session'), findsNothing);
+        expect(find.text('Join Zoom'), findsNothing);
         expect(find.text('Retry creating meeting'), findsNothing);
         expect(find.text('Mark session as completed'), findsNothing);
       }
     });
 
-    testWidgets('allowedActions false hides join even when scheduled',
-        (tester) async {
+    testWidgets('allowedActions false hides join even when scheduled', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrap(
           const LearnerHelpSessionDetailPage(sessionId: 'session-1'),
@@ -714,12 +943,13 @@ void main() {
             learnerHelpSessionDetailProvider('session-1').overrideWith(
               (ref) async => _session(
                 status: ProjectHelpSessionStatus.scheduled,
-                learnerAllowedActions: const ProjectHelpSessionLearnerAllowedActions(
-                  canJoin: false,
-                  canCancel: false,
-                  canAcceptAlternative: false,
-                  canRejectAlternative: false,
-                ),
+                learnerAllowedActions:
+                    const ProjectHelpSessionLearnerAllowedActions(
+                      canJoin: false,
+                      canCancel: false,
+                      canAcceptAlternative: false,
+                      canRejectAlternative: false,
+                    ),
               ),
             ),
           ],
@@ -749,12 +979,13 @@ void main() {
             activeHelpSessionForBuildProvider('build-1').overrideWith(
               (ref) async => _session(
                 timeOptions: _threeOptions(),
-                learnerAllowedActions: const ProjectHelpSessionLearnerAllowedActions(
-                  canCancel: true,
-                  canJoin: false,
-                  canAcceptAlternative: false,
-                  canRejectAlternative: false,
-                ),
+                learnerAllowedActions:
+                    const ProjectHelpSessionLearnerAllowedActions(
+                      canCancel: true,
+                      canJoin: false,
+                      canAcceptAlternative: false,
+                      canRejectAlternative: false,
+                    ),
               ),
             ),
           ],
@@ -762,7 +993,10 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Help session request'), findsOneWidget);
-      expect(find.textContaining('Waiting for the project creator'), findsOneWidget);
+      expect(
+        find.textContaining('Waiting for the project creator'),
+        findsOneWidget,
+      );
       expect(find.text('3 proposed times'), findsOneWidget);
       final button = tester.widget<OutlinedButton>(
         find.widgetWithText(OutlinedButton, 'View session'),

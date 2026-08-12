@@ -7,9 +7,46 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../../l10n/l10n.dart';
+import '../../../../shared/widgets/app_feedback.dart';
+import '../../../learner_builds/application/learner_builds_providers.dart';
 import '../../application/project_help_sessions_providers.dart';
 import '../l10n/project_help_sessions_l10n.dart';
 import '../widgets/help_session_list_card.dart';
+import '../widgets/help_session_project_picker.dart';
+import '../widgets/help_session_request_flow.dart';
+
+Future<void> _startHelpSessionRequest(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final option = await showHelpSessionProjectPicker(context);
+  if (option == null || !context.mounted) return;
+  try {
+    final build = await ref
+        .read(learnerBuildsApiProvider)
+        .fetchBuild(option.buildId);
+    final availability = await ref.read(
+      projectHelpSessionAvailabilityProvider(option.projectId).future,
+    );
+    if (!context.mounted) return;
+    if (!availability.available) {
+      showErrorSnackBar(context, availability.reason ?? 'Unavailable');
+      return;
+    }
+    final session = await showProjectHelpSessionRequestFlow(
+      context: context,
+      ref: ref,
+      build: build,
+      availability: availability,
+    );
+    if (session != null && context.mounted) {
+      context.push('/learner/help-sessions/${session.id}');
+    }
+  } catch (error) {
+    if (context.mounted) showErrorSnackBar(context, error);
+  }
+}
 
 class LearnerHelpSessionsPage extends ConsumerWidget {
   const LearnerHelpSessionsPage({super.key});
@@ -40,11 +77,26 @@ class LearnerHelpSessionsPage extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          ProjectHelpSessionsL10n.listSubtitle.resolve(context),
-                          style: AppTextStyles.body(context).copyWith(
-                            color: palette.textSecondary,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                ProjectHelpSessionsL10n.listSubtitle.resolve(
+                                  context,
+                                ),
+                                style: AppTextStyles.body(
+                                  context,
+                                ).copyWith(color: palette.textSecondary),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            FilledButton.icon(
+                              onPressed: () =>
+                                  _startHelpSessionRequest(context, ref),
+                              icon: const Icon(Icons.add),
+                              label: Text(context.l10n.phsNewRequest),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: AppSpacing.md),
                         _FilterBar(
@@ -61,16 +113,21 @@ class LearnerHelpSessionsPage extends ConsumerWidget {
                             ),
                             error: (_, _) => AppEmptyStateCard(
                               icon: Icons.error_outline,
-                              title: ProjectHelpSessionsL10n.retry
-                                  .resolve(context),
-                              subtitle: ProjectHelpSessionsL10n.localizedError(null)
-                                  .resolve(context),
+                              title: ProjectHelpSessionsL10n.retry.resolve(
+                                context,
+                              ),
+                              subtitle: ProjectHelpSessionsL10n.localizedError(
+                                null,
+                              ).resolve(context),
                               actions: [
                                 FilledButton(
-                                  onPressed: () =>
-                                      ref.invalidate(learnerHelpSessionsProvider),
+                                  onPressed: () => ref.invalidate(
+                                    learnerHelpSessionsProvider,
+                                  ),
                                   child: Text(
-                                    ProjectHelpSessionsL10n.retry.resolve(context),
+                                    ProjectHelpSessionsL10n.retry.resolve(
+                                      context,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -85,11 +142,11 @@ class LearnerHelpSessionsPage extends ConsumerWidget {
                                       .resolve(context),
                                   actions: [
                                     FilledButton(
-                                      onPressed: () => context.go('/learning'),
-                                      child: Text(
-                                        ProjectHelpSessionsL10n.backToProjects
-                                            .resolve(context),
+                                      onPressed: () => _startHelpSessionRequest(
+                                        context,
+                                        ref,
                                       ),
+                                      child: Text(context.l10n.phsNewRequest),
                                     ),
                                   ],
                                 );
@@ -100,8 +157,8 @@ class LearnerHelpSessionsPage extends ConsumerWidget {
                                     const SizedBox(height: AppSpacing.sm),
                                 itemBuilder: (context, index) =>
                                     HelpSessionListCard(
-                                  session: result.items[index],
-                                ),
+                                      session: result.items[index],
+                                    ),
                               );
                             },
                           ),
@@ -120,10 +177,7 @@ class LearnerHelpSessionsPage extends ConsumerWidget {
 }
 
 class _FilterBar extends StatelessWidget {
-  const _FilterBar({
-    required this.selected,
-    required this.onSelected,
-  });
+  const _FilterBar({required this.selected, required this.onSelected});
 
   final LearnerHelpSessionListFilter selected;
   final ValueChanged<LearnerHelpSessionListFilter> onSelected;
@@ -132,7 +186,10 @@ class _FilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final options = [
       (LearnerHelpSessionListFilter.all, ProjectHelpSessionsL10n.filterAll),
-      (LearnerHelpSessionListFilter.active, ProjectHelpSessionsL10n.filterActive),
+      (
+        LearnerHelpSessionListFilter.active,
+        ProjectHelpSessionsL10n.filterActive,
+      ),
       (
         LearnerHelpSessionListFilter.scheduled,
         ProjectHelpSessionsL10n.filterScheduled,
@@ -141,7 +198,10 @@ class _FilterBar extends StatelessWidget {
         LearnerHelpSessionListFilter.completed,
         ProjectHelpSessionsL10n.filterCompleted,
       ),
-      (LearnerHelpSessionListFilter.closed, ProjectHelpSessionsL10n.filterClosed),
+      (
+        LearnerHelpSessionListFilter.closed,
+        ProjectHelpSessionsL10n.filterClosed,
+      ),
     ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,

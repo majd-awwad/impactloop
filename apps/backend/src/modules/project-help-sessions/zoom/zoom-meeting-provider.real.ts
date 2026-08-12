@@ -22,7 +22,6 @@ type ZoomGetResponse = {
   join_url?: string;
   start_time?: string;
   duration?: number;
-  start_url?: string;
 };
 
 const parseMeetingId = (value: unknown): string => {
@@ -78,27 +77,12 @@ const mapCreateResponse = (payload: ZoomCreateResponse): CreatedZoomMeeting => (
   durationMinutes: parseDuration(payload.duration),
 });
 
-const mapGetResponse = (payload: ZoomGetResponse): ZoomMeetingDetails => {
-  const hostStartUrl = typeof payload.start_url === 'string' ? payload.start_url.trim() : '';
-  if (!hostStartUrl) {
-    throw new ZoomError('Zoom meeting response was invalid.', 502, 'ZOOM_RESPONSE_INVALID');
-  }
-  try {
-    const parsed = new URL(hostStartUrl);
-    if (parsed.protocol !== 'https:') {
-      throw new Error('invalid protocol');
-    }
-  } catch {
-    throw new ZoomError('Zoom meeting response was invalid.', 502, 'ZOOM_RESPONSE_INVALID');
-  }
-  return {
+const mapGetResponse = (payload: ZoomGetResponse): ZoomMeetingDetails => ({
     meetingId: parseMeetingId(payload.id),
     joinUrl: parseJoinUrl(payload.join_url),
     startsAt: parseStartTime(payload.start_time),
     durationMinutes: parseDuration(payload.duration),
-    hostStartUrl,
-  };
-};
+});
 
 export type RealZoomProviderDeps = {
   fetchImpl?: typeof fetch;
@@ -131,8 +115,9 @@ export class RealZoomMeetingProvider implements ZoomMeetingProvider {
           settings: {
             host_video: false,
             participant_video: false,
-            join_before_host: false,
-            waiting_room: true,
+            join_before_host: true,
+            jbh_time: 0,
+            waiting_room: false,
             mute_upon_entry: true,
             auto_recording: 'none',
           },
@@ -154,11 +139,6 @@ export class RealZoomMeetingProvider implements ZoomMeetingProvider {
       this.deps,
     );
     return mapGetResponse(payload);
-  }
-
-  async getFreshHostStartUrl(meetingId: string): Promise<string> {
-    const details = await this.getMeeting(meetingId);
-    return details.hostStartUrl;
   }
 
   async deleteMeeting(meetingId: string): Promise<void> {

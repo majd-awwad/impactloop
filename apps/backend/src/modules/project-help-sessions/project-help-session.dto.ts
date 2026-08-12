@@ -47,13 +47,6 @@ export const mapProjectHelpSessionPrivateDto = (
     viewerRole,
     now,
   );
-  const learnerJoinUrl =
-    viewerRole === 'learner' &&
-    session.status === 'SCHEDULED' &&
-    meetingState.inWindow &&
-    session.zoomJoinUrl
-      ? session.zoomJoinUrl
-      : null;
   return {
   id: session.id,
   status: session.status,
@@ -82,7 +75,6 @@ export const mapProjectHelpSessionPrivateDto = (
   selectedTimeOptionId: session.selectedTimeOptionId,
   selectedStartsAt: getSelectedStartsAt(session),
   allowedActions,
-  ...(learnerJoinUrl ? { joinUrl: learnerJoinUrl } : {}),
   alternativeProposedAt: session.alternativeProposedAt?.toISOString() ?? null,
   confirmedAt: session.confirmedAt?.toISOString() ?? null,
   declinedReason:
@@ -107,12 +99,20 @@ export const mapProjectHelpSessionPrivateDto = (
   completedAt: session.completedAt?.toISOString() ?? null,
   scheduledEndsAt: completionTiming.scheduledEndsAt,
   completionAvailableAt: completionTiming.completionAvailableAt,
+  autoFinalizeAt: session.autoFinalizeAt?.toISOString() ?? null,
+  autoFinalizationBlocked:
+    session.learnerReportedAuthorNoShowAt !== null ||
+    session.authorReportedLearnerNoShowAt !== null,
   createdAt: session.createdAt.toISOString(),
   updatedAt: session.updatedAt.toISOString(),
   meetingReady: meetingState.meetingReady,
   provider: meetingState.meetingReady ? ('ZOOM' as const) : null,
   joinAvailableAt: meetingState.joinAvailableAt,
   joinClosesAt: meetingState.joinClosesAt,
+  noShowReportedAt:
+    viewerRole === 'learner'
+      ? session.learnerReportedAuthorNoShowAt?.toISOString() ?? null
+      : session.authorReportedLearnerNoShowAt?.toISOString() ?? null,
   zoomFailureState:
     session.status === 'SCHEDULING_FAILED' ? session.zoomLastFailureCode : null,
   };
