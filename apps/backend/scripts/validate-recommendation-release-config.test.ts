@@ -38,9 +38,10 @@ const validReleaseAEnv = (): NodeJS.Dict<string> => ({
   NODE_ENV: "production",
   DATABASE_URL: "postgresql://validator:secret@127.0.0.1:5432/impactloop_ci",
   RECOMMENDATION_SCORER_VERSION: "legacy-v1",
-  RECOMMENDATION_ML_SHADOW_ENABLED: "false",
-  RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED: "false",
-  RECOMMENDATION_ML_PROJECT_SERVING_ENABLED: "false",
+  // Valid release: ML_PRIMARY with artifact paths (or DETERMINISTIC).
+  RECOMMENDATION_ML_RUNTIME_MODE: "ML_PRIMARY",
+  RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH: "/models/material.json",
+  RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH: "/models/project.json",
   RECOMMENDATION_OUTBOX_WORKER_ENABLED: "true",
   RECOMMENDATION_OUTBOX_WORKER_REQUIRED: "true",
   RECOMMENDATION_OUTBOX_POLL_INTERVAL_MS: "2000",
@@ -155,12 +156,12 @@ test("accepted legacy-v1 champion passes; unset defaults to legacy-v1", () => {
   assert.equal(unset.ok, true);
 });
 
-test("unsupported and unknown champions fail", () => {
+test("unsupported and unknown fallback scorers fail", () => {
   const canonical = validReleaseAEnv();
   canonical.RECOMMENDATION_SCORER_VERSION = "canonical-taxonomy-v3";
   assert.ok(
     codesOf(validateSync(canonical).diagnostics).includes(
-      "CHAMPION_UNSUPPORTED_FOR_RELEASE_A",
+      "FALLBACK_SCORER_UNSUPPORTED_FOR_RELEASE",
     ),
   );
 
@@ -168,14 +169,16 @@ test("unsupported and unknown champions fail", () => {
   normalized.RECOMMENDATION_SCORER_VERSION = "normalized-interests-v2";
   assert.ok(
     codesOf(validateSync(normalized).diagnostics).includes(
-      "CHAMPION_UNSUPPORTED_FOR_RELEASE_A",
+      "FALLBACK_SCORER_UNSUPPORTED_FOR_RELEASE",
     ),
   );
 
   const unknown = validReleaseAEnv();
   unknown.RECOMMENDATION_SCORER_VERSION = "not-a-champion";
   assert.ok(
-    codesOf(validateSync(unknown).diagnostics).includes("CHAMPION_UNKNOWN"),
+    codesOf(validateSync(unknown).diagnostics).includes(
+      "FALLBACK_SCORER_UNKNOWN",
+    ),
   );
 });
 
@@ -185,40 +188,55 @@ test("canonical taxonomy is not newly required", () => {
   const result = validateSync(env);
   assert.equal(result.ok, true);
   assert.equal(
-    codesOf(result.diagnostics).includes("CHAMPION_UNSUPPORTED_FOR_RELEASE_A"),
+    codesOf(result.diagnostics).includes(
+      "FALLBACK_SCORER_UNSUPPORTED_FOR_RELEASE",
+    ),
     false,
   );
 });
 
-test("ML material and project serving enabled fail", () => {
+test("stale ML serving flags fail when set", () => {
   const material = validReleaseAEnv();
   material.RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED = "true";
   assert.ok(
     codesOf(validateSync(material).diagnostics).includes(
-      "ML_MATERIAL_SERVING_ENABLED",
+      "ML_SERVING_FLAGS_REMOVED",
     ),
   );
 
   const project = validReleaseAEnv();
-  project.RECOMMENDATION_ML_PROJECT_SERVING_ENABLED = "yes";
+  project.RECOMMENDATION_ML_PROJECT_SERVING_ENABLED = "false";
   assert.ok(
     codesOf(validateSync(project).diagnostics).includes(
-      "ML_PROJECT_SERVING_ENABLED",
+      "ML_SERVING_FLAGS_REMOVED",
     ),
   );
 });
 
-test("unsafe combined serving and shadow fails", () => {
+test("ML_PRIMARY without artifact paths fails", () => {
   const env = validReleaseAEnv();
-  env.RECOMMENDATION_ML_SHADOW_ENABLED = "true";
-  env.RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED = "true";
+  env.RECOMMENDATION_ML_RUNTIME_MODE = "ML_PRIMARY";
+  env.RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH = "";
+  env.RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH = "";
   const codes = codesOf(validateSync(env).diagnostics);
-  assert.ok(codes.includes("ML_MATERIAL_SERVING_ENABLED"));
-  assert.ok(codes.includes("ML_SHADOW_WITH_SERVING_UNSAFE"));
+  assert.ok(codes.includes("ML_MATERIAL_ARTIFACT_MISSING"));
+  assert.ok(codes.includes("ML_PROJECT_ARTIFACT_MISSING"));
 });
 
-test("shadow enabled with serving disabled is accepted", () => {
+test("explicit DETERMINISTIC is accepted without artifact paths", () => {
   const env = validReleaseAEnv();
+  env.RECOMMENDATION_ML_RUNTIME_MODE = "DETERMINISTIC";
+  delete env.RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH;
+  delete env.RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH;
+  const result = validateSync(env);
+  assert.equal(result.ok, true);
+});
+
+test("SHADOW runtime mode is accepted", () => {
+  const env = validReleaseAEnv();
+  env.RECOMMENDATION_ML_RUNTIME_MODE = "SHADOW";
+  delete env.RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH;
+  delete env.RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH;
   env.RECOMMENDATION_ML_SHADOW_ENABLED = "true";
   const result = validateSync(env);
   assert.equal(result.ok, true);
@@ -271,17 +289,18 @@ test("invalid poll, retry, batch, and lease values fail", () => {
 
 test("malformed boolean flags fail closed", () => {
   const env = validReleaseAEnv();
-  env.RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED = "maybe";
+  env.RECOMMENDATION_ML_RUNTIME_MODE = "SHADOW";
+  env.RECOMMENDATION_ML_SHADOW_ENABLED = "maybe";
   assert.ok(
     codesOf(validateSync(env).diagnostics).includes("FLAG_BOOLEAN_INVALID"),
   );
 });
 
-test("optional artifact paths are not required", () => {
+test("artifact paths are not required for DETERMINISTIC", () => {
   const env = validReleaseAEnv();
+  env.RECOMMENDATION_ML_RUNTIME_MODE = "DETERMINISTIC";
   env.RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH = "";
   env.RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH = "";
-  env.RECOMMENDATION_ML_SHADOW_ENABLED = "true";
   const result = validateSync(env);
   assert.equal(result.ok, true);
 });
@@ -305,13 +324,15 @@ test("diagnostic ordering follows fixed check sequence", () => {
   const codes = codesOf(validateSync(env).diagnostics);
   const envModeIndex = codes.indexOf("ENV_MODE_UNSUPPORTED");
   const dbUrlIndex = codes.indexOf("DATABASE_URL_MISSING");
-  const championIndex = codes.indexOf("CHAMPION_UNKNOWN");
-  const servingIndex = codes.indexOf("ML_MATERIAL_SERVING_ENABLED");
+  const scorerIndex = codes.indexOf("FALLBACK_SCORER_UNKNOWN");
+  const artifactIndex = codes.indexOf("ML_MATERIAL_ARTIFACT_MISSING");
+  const servingIndex = codes.indexOf("ML_SERVING_FLAGS_REMOVED");
   const workerIndex = codes.indexOf("OUTBOX_WORKER_REQUIRED_BUT_DISABLED");
   assert.ok(envModeIndex >= 0);
   assert.ok(dbUrlIndex > envModeIndex);
-  assert.ok(championIndex > dbUrlIndex);
-  assert.ok(servingIndex > championIndex);
+  assert.ok(scorerIndex > dbUrlIndex);
+  assert.ok(artifactIndex > scorerIndex);
+  assert.ok(servingIndex > artifactIndex);
   assert.ok(workerIndex > servingIndex);
 });
 
@@ -320,6 +341,7 @@ test("diagnostic count is bounded", () => {
   env.RECOMMENDATION_SCORER_VERSION = "x";
   env.RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED = "maybe";
   env.RECOMMENDATION_ML_PROJECT_SERVING_ENABLED = "maybe";
+  env.RECOMMENDATION_ML_RUNTIME_MODE = "SHADOW";
   env.RECOMMENDATION_ML_SHADOW_ENABLED = "maybe";
   env.RECOMMENDATION_OUTBOX_WORKER_ENABLED = "maybe";
   env.RECOMMENDATION_OUTBOX_WORKER_REQUIRED = "maybe";
@@ -562,7 +584,7 @@ test("CLI reports config failure with exit code 1 without loading dotenv", async
   }
 });
 
-test("child process: invalid champion yields CHAMPION_UNKNOWN without stack (human)", async () => {
+test("child process: invalid scorer yields FALLBACK_SCORER_UNKNOWN without stack (human)", async () => {
   const result = await runValidatorChild([], {
     ...validReleaseAEnv(),
     RECOMMENDATION_SCORER_VERSION: "not-a-champion",
@@ -571,13 +593,13 @@ test("child process: invalid champion yields CHAMPION_UNKNOWN without stack (hum
   });
   const output = `${result.stdout}\n${result.stderr}`;
   assert.equal(result.code, 1);
-  assert.match(output, /CHAMPION_UNKNOWN/);
+  assert.match(output, /FALLBACK_SCORER_UNKNOWN/);
   assert.match(output, /FAIL —/);
   assert.equal(output.includes("not-a-champion"), false);
   assert.equal(/\n\s*at\s+\S+/.test(output), false);
 });
 
-test("child process: invalid champion with --json yields valid JSON and exit 1", async () => {
+test("child process: invalid scorer with --json yields valid JSON and exit 1", async () => {
   const result = await runValidatorChild(["--json"], {
     ...validReleaseAEnv(),
     RECOMMENDATION_SCORER_VERSION: "not-a-champion",
@@ -593,7 +615,9 @@ test("child process: invalid champion with --json yields valid JSON and exit 1",
   };
   assert.equal(parsed.ok, false);
   assert.ok(
-    parsed.diagnostics.some((diagnostic) => diagnostic.code === "CHAMPION_UNKNOWN"),
+    parsed.diagnostics.some(
+      (diagnostic) => diagnostic.code === "FALLBACK_SCORER_UNKNOWN",
+    ),
   );
   assert.equal(jsonText.includes("not-a-champion"), false);
   assert.equal(/\n\s*at\s+\S/.test(jsonText), false);

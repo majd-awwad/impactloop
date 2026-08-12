@@ -170,3 +170,14 @@ requires a prior `prisma:seed` (Majd supplier + Obstacle Avoidance Robot) and up
 - Community people/materials/projects/behavior scripts are idempotent on localhost
 - `npm run prisma:seed` truncates the local database — use only for a full reset
 - After a full `prisma:seed`, re-run `demo:seed` (or the per-stage commands above)
+
+## Demo data vs ML artifacts
+
+Demo seed prepares **database content** (materials, projects, behavior). It does **not** train or refresh LightFM artifacts.
+
+| Action | Affects DB | Affects ML artifacts |
+|--------|------------|----------------------|
+| `demo:seed` | Yes | No |
+| `recommendations:ml:train:local` | No | Yes |
+
+If taxonomy, demo materials, or feature contracts change materially, regenerate snapshot → retrain → validate per [development/local-ml.md](development/local-ml.md). Stale artifacts may cause NOT_READY or deterministic fallback under ML_PRIMARY even when demo data looks correct.

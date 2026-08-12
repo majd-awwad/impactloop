@@ -26,22 +26,23 @@ export type ReleaseClassification =
   "READY_FOR_CONTROLLED_LOCAL_DEMO" | "READY_WITH_WARNINGS" | "NOT_READY";
 
 export type RecommendationFlagState = {
+  /** Authoritative runtime mode for this evaluation step. */
+  runtimeMode: 'DETERMINISTIC' | 'SHADOW' | 'ML_PRIMARY';
   shadow: boolean;
-  materialServing: boolean;
-  projectServing: boolean;
   materialPath: string;
   projectPath: string;
 };
 
 export const EVALUATION_MODES: Record<
   EvaluationModeKey,
-  Pick<RecommendationFlagState, "shadow" | "materialServing" | "projectServing">
+  Pick<RecommendationFlagState, 'runtimeMode' | 'shadow'>
 > = {
-  A_baseline: { shadow: false, materialServing: false, projectServing: false },
-  B_shadow: { shadow: true, materialServing: false, projectServing: false },
-  C_material: { shadow: true, materialServing: true, projectServing: false },
-  D_project: { shadow: true, materialServing: false, projectServing: true },
-  E_both: { shadow: true, materialServing: true, projectServing: true },
+  A_baseline: { runtimeMode: 'DETERMINISTIC', shadow: false },
+  B_shadow: { runtimeMode: 'SHADOW', shadow: true },
+  // Legacy C/D/E serving-flag modes collapse to ML_PRIMARY (serving flags removed).
+  C_material: { runtimeMode: 'ML_PRIMARY', shadow: true },
+  D_project: { runtimeMode: 'ML_PRIMARY', shadow: true },
+  E_both: { runtimeMode: 'ML_PRIMARY', shadow: true },
 };
 
 export const ARCHETYPE_KEYS: ArchetypeKey[] = [
@@ -244,9 +245,8 @@ export const summarizeDistribution = (values: number[]) => ({
 export const captureRecommendationFlags = (
   env: typeof EnvType,
 ): RecommendationFlagState => ({
+  runtimeMode: env.recommendationMlRuntimeMode,
   shadow: env.recommendationMlShadowEnabled,
-  materialServing: env.recommendationMlMaterialServingEnabled,
-  projectServing: env.recommendationMlProjectServingEnabled,
   materialPath: env.recommendationMlMaterialArtifactPath,
   projectPath: env.recommendationMlProjectArtifactPath,
 });
@@ -255,9 +255,8 @@ export const applyRecommendationFlags = (
   env: typeof EnvType,
   flags: RecommendationFlagState,
 ): void => {
+  env.recommendationMlRuntimeMode = flags.runtimeMode;
   env.recommendationMlShadowEnabled = flags.shadow;
-  env.recommendationMlMaterialServingEnabled = flags.materialServing;
-  env.recommendationMlProjectServingEnabled = flags.projectServing;
   env.recommendationMlMaterialArtifactPath = flags.materialPath;
   env.recommendationMlProjectArtifactPath = flags.projectPath;
 };

@@ -63,10 +63,11 @@ Role-scope framing: see [roles-and-capabilities](roles-and-capabilities.md).
 |------|------|
 | Routes | `modules/learner-home/learner-home.routes.ts` |
 | Service | `modules/learner-home/learner-home.service.ts` |
+| ML recall | `modules/learner-home/learner-home.material-candidate-recall.ts` |
+| ML ordering | `modules/learner-home/learner-home.ml-ordering.ts` |
 | Scoring | `modules/learner-home/learner-home.scoring.ts` |
-| Affinity / behavior | `modules/learner-home/learner-home.affinity.ts` |
-| Repository | `modules/learner-home/learner-home.repository.ts` |
-| Tests | `modules/learner-home/learner-home.scoring.test.ts` |
+
+**Ranking architecture:** [architecture/recommendation-system.md](../architecture/recommendation-system.md). Under default `ML_PRIMARY`, `suggested_materials` and `suggested_projects` are ML-ranked when artifacts are READY; other sections remain deterministic/business-driven.
 
 ## API endpoints
 

@@ -147,9 +147,8 @@ describe('process-local deterministic bootstrap', () => {
     const originalDateNow = Date.now;
     const trackedKeys = [
       'RECOMMENDATION_SCORER_VERSION',
+      'RECOMMENDATION_ML_RUNTIME_MODE',
       'RECOMMENDATION_ML_SHADOW_ENABLED',
-      'RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED',
-      'RECOMMENDATION_ML_PROJECT_SERVING_ENABLED',
       'RECOMMENDATION_OUTBOX_WORKER_ENABLED',
     ] as const;
     const originalProcessValues = new Map(
@@ -157,9 +156,8 @@ describe('process-local deterministic bootstrap', () => {
     );
     const mutableEnv: Record<string, unknown> = {
       recommendationScorerVersion: 'normalized-interests-v2',
+      recommendationMlRuntimeMode: 'ML_PRIMARY',
       recommendationMlShadowEnabled: true,
-      recommendationMlMaterialServingEnabled: true,
-      recommendationMlProjectServingEnabled: true,
       recommendationOutboxWorkerEnabled: true,
     };
     const originalMutableEnv = { ...mutableEnv };
@@ -180,10 +178,10 @@ describe('process-local deterministic bootstrap', () => {
       async ({ env }) => {
         assert.equal(Date.now(), Date.parse(evaluationTime));
         assert.equal(process.env.RECOMMENDATION_ML_SHADOW_ENABLED, 'false');
+        assert.equal(process.env.RECOMMENDATION_ML_RUNTIME_MODE, 'DETERMINISTIC');
         assert.equal(env.recommendationScorerVersion, 'legacy-v1');
+        assert.equal(env.recommendationMlRuntimeMode, 'DETERMINISTIC');
         assert.equal(env.recommendationMlShadowEnabled, false);
-        assert.equal(env.recommendationMlMaterialServingEnabled, false);
-        assert.equal(env.recommendationMlProjectServingEnabled, false);
         assert.equal(env.recommendationOutboxWorkerEnabled, false);
       },
     );
@@ -200,9 +198,8 @@ describe('process-local deterministic bootstrap', () => {
     const originalShadow = process.env.RECOMMENDATION_ML_SHADOW_ENABLED;
     const mutableEnv: Record<string, unknown> = {
       recommendationScorerVersion: 'legacy-v1',
+      recommendationMlRuntimeMode: 'DETERMINISTIC',
       recommendationMlShadowEnabled: true,
-      recommendationMlMaterialServingEnabled: false,
-      recommendationMlProjectServingEnabled: false,
       recommendationOutboxWorkerEnabled: false,
     };
 

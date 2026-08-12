@@ -119,7 +119,7 @@ test('loader rejects relative, missing, unreadable, malformed, structural, and s
 test('taxonomy vocabulary fingerprint covers only concept type and canonical key', () => {
   assert.equal(
     computeTaxonomyVocabularyFingerprint(),
-    'c84173df47de8dfc547e5d68277fbf789b9e0a27561be08221e5e0d88d3db370',
+    '14b855de18511235289cf33e4704693bd5d3887cb6e066d6abcd2a00ef08ed83',
   );
 
   const labelAndAliasOnlyChange = TAXONOMY_CONCEPT_SEEDS.map((seed, index) =>

@@ -41,9 +41,8 @@ const repositoryRoot = path.resolve(import.meta.dirname, "../../..");
 
 const restoreBaselineRecommendationEnv = (): void => {
   applyRecommendationFlags(env, {
+    runtimeMode: "DETERMINISTIC",
     shadow: false,
-    materialServing: false,
-    projectServing: false,
     materialPath: "",
     projectPath: "",
   });
@@ -64,21 +63,20 @@ test("parseMode accepts known modes, PREFLIGHT_MODE env, and rejects unknown val
   restoreRecommendationProcessEnv(prior);
 });
 
-test("buildModeFlags isolates material and project serving per mode", () => {
+test("buildModeFlags uses runtimeMode+shadow (no materialServing)", () => {
   const paths = resolveArtifactPaths(repositoryRoot);
   assert.deepEqual(buildModeFlags("deterministic", paths), {
+    runtimeMode: "DETERMINISTIC",
     shadow: false,
-    materialServing: false,
-    projectServing: false,
     materialPath: paths.material,
     projectPath: paths.project,
   });
-  assert.equal(buildModeFlags("material", paths).materialServing, true);
-  assert.equal(buildModeFlags("material", paths).projectServing, false);
-  assert.equal(buildModeFlags("project", paths).materialServing, false);
-  assert.equal(buildModeFlags("project", paths).projectServing, true);
-  assert.equal(buildModeFlags("both", paths).materialServing, true);
-  assert.equal(buildModeFlags("both", paths).projectServing, true);
+  assert.equal(buildModeFlags("material", paths).runtimeMode, "ML_PRIMARY");
+  assert.equal(buildModeFlags("material", paths).shadow, true);
+  assert.equal(buildModeFlags("project", paths).runtimeMode, "ML_PRIMARY");
+  assert.equal(buildModeFlags("project", paths).shadow, true);
+  assert.equal(buildModeFlags("both", paths).runtimeMode, "ML_PRIMARY");
+  assert.equal(buildModeFlags("both", paths).shadow, true);
 });
 
 test("deterministic mode proof invokes no scorer", () => {
@@ -171,7 +169,7 @@ isolatedRecommendationTest(
     const original = captureRecommendationFlags(env);
     try {
       env.recommendationMlShadowEnabled = true;
-      env.recommendationMlMaterialServingEnabled = true;
+      env.recommendationMlRuntimeMode = "ML_PRIMARY";
       env.recommendationMlProjectArtifactPath =
         "/tmp/preflight-test-artifact.json";
       const priorBeforeRun = captureRecommendationFlags(env);
@@ -226,7 +224,7 @@ isolatedRecommendationTest(
     try {
       delete process.env.PREFLIGHT_MODE;
       process.env.RECOMMENDATION_ML_SHADOW_ENABLED = "";
-      process.env.RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED = "true";
+      process.env.RECOMMENDATION_ML_RUNTIME_MODE = "ML_PRIMARY";
       process.env.RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH =
         "/tmp/material-artifact.json";
 
@@ -237,10 +235,7 @@ isolatedRecommendationTest(
 
       assert.equal("PREFLIGHT_MODE" in process.env, false);
       assert.equal(process.env.RECOMMENDATION_ML_SHADOW_ENABLED, "");
-      assert.equal(
-        process.env.RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED,
-        "true",
-      );
+      assert.equal(process.env.RECOMMENDATION_ML_RUNTIME_MODE, "ML_PRIMARY");
       assert.equal(
         process.env.RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH,
         "/tmp/material-artifact.json",
@@ -539,7 +534,9 @@ if (hasDatabase) {
   isolatedRecommendationTest(
     "accepted artifact versions are enforced",
     async () => {
-      const paths = resolveArtifactPaths(repositoryRoot);
+      const { ACCEPTED_MODEL_VERSIONS, ACCEPTED_FEATURE_SCHEMAS } = await import(
+        "./recommendations-demo-preflight.js"
+      );
       const { report } = await runPreflight({
         mode: "deterministic",
         repositoryRoot,
@@ -551,9 +548,10 @@ if (hasDatabase) {
           modelVersion: string;
           featureSchemaVersion: string;
         };
+        assert.ok(ACCEPTED_MODEL_VERSIONS.has(material.modelVersion));
+        assert.ok(ACCEPTED_FEATURE_SCHEMAS.has(material.featureSchemaVersion));
         assert.equal(material.modelVersion, ACCEPTED_MODEL_VERSION);
         assert.equal(material.featureSchemaVersion, ACCEPTED_FEATURE_SCHEMA);
-        assert.ok(paths.material.endsWith("material-hybrid-runtime-v2.json"));
       }
     },
   );
@@ -570,9 +568,8 @@ test("preflight modes cover all accepted CLI values", () => {
     [...RECOMMENDATION_PROCESS_ENV_KEYS],
     [
       "PREFLIGHT_MODE",
+      "RECOMMENDATION_ML_RUNTIME_MODE",
       "RECOMMENDATION_ML_SHADOW_ENABLED",
-      "RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED",
-      "RECOMMENDATION_ML_PROJECT_SERVING_ENABLED",
       "RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH",
       "RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH",
     ],

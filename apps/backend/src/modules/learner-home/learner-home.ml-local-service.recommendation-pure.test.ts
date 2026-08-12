@@ -94,7 +94,7 @@ const decision = (
   overrides: Partial<LearnerHomeMlOrderingDecision['diagnostics']> = {},
 ): LearnerHomeMlOrderingDecision => ({
   domain,
-  runtimeMode: 'ML_LOCAL',
+  runtimeMode: 'ML_PRIMARY',
   status,
   ...(status === 'FALLBACK_NOT_READY' ? { reasonCode: 'RUNTIME_NOT_READY' } : {}),
   diagnostics: {
@@ -183,9 +183,68 @@ test('both READY domains visibly follow their independent validated ordering', a
   });
   assert.deepEqual(sectionIds(envelope.response, 'suggested_materials'), ['m-5', 'm-4', 'm-3', 'm-2']);
   assert.deepEqual(sectionIds(envelope.response, 'suggested_projects'), ['p-5', 'p-4', 'p-3', 'p-2']);
-  assert.equal(envelope.generation.algorithmName, 'local-ml-hybrid');
-  assert.match(envelope.generation.algorithmVersion, /sm=ml-local/);
-  assert.match(envelope.generation.algorithmVersion, /sp=ml-local/);
+  assert.equal(envelope.generation.algorithmName, 'ml-primary-hybrid');
+  assert.match(envelope.generation.algorithmVersion, /sm=ml-primary/);
+  assert.match(envelope.generation.algorithmVersion, /sp=ml-primary/);
+});
+
+test('final visible material order matches ML scorer order after assembly/dedupe', async () => {
+  const envelope = await assemble({
+    materialStatus: 'ML_RANKED',
+    projectStatus: 'FALLBACK_NOT_READY',
+    reverseMaterial: true,
+  });
+  const visible = sectionIds(envelope.response, 'suggested_materials');
+  // Mock scorer reversed pool [m-0..]; containment keeps relative ML order of survivors.
+  assert.deepEqual(visible, ['m-5', 'm-4', 'm-3', 'm-2']);
+  assert.equal(envelope.servingTruth.material.health, 'ML_SERVED');
+  assert.equal(envelope.servingTruth.material.mlOwnedFinalOrder, true);
+  assert.equal(envelope.generation.servingOutcomes?.material.status, 'ML_RANKED');
+  assert.equal(envelope.generation.servingOutcomes?.project.status, 'FALLBACK_NOT_READY');
+});
+
+test('final visible project order preserves ML relative order under unsaved/saved policy', async () => {
+  const withSaved = (): LearnerHomeLoadedContext => {
+    const base = loaded();
+    return {
+      ...base,
+      savedProjectIds: new Set(['p-5', 'p-4']),
+      hasSavedProjects: true,
+      projects: base.projects.map((row, index) => ({
+        ...row,
+        mapped: {
+          ...row.mapped,
+          isSaved: index === 5 || index === 4,
+        },
+      })),
+    };
+  };
+
+  const envelope = await assembleLearnerHomeCachedEnvelope({
+    userId: 'learner-ml-local-saved',
+    loaded: withSaved(),
+    requestedMaterialScoringMode: 'legacy-v1' as RecommendationScorerVersion,
+    rankMaterialPool: async (_context, pool) => ({
+      ordered: [...pool],
+      decision: decision('material', 'FALLBACK_NOT_READY'),
+    }),
+    rankProjectPool: async (_context, pool) => ({
+      ordered: [...pool].reverse(),
+      decision: decision('project', 'ML_RANKED'),
+    }),
+  });
+
+  const visible = sectionIds(envelope.response, 'suggested_projects');
+  // Unsaved-first: reversed ML order among unsaved (p-3,p-2,...) then saved fill.
+  assert.ok(visible.length > 0);
+  assert.equal(envelope.mlOrdering.project.status, 'ML_RANKED');
+  // Relative order of unsaved survivors must follow reverse scorer order.
+  const unsavedVisible = visible.filter((id) => id !== 'p-5' && id !== 'p-4');
+  for (let i = 1; i < unsavedVisible.length; i += 1) {
+    const prev = Number(unsavedVisible[i - 1]!.slice(2));
+    const next = Number(unsavedVisible[i]!.slice(2));
+    assert.ok(prev > next, `expected descending ML unsaved order, got ${unsavedVisible.join(',')}`);
+  }
 });
 
 test('an unexpected Material rejection cannot cancel a valid Project ordering', async () => {
@@ -220,7 +279,7 @@ test('partial material mapping retains diagnostics, deterministic append, and se
 });
 
 test('cache key separates mode and independent Material/Project identities', () => {
-  const key = (runtimeMode: 'DETERMINISTIC' | 'SHADOW' | 'ML_LOCAL', material: string, project: string) =>
+  const key = (runtimeMode: 'DETERMINISTIC' | 'SHADOW' | 'ML_PRIMARY', material: string, project: string) =>
     buildLearnerHomeCacheKey({
       userId: 'learner-1',
       scorerVersion: 'legacy-v1',
@@ -228,11 +287,11 @@ test('cache key separates mode and independent Material/Project identities', () 
       materialRuntimeIdentity: material,
       projectRuntimeIdentity: project,
     });
-  const local = key('ML_LOCAL', 'material-a', 'project-a');
+  const local = key('ML_PRIMARY', 'material-a', 'project-a');
   assert.notEqual(local, key('DETERMINISTIC', 'material-a', 'project-a'));
   assert.notEqual(local, key('SHADOW', 'material-a', 'project-a'));
-  assert.notEqual(local, key('ML_LOCAL', 'material-b', 'project-a'));
-  assert.notEqual(local, key('ML_LOCAL', 'material-a', 'project-b'));
+  assert.notEqual(local, key('ML_PRIMARY', 'material-b', 'project-a'));
+  assert.notEqual(local, key('ML_PRIMARY', 'material-a', 'project-b'));
 });
 
 const SCORER_VERSIONS = [
@@ -251,11 +310,11 @@ const mlHomeAlgorithmVersion = (input: {
 }): string => {
   const materialDecision: LearnerHomeMlOrderingDecision = {
     ...decision('material', input.materialStatus),
-    runtimeMode: input.materialRuntimeMode ?? 'ML_LOCAL',
+    runtimeMode: input.materialRuntimeMode ?? 'ML_PRIMARY',
   };
   const projectDecision: LearnerHomeMlOrderingDecision = {
     ...decision('project', input.projectStatus),
-    runtimeMode: input.projectRuntimeMode ?? 'ML_LOCAL',
+    runtimeMode: input.projectRuntimeMode ?? 'ML_PRIMARY',
   };
   return algorithmVersionForMlHomeForTests(
     {
@@ -315,8 +374,8 @@ test('full-Home ML algorithm versions stay within 100 chars for all supported ba
     {
       materialStatus: 'ML_RANKED',
       projectStatus: 'ML_RANKED',
-      materialToken: 'ml-local',
-      projectToken: 'ml-local',
+      materialToken: 'ml-primary',
+      projectToken: 'ml-primary',
     },
     {
       materialStatus: 'FALLBACK_NOT_READY',
@@ -333,19 +392,19 @@ test('full-Home ML algorithm versions stay within 100 chars for all supported ba
     {
       materialStatus: 'ML_RANKED',
       projectStatus: 'FALLBACK_NOT_READY',
-      materialToken: 'ml-local',
+      materialToken: 'ml-primary',
       projectToken: 'fb-not-ready',
     },
     {
       materialStatus: 'FALLBACK_FAILED',
       projectStatus: 'ML_RANKED',
       materialToken: 'fb-failed',
-      projectToken: 'ml-local',
+      projectToken: 'ml-primary',
     },
     {
       materialStatus: 'ML_RANKED',
       projectStatus: 'DETERMINISTIC',
-      materialToken: 'ml-local',
+      materialToken: 'ml-primary',
       projectToken: 'deterministic',
     },
     {

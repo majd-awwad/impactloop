@@ -1,6 +1,6 @@
 # Final Recommendation Architecture Freeze
 
-> **Historical decision snapshot — 2026-07-18.** This document preserves the graduation-freeze evidence and decision as recorded on that date. Later experimental LightFM training, artifacts, TypeScript scoring, shadow, rank-fusion, and optional serving code do not rewrite this history. For authoritative current implementation and adoption status, read [`current-state.md`](current-state.md).
+> **Historical decision snapshot — 2026-07-18.** This document preserves the graduation-freeze evidence and decision as recorded on that date. Later experimental LightFM training, artifacts, TypeScript scoring, shadow, rank-fusion, and optional serving code do not rewrite this history. For current architecture see [../../architecture/recommendation-system.md](../../architecture/recommendation-system.md).
 
 Date: 2026-07-18
 Scope: graduation-project architecture and documentation freeze

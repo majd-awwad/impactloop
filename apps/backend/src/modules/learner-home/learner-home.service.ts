@@ -29,6 +29,11 @@ import {
   type PreScoredMaterialEntry,
 } from './learner-home.material-features.js';
 import {
+  DETERMINISTIC_MATERIAL_RANK_POOL_SIZE,
+  type RankedMaterialEntry,
+  resolveSuggestedMaterialCandidatePoolForServing,
+} from './learner-home.material-candidate-recall.js';
+import {
   selectTieredSuggestedMaterials,
   sortAllRankedMaterials,
   type RankedMaterialItem,
@@ -79,6 +84,7 @@ import type {
 import { isActiveReservationBehaviorStatus } from '../reservations/reservations.quantity.js';
 import { isContinueBuildItemReady } from '../learning-projects/project-build-continuation.js';
 import { getRequestId } from '../../observability/request-context.js';
+import { logger } from '../../observability/logger.js';
 import {
   RECOMMENDATION_ALGORITHM_NAME,
   RECOMMENDATION_POLICY_VERSION,
@@ -89,6 +95,10 @@ import {
   type RecommendationGenerationMetadata,
 } from '../recommendation-events/recommendation-events.service.js';
 import { reportMlShadowFallback, runMlShadowComparison } from '../recommendations/ml-shadow.service.js';
+import {
+  evaluateRequestServingHealth,
+  type RecommendationRequestServingTruth,
+} from '../recommendations/recommendation-serving-health.js';
 import {
   buildLearnerHomeMlRuntimeIdentity,
   rankLearnerHomeMlCandidatePool,
@@ -121,7 +131,7 @@ const algorithmVersionForSection = (
 
 const mlDecisionToken = (decision: LearnerHomeMlOrderingDecision): string => {
   switch (decision.status) {
-    case 'ML_RANKED': return 'ml-local';
+    case 'ML_RANKED': return 'ml-primary';
     case 'FALLBACK_NOT_READY': return 'fb-not-ready';
     case 'FALLBACK_FAILED': return 'fb-failed';
     default: return 'deterministic';
@@ -133,7 +143,7 @@ const algorithmVersionForMlSection = (
   sectionKey: LearnerHomeSectionKey,
   decision?: LearnerHomeMlOrderingDecision,
 ): string => {
-  if (!decision || decision.runtimeMode !== 'ML_LOCAL') {
+  if (!decision || decision.runtimeMode !== 'ML_PRIMARY') {
     return algorithmVersionForSection(context, sectionKey);
   }
   const sectionToken = sectionKey === 'suggested_materials'
@@ -158,7 +168,7 @@ const algorithmVersionForMlHome = (
   material: LearnerHomeMlOrderingDecision,
   project: LearnerHomeMlOrderingDecision,
 ): string => {
-  if (material.runtimeMode !== 'ML_LOCAL' && project.runtimeMode !== 'ML_LOCAL') {
+  if (material.runtimeMode !== 'ML_PRIMARY' && project.runtimeMode !== 'ML_PRIMARY') {
     return algorithmVersionForModeDecision(context.modeDecision);
   }
   const materialBase = context.modeDecision.effectiveMaterialScoringMode;
@@ -175,7 +185,7 @@ export const algorithmVersionForMlHomeForTests = algorithmVersionForMlHome;
 const algorithmNameForMlDecisions = (
   ...decisions: Array<LearnerHomeMlOrderingDecision | undefined>
 ): string => decisions.some((value) => value?.status === 'ML_RANKED')
-  ? 'local-ml-hybrid'
+  ? 'ml-primary-hybrid'
   : RECOMMENDATION_ALGORITHM_NAME;
 
 const SECTION_LIMITS = {
@@ -188,7 +198,7 @@ const SECTION_LIMITS = {
   popular_projects: 4,
 } as const;
 
-const RANK_POOL_SIZE = 48;
+const RANK_POOL_SIZE = DETERMINISTIC_MATERIAL_RANK_POOL_SIZE;
 
 /** @internal Exported for RP-03.5 TTL assertions (single source of truth). */
 export const LEARNER_HOME_CACHE_TTL_MS = 45_000;
@@ -681,6 +691,61 @@ export type LearnerHomeCachedEnvelope = {
     material: LearnerHomeMlOrderingDecision;
     project: LearnerHomeMlOrderingDecision;
   };
+  /** @internal Serving-health truth for smoke/preflight/diagnostics. */
+  servingTruth: RecommendationRequestServingTruth;
+};
+
+const logLearnerHomeServingTruth = (
+  truth: RecommendationRequestServingTruth,
+  userId: string,
+): void => {
+  const requestId = getRequestId();
+  const logDomain = (
+    domainTruth: RecommendationRequestServingTruth['material'],
+  ) => {
+    const payload = {
+      operation: 'recommendation.serving.outcome',
+      userId,
+      ...(requestId ? { requestId } : {}),
+      domain: domainTruth.domain,
+      runtimeMode: domainTruth.runtimeMode,
+      domainState: domainTruth.domainState,
+      outcome: domainTruth.outcome,
+      health: domainTruth.health,
+      reasonCode: domainTruth.reasonCode ?? null,
+      candidateCount: domainTruth.candidateCount,
+      mappedCount: domainTruth.mappedCandidateCount,
+      unmappedCount: domainTruth.unmappedCandidateCount,
+      scoredCount: domainTruth.scoredCount,
+      finalSectionItemCount: domainTruth.finalSectionItemCount,
+      mlOwnedFinalOrder: domainTruth.mlOwnedFinalOrder,
+      modelVersion: domainTruth.modelVersion ?? null,
+      schemaVersion: domainTruth.schemaVersion ?? null,
+    };
+
+    if (domainTruth.health === 'FALLBACK_UNEXPECTED') {
+      logger.warn(
+        payload,
+        'Recommendation ML unexpected fallback under ML_PRIMARY',
+      );
+      return;
+    }
+    if (
+      domainTruth.health === 'FALLBACK_EXPECTED' ||
+      domainTruth.outcome === 'FALLBACK_FAILED'
+    ) {
+      logger.warn(payload, 'Recommendation ML expected fallback active');
+      return;
+    }
+    if (domainTruth.health === 'ML_SERVED') {
+      logger.debug(payload, 'Recommendation ML served ranking');
+      return;
+    }
+    logger.debug(payload, 'Recommendation serving outcome');
+  };
+
+  logDomain(truth.material);
+  logDomain(truth.project);
 };
 
 const buildCanonicalScoringContextForMaterials = async (input: {
@@ -1112,17 +1177,6 @@ export const rankPreScoredMaterialEntries = (
   );
 };
 
-type RankedMaterialEntry = {
-  type: 'material';
-  score: number;
-  reasons: string[];
-  tier: number;
-  hasPrimaryRelevance: boolean;
-  fallbackOnly: boolean;
-  material: Record<string, unknown>;
-  ownerId: string;
-};
-
 const toMaterialItem = ({
   ownerId: _ownerId,
   tier: _tier,
@@ -1321,10 +1375,8 @@ export const rankProjects = (
   );
 };
 
-const buildSuggestedProjectsItems = (
+const buildEligibleSuggestedProjectPool = (
   context: LearnerHomeContext,
-  limit: number,
-  orderedPool?: readonly LearnerHomeProjectItem[],
 ): LearnerHomeProjectItem[] => {
   const availableMaterials = context.materials.filter(
     (material) =>
@@ -1340,45 +1392,72 @@ const buildSuggestedProjectsItems = (
       behavior: context.behavior,
     });
 
-  const unsavedProjects = context.projects.filter(
-    (project) => !context.savedProjectIds.has(project.id),
+  // Soft score>0 is eligibility for suggestion surfaces; tier sort is fallback-only
+  // ordering and must not gate which projects ML may rank.
+  return rankProjects(
+    context.projects,
+    scoreProject,
+    context.projects.length,
+    true,
   );
-  const savedProjects = context.projects.filter((project) =>
-    context.savedProjectIds.has(project.id),
-  );
+};
 
-  const deterministicPool = [
-    ...rankProjects(unsavedProjects, scoreProject, context.projects.length, true),
-    ...rankProjects(savedProjects, scoreProject, context.projects.length, true),
-  ];
-  const selectedPool = orderedPool ? [...orderedPool] : deterministicPool;
-  return selectSuggestedProjectItems(
-    selectedPool.filter(
-      (item) => !context.savedProjectIds.has(String(item.project.id ?? '')),
-    ),
-    selectedPool.filter((item) =>
-      context.savedProjectIds.has(String(item.project.id ?? '')),
-    ),
+/**
+ * Apply saved/unsaved business policy AFTER ranking ownership is settled.
+ * Unsaved projects are the primary suggested set; saved projects are shortage fill
+ * only. Within each band, relative order from `orderedPool` (ML or deterministic)
+ * is preserved — never re-sorted by deterministic score.
+ */
+export const selectSuggestedProjectsPreservingOrder = (
+  orderedPool: readonly LearnerHomeProjectItem[],
+  savedProjectIds: ReadonlySet<string>,
+  limit: number,
+): LearnerHomeProjectItem[] => {
+  const unsaved: LearnerHomeProjectItem[] = [];
+  const saved: LearnerHomeProjectItem[] = [];
+  for (const item of orderedPool) {
+    const id = String(item.project.id ?? '');
+    if (!id) continue;
+    if (savedProjectIds.has(id)) {
+      saved.push(item);
+    } else {
+      unsaved.push(item);
+    }
+  }
+  return selectSuggestedProjectItems(unsaved, saved, limit);
+};
+
+const buildSuggestedProjectsItems = (
+  context: LearnerHomeContext,
+  limit: number,
+  orderedPool?: readonly LearnerHomeProjectItem[],
+): LearnerHomeProjectItem[] => {
+  const selectedPool = orderedPool
+    ? [...orderedPool]
+    : buildEligibleSuggestedProjectPool(context);
+  return selectSuggestedProjectsPreservingOrder(
+    selectedPool,
+    context.savedProjectIds,
     limit,
   );
 };
 
 const buildSuggestedProjectsCandidatePool = (
   context: LearnerHomeContext,
-): LearnerHomeProjectItem[] => buildSuggestedProjectsItems(
-  context,
-  context.projects.length,
-);
+): LearnerHomeProjectItem[] => buildEligibleSuggestedProjectPool(context);
 
-const buildSuggestedMaterialCandidatePool = (
+const resolveMaterialCandidatePoolForMlServing = (
   entries: PreScoredMaterialEntry[],
   browseAll: boolean,
-): RankedMaterialEntry[] => rankPreScoredMaterialEntries(
-  entries,
-  'suggested',
-  true,
-  browseAll,
-).slice(0, browseAll ? entries.length : RANK_POOL_SIZE);
+) => {
+  const runtimeMode = getRecommendationMlRuntimeSnapshot().mode;
+  return resolveSuggestedMaterialCandidatePoolForServing({
+    entries,
+    runtimeMode,
+    browseAll,
+    rankPreScoredMaterialEntries,
+  });
+};
 
 const failedMlOrderingResult = <T>(
   domain: 'material' | 'project',
@@ -1411,7 +1490,7 @@ const rankSuggestedMaterialPoolWithMl = async (
   const snapshot = getRecommendationMlRuntimeSnapshot();
   let materialConcepts = new Map<string, string[]>();
   let conceptLoadFailed = false;
-  if (snapshot.mode === 'ML_LOCAL') {
+  if (snapshot.mode === 'ML_PRIMARY') {
     try {
       materialConcepts = (
         await learnerHomeRepository.loadMlShadowConcepts(
@@ -1461,7 +1540,7 @@ const rankSuggestedProjectPoolWithMl = async (
   let projectConcepts = new Map<string, string[]>();
   let projectComponentConcepts = new Map<string, string[]>();
   let conceptLoadFailed = false;
-  if (snapshot.mode === 'ML_LOCAL') {
+  if (snapshot.mode === 'ML_PRIMARY') {
     try {
       const concepts = await learnerHomeRepository.loadMlShadowConcepts(
         [],
@@ -1779,7 +1858,10 @@ export const getLearnerHomeSectionForAudit = async (
   let orderedSuggestedProjectItems: readonly LearnerHomeProjectItem[] | undefined;
   let mlDecision: LearnerHomeMlOrderingDecision | undefined;
   if (sectionKey === 'suggested_materials' && preScoredMaterials) {
-    const pool = buildSuggestedMaterialCandidatePool(preScoredMaterials, true);
+    const { pool } = resolveMaterialCandidatePoolForMlServing(
+      preScoredMaterials,
+      true,
+    );
     const mlResult = await rankSuggestedMaterialPoolWithMl(context, pool);
     orderedSuggestedMaterialEntries = mlResult.ordered;
     mlDecision = mlResult.decision;
@@ -2038,16 +2120,47 @@ export const assembleLearnerHomeCachedEnvelope = async (input: {
       })),
     ]);
 
-  const deterministicMaterialPool = buildSuggestedMaterialCandidatePool(
+  const materialCandidatePool = resolveMaterialCandidatePoolForMlServing(
     preScoredMaterials,
     false,
   );
   const deterministicProjectPool = buildSuggestedProjectsCandidatePool(context);
+  const materialRecallAudit = materialCandidatePool.audit;
+  logger.debug(
+    {
+      operation: 'recommendation.candidate_pool.audit',
+      userId: input.userId,
+      material: {
+        servingMode: getRecommendationMlRuntimeSnapshot().mode,
+        hardEligible: materialRecallAudit.hardEligibleCount,
+        surfaceEligible: materialRecallAudit.surfaceEligibleCount,
+        excludedBySurface: materialRecallAudit.excludedBySurfaceCount,
+        mlRecallPool: materialRecallAudit.mlRecallPoolCount,
+        excludedByRecallCap: materialRecallAudit.excludedByRecallCapCount,
+        recallCap: materialRecallAudit.recallCap,
+        surfaceExclusionDetails: materialRecallAudit.surfaceExclusionDetails,
+        legacyDeterministic: {
+          softEligible: materialRecallAudit.deterministicSoftEligibleCount,
+          excludedByScoreGate:
+            materialRecallAudit.excludedByDeterministicScoreGateCount,
+          rankPool: materialRecallAudit.deterministicRankPoolCount,
+          excludedByRankPoolCap:
+            materialRecallAudit.excludedByDeterministicRankPoolCapCount,
+        },
+      },
+      project: {
+        hardEligible: context.projects.length,
+        softEligible: deterministicProjectPool.length,
+        mlPoolSize: deterministicProjectPool.length,
+      },
+    },
+    'Recommendation candidate pool recall audit',
+  );
   const [materialSettled, projectSettled] = await Promise.allSettled([
     Promise.resolve().then(() =>
       (input.rankMaterialPool ?? rankSuggestedMaterialPoolWithMl)(
         context,
-        deterministicMaterialPool,
+        materialCandidatePool.pool,
       ),
     ),
     Promise.resolve().then(() =>
@@ -2059,7 +2172,7 @@ export const assembleLearnerHomeCachedEnvelope = async (input: {
   ]);
   const materialMl = materialSettled.status === 'fulfilled'
     ? materialSettled.value
-    : failedMlOrderingResult('material', deterministicMaterialPool, 'SCORER_EXCEPTION');
+    : failedMlOrderingResult('material', materialCandidatePool.pool, 'SCORER_EXCEPTION');
   const projectMl = projectSettled.status === 'fulfilled'
     ? projectSettled.value
     : failedMlOrderingResult('project', deterministicProjectPool, 'SCORER_EXCEPTION');
@@ -2130,6 +2243,22 @@ export const assembleLearnerHomeCachedEnvelope = async (input: {
     sections,
   };
 
+  const suggestedMaterialCount = sections.find(
+    (section) => section.key === 'suggested_materials',
+  )?.items.length ?? 0;
+  const suggestedProjectCount = sections.find(
+    (section) => section.key === 'suggested_projects',
+  )?.items.length ?? 0;
+  const runtimeSnapshot = getRecommendationMlRuntimeSnapshot();
+  const servingTruth = evaluateRequestServingHealth({
+    snapshot: runtimeSnapshot,
+    materialDecision: materialMl.decision,
+    projectDecision: projectMl.decision,
+    materialFinalSectionItemCount: suggestedMaterialCount,
+    projectFinalSectionItemCount: suggestedProjectCount,
+  });
+  logLearnerHomeServingTruth(servingTruth, input.userId);
+
   const currentTopKeys = (domain: 'material' | 'project') =>
     sections.flatMap((section) => section.items)
       .flatMap((item) => {
@@ -2148,7 +2277,7 @@ export const assembleLearnerHomeCachedEnvelope = async (input: {
   })).filter((section) => section.candidateKeys.length > 0);
 
   // Shadow work is fail-safe and has no user-visible ordering effect.
-  if (getRecommendationMlRuntimeSnapshot().mode === 'SHADOW') {
+  if (runtimeSnapshot.mode === 'SHADOW') {
     try {
       const shadowConcepts = env.recommendationMlShadowEnabled
         ? await learnerHomeRepository.loadMlShadowConcepts(
@@ -2209,6 +2338,18 @@ export const assembleLearnerHomeCachedEnvelope = async (input: {
       ),
       generationCacheState: 'MISS',
       candidateTraces: buildCandidateTraces(context, response),
+      servingOutcomes: {
+        material: {
+          status: materialMl.decision.status,
+          health: servingTruth.material.health,
+          reasonCode: materialMl.decision.reasonCode,
+        },
+        project: {
+          status: projectMl.decision.status,
+          health: servingTruth.project.health,
+          reasonCode: projectMl.decision.reasonCode,
+        },
+      },
     },
     cacheable: context.modeDecision.cacheable,
     modeDecision: context.modeDecision,
@@ -2216,6 +2357,7 @@ export const assembleLearnerHomeCachedEnvelope = async (input: {
       material: materialMl.decision,
       project: projectMl.decision,
     },
+    servingTruth,
   };
 };
 
@@ -2243,14 +2385,12 @@ async function loadLearnerHomeUncached(
 export type LearnerHomeCacheKeyInput = {
   userId: string;
   scorerVersion: RecommendationScorerVersion;
-  runtimeMode?: 'DETERMINISTIC' | 'SHADOW' | 'ML_LOCAL';
+  runtimeMode?: 'DETERMINISTIC' | 'SHADOW' | 'ML_PRIMARY';
   materialRuntimeIdentity?: string;
   projectRuntimeIdentity?: string;
   /** @deprecated Compatibility inputs for existing deterministic cache tests. */
   mlShadowEnabled?: boolean;
-  mlMaterialServingEnabled?: boolean;
   mlMaterialArtifactPath?: string;
-  mlProjectServingEnabled?: boolean;
   mlProjectArtifactPath?: string;
 };
 
@@ -2265,14 +2405,10 @@ export const buildLearnerHomeCacheKey = (
     input.userId,
     input.scorerVersion,
     input.runtimeMode ?? (input.mlShadowEnabled ? 'SHADOW' : 'DETERMINISTIC'),
-    input.materialRuntimeIdentity ?? [
-      input.mlMaterialServingEnabled ? 'MATERIAL_SERVED' : 'MATERIAL_NOT_SERVED',
-      input.mlMaterialArtifactPath || 'NO_MATERIAL_ARTIFACT',
-    ].join(':'),
-    input.projectRuntimeIdentity ?? [
-      input.mlProjectServingEnabled ? 'PROJECT_SERVED' : 'PROJECT_NOT_SERVED',
-      input.mlProjectArtifactPath || 'NO_PROJECT_ARTIFACT',
-    ].join(':'),
+    input.materialRuntimeIdentity ??
+      (input.mlMaterialArtifactPath || 'NO_MATERIAL_ARTIFACT'),
+    input.projectRuntimeIdentity ??
+      (input.mlProjectArtifactPath || 'NO_PROJECT_ARTIFACT'),
   ].join('\u0000');
 
 const learnerHomeCacheKey = (userId: string): string => {
@@ -2358,7 +2494,9 @@ export const getLearnerHomeWithCacheStateForAudit = async (userId: string) => {
     response: cacheRead.payload.response,
     modeDecision: cacheRead.payload.modeDecision,
     mlOrdering: cacheRead.payload.mlOrdering,
+    servingTruth: cacheRead.payload.servingTruth,
     candidateCount: cacheRead.payload.generation.candidateCount,
+    generation: cacheRead.payload.generation,
   };
 };
 

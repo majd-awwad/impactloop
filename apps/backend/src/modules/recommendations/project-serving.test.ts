@@ -58,11 +58,9 @@ test('buildServedSuggestedProjectsItems fails closed on hydration mismatch', () 
 isolatedRecommendationTest('READY NONE and LOW serve long-term order with zero recent slots', async () => {
   const prior = {
     shadow: env.recommendationMlShadowEnabled,
-    projectServing: env.recommendationMlProjectServingEnabled,
     projectPath: env.recommendationMlProjectArtifactPath,
   };
   env.recommendationMlShadowEnabled = true;
-  env.recommendationMlProjectServingEnabled = true;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
   setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
   clearMlArtifactCacheForTests();
@@ -120,7 +118,6 @@ isolatedRecommendationTest('READY NONE and LOW serve long-term order with zero r
     assert.equal(scattered.rankedCandidateKeys, undefined);
   } finally {
     env.recommendationMlShadowEnabled = prior.shadow;
-    env.recommendationMlProjectServingEnabled = prior.projectServing;
     env.recommendationMlProjectArtifactPath = prior.projectPath;
     clearMlArtifactCacheForTests();
   }
@@ -129,11 +126,9 @@ isolatedRecommendationTest('READY NONE and LOW serve long-term order with zero r
 isolatedRecommendationTest('READY MEDIUM and HIGH respect frozen recent slot caps in served ranking', async () => {
   const prior = {
     shadow: env.recommendationMlShadowEnabled,
-    projectServing: env.recommendationMlProjectServingEnabled,
     projectPath: env.recommendationMlProjectArtifactPath,
   };
   env.recommendationMlShadowEnabled = true;
-  env.recommendationMlProjectServingEnabled = true;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
   setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
   clearMlArtifactCacheForTests();
@@ -180,7 +175,6 @@ isolatedRecommendationTest('READY MEDIUM and HIGH respect frozen recent slot cap
     );
   } finally {
     env.recommendationMlShadowEnabled = prior.shadow;
-    env.recommendationMlProjectServingEnabled = prior.projectServing;
     env.recommendationMlProjectArtifactPath = prior.projectPath;
     clearMlArtifactCacheForTests();
   }

@@ -309,7 +309,7 @@ export const runtimeConfigForSmoke = (input: {
   materialArtifactPath: string;
   projectArtifactPath: string;
 }): RecommendationMlRuntimeConfig => ({
-  mode: input.mode ?? 'ML_LOCAL',
+  mode: input.mode ?? 'ML_PRIMARY',
   explicitMode: true,
   materialArtifactPath: input.materialArtifactPath,
   projectArtifactPath: input.projectArtifactPath,
@@ -319,10 +319,10 @@ export const applySmokeRuntimeEnv = (input: {
   materialArtifactPath: string;
   projectArtifactPath: string;
 }): void => {
-  process.env.RECOMMENDATION_ML_RUNTIME_MODE = 'ML_LOCAL';
+  process.env.RECOMMENDATION_ML_RUNTIME_MODE = 'ML_PRIMARY';
   process.env.RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH = input.materialArtifactPath;
   process.env.RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH = input.projectArtifactPath;
-  env.recommendationMlRuntimeMode = 'ML_LOCAL';
+  env.recommendationMlRuntimeMode = 'ML_PRIMARY';
   env.recommendationMlRuntimeModeExplicit = true;
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlMaterialArtifactPath = input.materialArtifactPath;
@@ -426,7 +426,7 @@ const rankMaterialPoolForSmoke = async (
   const snapshot = getRecommendationMlRuntimeSnapshot();
   let materialConcepts = new Map<string, string[]>();
   let conceptLoadFailed = false;
-  if (snapshot.mode === 'ML_LOCAL') {
+  if (snapshot.mode === 'ML_PRIMARY') {
     try {
       materialConcepts = (
         await learnerHomeRepository.loadMlShadowConcepts(
@@ -490,7 +490,7 @@ const rankProjectPoolForSmoke = async (
   let projectConcepts = new Map<string, string[]>();
   let projectComponentConcepts = new Map<string, string[]>();
   let conceptLoadFailed = false;
-  if (snapshot.mode === 'ML_LOCAL') {
+  if (snapshot.mode === 'ML_PRIMARY') {
     try {
       const concepts = await learnerHomeRepository.loadMlShadowConcepts(
         [],
@@ -1080,8 +1080,8 @@ export const runLocalMlSmokeEvaluation = async (
     }
 
     if (snapshot) {
-      if (snapshot.mode !== 'ML_LOCAL') {
-        hardSetup.push(`RUNTIME_MODE_NOT_ML_LOCAL:${snapshot.mode}`);
+      if (snapshot.mode !== 'ML_PRIMARY') {
+        hardSetup.push(`RUNTIME_MODE_NOT_ML_PRIMARY:${snapshot.mode}`);
       }
       const materialReady = validateDomainReady(snapshot, 'material');
       const projectReady = validateDomainReady(snapshot, 'project');
@@ -1226,6 +1226,36 @@ export const runLocalMlSmokeEvaluation = async (
 
       const materialReady = snapshot.material.state === 'READY';
       const projectReady = snapshot.project.state === 'READY';
+
+      for (const section of sectionEvals) {
+        const domainReady =
+          section.domain === 'material' ? materialReady : projectReady;
+        const candidateCount = section.decision.diagnostics.candidateCount;
+        const expected =
+          snapshot.mode === 'ML_PRIMARY' &&
+          domainReady &&
+          candidateCount > 0;
+        if (!expected) {
+          diagnostics.push(
+            `${section.learnerAlias}/${section.sectionKey}:serving_expectation=not_required;status=${section.decision.status};candidates=${candidateCount};ready=${domainReady}`,
+          );
+          continue;
+        }
+        if (section.decision.status !== 'ML_RANKED') {
+          hardSetup.push(
+            `${section.domain.toUpperCase()}_READY_NOT_ML_RANKED:${section.learnerAlias}/${section.sectionKey}:status=${section.decision.status}:candidates=${candidateCount}`,
+          );
+        } else {
+          diagnostics.push(
+            `${section.learnerAlias}/${section.sectionKey}:ML_RANKED;candidates=${candidateCount};scored=${section.decision.diagnostics.scoredCount};mlOwned=true;model=${
+              section.domain === 'material'
+                ? snapshot.material.modelVersion ?? 'unknown'
+                : snapshot.project.modelVersion ?? 'unknown'
+            }`,
+          );
+        }
+      }
+
       const materialMlApplied = sectionEvals.some(
         (section) =>
           section.domain === 'material' &&

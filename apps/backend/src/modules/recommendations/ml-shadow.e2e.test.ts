@@ -33,8 +33,7 @@ test('Slice 4B local learner-home shadow validation', { concurrency: false }, as
   await withRecommendationTestIsolation(async () => {
   const prior = {
     shadow: env.recommendationMlShadowEnabled,
-    materialServing: env.recommendationMlMaterialServingEnabled,
-    projectServing: env.recommendationMlProjectServingEnabled,
+    runtimeMode: env.recommendationMlRuntimeMode,
     materialPath: env.recommendationMlMaterialArtifactPath,
     projectPath: env.recommendationMlProjectArtifactPath,
   };
@@ -42,8 +41,6 @@ test('Slice 4B local learner-home shadow validation', { concurrency: false }, as
   setMlShadowObserverForTests((value) => observations.push(value));
 
   try {
-    env.recommendationMlMaterialServingEnabled = false;
-    env.recommendationMlProjectServingEnabled = false;
     env.recommendationMlMaterialArtifactPath = materialArtifact;
     env.recommendationMlProjectArtifactPath = projectArtifact;
 
@@ -226,7 +223,7 @@ test('Slice 4B local learner-home shadow validation', { concurrency: false }, as
       slice4b: {
         caseCount: selected.length,
         caseLabels: invariance,
-        servingFlags: { material: env.recommendationMlMaterialServingEnabled, project: env.recommendationMlProjectServingEnabled },
+        runtimeMode: env.recommendationMlRuntimeMode,
         cache: getMlArtifactCacheStatsForTests(),
         material: aggregate(materialObservations),
         project: aggregate(projectObservations),
@@ -256,8 +253,7 @@ test('Slice 4B local learner-home shadow validation', { concurrency: false }, as
   } finally {
     setMlShadowObserverForTests(undefined);
     env.recommendationMlShadowEnabled = prior.shadow;
-    env.recommendationMlMaterialServingEnabled = prior.materialServing;
-    env.recommendationMlProjectServingEnabled = prior.projectServing;
+    env.recommendationMlRuntimeMode = prior.runtimeMode;
     env.recommendationMlMaterialArtifactPath = prior.materialPath;
     env.recommendationMlProjectArtifactPath = prior.projectPath;
     clearMlArtifactCacheForTests();

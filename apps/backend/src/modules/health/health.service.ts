@@ -3,6 +3,10 @@ import type {
   RecommendationOutboxHealthSnapshot,
   RecommendationOutboxStopResult,
 } from '../recommendation-events/recommendation-events.outbox.worker.js';
+import {
+  getRecommendationMlRuntimeSnapshot,
+  type RecommendationMlRuntimeSnapshot,
+} from '../recommendations/ml-runtime-state.service.js';
 import type { ReservationLifecycleHealthSnapshot } from '../reservations/reservation-lifecycle.worker.js';
 
 export type HealthStatus = {
@@ -24,12 +28,70 @@ export type ReservationLifecycleHealthProvider = {
   getSnapshot: (nowMs?: number) => ReservationLifecycleHealthSnapshot;
 };
 
+/**
+ * Informational ML recommendation health. Never contributes to `ready`.
+ * Application readiness stays independent of ML domain READY/fallback.
+ */
+export type RecommendationMlHealthSummary = {
+  mode: RecommendationMlRuntimeSnapshot['mode'];
+  material: {
+    state: RecommendationMlRuntimeSnapshot['material']['state'];
+    failureCode?: string;
+    modelVersion?: string;
+    schemaVersion?: string;
+    aggregationMode?: string;
+  };
+  project: {
+    state: RecommendationMlRuntimeSnapshot['project']['state'];
+    failureCode?: string;
+    modelVersion?: string;
+    schemaVersion?: string;
+    aggregationMode?: string;
+  };
+  /** True when ML_PRIMARY and both domains READY. */
+  mlServingCapable: boolean;
+  /** True when ML_PRIMARY but at least one domain is not READY. */
+  mlDegraded: boolean;
+};
+
 export type ReadinessStatus = {
   ready: boolean;
   recommendationOutbox: RecommendationOutboxHealthSnapshot | null;
   database: DatabaseHealthSnapshot | null;
   reservationLifecycle: ReservationLifecycleHealthSnapshot | null;
+  /** Presentational only — does not affect `ready`. */
+  recommendationMl: RecommendationMlHealthSummary;
   reasonCodes: string[];
+};
+
+export const buildRecommendationMlHealthSummary = (
+  snapshot: RecommendationMlRuntimeSnapshot = getRecommendationMlRuntimeSnapshot(),
+): RecommendationMlHealthSummary => {
+  const summarize = (
+    domain: RecommendationMlRuntimeSnapshot['material'],
+  ): RecommendationMlHealthSummary['material'] => ({
+    state: domain.state,
+    ...(domain.failureCode ? { failureCode: domain.failureCode } : {}),
+    ...(domain.modelVersion ? { modelVersion: domain.modelVersion } : {}),
+    ...(domain.schemaVersion ? { schemaVersion: domain.schemaVersion } : {}),
+    ...(domain.aggregationMode
+      ? { aggregationMode: domain.aggregationMode }
+      : {}),
+  });
+
+  const mlPrimary = snapshot.mode === 'ML_PRIMARY';
+  const bothReady =
+    snapshot.material.state === 'READY' && snapshot.project.state === 'READY';
+  const anyNotReady =
+    snapshot.material.state !== 'READY' || snapshot.project.state !== 'READY';
+
+  return {
+    mode: snapshot.mode,
+    material: summarize(snapshot.material),
+    project: summarize(snapshot.project),
+    mlServingCapable: mlPrimary && bothReady,
+    mlDegraded: mlPrimary && anyNotReady,
+  };
 };
 
 export type ReadinessAwareShutdownDeps = {
@@ -138,6 +200,7 @@ export const getReadinessStatus = (nowMs: number = Date.now()): ReadinessStatus 
     recommendationOutbox: outboxSnapshot,
     database: databaseSnapshot,
     reservationLifecycle: reservationLifecycleSnapshot,
+    recommendationMl: buildRecommendationMlHealthSummary(),
     reasonCodes,
   };
 };

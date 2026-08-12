@@ -196,11 +196,9 @@ test('live PostgreSQL runtime projects use v3 keys while legacy artifacts remain
 isolatedRecommendationTest('READY executes recent intent and fusion and exposes fused ranking when serving is enabled', async () => {
   const prior = {
     shadow: env.recommendationMlShadowEnabled,
-    projectServing: env.recommendationMlProjectServingEnabled,
     projectPath: env.recommendationMlProjectArtifactPath,
   };
   env.recommendationMlShadowEnabled = true;
-  env.recommendationMlProjectServingEnabled = true;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
   setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
   clearMlArtifactCacheForTests();
@@ -267,7 +265,6 @@ isolatedRecommendationTest('READY executes recent intent and fusion and exposes 
     assert.strictEqual(coherent.response, response);
   } finally {
     env.recommendationMlShadowEnabled = prior.shadow;
-    env.recommendationMlProjectServingEnabled = prior.projectServing;
     env.recommendationMlProjectArtifactPath = prior.projectPath;
     clearMlArtifactCacheForTests();
     await prisma.$disconnect();

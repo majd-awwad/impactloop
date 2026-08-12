@@ -19,7 +19,7 @@ const prepared = (keys: readonly string[]): LearnerHomeMlPreparedCandidate<{ id:
   }));
 
 const diagnostics = (candidateCount: number, overrides: Record<string, unknown> = {}) => ({
-  runtimeMode: 'ML_LOCAL' as const,
+  runtimeMode: 'ML_PRIMARY' as const,
   domain: 'material' as const,
   state: 'READY' as const,
   candidateCount,
@@ -36,7 +36,7 @@ const ranked = (
   scores: readonly number[] = keys.map((_, index) => keys.length - index),
 ): Extract<RecommendationMlRankingResult, { outcome: 'ML_RANKED' }> => ({
   outcome: 'ML_RANKED',
-  mode: 'ML_LOCAL',
+  mode: 'ML_PRIMARY',
   domain: 'material',
   scored: keys.map((candidateKey, index) => ({
     candidateKey,
@@ -51,7 +51,7 @@ const missing = (
   keys: readonly string[],
 ): RecommendationMlRankingResult => ({
   outcome: 'ML_UNAVAILABLE',
-  mode: 'ML_LOCAL',
+  mode: 'ML_PRIMARY',
   domain: 'material',
   reasonCode: 'CANDIDATE_MAPPING_MISSING',
   diagnostics: diagnostics(candidateCount, {
@@ -64,7 +64,7 @@ test('contained ranking drops unknown keys and deterministically appends omitted
   const original = prepared(['a', 'b', 'c']);
   const result = applyContainedMlRanking({
     domain: 'material',
-    runtimeMode: 'ML_LOCAL',
+    runtimeMode: 'ML_PRIMARY',
     original,
     mapped: original,
     unmapped: [],
@@ -87,7 +87,7 @@ test('non-ML-ranked tail preserves original interleaving of unmapped and omitted
   const unmapped = prepared(['b']);
   const result = applyContainedMlRanking({
     domain: 'material',
-    runtimeMode: 'ML_LOCAL',
+    runtimeMode: 'ML_PRIMARY',
     original,
     mapped,
     unmapped,
@@ -105,7 +105,7 @@ test('duplicate ranked keys reject the result and cannot duplicate visible candi
   const original = prepared(['a', 'b']);
   const result = applyContainedMlRanking({
     domain: 'material',
-    runtimeMode: 'ML_LOCAL',
+    runtimeMode: 'ML_PRIMARY',
     original,
     mapped: original,
     unmapped: [],
@@ -123,7 +123,7 @@ test('mapping misses are removed, retried, and appended in original stable order
   let calls = 0;
   const result = rankPreparedLearnerHomeMlCandidatePoolForTests({
     domain: 'material',
-    runtimeMode: 'ML_LOCAL',
+    runtimeMode: 'ML_PRIMARY',
     userFeatures: [],
     candidates,
     rank: (input) => {
@@ -148,7 +148,7 @@ test('more than eight mapping misses use bounded multiple retries', () => {
   let calls = 0;
   const result = rankPreparedLearnerHomeMlCandidatePoolForTests({
     domain: 'material',
-    runtimeMode: 'ML_LOCAL',
+    runtimeMode: 'ML_PRIMARY',
     userFeatures: [],
     candidates,
     rank: (input) => {
@@ -170,7 +170,7 @@ test('unmatched missing diagnostics fail closed without retrying forever', () =>
   let calls = 0;
   const result = rankPreparedLearnerHomeMlCandidatePoolForTests({
     domain: 'material',
-    runtimeMode: 'ML_LOCAL',
+    runtimeMode: 'ML_PRIMARY',
     userFeatures: [],
     candidates,
     rank: (input) => {
@@ -187,7 +187,7 @@ test('an entirely unmapped pool falls back deterministically', () => {
   const candidates = prepared(['a', 'b']);
   const result = rankPreparedLearnerHomeMlCandidatePoolForTests({
     domain: 'material',
-    runtimeMode: 'ML_LOCAL',
+    runtimeMode: 'ML_PRIMARY',
     userFeatures: [],
     candidates,
     rank: (input) => missing(
@@ -204,7 +204,7 @@ test('non-finite scores and domain mismatches reject ML output', () => {
   const original = prepared(['a']);
   const nonfinite = applyContainedMlRanking({
     domain: 'material',
-    runtimeMode: 'ML_LOCAL',
+    runtimeMode: 'ML_PRIMARY',
     original,
     mapped: original,
     unmapped: [],
@@ -216,7 +216,7 @@ test('non-finite scores and domain mismatches reject ML output', () => {
 
   const mismatch = applyContainedMlRanking({
     domain: 'project',
-    runtimeMode: 'ML_LOCAL',
+    runtimeMode: 'ML_PRIMARY',
     original,
     mapped: original,
     unmapped: [],
@@ -271,12 +271,12 @@ test('invalid scorer output while the domain is READY is a failed fallback', () 
   const candidates = prepared(['a']);
   const result = rankPreparedLearnerHomeMlCandidatePoolForTests({
     domain: 'material',
-    runtimeMode: 'ML_LOCAL',
+    runtimeMode: 'ML_PRIMARY',
     userFeatures: [],
     candidates,
     rank: (input) => ({
       outcome: 'ML_UNAVAILABLE',
-      mode: 'ML_LOCAL',
+      mode: 'ML_PRIMARY',
       domain: 'material',
       reasonCode: 'INVALID_CANDIDATE_KEY',
       diagnostics: diagnostics(input.candidates.length),
@@ -288,7 +288,7 @@ test('invalid scorer output while the domain is READY is a failed fallback', () 
 });
 
 test('runtime cache identity separates modes and independent artifact identities', () => {
-  const snapshot = (mode: 'DETERMINISTIC' | 'SHADOW' | 'ML_LOCAL', materialHash: string, projectHash: string) => ({
+  const snapshot = (mode: 'DETERMINISTIC' | 'SHADOW' | 'ML_PRIMARY', materialHash: string, projectHash: string) => ({
     mode,
     material: {
       runtimeMode: mode,
@@ -307,9 +307,9 @@ test('runtime cache identity separates modes and independent artifact identities
   });
   const deterministic = buildLearnerHomeMlRuntimeIdentity({ snapshot: snapshot('DETERMINISTIC', 'm1', 'p1') });
   const shadow = buildLearnerHomeMlRuntimeIdentity({ snapshot: snapshot('SHADOW', 'm1', 'p1') });
-  const local = buildLearnerHomeMlRuntimeIdentity({ snapshot: snapshot('ML_LOCAL', 'm1', 'p1') });
-  const changedMaterial = buildLearnerHomeMlRuntimeIdentity({ snapshot: snapshot('ML_LOCAL', 'm2', 'p1') });
-  const changedProject = buildLearnerHomeMlRuntimeIdentity({ snapshot: snapshot('ML_LOCAL', 'm1', 'p2') });
+  const local = buildLearnerHomeMlRuntimeIdentity({ snapshot: snapshot('ML_PRIMARY', 'm1', 'p1') });
+  const changedMaterial = buildLearnerHomeMlRuntimeIdentity({ snapshot: snapshot('ML_PRIMARY', 'm2', 'p1') });
+  const changedProject = buildLearnerHomeMlRuntimeIdentity({ snapshot: snapshot('ML_PRIMARY', 'm1', 'p2') });
   assert.notDeepEqual(deterministic, shadow);
   assert.notDeepEqual(shadow, local);
   assert.notEqual(local.material, changedMaterial.material);

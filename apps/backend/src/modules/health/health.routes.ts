@@ -17,6 +17,7 @@ healthRouter.get('/ready', (_req: Request, res: Response): void => {
         recommendationOutbox: readiness.recommendationOutbox,
         database: readiness.database,
         reservationLifecycle: readiness.reservationLifecycle,
+        recommendationMl: readiness.recommendationMl,
       }),
     );
     return;
@@ -28,6 +29,7 @@ healthRouter.get('/ready', (_req: Request, res: Response): void => {
       recommendationOutbox: readiness.recommendationOutbox,
       database: readiness.database,
       reservationLifecycle: readiness.reservationLifecycle,
+      recommendationMl: readiness.recommendationMl,
       reasonCodes: readiness.reasonCodes,
     }),
   );

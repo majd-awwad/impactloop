@@ -45,17 +45,15 @@ export const FIXTURE_PATH = resolve(
 
 const RECOMMENDATION_PROCESS_ENV = {
   RECOMMENDATION_SCORER_VERSION: 'legacy-v1',
+  RECOMMENDATION_ML_RUNTIME_MODE: 'DETERMINISTIC',
   RECOMMENDATION_ML_SHADOW_ENABLED: 'false',
-  RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED: 'false',
-  RECOMMENDATION_ML_PROJECT_SERVING_ENABLED: 'false',
   RECOMMENDATION_OUTBOX_WORKER_ENABLED: 'false',
 } as const;
 
 const RECOMMENDATION_ENV_PROPERTIES = {
   recommendationScorerVersion: 'legacy-v1',
+  recommendationMlRuntimeMode: 'DETERMINISTIC',
   recommendationMlShadowEnabled: false,
-  recommendationMlMaterialServingEnabled: false,
-  recommendationMlProjectServingEnabled: false,
   recommendationOutboxWorkerEnabled: false,
 } as const;
 

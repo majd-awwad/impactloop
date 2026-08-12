@@ -313,7 +313,7 @@ test(
       assert.ok(projectKeys.length > 0);
 
       const snapshot = await preloadBothReady(materialKeys, projectKeys);
-      assert.equal(snapshot.mode, 'ML_LOCAL');
+      assert.equal(snapshot.mode, 'ML_PRIMARY');
       assert.equal(snapshot.material.state, 'READY');
       assert.equal(snapshot.project.state, 'READY');
 
@@ -325,7 +325,7 @@ test(
           skipDisconnect: true,
         });
         assert.equal(guard.mutations.length, 0, guard.mutations.join(','));
-        assert.equal(result.report.runtimeMode, 'ML_LOCAL');
+        assert.equal(result.report.runtimeMode, 'ML_PRIMARY');
         assert.equal(result.exitCode, 0, result.report.hardFailures.join(';'));
         assert.equal(result.report.hardFailures.length, 0);
 
@@ -367,9 +367,9 @@ test(
             section.sectionKey as 'suggested_materials' | 'suggested_projects',
           );
           if (section.status === 'ML_RANKED') {
-            assert.equal(token, 'ml-local');
+            assert.equal(token, 'ml-primary');
           } else {
-            assert.notEqual(token, 'ml-local');
+            assert.notEqual(token, 'ml-primary');
           }
         }
         assert.doesNotMatch(JSON.stringify(result.report), /@learner\.com/);
@@ -467,7 +467,7 @@ test(
             section.stamp,
             'suggested_projects',
           ),
-          'ml-local',
+          'ml-primary',
         );
       }
 
@@ -511,7 +511,7 @@ test(
             section.stamp,
             'suggested_materials',
           ),
-          'ml-local',
+          'ml-primary',
         );
       }
     });
@@ -582,7 +582,7 @@ test(
             extractSectionTokenFromActualStamp(
               row.stamp,
               'suggested_materials',
-            ) !== 'ml-local',
+            ) !== 'ml-primary',
         ),
       );
       assert.ok(
@@ -590,7 +590,7 @@ test(
         'unaffected project domain must continue ML_RANKED',
       );
       for (const row of material) {
-        assert.equal(mlDecisionToken(row.status) !== 'ml-local', true);
+        assert.equal(mlDecisionToken(row.status) !== 'ml-primary', true);
       }
     });
   },
@@ -695,7 +695,7 @@ test(
         assert.equal(row.checks.uniqueness, true);
         assert.notEqual(
           extractSectionTokenFromActualStamp(row.stamp, 'suggested_materials'),
-          'ml-local',
+          'ml-primary',
         );
       }
       assert.ok(

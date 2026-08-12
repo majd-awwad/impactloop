@@ -76,6 +76,12 @@ export const buildRecommendationMlReadyContext = (
   projectModel: snapshot.project.modelVersion ?? null,
   materialState: snapshot.material.state,
   projectState: snapshot.project.state,
+  materialAggregationMode: snapshot.material.aggregationMode ?? null,
+  projectAggregationMode: snapshot.project.aggregationMode ?? null,
+  materialFeatureContractId: snapshot.material.featureContractId ?? null,
+  projectFeatureContractId: snapshot.project.featureContractId ?? null,
+  materialFailureCode: snapshot.material.failureCode ?? null,
+  projectFailureCode: snapshot.project.failureCode ?? null,
 });
 
 export const logPaymentStartupConfig = (): void => {
@@ -272,14 +278,55 @@ export const logRecommendationMlRuntimeReady = (
   const projectReady = snapshot.project.state === 'READY';
   const bothDisabled =
     snapshot.material.state === 'DISABLED' && snapshot.project.state === 'DISABLED';
+  const mlPrimary = snapshot.mode === 'ML_PRIMARY';
+
+  const describeDomain = (
+    label: 'MATERIAL' | 'PROJECT',
+    state: RecommendationMlRuntimeSnapshot['material'],
+  ): string => {
+    if (state.state === 'READY') {
+      return `Recommendation ML ${label}: READY (${state.modelVersion ?? 'unknown-model'} / ${state.schemaVersion ?? 'unknown-schema'}) — ${mlPrimary ? 'ML_PRIMARY serving enabled' : `mode=${snapshot.mode}`}`;
+    }
+    if (state.state === 'DISABLED') {
+      return `Recommendation ML ${label}: DISABLED`;
+    }
+    return `Recommendation ML ${label}: ${state.state}${state.failureCode ? ` (${state.failureCode})` : ''} — deterministic fallback active`;
+  };
 
   if (bothDisabled) {
-    logger.info(context, 'Recommendation ML runtime disabled');
-  } else if (materialReady || projectReady) {
-    logger.info(context, 'Recommendation ML runtime ready');
+    logger.info(context, 'Recommendation ML runtime disabled (explicit DETERMINISTIC)');
+  } else if (materialReady && projectReady) {
+    logger.info(
+      {
+        ...context,
+        materialSummary: describeDomain('MATERIAL', snapshot.material),
+        projectSummary: describeDomain('PROJECT', snapshot.project),
+      },
+      'Recommendation ML runtime ready for ML_PRIMARY serving',
+    );
   } else {
-    logger.warn(context, 'Recommendation ML runtime not ready');
+    logger.warn(
+      {
+        ...context,
+        materialSummary: describeDomain('MATERIAL', snapshot.material),
+        projectSummary: describeDomain('PROJECT', snapshot.project),
+        servingMode: snapshot.mode,
+      },
+      mlPrimary
+        ? 'Recommendation ML runtime degraded — deterministic fallback active under ML_PRIMARY'
+        : 'Recommendation ML runtime not ready',
+    );
   }
+
+  logger.info(
+    {
+      operation: 'recommendation.ml.domain_status',
+      mode: snapshot.mode,
+      material: describeDomain('MATERIAL', snapshot.material),
+      project: describeDomain('PROJECT', snapshot.project),
+    },
+    'Recommendation ML domain status',
+  );
 
   logger.debug(
     {

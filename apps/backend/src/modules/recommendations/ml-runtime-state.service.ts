@@ -57,6 +57,10 @@ export type RecommendationMlDomainDiagnostics = Readonly<{
   semanticContentHash?: string;
   modelVersion?: string;
   schemaVersion?: string;
+  /** Loaded aggregation mode (e.g. weighted-sum). Omitted when not READY. */
+  aggregationMode?: string;
+  featureContractId?: string;
+  featureContractVersion?: string;
   failureCode?: RecommendationMlStartupFailureCode;
   loadCompletedAt?: string;
   artifactItemCount?: number;
@@ -70,7 +74,7 @@ export type RecommendationMlRuntimeSnapshot = Readonly<{
 
 export type RecommendationMlUnavailableReason =
   | 'RUNTIME_MODE_DISABLED'
-  | 'RUNTIME_MODE_NOT_LOCAL'
+  | 'RUNTIME_MODE_NOT_PRIMARY'
   | 'RUNTIME_LOADING'
   | 'RUNTIME_NOT_READY'
   | 'RUNTIME_FAILED'
@@ -93,7 +97,7 @@ export type RecommendationMlRequestDiagnostics = Readonly<{
 export type RecommendationMlRankingResult =
   | Readonly<{
       outcome: 'ML_RANKED';
-      mode: 'ML_LOCAL';
+      mode: 'ML_PRIMARY';
       domain: LocalMlDomain;
       scored: readonly Readonly<ScoredCandidate>[];
       rankedCandidateKeys: readonly string[];
@@ -392,6 +396,9 @@ const loadDomain = async (
           semanticContentHash: scorer.metadata.semanticContentHash,
           modelVersion: scorer.metadata.modelVersion,
           schemaVersion: scorer.metadata.schemaVersion,
+          aggregationMode: aggregationContract.selectedMode,
+          featureContractId: featureContract.contractId,
+          featureContractVersion: featureContract.contractVersion,
           artifactItemCount: scorer.metadata.itemCount,
           loadCompletedAt: completed(),
         },
@@ -579,15 +586,15 @@ export const scoreRecommendationMlRuntimeForShadow = (
   return scoreCapturedSnapshot(snapshot, input);
 };
 
-export const rankMlLocalCandidates = (
+export const rankMlPrimaryCandidates = (
   input: LocalMlScoringInput,
 ): RecommendationMlRankingResult => {
   const snapshot = publishedSnapshot;
   if (snapshot.publicSnapshot.mode === 'DETERMINISTIC') {
     return unavailableForState(snapshot, input, 'RUNTIME_MODE_DISABLED');
   }
-  if (snapshot.publicSnapshot.mode !== 'ML_LOCAL') {
-    return unavailableForState(snapshot, input, 'RUNTIME_MODE_NOT_LOCAL');
+  if (snapshot.publicSnapshot.mode !== 'ML_PRIMARY') {
+    return unavailableForState(snapshot, input, 'RUNTIME_MODE_NOT_PRIMARY');
   }
 
   const result = scoreCapturedSnapshot(snapshot, input);
@@ -595,7 +602,7 @@ export const rankMlLocalCandidates = (
   if (result.outcome === 'UNAVAILABLE') {
     return Object.freeze({
       outcome: 'ML_UNAVAILABLE' as const,
-      mode: 'ML_LOCAL' as const,
+      mode: 'ML_PRIMARY' as const,
       domain: input.domain,
       reasonCode: result.reasonCode,
       diagnostics: requestDiagnostics(
@@ -608,7 +615,7 @@ export const rankMlLocalCandidates = (
   }
   return Object.freeze({
     outcome: 'ML_RANKED' as const,
-    mode: 'ML_LOCAL' as const,
+    mode: 'ML_PRIMARY' as const,
     domain: input.domain,
     scored: result.scored,
     rankedCandidateKeys: result.rankedCandidateKeys,
@@ -620,6 +627,9 @@ export const rankMlLocalCandidates = (
     ),
   });
 };
+
+/** @deprecated Alias — use rankMlPrimaryCandidates. */
+export const rankMlLocalCandidates = rankMlPrimaryCandidates;
 
 export const setRecommendationMlRuntimeDependenciesForTests = (
   overrides: Partial<RuntimeDependencies>,

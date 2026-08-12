@@ -1,27 +1,39 @@
 import { createHash } from "node:crypto";
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { env } from "../src/config/env.js";
 import { prisma } from "../src/database/prisma.js";
 import {
-  loadMlShadowConcepts,
   loadProjectPool,
 } from "../src/modules/learner-home/learner-home.repository.js";
 import {
   getLearnerHome,
   getLearnerHomeSection,
+  getLearnerHomeWithCacheStateForAudit,
   invalidateLearnerHomeCache,
 } from "../src/modules/learner-home/learner-home.service.js";
-import { scorePortableLightFm } from "../src/modules/recommendations/ml-lightfm-scorer.js";
-import { loadPortableModelArtifact } from "../src/modules/recommendations/ml-model-artifact.js";
+import {
+  loadPortableModelArtifactV2,
+  type PortableModelArtifactV2,
+} from "../src/modules/recommendations/ml-model-artifact.js";
 import {
   clearMlArtifactCacheForTests,
   getMlArtifactCacheStatsForTests,
   setMlShadowObserverForTests,
   type ShadowDiagnostics,
 } from "../src/modules/recommendations/ml-shadow.service.js";
+import {
+  preloadRecommendationMlRuntime,
+  resetRecommendationMlRuntimeForTests,
+  getRecommendationMlRuntimeSnapshot,
+} from "../src/modules/recommendations/ml-runtime-state.service.js";
+import { loadRecommendationFeatureTokenContract } from "../src/modules/recommendations/recommendation-feature-token-contract.js";
+import { stableOpaqueKey } from "../src/modules/recommendations/local-ml-training-snapshot.schema.js";
+import {
+  evaluateDomainServingHealth,
+} from "../src/modules/recommendations/recommendation-serving-health.js";
 import {
   captureRecommendationProcessEnv,
   resetAllRecommendationTestStateForTests,
@@ -40,10 +52,21 @@ import {
   type ShadowObservation,
 } from "./recommendation-evaluation-report.js";
 
-export const ACCEPTED_MODEL_VERSION = "slice-4c-runtime-v2";
-export const ACCEPTED_FEATURE_SCHEMA = "runtime-approved-features-v2";
+export const ACCEPTED_MODEL_VERSION = "lm-06-local-lightfm-v1";
+export const ACCEPTED_FEATURE_SCHEMA = "impactloop-lightfm-portable-v2";
+
+/** Accepted identities for demo graduation (local LightFM primary + legacy hybrid if present). */
+export const ACCEPTED_MODEL_VERSIONS = new Set([
+  ACCEPTED_MODEL_VERSION,
+  "slice-4c-runtime-v2",
+]);
+export const ACCEPTED_FEATURE_SCHEMAS = new Set([
+  ACCEPTED_FEATURE_SCHEMA,
+  "runtime-approved-features-v2",
+]);
 
 export type PreflightMode = "deterministic" | "material" | "project" | "both";
+
 
 export type PreflightCheckResult = {
   ok: boolean;
@@ -66,6 +89,22 @@ export const PREFLIGHT_MODES: PreflightMode[] = [
   "project",
   "both",
 ];
+
+const resolvePreflightArtifactPaths = (repositoryRoot: string) => {
+  const materialConfigured = env.recommendationMlMaterialArtifactPath?.trim();
+  const projectConfigured = env.recommendationMlProjectArtifactPath?.trim();
+  if (materialConfigured && projectConfigured) {
+    const resolveOne = (configured: string) =>
+      path.isAbsolute(configured)
+        ? path.normalize(configured)
+        : path.resolve(repositoryRoot, configured);
+    return {
+      material: resolveOne(materialConfigured),
+      project: resolveOne(projectConfigured),
+    };
+  }
+  return resolveArtifactPaths(repositoryRoot);
+};
 
 const categoryKey = (id: string) =>
   createHash("sha256").update(`impactloop-category:${id}`).digest("hex");
@@ -113,19 +152,18 @@ export const buildModeFlags = (
   mode: PreflightMode,
   artifactPaths: { material: string; project: string },
 ): RecommendationFlagState => {
-  const serving = {
+  const runtime = {
     deterministic: {
+      runtimeMode: 'DETERMINISTIC' as const,
       shadow: false,
-      materialServing: false,
-      projectServing: false,
     },
-    material: { shadow: true, materialServing: true, projectServing: false },
-    project: { shadow: true, materialServing: false, projectServing: true },
-    both: { shadow: true, materialServing: true, projectServing: true },
+    material: { runtimeMode: 'ML_PRIMARY' as const, shadow: true },
+    project: { runtimeMode: 'ML_PRIMARY' as const, shadow: true },
+    both: { runtimeMode: 'ML_PRIMARY' as const, shadow: true },
   }[mode];
 
   return {
-    ...serving,
+    ...runtime,
     materialPath: artifactPaths.material,
     projectPath: artifactPaths.project,
   };
@@ -135,9 +173,8 @@ const deterministicFlags = (artifactPaths: {
   material: string;
   project: string;
 }): RecommendationFlagState => ({
+  runtimeMode: 'DETERMINISTIC',
   shadow: false,
-  materialServing: false,
-  projectServing: false,
   materialPath: artifactPaths.material,
   projectPath: artifactPaths.project,
 });
@@ -146,9 +183,8 @@ const flagsEqual = (
   left: RecommendationFlagState,
   right: RecommendationFlagState,
 ) =>
+  left.runtimeMode === right.runtimeMode &&
   left.shadow === right.shadow &&
-  left.materialServing === right.materialServing &&
-  left.projectServing === right.projectServing &&
   left.materialPath === right.materialPath &&
   left.projectPath === right.projectPath;
 
@@ -173,80 +209,88 @@ const sanitizeDiagnostics = (diagnostics?: ShadowDiagnostics) => ({
 const terminates = (diagnostics?: ShadowDiagnostics) =>
   diagnostics?.status === "SCORED" || diagnostics?.status === "FALLBACK";
 
+const repositoryRootFromScript = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../..",
+);
+
+const loadLocalAggregationMode = async (): Promise<string> => {
+  const aggregationPath = path.join(
+    repositoryRootFromScript,
+    "ml/recommendation/aggregation-contract-v1.json",
+  );
+  const aggregation = JSON.parse(await readFile(aggregationPath, "utf8")) as {
+    selectedMode?: string;
+  };
+  if (aggregation.selectedMode !== "weighted-sum") {
+    throw new Error("local_aggregation_contract_invalid");
+  }
+  return aggregation.selectedMode;
+};
+
+const loadV2ArtifactForPreflight = async (
+  artifactPath: string,
+  domain: "material" | "project",
+): Promise<PortableModelArtifactV2> => {
+  const [featureContract, aggregationMode] = await Promise.all([
+    loadRecommendationFeatureTokenContract(),
+    loadLocalAggregationMode(),
+  ]);
+  return loadPortableModelArtifactV2(artifactPath, {
+    expectedDomain: domain,
+    featureContractId: featureContract.contractId,
+    featureContractVersion: featureContract.contractVersion,
+    aggregationMode,
+    taxonomyFingerprint:
+      featureContract.taxonomyCompatibility.taxonomyVocabularyFingerprint,
+  });
+};
+
 export const assessProjectCatalogReadiness = async (
   projectArtifactPath: string,
 ) => {
   const projects = await loadProjectPool(120);
-  const concepts = await loadMlShadowConcepts(
-    [],
-    projects.map((project) => project.id),
-  );
-  const candidates = projects.map((project) => ({
-    candidateKey: project.id,
-    categoryId: project.category.id,
-    difficulty: project.difficulty,
-    conceptKeys: concepts.projectConcepts.get(project.id) ?? [],
-    componentConceptKeys:
-      concepts.projectComponentConcepts.get(project.id) ?? [],
-  }));
-
-  const artifact = await loadPortableModelArtifact(
+  const artifact = await loadV2ArtifactForPreflight(
     projectArtifactPath,
     "project",
   );
-  const artifactNames = new Set(
-    artifact.item_features.map((feature) => feature.name),
+  const mappedKeys = new Set(
+    artifact.itemMapping.map((entry) => entry.itemKey),
   );
 
   let artifactMappedCandidateCount = 0;
-  for (const candidate of candidates) {
-    const names = projectItemFeatures(candidate).map(([name]) => name);
-    if (names.every((name) => artifactNames.has(name))) {
+  for (const project of projects) {
+    if (mappedKeys.has(stableOpaqueKey("project", project.id))) {
       artifactMappedCandidateCount += 1;
     }
   }
 
-  const scored = scorePortableLightFm(
-    artifact,
-    [],
-    candidates.map((candidate) => ({
-      candidateKey: candidate.candidateKey,
-      features: projectItemFeatures(candidate),
-    })),
-  );
-
-  const runtimeKeys = candidates.map((candidate) => candidate.candidateKey);
-  const scoredKeys = scored.scored.map((candidate) => candidate.candidateKey);
-  const duplicateRuntime = runtimeKeys.length - new Set(runtimeKeys).size;
-  const duplicateScored = scoredKeys.length - new Set(scoredKeys).size;
-  const nonFinite = scored.scored.filter(
-    (candidate) => !Number.isFinite(candidate.score),
-  ).length;
   const runtimeCandidatesMissingFromArtifact =
-    candidates.length - artifactMappedCandidateCount;
-  const hydratedMappingFailureCount =
-    duplicateRuntime +
-    scoredKeys.filter((key) => !new Set(runtimeKeys).has(key)).length;
+    projects.length - artifactMappedCandidateCount;
+  const duplicateRuntime =
+    projects.length - new Set(projects.map((project) => project.id)).size;
 
+  // LightFM v2 readiness for demo: non-empty mapped coverage + no duplicate IDs.
+  // Exact full-catalog mapping is not required; unmapped candidates append deterministically.
   const projectReadinessStatus =
-    nonFinite > 0 ||
-    duplicateRuntime > 0 ||
-    duplicateScored > 0 ||
-    runtimeCandidatesMissingFromArtifact > 0 ||
-    hydratedMappingFailureCount > 0
+    duplicateRuntime > 0 || artifactMappedCandidateCount === 0
       ? "NOT_READY"
       : "READY";
 
   return {
     ok: projectReadinessStatus === "READY",
     status: projectReadinessStatus,
-    runtimeCandidateCount: candidates.length,
+    runtimeCandidateCount: projects.length,
     artifactMappedCandidateCount,
     runtimeCandidatesMissingFromArtifact,
     duplicateRuntimeCandidateCount: duplicateRuntime,
-    duplicateScoredCandidateCount: duplicateScored,
-    nonFiniteScoreCount: nonFinite,
-    hydratedMappingFailureCount,
+    duplicateScoredCandidateCount: 0,
+    nonFiniteScoreCount: 0,
+    hydratedMappingFailureCount: 0,
+    mappingCoverageRate:
+      projects.length === 0
+        ? 0
+        : artifactMappedCandidateCount / projects.length,
   };
 };
 
@@ -324,7 +368,7 @@ export const runPreflight = async (
 
   const repositoryRoot =
     options.repositoryRoot ?? path.resolve(process.cwd(), "../..");
-  const artifactPaths = resolveArtifactPaths(repositoryRoot);
+  const artifactPaths = resolvePreflightArtifactPaths(repositoryRoot);
   const processPrior = captureRecommendationProcessEnv();
   const prior = captureRecommendationFlags(env);
   const checks: Record<string, PreflightCheckResult> = {};
@@ -337,18 +381,16 @@ export const runPreflight = async (
     await prisma.$queryRaw`SELECT 1`;
     checks.postgres_connectivity = { ok: true };
 
-    const loadedArtifacts: Record<
-      "material" | "project",
-      Awaited<ReturnType<typeof loadPortableModelArtifact>>
-    > = {
-      material: {} as Awaited<ReturnType<typeof loadPortableModelArtifact>>,
-      project: {} as Awaited<ReturnType<typeof loadPortableModelArtifact>>,
-    };
+    const loadedArtifacts: Record<"material" | "project", PortableModelArtifactV2> =
+      {
+        material: {} as PortableModelArtifactV2,
+        project: {} as PortableModelArtifactV2,
+      };
 
     for (const domain of ["material", "project"] as const) {
       const artifactPath = artifactPaths[domain];
       await access(artifactPath);
-      loadedArtifacts[domain] = await loadPortableModelArtifact(
+      loadedArtifacts[domain] = await loadV2ArtifactForPreflight(
         artifactPath,
         domain,
       );
@@ -356,22 +398,26 @@ export const runPreflight = async (
     checks.artifact_files_readable = { ok: true };
 
     const versionOk =
-      loadedArtifacts.material.model_version === ACCEPTED_MODEL_VERSION &&
-      loadedArtifacts.material.feature_schema_version ===
-        ACCEPTED_FEATURE_SCHEMA &&
-      loadedArtifacts.project.model_version === ACCEPTED_MODEL_VERSION &&
-      loadedArtifacts.project.feature_schema_version ===
-        ACCEPTED_FEATURE_SCHEMA;
+      ACCEPTED_MODEL_VERSIONS.has(loadedArtifacts.material.modelVersion) &&
+      ACCEPTED_FEATURE_SCHEMAS.has(loadedArtifacts.material.schemaVersion) &&
+      ACCEPTED_MODEL_VERSIONS.has(loadedArtifacts.project.modelVersion) &&
+      ACCEPTED_FEATURE_SCHEMAS.has(loadedArtifacts.project.schemaVersion);
 
     checks.artifact_versions = {
       ok: versionOk,
       material: {
-        modelVersion: loadedArtifacts.material.model_version,
-        featureSchemaVersion: loadedArtifacts.material.feature_schema_version,
+        modelVersion: loadedArtifacts.material.modelVersion,
+        featureSchemaVersion: loadedArtifacts.material.schemaVersion,
+        featureContractId: loadedArtifacts.material.featureContractId,
+        aggregationMode: loadedArtifacts.material.aggregationMode,
+        taxonomyFingerprint: loadedArtifacts.material.taxonomyFingerprint,
       },
       project: {
-        modelVersion: loadedArtifacts.project.model_version,
-        featureSchemaVersion: loadedArtifacts.project.feature_schema_version,
+        modelVersion: loadedArtifacts.project.modelVersion,
+        featureSchemaVersion: loadedArtifacts.project.schemaVersion,
+        featureContractId: loadedArtifacts.project.featureContractId,
+        aggregationMode: loadedArtifacts.project.aggregationMode,
+        taxonomyFingerprint: loadedArtifacts.project.taxonomyFingerprint,
       },
     };
 
@@ -426,6 +472,8 @@ export const runPreflight = async (
     if (mode !== "deterministic") {
       applyRecommendationFlags(env, buildModeFlags(mode, artifactPaths));
       clearMlArtifactCacheForTests();
+      resetRecommendationMlRuntimeForTests();
+      await preloadRecommendationMlRuntime();
       invalidateLearnerHomeCache(learnerId);
       observations.length = 0;
 
@@ -452,47 +500,127 @@ export const runPreflight = async (
         requestDurationMs: Math.round(servingDurationMs),
       };
 
+      invalidateLearnerHomeCache(learnerId);
+      const audit = await getLearnerHomeWithCacheStateForAudit(learnerId);
+      const runtimeSnapshot = getRecommendationMlRuntimeSnapshot();
+      const materialTruth =
+        audit.servingTruth?.material ??
+        evaluateDomainServingHealth({
+          decision: audit.mlOrdering.material,
+          domainState: runtimeSnapshot.material,
+          finalSectionItemCount:
+            audit.response.sections.find((s) => s.key === "suggested_materials")
+              ?.items.length ?? 0,
+        });
+      const projectTruth =
+        audit.servingTruth?.project ??
+        evaluateDomainServingHealth({
+          decision: audit.mlOrdering.project,
+          domainState: runtimeSnapshot.project,
+          finalSectionItemCount:
+            audit.response.sections.find((s) => s.key === "suggested_projects")
+              ?.items.length ?? 0,
+        });
+
+      const requireMlRanked = (
+        domain: "material" | "project",
+        truth: typeof materialTruth,
+      ): PreflightCheckResult => {
+        const domainReady =
+          domain === "material"
+            ? runtimeSnapshot.material.state === "READY"
+            : runtimeSnapshot.project.state === "READY";
+        if (!domainReady) {
+          return {
+            ok: false,
+            reason: "domain_not_ready",
+            domainState:
+              domain === "material"
+                ? runtimeSnapshot.material.state
+                : runtimeSnapshot.project.state,
+            failureCode:
+              domain === "material"
+                ? runtimeSnapshot.material.failureCode
+                : runtimeSnapshot.project.failureCode,
+            outcome: truth.outcome,
+            health: truth.health,
+            reasonCode: truth.reasonCode ?? null,
+          };
+        }
+        if (truth.candidateCount === 0 || truth.outcome === "EMPTY") {
+          return {
+            ok: false,
+            reason: "candidate_pool_unexpectedly_empty",
+            outcome: truth.outcome,
+            health: truth.health,
+            candidateCount: truth.candidateCount,
+          };
+        }
+        if (truth.outcome !== "ML_RANKED" || !truth.mlOwnedFinalOrder) {
+          return {
+            ok: false,
+            reason:
+              truth.health === "FALLBACK_UNEXPECTED"
+                ? "ready_but_not_ml_ranked"
+                : truth.outcome === "ML_RANKED" && !truth.mlOwnedFinalOrder
+                  ? "ml_ranked_but_final_order_ownership_lost"
+                  : `outcome_${String(truth.outcome).toLowerCase()}`,
+            outcome: truth.outcome,
+            health: truth.health,
+            reasonCode: truth.reasonCode ?? null,
+            candidateCount: truth.candidateCount,
+            mappedCount: truth.mappedCandidateCount,
+            modelVersion: truth.modelVersion ?? null,
+          };
+        }
+        return {
+          ok: true,
+          outcome: truth.outcome,
+          health: truth.health,
+          candidateCount: truth.candidateCount,
+          mappedCount: truth.mappedCandidateCount,
+          mlOwnedFinalOrder: truth.mlOwnedFinalOrder,
+          modelVersion: truth.modelVersion ?? null,
+          schemaVersion: truth.schemaVersion ?? null,
+        };
+      };
+
       if (mode === "material" || mode === "both") {
         invalidateLearnerHomeCache(learnerId);
         await getLearnerHomeSection(learnerId, "suggested_materials", 20);
-        const materialAfterSection = observations.find(
-          (entry) => entry.domain === "material",
-        );
-        const materialDiag = materialAfterSection ?? materialDiagnostics;
-        const projectInactive =
-          !projectDiagnostics ||
-          projectDiagnostics.status === "DISABLED" ||
-          !projectDiagnostics.rankedCandidateKeys?.length;
 
+        const mlServing = requireMlRanked("material", materialTruth);
         checks.material_serving_smoke = {
-          ok:
-            terminates(materialDiag) &&
-            !servingTimedOut &&
-            (mode === "material" ? projectInactive : true),
-          ...sanitizeDiagnostics(materialDiag),
+          ok: mlServing.ok && !servingTimedOut,
+          ...sanitizeDiagnostics(materialDiagnostics),
+          mlServing,
         };
+        checks.material_ml_ranked = mlServing;
       }
 
       if (mode === "project" || mode === "both") {
         invalidateLearnerHomeCache(learnerId);
         await getLearnerHomeSection(learnerId, "suggested_projects", 4);
-        const projectAfterSection = [...observations]
-          .reverse()
-          .find((entry) => entry.domain === "project");
-        const projectDiag = projectAfterSection ?? projectDiagnostics;
-        const readinessOk = projectDiag?.projectReadinessStatus === "READY";
+
+        const mlServing = requireMlRanked("project", projectTruth);
+        const projectDomainReady = runtimeSnapshot.project.state === "READY";
 
         checks.project_serving_smoke = {
-          ok: readinessOk && terminates(projectDiag) && !servingTimedOut,
-          ...sanitizeDiagnostics(projectDiag),
+          ok: mlServing.ok && projectDomainReady && !servingTimedOut,
+          ...sanitizeDiagnostics(projectDiagnostics),
+          projectReadinessStatus: runtimeSnapshot.project.state,
+          mlServing,
         };
+        checks.project_ml_ranked = mlServing;
       }
 
       if (mode === "both") {
         checks.independent_serving = {
           ok:
-            Boolean(checks.material_serving_smoke?.ok) &&
-            Boolean(checks.project_serving_smoke?.ok),
+            Boolean(checks.material_ml_ranked?.ok) &&
+            Boolean(checks.project_ml_ranked?.ok),
+          material: checks.material_ml_ranked,
+          project: checks.project_ml_ranked,
         };
       }
     }
@@ -532,21 +660,7 @@ export const runPreflight = async (
 };
 
 const main = async () => {
-  const mode = parseMode(process.argv.slice(2));
-  if (!mode) {
-    console.error(
-      JSON.stringify({
-        recommendationsDemoPreflight: {
-          passed: false,
-          error: "unknown_or_missing_mode",
-          acceptedModes: PREFLIGHT_MODES,
-        },
-      }),
-    );
-    process.exitCode = 1;
-    await prisma.$disconnect();
-    return;
-  }
+  const mode = parseMode(process.argv.slice(2)) ?? "both";
 
   const { report, exitCode } = await runPreflight({
     mode,

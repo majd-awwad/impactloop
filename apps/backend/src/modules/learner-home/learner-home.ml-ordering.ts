@@ -19,7 +19,7 @@ import type {
 import { stableOpaqueKey } from '../recommendations/local-ml-training-snapshot.schema.js';
 import {
   getRecommendationMlRuntimeSnapshot,
-  rankMlLocalCandidates,
+  rankMlPrimaryCandidates,
   type RecommendationMlRankingResult,
   type RecommendationMlRuntimeSnapshot,
 } from '../recommendations/ml-runtime-state.service.js';
@@ -90,7 +90,7 @@ type MlOrderingDependencies = Readonly<{
 
 const defaultDependencies: MlOrderingDependencies = {
   getSnapshot: getRecommendationMlRuntimeSnapshot,
-  rank: rankMlLocalCandidates,
+  rank: rankMlPrimaryCandidates,
   loadUserFeatures: async (interests) =>
     (
       await resolveCanonicalShadowUserFeatures({

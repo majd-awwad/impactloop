@@ -33,38 +33,63 @@ const FALSE_VALUES = new Set(["0", "false", "no"]);
 const RECOMMENDATION_ML_RUNTIME_MODES = new Set([
   "DETERMINISTIC",
   "SHADOW",
-  "ML_LOCAL",
+  "ML_PRIMARY",
 ]);
 
+/**
+ * Production ML runtime validation.
+ * Unset mode resolves to ML_PRIMARY at runtime; when explicitly ML_PRIMARY (or unset),
+ * require non-empty artifact paths so deployments are not silently "ML-ready" without models.
+ */
 const validateRecommendationMlRuntimeMode = (
   env: NodeJS.Dict<string>,
   diagnostics: Diagnostic[],
 ): void => {
   const rawMode = readEnv(env, "RECOMMENDATION_ML_RUNTIME_MODE")?.trim() ?? "";
-  if (!rawMode) {
-    return;
-  }
+  const mode = rawMode.length > 0 ? rawMode : "ML_PRIMARY";
 
-  if (!RECOMMENDATION_ML_RUNTIME_MODES.has(rawMode)) {
+  if (rawMode.length > 0 && !RECOMMENDATION_ML_RUNTIME_MODES.has(rawMode)) {
     pushDiagnostic(diagnostics, {
       code: "RECOMMENDATION_ML_RUNTIME_INVALID",
       summary:
-        "RECOMMENDATION_ML_RUNTIME_MODE must be DETERMINISTIC, SHADOW, or ML_LOCAL",
+        "RECOMMENDATION_ML_RUNTIME_MODE must be DETERMINISTIC, SHADOW, or ML_PRIMARY",
       field: "RECOMMENDATION_ML_RUNTIME_MODE",
     });
     return;
   }
 
-  const nodeEnv = readEnv(env, "NODE_ENV")?.trim() ?? "development";
-  if (
-    rawMode === "ML_LOCAL" &&
-    nodeEnv !== "development" &&
-    nodeEnv !== "test"
-  ) {
+  if (mode === "ML_PRIMARY") {
+    const materialPath =
+      readEnv(env, "RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH")?.trim() ?? "";
+    const projectPath =
+      readEnv(env, "RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH")?.trim() ?? "";
+    if (!materialPath) {
+      pushDiagnostic(diagnostics, {
+        code: "RECOMMENDATION_ML_MATERIAL_ARTIFACT_MISSING",
+        summary:
+          "ML_PRIMARY requires RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH in production",
+        field: "RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH",
+      });
+    }
+    if (!projectPath) {
+      pushDiagnostic(diagnostics, {
+        code: "RECOMMENDATION_ML_PROJECT_ARTIFACT_MISSING",
+        summary:
+          "ML_PRIMARY requires RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH in production",
+        field: "RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH",
+      });
+    }
+  }
+
+  const staleMaterialServing =
+    readEnv(env, "RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED")?.trim() ?? "";
+  const staleProjectServing =
+    readEnv(env, "RECOMMENDATION_ML_PROJECT_SERVING_ENABLED")?.trim() ?? "";
+  if (staleMaterialServing.length > 0 || staleProjectServing.length > 0) {
     pushDiagnostic(diagnostics, {
-      code: "RECOMMENDATION_ML_RUNTIME_INVALID",
+      code: "RECOMMENDATION_ML_SERVING_FLAGS_REMOVED",
       summary:
-        "RECOMMENDATION_ML_RUNTIME_MODE=ML_LOCAL is restricted to development and test",
+        "RECOMMENDATION_ML_*_SERVING_ENABLED flags are removed; use RECOMMENDATION_ML_RUNTIME_MODE=ML_PRIMARY|DETERMINISTIC|SHADOW",
       field: "RECOMMENDATION_ML_RUNTIME_MODE",
     });
   }

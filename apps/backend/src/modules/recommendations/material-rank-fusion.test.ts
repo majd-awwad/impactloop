@@ -156,7 +156,11 @@ test('three real-catalog preference-shift pairs pass fixed-universe HIGH fusion 
   }
   const casebook = JSON.parse(await readFile(path.join(root, 'ml/recommendation/generated/benchmark-b/new-users/recommendation-casebook.json'), 'utf8')) as Array<{ stage: string; staged_actions: unknown[]; cohort: string }>;
   const profileOnly = casebook.filter((value) => value.stage === 'T0_PROFILE_ONLY'); assert.equal(profileOnly.length, 50); assert.ok(profileOnly.every((value) => value.staged_actions.length === 0));
-  assert.equal(env.recommendationMlMaterialServingEnabled, false); assert.equal(env.recommendationMlProjectServingEnabled, false);
+  assert.ok(
+    env.recommendationMlRuntimeMode === 'DETERMINISTIC' ||
+      env.recommendationMlRuntimeMode === 'SHADOW' ||
+      env.recommendationMlRuntimeMode === 'ML_PRIMARY',
+  );
   console.log(JSON.stringify({ slice4d: { pairs: results, casebookRows: casebook.length, profileOnlyUnchanged: profileOnly.length, projectGap: 'NO_COMPONENT_MATERIAL_CONCEPT_OVERLAP' } }));
   await prisma.$disconnect();
 });

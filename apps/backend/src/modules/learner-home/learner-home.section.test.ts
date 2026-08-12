@@ -89,6 +89,49 @@ describe('learner-home section builders', () => {
     assert.equal(selected[1]?.project.isSaved, true);
   });
 
+  test('selectSuggestedProjectsPreservingOrder keeps ML relative order within unsaved and saved bands', async () => {
+    const { selectSuggestedProjectsPreservingOrder } = await import(
+      './learner-home.service.js'
+    );
+    const orderedPool = [
+      {
+        type: 'project' as const,
+        score: 10,
+        reasons: ['ml'],
+        project: { id: 'saved-high', isSaved: true },
+      },
+      {
+        type: 'project' as const,
+        score: 9,
+        reasons: ['ml'],
+        project: { id: 'unsaved-b', isSaved: false },
+      },
+      {
+        type: 'project' as const,
+        score: 8,
+        reasons: ['ml'],
+        project: { id: 'unsaved-a', isSaved: false },
+      },
+      {
+        type: 'project' as const,
+        score: 7,
+        reasons: ['ml'],
+        project: { id: 'saved-low', isSaved: true },
+      },
+    ];
+    const selected = selectSuggestedProjectsPreservingOrder(
+      orderedPool,
+      new Set(['saved-high', 'saved-low']),
+      3,
+    );
+    // Unsaved-first business policy; within unsaved, ML order (b before a) is preserved.
+    // Saved fill keeps ML order among saved (high before low).
+    assert.deepEqual(
+      selected.map((item) => item.project.id),
+      ['unsaved-b', 'unsaved-a', 'saved-high'],
+    );
+  });
+
   test('resolveFreeMaterialsSectionTitle avoids near wording without near items', () => {
     assert.equal(
       resolveFreeMaterialsSectionTitle({

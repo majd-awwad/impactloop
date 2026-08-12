@@ -178,12 +178,16 @@ test("archetype selection is deterministic and covers expected predicates", () =
   );
 });
 
-test("mode definitions isolate material and project serving flags", () => {
-  assert.equal(EVALUATION_MODES.C_material.materialServing, true);
-  assert.equal(EVALUATION_MODES.C_material.projectServing, false);
-  assert.equal(EVALUATION_MODES.D_project.materialServing, false);
-  assert.equal(EVALUATION_MODES.D_project.projectServing, true);
+test("mode definitions use runtimeMode+shadow (C/D/E are ML_PRIMARY)", () => {
+  assert.equal(EVALUATION_MODES.C_material.runtimeMode, "ML_PRIMARY");
+  assert.equal(EVALUATION_MODES.C_material.shadow, true);
+  assert.equal(EVALUATION_MODES.D_project.runtimeMode, "ML_PRIMARY");
+  assert.equal(EVALUATION_MODES.D_project.shadow, true);
+  assert.equal(EVALUATION_MODES.E_both.runtimeMode, "ML_PRIMARY");
+  assert.equal(EVALUATION_MODES.A_baseline.runtimeMode, "DETERMINISTIC");
   assert.equal(EVALUATION_MODES.A_baseline.shadow, false);
+  assert.equal(EVALUATION_MODES.B_shadow.runtimeMode, "SHADOW");
+  assert.equal(EVALUATION_MODES.B_shadow.shadow, true);
 });
 
 test("overlap helpers use hashed labels without exposing identifiers in metrics output", () => {
@@ -334,14 +338,17 @@ test("withRecommendationFlags restores environment values after success and fail
   const prior = captureRecommendationFlags(env);
   const next = {
     ...prior,
+    runtimeMode:
+      prior.runtimeMode === "DETERMINISTIC"
+        ? ("SHADOW" as const)
+        : ("DETERMINISTIC" as const),
     shadow: !prior.shadow,
-    materialServing: !prior.materialServing,
-    projectServing: !prior.projectServing,
     materialPath: "/tmp/material.json",
     projectPath: "/tmp/project.json",
   };
 
   await withRecommendationFlags(env, prior, next, async () => {
+    assert.equal(env.recommendationMlRuntimeMode, next.runtimeMode);
     assert.equal(env.recommendationMlShadowEnabled, next.shadow);
     assert.equal(env.recommendationMlMaterialArtifactPath, next.materialPath);
   });
@@ -357,17 +364,18 @@ test("withRecommendationFlags restores environment values after success and fail
   assert.deepEqual(captureRecommendationFlags(env), prior);
 });
 
-test("applyRecommendationFlags changes only recommendation serving fields", () => {
+test("applyRecommendationFlags changes only recommendation runtime fields", () => {
   const prior = captureRecommendationFlags(env);
   applyRecommendationFlags(env, {
+    runtimeMode: "ML_PRIMARY",
     shadow: true,
-    materialServing: true,
-    projectServing: false,
     materialPath: "/tmp/a.json",
     projectPath: "/tmp/b.json",
   });
+  assert.equal(env.recommendationMlRuntimeMode, "ML_PRIMARY");
   assert.equal(env.recommendationMlShadowEnabled, true);
-  assert.equal(env.recommendationMlProjectServingEnabled, false);
+  assert.equal(env.recommendationMlMaterialArtifactPath, "/tmp/a.json");
+  assert.equal(env.recommendationMlProjectArtifactPath, "/tmp/b.json");
   applyRecommendationFlags(env, prior);
   assert.deepEqual(captureRecommendationFlags(env), prior);
 });

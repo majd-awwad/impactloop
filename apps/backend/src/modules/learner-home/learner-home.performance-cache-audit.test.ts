@@ -819,14 +819,10 @@ describe('RP-03.5 audit profile ML flag isolation', () => {
   test('canonical-isolated restores all ML flags after success and failure', async () => {
     const before = readMlRuntimeFlagSnapshot(env);
     env.recommendationMlShadowEnabled = true;
-    env.recommendationMlMaterialServingEnabled = true;
-    env.recommendationMlProjectServingEnabled = true;
     const expectedRestore = readMlRuntimeFlagSnapshot(env);
 
     await withCanonicalIsolatedMlFlags(env, async () => {
       assert.equal(env.recommendationMlShadowEnabled, false);
-      assert.equal(env.recommendationMlMaterialServingEnabled, false);
-      assert.equal(env.recommendationMlProjectServingEnabled, false);
     });
     assert.deepEqual(readMlRuntimeFlagSnapshot(env), expectedRestore);
 

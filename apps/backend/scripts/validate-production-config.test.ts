@@ -15,9 +15,12 @@ import {
 } from "./lib/validation-report.js";
 import { runValidateProductionConfigCli } from "./validate-production-config.js";
 
-const strongAccessSecret = "prod-grade-jwt-access-secret-value-01";
-const strongRefreshSecret = "prod-grade-jwt-refresh-secret-value-02";
-const strongHandoverSecret = "prod-grade-handover-code-secret-val";
+const strongAccessSecret =
+  "prod-grade-jwt-access-secret-value-01".padEnd(128, "x");
+const strongRefreshSecret =
+  "prod-grade-jwt-refresh-secret-value-02".padEnd(128, "y");
+const strongHandoverSecret =
+  "prod-grade-handover-code-secret-val".padEnd(128, "z");
 
 const validProductionEnv = (): NodeJS.Dict<string> => ({
   NODE_ENV: "production",
@@ -37,6 +40,8 @@ const validProductionEnv = (): NodeJS.Dict<string> => ({
   MOCK_EMAIL_LOG_LINKS: "false",
   AI_CHAT_DEV_MOCK_FALLBACK_ENABLED: "false",
   ZOOM_INTEGRATION_MODE: "disabled",
+  // Explicit DETERMINISTIC avoids ML_PRIMARY artifact requirements for the base fixture.
+  RECOMMENDATION_ML_RUNTIME_MODE: "DETERMINISTIC",
 });
 
 const codesOf = (diagnostics: Array<{ code: string }>): string[] =>
@@ -123,9 +128,48 @@ test("LOG_PRETTY must be disabled in production", () => {
   );
 });
 
-test("ML_LOCAL runtime mode is rejected outside development/test", () => {
+test("ML_PRIMARY is allowed in production when artifact paths are set", () => {
   const env = validProductionEnv();
-  env.RECOMMENDATION_ML_RUNTIME_MODE = "ML_LOCAL";
+  env.RECOMMENDATION_ML_RUNTIME_MODE = "ML_PRIMARY";
+  env.RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH = "/models/material.json";
+  env.RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH = "/models/project.json";
+  const result = validateAppProductionPreflightSync(env, {
+    checkUploadDirectories: false,
+  });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.diagnostics, []);
+});
+
+test("ML_PRIMARY without artifact paths fails in production", () => {
+  const env = validProductionEnv();
+  env.RECOMMENDATION_ML_RUNTIME_MODE = "ML_PRIMARY";
+  delete env.RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH;
+  delete env.RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH;
+  const codes = codesOf(
+    validateAppProductionPreflightSync(env, {
+      checkUploadDirectories: false,
+    }).diagnostics,
+  );
+  assert.ok(codes.includes("RECOMMENDATION_ML_MATERIAL_ARTIFACT_MISSING"));
+  assert.ok(codes.includes("RECOMMENDATION_ML_PROJECT_ARTIFACT_MISSING"));
+});
+
+test("stale ML serving flags fail in production", () => {
+  const env = validProductionEnv();
+  env.RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED = "false";
+  const result = validateAppProductionPreflightSync(env, {
+    checkUploadDirectories: false,
+  });
+  assert.ok(
+    codesOf(result.diagnostics).includes(
+      "RECOMMENDATION_ML_SERVING_FLAGS_REMOVED",
+    ),
+  );
+});
+
+test("invalid ML runtime mode fails in production", () => {
+  const env = validProductionEnv();
+  env.RECOMMENDATION_ML_RUNTIME_MODE = "NOT_A_MODE";
   const result = validateAppProductionPreflightSync(env, {
     checkUploadDirectories: false,
   });

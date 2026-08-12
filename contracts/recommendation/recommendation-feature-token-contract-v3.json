@@ -14,7 +14,7 @@
     "membershipMode": "EXACT_CANONICAL_KEY_AND_CONCEPT_TYPE",
     "fingerprintAlgorithm": "SHA-256",
     "fingerprintSerialization": "Sort by canonicalKey using ASCII order; serialize each entry as <conceptType>\\t<canonicalKey>; join with LF; encode as UTF-8. Aliases, labels, and mapping rules are excluded.",
-    "taxonomyVocabularyFingerprint": "c84173df47de8dfc547e5d68277fbf789b9e0a27561be08221e5e0d88d3db370"
+    "taxonomyVocabularyFingerprint": "14b855de18511235289cf33e4704693bd5d3887cb6e066d6abcd2a00ef08ed83"
   },
   "normalization": {
     "inputAliasResolution": "OUTSIDE_CONTRACT_UNICODE_SAFE",

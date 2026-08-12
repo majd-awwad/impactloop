@@ -2,7 +2,7 @@
 
 ## Latest Current Status — 2026-07-23
 
-The authoritative current classification is [`current-state.md`](current-state.md). This file retains cumulative implementation evidence and historical decisions; a later implementation does not retroactively alter what an earlier dated phase established.
+The authoritative current classification is [architecture/recommendation-system.md](../../architecture/recommendation-system.md). This file retains cumulative implementation evidence and historical decisions; a later implementation does not retroactively alter what an earlier dated phase established.
 
 | Capability | Latest status |
 |---|---|

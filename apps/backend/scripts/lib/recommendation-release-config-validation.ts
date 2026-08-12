@@ -180,82 +180,85 @@ export const validateRecommendationReleaseConfigSync = (
     const parsed = parseScorerVersion(scorerRaw);
     if (parsed !== "legacy-v1") {
       pushDiagnostic(diagnostics, {
-        code: "CHAMPION_UNSUPPORTED_FOR_RELEASE_A",
+        code: "FALLBACK_SCORER_UNSUPPORTED_FOR_RELEASE",
         summary:
-          "Release A accepts only legacy-v1; canonical-taxonomy-v3 remains opt-in in runtime code but is not accepted by this deploy gate",
+          "Release config accepts only legacy-v1 as the deterministic fallback scorer; canonical-taxonomy-v3 remains opt-in in runtime code but is not accepted by this deploy gate",
         field: "RECOMMENDATION_SCORER_VERSION",
       });
     }
   } catch {
     pushDiagnostic(diagnostics, {
-      code: "CHAMPION_UNKNOWN",
+      code: "FALLBACK_SCORER_UNKNOWN",
       summary: "RECOMMENDATION_SCORER_VERSION is unknown or invalid",
       field: "RECOMMENDATION_SCORER_VERSION",
     });
   }
 
-  const materialServing = parseStrictBoolean(
-    readEnv(env, "RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED"),
-    false,
-  );
-  const projectServing = parseStrictBoolean(
-    readEnv(env, "RECOMMENDATION_ML_PROJECT_SERVING_ENABLED"),
-    false,
-  );
-  const shadow = parseStrictBoolean(
-    readEnv(env, "RECOMMENDATION_ML_SHADOW_ENABLED"),
-    false,
-  );
-
-  if (!materialServing.ok) {
+  const rawRuntimeMode =
+    readEnv(env, "RECOMMENDATION_ML_RUNTIME_MODE")?.trim() ?? "";
+  const runtimeMode = rawRuntimeMode.length > 0 ? rawRuntimeMode : "ML_PRIMARY";
+  const allowedRuntimeModes = new Set([
+    "DETERMINISTIC",
+    "SHADOW",
+    "ML_PRIMARY",
+  ]);
+  if (rawRuntimeMode.length > 0 && !allowedRuntimeModes.has(rawRuntimeMode)) {
     pushDiagnostic(diagnostics, {
-      code: "FLAG_BOOLEAN_INVALID",
+      code: "ML_RUNTIME_MODE_INVALID",
       summary:
-        "RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED must be unset or one of: 1, true, yes, 0, false, no",
-      field: "RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED",
-    });
-  }
-  if (!projectServing.ok) {
-    pushDiagnostic(diagnostics, {
-      code: "FLAG_BOOLEAN_INVALID",
-      summary:
-        "RECOMMENDATION_ML_PROJECT_SERVING_ENABLED must be unset or one of: 1, true, yes, 0, false, no",
-      field: "RECOMMENDATION_ML_PROJECT_SERVING_ENABLED",
-    });
-  }
-  if (!shadow.ok) {
-    pushDiagnostic(diagnostics, {
-      code: "FLAG_BOOLEAN_INVALID",
-      summary:
-        "RECOMMENDATION_ML_SHADOW_ENABLED must be unset or one of: 1, true, yes, 0, false, no",
-      field: "RECOMMENDATION_ML_SHADOW_ENABLED",
+        "RECOMMENDATION_ML_RUNTIME_MODE must be DETERMINISTIC, SHADOW, or ML_PRIMARY",
+      field: "RECOMMENDATION_ML_RUNTIME_MODE",
     });
   }
 
-  const materialEnabled = materialServing.ok && materialServing.value;
-  const projectEnabled = projectServing.ok && projectServing.value;
-  const shadowEnabled = shadow.ok && shadow.value;
+  if (runtimeMode === "ML_PRIMARY") {
+    const materialPath =
+      readEnv(env, "RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH")?.trim() ?? "";
+    const projectPath =
+      readEnv(env, "RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH")?.trim() ?? "";
+    if (!materialPath) {
+      pushDiagnostic(diagnostics, {
+        code: "ML_MATERIAL_ARTIFACT_MISSING",
+        summary:
+          "ML_PRIMARY requires RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH",
+        field: "RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH",
+      });
+    }
+    if (!projectPath) {
+      pushDiagnostic(diagnostics, {
+        code: "ML_PROJECT_ARTIFACT_MISSING",
+        summary:
+          "ML_PRIMARY requires RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH",
+        field: "RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH",
+      });
+    }
+  }
 
-  if (materialEnabled) {
-    pushDiagnostic(diagnostics, {
-      code: "ML_MATERIAL_SERVING_ENABLED",
-      summary: "ML material serving must be disabled for Release A",
-      field: "RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED",
-    });
+  if (runtimeMode === "SHADOW") {
+    const shadow = parseStrictBoolean(
+      readEnv(env, "RECOMMENDATION_ML_SHADOW_ENABLED"),
+      true,
+    );
+    if (!shadow.ok) {
+      pushDiagnostic(diagnostics, {
+        code: "FLAG_BOOLEAN_INVALID",
+        summary:
+          "RECOMMENDATION_ML_SHADOW_ENABLED must be unset or one of: 1, true, yes, 0, false, no",
+        field: "RECOMMENDATION_ML_SHADOW_ENABLED",
+      });
+    }
   }
-  if (projectEnabled) {
+
+  const staleMaterialServing =
+    readEnv(env, "RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED")?.trim() ?? "";
+  const staleProjectServing =
+    readEnv(env, "RECOMMENDATION_ML_PROJECT_SERVING_ENABLED")?.trim() ?? "";
+  if (staleMaterialServing.length > 0 || staleProjectServing.length > 0) {
     pushDiagnostic(diagnostics, {
-      code: "ML_PROJECT_SERVING_ENABLED",
-      summary: "ML project serving must be disabled for Release A",
-      field: "RECOMMENDATION_ML_PROJECT_SERVING_ENABLED",
-    });
-  }
-  if (shadowEnabled && (materialEnabled || projectEnabled)) {
-    pushDiagnostic(diagnostics, {
-      code: "ML_SHADOW_WITH_SERVING_UNSAFE",
+      code: "ML_SERVING_FLAGS_REMOVED",
       summary:
-        "Shadow must not be combined with ML serving flags for Release A",
-      field: "RECOMMENDATION_ML_SHADOW_ENABLED",
+        "RECOMMENDATION_ML_*_SERVING_ENABLED flags are removed; serving is controlled solely by RECOMMENDATION_ML_RUNTIME_MODE",
+      field: "RECOMMENDATION_ML_RUNTIME_MODE",
     });
   }
 

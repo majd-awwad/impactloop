@@ -126,3 +126,21 @@ Baseline CI uses Node 22.12.0 and PostGIS 16. The Docker image matches Node 22.1
 ## Demo-only / local development
 
 Local `npm run backend:dev` without Docker continues to use `apps/backend/uploads/` on disk. This is suitable for development and demos only; do not rely on that directory for production durability.
+
+## Recommendation ML (ML_PRIMARY)
+
+Production-capable Learner Home serving uses:
+
+```bash
+RECOMMENDATION_ML_RUNTIME_MODE=ML_PRIMARY   # default when unset
+RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH=<portable v2 JSON>
+RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH=<portable v2 JSON>
+```
+
+- Missing or incompatible artifacts → per-domain NOT_READY → **deterministic fallback** (API still returns 200).
+- Explicit rollback: `RECOMMENDATION_ML_RUNTIME_MODE=DETERMINISTIC`.
+- Legacy `RECOMMENDATION_ML_*_SERVING_ENABLED` flags were removed — do not configure them.
+
+Validate production config: `npm run validate:production-config -w apps/backend` and `npm run validate:recommendation-release-config -w apps/backend`.
+
+Architecture: [architecture/recommendation-system.md](architecture/recommendation-system.md). Local artifact workflow: [development/local-ml.md](development/local-ml.md).

@@ -127,6 +127,22 @@ export type RecommendationGenerationMetadata = {
   generationCacheState: CacheState;
   candidateTraces: RecommendationCandidateTraceInput[];
   eventSource?: EventSource;
+  /**
+   * Domain-level serving outcomes for analytics/smoke.
+   * Not required by outbox schema; algorithmVersion sm=/sp= remains the durable stamp.
+   */
+  servingOutcomes?: {
+    material: {
+      status: string;
+      health: string;
+      reasonCode?: string;
+    };
+    project: {
+      status: string;
+      health: string;
+      reasonCode?: string;
+    };
+  };
 };
 
 export type RecommendationExposureItem = {

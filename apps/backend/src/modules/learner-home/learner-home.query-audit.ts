@@ -542,53 +542,35 @@ export const parseAuditCliArgs = (argv: string[]): AuditCliOptions => {
 
 export type MlRuntimeFlagSnapshot = {
   recommendationMlShadowEnabled: boolean;
-  recommendationMlMaterialServingEnabled: boolean;
-  recommendationMlProjectServingEnabled: boolean;
 };
 
 export const readMlRuntimeFlagSnapshot = (flags: {
   recommendationMlShadowEnabled: boolean;
-  recommendationMlMaterialServingEnabled: boolean;
-  recommendationMlProjectServingEnabled: boolean;
 }): MlRuntimeFlagSnapshot => ({
   recommendationMlShadowEnabled: flags.recommendationMlShadowEnabled,
-  recommendationMlMaterialServingEnabled:
-    flags.recommendationMlMaterialServingEnabled,
-  recommendationMlProjectServingEnabled:
-    flags.recommendationMlProjectServingEnabled,
 });
 
 export const restoreMlRuntimeFlagSnapshot = (
   target: {
     recommendationMlShadowEnabled: boolean;
-    recommendationMlMaterialServingEnabled: boolean;
-    recommendationMlProjectServingEnabled: boolean;
   },
   snapshot: MlRuntimeFlagSnapshot,
 ): void => {
   target.recommendationMlShadowEnabled = snapshot.recommendationMlShadowEnabled;
-  target.recommendationMlMaterialServingEnabled =
-    snapshot.recommendationMlMaterialServingEnabled;
-  target.recommendationMlProjectServingEnabled =
-    snapshot.recommendationMlProjectServingEnabled;
 };
 
 /**
- * Canonical-isolated only: temporarily disable ML shadow/serving, restore in finally.
+ * Canonical-isolated only: temporarily disable ML shadow side-path, restore in finally.
  * Configured-runtime must never call this.
  */
 export const withCanonicalIsolatedMlFlags = async <T>(
   target: {
     recommendationMlShadowEnabled: boolean;
-    recommendationMlMaterialServingEnabled: boolean;
-    recommendationMlProjectServingEnabled: boolean;
   },
   run: () => Promise<T>,
 ): Promise<T> => {
   const previous = readMlRuntimeFlagSnapshot(target);
   target.recommendationMlShadowEnabled = false;
-  target.recommendationMlMaterialServingEnabled = false;
-  target.recommendationMlProjectServingEnabled = false;
   try {
     return await run();
   } finally {

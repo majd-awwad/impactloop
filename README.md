@@ -71,17 +71,22 @@ Release builds require `--dart-define=API_BASE_URL=...` (or `API_USE_SAME_ORIGIN
 
 ## Documentation index
 
-Start here for agents and contributors:
+**Start here:** [docs/README.md](docs/README.md)
 
 | Doc | Purpose |
 |-----|---------|
-| [AGENTS.md](AGENTS.md) | Coding rules and MVP decisions |
-| [docs/local-development-and-ml.md](docs/local-development-and-ml.md) | Fresh local setup and local ML demo runbook |
-| [docs/00-ai-docs-router.md](docs/00-ai-docs-router.md) | Which docs to read/update when changing code |
-| [docs/01-project-map.md](docs/01-project-map.md) | Repo map and feature inventory |
-| [docs/02-architecture.md](docs/02-architecture.md) | Architecture (code-derived) |
-| [docs/08-implementation-status.md](docs/08-implementation-status.md) | What is implemented vs partial vs not built |
-| [docs/09-open-questions.md](docs/09-open-questions.md) | Unresolved risks and **Needs verification** items |
+| [AGENTS.md](AGENTS.md) | Coding rules |
+| [docs/README.md](docs/README.md) | Full documentation index |
+| [docs/architecture/recommendation-system.md](docs/architecture/recommendation-system.md) | **Learner Home ML_PRIMARY recommendation architecture** |
+| [docs/development/local-development.md](docs/development/local-development.md) | Fresh local setup |
+| [docs/development/local-ml.md](docs/development/local-ml.md) | Local LightFM train / validate / smoke |
+| [docs/demo-data.md](docs/demo-data.md) | Community demo seed workflow |
+| [docs/architecture/system-overview.md](docs/architecture/system-overview.md) | System architecture |
+| [docs/08-implementation-status.md](docs/08-implementation-status.md) | Implemented vs partial vs not built |
+
+Legacy routers (redirect): [docs/00-ai-docs-router.md](docs/00-ai-docs-router.md), [docs/02-architecture.md](docs/02-architecture.md).
+
+Historical recommendation phases: [docs/history/recommendation/README.md](docs/history/recommendation/README.md) — **not** current runtime truth.
 
 ### Inventories (code-derived)
 
@@ -116,7 +121,8 @@ Start here for agents and contributors:
 | Material discovery | [docs/features/material-discovery.md](docs/features/material-discovery.md) | [material-discovery-flow](docs/flows/material-discovery-flow.md) | **Implemented** |
 | Supplier portal | [docs/features/supplier-portal.md](docs/features/supplier-portal.md) | [supplier-material-listing-flow](docs/flows/supplier-material-listing-flow.md), [supplier-reservation-flow](docs/flows/supplier-reservation-flow.md) | **Partial** |
 | Learning hub | [docs/features/learning-hub.md](docs/features/learning-hub.md) | [learning-hub-browse-flow](docs/flows/learning-hub-browse-flow.md) | **Partial** — browse/detail/spotlight API-backed; builds, moderation, engagement wired; AI material matching pending |
-| ImpactLoop Assistant (AI) | [docs/ai/01-general-learning-chat.md](docs/ai/01-general-learning-chat.md) | — | **Partial** — `/api/ai/v1` + Flutter `/ai/assistant`; general learning + build-guide + project authoring waves; material-matching agent still **not implemented** |
+| [docs/ai/01-general-learning-chat.md](docs/ai/01-general-learning-chat.md) | **Partial** — `/api/ai/v1` + Flutter `/ai/assistant`; general learning + build-guide + project authoring waves; material-matching agent still **not implemented** |
+| Recommendation ML (Learner Home) | [docs/architecture/recommendation-system.md](docs/architecture/recommendation-system.md) | — | **Implemented** — ML_PRIMARY serving for suggested materials/projects with deterministic fallback |
 
 ADRs live in [docs/adr/](docs/adr/) for accepted architecture decisions.
 
@@ -128,7 +134,7 @@ ADRs live in [docs/adr/](docs/adr/) for accepted architecture decisions.
 | Locations | [docs/features/locations.md](docs/features/locations.md) | — | **Partial** — public redaction **Needs verification** |
 | Invitations | [docs/features/invitations.md](docs/features/invitations.md) | [invitation-flow](docs/flows/invitation-flow.md) | **Backend-only** |
 | Landing | [docs/features/landing.md](docs/features/landing.md) | — | **Implemented** — static; no API |
-| Home (learner) | [docs/features/home-learner.md](docs/features/home-learner.md) | — | **Partial** — personalized home feed (7 sections) **API-backed** |
+| Home (learner) | [docs/features/home-learner.md](docs/features/home-learner.md) | — | **Partial** — personalized home feed (7 sections) **API-backed**; suggested materials/projects use ML_PRIMARY when artifacts READY |
 
 ### Gap docs and open questions (Phase 2C)
 
@@ -152,4 +158,4 @@ ADRs live in [docs/adr/](docs/adr/) for accepted architecture decisions.
 | [docs/frontend/material-discovery-handoff.md](docs/frontend/material-discovery-handoff.md) | Historical handoff notes |
 | [docs/tasks/](docs/tasks/) | Task snapshots — not canonical behavior |
 | [docs/archive/](docs/archive/) | **Historical** plans superseded by code-derived docs |
-| [docs/ai/00-ai-system-architecture-plan.md](docs/ai/00-ai-system-architecture-plan.md) | **Historical** Phase 0 AI plan — see [01-general-learning-chat](docs/ai/01-general-learning-chat.md) and [08-implementation-status](docs/08-implementation-status.md) for current state |
+| [docs/history/ai/00-ai-system-architecture-plan.md](docs/history/ai/00-ai-system-architecture-plan.md) | **Historical** Phase 0 AI plan — see [01-general-learning-chat](docs/ai/01-general-learning-chat.md) for current chat architecture |

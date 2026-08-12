@@ -22,7 +22,14 @@ Always verify behavior against checked-in code and:
 
 | Doc | Notes |
 |-----|-------|
-| [ai/00-ai-system-architecture-plan.md](../ai/00-ai-system-architecture-plan.md) | Phase 0 architecture plan (2026-07-14). Partial implementation followed — see [ai/01-general-learning-chat.md](../ai/01-general-learning-chat.md) |
+| [history/ai/00-ai-system-architecture-plan.md](../history/ai/00-ai-system-architecture-plan.md) | Phase 0 architecture plan (2026-07-14). Partial implementation followed — see [ai/01-general-learning-chat.md](../ai/01-general-learning-chat.md) |
+
+## Historical recommendation work
+
+| Doc | Notes |
+|-----|-------|
+| [history/recommendation/README.md](../history/recommendation/README.md) | Phase/slice reports, old plans — **not current architecture** |
+| Current recommendation architecture | [architecture/recommendation-system.md](../architecture/recommendation-system.md) |
 
 ## Gap / stub docs (planned features)
 

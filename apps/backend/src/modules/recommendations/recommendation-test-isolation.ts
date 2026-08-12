@@ -7,34 +7,30 @@ import { invalidateAllLearnerHomeResponseCaches } from '../learner-home/learner-
 import { resetMlShadowTestStateForTests } from './ml-shadow.service.js';
 
 export type RecommendationFlagState = {
+  runtimeMode: 'DETERMINISTIC' | 'SHADOW' | 'ML_PRIMARY';
   shadow: boolean;
-  materialServing: boolean;
-  projectServing: boolean;
   materialPath: string;
   projectPath: string;
 };
 
 export const captureRecommendationFlags = (): RecommendationFlagState => ({
+  runtimeMode: env.recommendationMlRuntimeMode,
   shadow: env.recommendationMlShadowEnabled,
-  materialServing: env.recommendationMlMaterialServingEnabled,
-  projectServing: env.recommendationMlProjectServingEnabled,
   materialPath: env.recommendationMlMaterialArtifactPath,
   projectPath: env.recommendationMlProjectArtifactPath,
 });
 
 export const applyRecommendationFlags = (flags: RecommendationFlagState): void => {
+  env.recommendationMlRuntimeMode = flags.runtimeMode;
   env.recommendationMlShadowEnabled = flags.shadow;
-  env.recommendationMlMaterialServingEnabled = flags.materialServing;
-  env.recommendationMlProjectServingEnabled = flags.projectServing;
   env.recommendationMlMaterialArtifactPath = flags.materialPath;
   env.recommendationMlProjectArtifactPath = flags.projectPath;
 };
 
 export const RECOMMENDATION_PROCESS_ENV_KEYS = [
   'PREFLIGHT_MODE',
+  'RECOMMENDATION_ML_RUNTIME_MODE',
   'RECOMMENDATION_ML_SHADOW_ENABLED',
-  'RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED',
-  'RECOMMENDATION_ML_PROJECT_SERVING_ENABLED',
   'RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH',
   'RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH',
 ] as const;

@@ -30,7 +30,7 @@ import {
 const decision = (
   status: SmokeOrderingDecision['status'],
 ): SmokeOrderingDecision => ({
-  runtimeMode: 'ML_LOCAL',
+  runtimeMode: 'ML_PRIMARY',
   status,
   diagnostics: {
     candidateCount: 3,
@@ -115,7 +115,7 @@ test('ml-smoke-local pure: actual stamp mismatch is detected against independent
   const ranked = decision('ML_RANKED');
   // Independently supplied actual stamp — not buildSectionAlgorithmStamp(ranked).
   const actualMismatch =
-    'learner-home-v1:base=legacy-v1;sm=deterministic;sp=ml-local';
+    'learner-home-v1:base=legacy-v1;sm=deterministic;sp=ml-primary';
   const failed = assertStampTruthful({
     actualStamp: actualMismatch,
     decision: ranked,
@@ -126,19 +126,19 @@ test('ml-smoke-local pure: actual stamp mismatch is detected against independent
 
   const constructed = buildSectionAlgorithmStamp({
     sectionKey: 'suggested_materials',
-    runtimeMode: 'ML_LOCAL',
+    runtimeMode: 'ML_PRIMARY',
     decision: ranked,
     effectiveBase: 'legacy-v1',
   });
   // Prove the check uses the supplied actual stamp, not the constructed one:
   // constructed would pass, but we pass a different actual stamp and fail.
-  assert.match(constructed, /sm=ml-local/);
+  assert.match(constructed, /sm=ml-primary/);
   assert.notEqual(constructed, actualMismatch);
 });
 
 test('ml-smoke-local pure: fallback claiming ML on actual stamp is detected', () => {
   const fallback = decision('FALLBACK_FAILED');
-  const actualStamp = 'learner-home-v1:base=legacy-v1;sm=ml-local;sp=fb-failed';
+  const actualStamp = 'learner-home-v1:base=legacy-v1;sm=ml-primary;sp=fb-failed';
   const failed = assertStampTruthful({
     actualStamp,
     decision: fallback,
@@ -150,9 +150,9 @@ test('ml-smoke-local pure: fallback claiming ML on actual stamp is detected', ()
 
 test('ml-smoke-local pure: stamp domain misroute is detected', () => {
   const ranked = decision('ML_RANKED');
-  // Expected sm=ml-local but only sp carries ml-local (swapped).
+  // Expected sm=ml-primary but only sp carries ml-primary (swapped).
   const actualStamp =
-    'learner-home-v1:base=legacy-v1;sm=deterministic;sp=ml-local';
+    'learner-home-v1:base=legacy-v1;sm=deterministic;sp=ml-primary';
   const failed = assertStampTruthful({
     actualStamp,
     decision: ranked,
@@ -169,14 +169,14 @@ test('ml-smoke-local pure: stamp domain misroute is detected', () => {
   );
   assert.equal(
     extractSectionTokenFromActualStamp(actualStamp, 'suggested_projects'),
-    'ml-local',
+    'ml-primary',
   );
 });
 
 test('ml-smoke-local pure: truthful actual stamp passes', () => {
   const ranked = decision('ML_RANKED');
   const actualStamp =
-    'learner-home-v1:base=legacy-v1;sm=ml-local;sp=fb-not-ready';
+    'learner-home-v1:base=legacy-v1;sm=ml-primary;sp=fb-not-ready';
   assert.equal(
     assertStampTruthful({
       actualStamp,
@@ -185,7 +185,7 @@ test('ml-smoke-local pure: truthful actual stamp passes', () => {
     }).ok,
     true,
   );
-  assert.equal(mlDecisionToken('ML_RANKED'), 'ml-local');
+  assert.equal(mlDecisionToken('ML_RANKED'), 'ml-primary');
 });
 
 test('ml-smoke-local pure: cross-section dedup matches dedupeMaterialSections authority', () => {
@@ -302,7 +302,7 @@ test('ml-smoke-local pure: duplicate ranked keys contained with truthful fallbac
     assertDuplicateKeysContained({
       decision: duplicateDecision,
       returnedIds: ['a', 'b'],
-      actualStamp: 'learner-home-v1:base=legacy-v1;sm=fb-failed;sp=ml-local',
+      actualStamp: 'learner-home-v1:base=legacy-v1;sm=fb-failed;sp=ml-primary',
       sectionKey: 'suggested_materials',
     }).ok,
     true,
@@ -316,7 +316,7 @@ test('ml-smoke-local pure: duplicate ranked keys contained with truthful fallbac
       },
     },
     returnedIds: ['a', 'b'],
-    actualStamp: 'learner-home-v1:base=legacy-v1;sm=ml-local;sp=ml-local',
+    actualStamp: 'learner-home-v1:base=legacy-v1;sm=ml-primary;sp=ml-primary',
     sectionKey: 'suggested_materials',
   });
   assert.equal(mlAccepted.ok, false);
@@ -325,7 +325,7 @@ test('ml-smoke-local pure: duplicate ranked keys contained with truthful fallbac
   const visibleDup = assertDuplicateKeysContained({
     decision: duplicateDecision,
     returnedIds: ['a', 'a'],
-    actualStamp: 'learner-home-v1:base=legacy-v1;sm=fb-failed;sp=ml-local',
+    actualStamp: 'learner-home-v1:base=legacy-v1;sm=fb-failed;sp=ml-primary',
     sectionKey: 'suggested_materials',
   });
   assert.equal(visibleDup.ok, false);
@@ -337,7 +337,7 @@ test('ml-smoke-local pure: repeatability compares full snapshot fields', () => {
     rankedIds: ['a', 'b'],
     orderedPoolIds: ['a', 'b', 'c'],
     visibleIds: ['a', 'b'],
-    actualStamp: 'learner-home-v1:base=legacy-v1;sm=ml-local;sp=ml-local',
+    actualStamp: 'learner-home-v1:base=legacy-v1;sm=ml-primary;sp=ml-primary',
     status: 'ML_RANKED',
     mappedCount: 2,
     unmappedCount: 1,
@@ -399,7 +399,7 @@ test('ml-smoke-local pure: stable JSON serialization includes schema and aliases
   const report: SmokeJsonReport = {
     schemaVersion: SMOKE_SCHEMA_VERSION,
     evaluationTimeUtc: '2026-07-23T00:00:00.000Z',
-    runtimeMode: 'ML_LOCAL',
+    runtimeMode: 'ML_PRIMARY',
     artifacts: {
       material: { state: 'READY', semanticContentHash: 'a'.repeat(64) },
       project: { state: 'READY', semanticContentHash: 'b'.repeat(64) },

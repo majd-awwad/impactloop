@@ -751,7 +751,7 @@ const recommendationOutboxRuntime = resolveRecommendationOutboxRuntimeConfig();
 export type RecommendationMlRuntimeMode =
   | 'DETERMINISTIC'
   | 'SHADOW'
-  | 'ML_LOCAL';
+  | 'ML_PRIMARY';
 
 export type RecommendationMlRuntimeConfig = {
   mode: RecommendationMlRuntimeMode;
@@ -760,9 +760,7 @@ export type RecommendationMlRuntimeConfig = {
   projectArtifactPath: string;
 };
 
-export type RecommendationMlRuntimeConfigErrorCode =
-  | 'INVALID_RUNTIME_MODE'
-  | 'ML_LOCAL_ENVIRONMENT_FORBIDDEN';
+export type RecommendationMlRuntimeConfigErrorCode = 'INVALID_RUNTIME_MODE';
 
 export class RecommendationMlRuntimeConfigError extends Error {
   readonly code: RecommendationMlRuntimeConfigErrorCode;
@@ -777,9 +775,15 @@ export class RecommendationMlRuntimeConfigError extends Error {
 const recommendationMlRuntimeModes = new Set<RecommendationMlRuntimeMode>([
   'DETERMINISTIC',
   'SHADOW',
-  'ML_LOCAL',
+  'ML_PRIMARY',
 ]);
 
+/**
+ * Authoritative ML serving mode.
+ * Unset → ML_PRIMARY (intended architecture; deterministic is fallback when ML is not READY).
+ * Explicit DETERMINISTIC / SHADOW override for rollback and evaluation.
+ * Legacy RECOMMENDATION_ML_SHADOW_ENABLED alone no longer selects the mode.
+ */
 export const resolveRecommendationMlRuntimeConfig = (
   processEnv: NodeJS.ProcessEnv,
 ): RecommendationMlRuntimeConfig => {
@@ -788,9 +792,7 @@ export const resolveRecommendationMlRuntimeConfig = (
   let mode: RecommendationMlRuntimeMode;
 
   if (!explicitMode) {
-    mode = parseBoolean(processEnv.RECOMMENDATION_ML_SHADOW_ENABLED, false)
-      ? 'SHADOW'
-      : 'DETERMINISTIC';
+    mode = 'ML_PRIMARY';
   } else if (
     recommendationMlRuntimeModes.has(rawMode as RecommendationMlRuntimeMode)
   ) {
@@ -798,15 +800,7 @@ export const resolveRecommendationMlRuntimeConfig = (
   } else {
     throw new RecommendationMlRuntimeConfigError(
       'INVALID_RUNTIME_MODE',
-      'RECOMMENDATION_ML_RUNTIME_MODE must be DETERMINISTIC, SHADOW, or ML_LOCAL.',
-    );
-  }
-
-  const nodeEnv = processEnv.NODE_ENV ?? 'development';
-  if (mode === 'ML_LOCAL' && nodeEnv !== 'development' && nodeEnv !== 'test') {
-    throw new RecommendationMlRuntimeConfigError(
-      'ML_LOCAL_ENVIRONMENT_FORBIDDEN',
-      'RECOMMENDATION_ML_RUNTIME_MODE=ML_LOCAL is restricted to development and test.',
+      'RECOMMENDATION_ML_RUNTIME_MODE must be DETERMINISTIC, SHADOW, or ML_PRIMARY.',
     );
   }
 
@@ -922,16 +916,9 @@ export const env = {
   ) as RecommendationScorerVersion,
   recommendationMlRuntimeMode: recommendationMlRuntime.mode,
   recommendationMlRuntimeModeExplicit: recommendationMlRuntime.explicitMode,
+  /** True when mode is SHADOW or ML_PRIMARY (side-path / concept hydration eligible). */
   recommendationMlShadowEnabled:
     recommendationMlRuntime.mode !== 'DETERMINISTIC',
-  recommendationMlMaterialServingEnabled: parseBoolean(
-    process.env.RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED,
-    false,
-  ),
-  recommendationMlProjectServingEnabled: parseBoolean(
-    process.env.RECOMMENDATION_ML_PROJECT_SERVING_ENABLED,
-    false,
-  ),
   recommendationMlMaterialArtifactPath:
     recommendationMlRuntime.materialArtifactPath,
   recommendationMlProjectArtifactPath:

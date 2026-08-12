@@ -1,55 +1,68 @@
-# Recommendation Decision Ledger
+# Recommendation decision ledger
 
-Current as of: 2026-07-23
-Authority: [`current-state.md`](current-state.md)
+**Authority for current architecture:** [architecture/recommendation-system.md](../architecture/recommendation-system.md)
 
-Implementation proves that a capability exists. Adoption requires explicit evidence and a recorded promotion decision. Dated phase and slice reports remain scoped evidence; they do not independently change production adoption status.
+Historical phase evidence lives in [history/recommendation/README.md](../history/recommendation/README.md). Dated slice reports do not independently change production behavior.
 
-## Active Decisions
+---
+
+## Active decisions
 
 | ID | Date | Decision | Status |
 |---|---|---|---|
-| REC-001 | 2026-07-23 | Keep the deterministic hybrid recommender using `legacy-v1` as the adopted active/default champion. | ACTIVE |
-| REC-002 | 2026-07-23 | Retain the normalized scorer and typed taxonomy as implemented foundations without activating them in the adopted default ranking. | ACTIVE_WITH_CONDITIONS |
-| REC-003 | 2026-07-23 | Classify LightFM training, portable artifacts, TypeScript scoring, shadow comparison, recent intent, rank fusion, diagnostics, preflight, and serving hooks as experimental implementation rather than adopted production behavior. | CONTINUE_EXPERIMENT |
-| REC-004 | 2026-07-23 | Block user-visible ML production promotion until semantic, taxonomy, real-evidence, runtime/artifact, and operational gates are explicitly accepted. | DEFER |
-| REC-005 | 2026-07-23 | Evaluate and promote material ML before beginning any project ML promotion. | ACTIVE |
-| REC-006 | 2026-07-23 | Require shadow evaluation before canary and canary before broader serving. | ACTIVE |
-| REC-007 | 2026-07-23 | Retain the deterministic champion as the comparison baseline, fail-closed response, and immediate rollback path. | ACTIVE |
-| REC-008 | 2026-07-23 | Keep recommendation outbox materialization opt-in until deployment, monitoring, and production-like operational evidence are accepted; do not treat infrastructure as sufficient attributed evidence. | ACTIVE_WITH_CONDITIONS |
+| REC-009 | 2026-08-12 | **ML-primary recommendation serving** with deterministic fallback: `ML_PRIMARY` is the default runtime mode; ML owns visible ordering on `suggested_materials` and `suggested_projects` when a domain is READY and safely rankable. | **ACTIVE** |
+| REC-002 | 2026-07-23 | Retain normalized scorer and typed taxonomy as foundations; activation details superseded by REC-009 for serving mode. | ACTIVE_WITH_CONDITIONS |
+| REC-005 | 2026-07-23 | Material ML serving path precedes project ML promotion work. | ACTIVE (material path accepted; project path operational) |
+| REC-007 | 2026-07-23 | Deterministic ranking remains comparison baseline, explicit rollback (`DETERMINISTIC`), and per-request fallback. | ACTIVE |
+| REC-008 | 2026-07-23 | Recommendation outbox materialization remains opt-in until operational evidence accepts broader rollout. | ACTIVE_WITH_CONDITIONS |
 
-## Decision Detail
+## Superseded decisions
 
-### Deterministic Champion
+| ID | Date | Original decision | Status |
+|---|---|---|---|
+| REC-001 | 2026-07-23 | Keep deterministic hybrid (`legacy-v1`) as adopted active/default champion. | **SUPERSEDED** by REC-009 |
+| REC-003 | 2026-07-23 | Classify LightFM path as experimental only. | **SUPERSEDED** by REC-009 (local ML_PRIMARY serving accepted) |
+| REC-004 | 2026-07-23 | Block user-visible ML promotion until gates accepted. | **SUPERSEDED** by REC-009 for local/controlled acceptance; production rollout gates remain operational |
+| REC-006 | 2026-07-23 | Require shadow → canary → serving promotion ladder. | **SUPERSEDED** for local default; SHADOW remains evaluation-only mode |
 
-The deterministic hybrid recommender may deploy after ordinary production hardening. Hard eligibility, availability, ownership, supplier, reservation, pickup, and delivery constraints remain authoritative and may not be overridden by an experimental model.
+---
 
-### Inactive Foundations
+## REC-009 — ML-primary serving with deterministic fallback
 
-`normalized-interests-v2` remains opt-in and `legacy-v1` remains the default. Typed taxonomy concepts, aliases, and mappings remain inactive in the adopted ranking path. Experimental shadow hydration of taxonomy concepts does not constitute champion activation.
+### Decision
 
-### Experimental ML Boundary
+Adopt **ML_PRIMARY** as the intended serving architecture for `suggested_materials` and `suggested_projects`:
 
-The repository contains an experimental LightFM path for materials and projects, including offline training/export, portable artifacts, in-process TypeScript scoring, recent-intent channels, confidence-gated fusion, privacy-safe diagnostics, controlled preflight, and optional serving hooks. These capabilities are disabled by default and do not establish production adoption or proven real-user recommendation quality.
+1. **Deterministic eligibility preserved** — availability, quantity, publication, access, and explicit surface rules remain authoritative.
+2. **Bounded candidate retrieval** — materials retrieved with `HOME_MATERIAL_POOL_CAP = 120`; ML recall is broad within that set, not an unbounded full-catalog scan.
+3. **Material recall no longer gated by deterministic `score > 0` or top-48 preselection** under ML_PRIMARY. Neutral stable recall order (material id) precedes ML ranking.
+4. **Deterministic scoring retained** for explanations, diagnostics, `DETERMINISTIC` mode, fallback display, and evaluation tooling.
+5. **Project path unchanged in eligibility**; ML ranks safely mappable candidates; unmapped tail uses containment semantics.
+6. **SHADOW** remains comparison-only (no served reordering).
+7. **Recent intent / rank fusion** remain evaluation-only, not active serving owners.
 
-Slice 4K is accepted only as controlled-demo operation of the experimental hooks. It is not a production-promotion decision.
+### Reason
 
-### Promotion Gates
+End-to-end acceptance demonstrated READY artifacts, ML_RANKED / ML_SERVED coverage on controlled personas, ML-owned final order, stable project behavior, and green recommendation CI after candidate-recall refinement.
 
-Production promotion remains blocked until a separate review accepts all applicable categories:
+### Rollback
 
-1. canonical semantic alignment between training, evaluation, stored user meaning, and runtime features;
-2. taxonomy lifecycle, coverage, governance, and project-component/material crosswalk readiness;
-3. sufficient real attributed interaction evidence separated from seed, fixture, and synthetic data;
-4. reproducible artifact compatibility, deployment, readiness, latency, and fail-safe runtime evidence;
-5. registry, monitoring, ownership, guardrail, canary, and rollback operations.
+Set `RECOMMENDATION_ML_RUNTIME_MODE=DETERMINISTIC` (or remove/disable artifact paths to force deterministic fallback per domain). No schema or client change required.
 
-Offline improvement, local shadow success, controlled-demo behavior, or implementation completion alone is insufficient for adoption.
+### Observability expectations
 
-### Release and Rollback Order
+- Per-request `servingTruth` and structured logs distinguish ML_SERVED vs fallback.
+- `READY` at startup does not prove ML served a request.
+- Smoke and demo preflight require ML_RANKED + ML-owned order when ML_PRIMARY and domain READY.
 
-Material ML must be evaluated and promoted before project ML. Each domain must proceed through shadow, explicit promotion review, canary, and only then broader serving. At every stage, disabling ML shadow returns the system to deterministic behavior without requiring a schema, API, or client change.
+---
 
-## Historical Context
+## REC-001 (superseded) — deterministic champion
 
-[`final-recommendation-architecture.md`](final-recommendation-architecture.md) is the preserved 2026-07-18 graduation freeze. Its pre-implementation LightFM status remains historical truth for that snapshot. Later experimental implementation changes the current inventory, not the adopted champion or the meaning of the earlier decision.
+Originally recorded deterministic hybrid (`legacy-v1`) as the adopted default champion (2026-07-23). Superseded by REC-009 after ML_PRIMARY serving, artifact validation, smoke, and candidate-recall refinement. Deterministic logic remains for eligibility and fallback; it is no longer the primary ranking owner under default runtime mode.
+
+---
+
+## Decision outcomes (experiments)
+
+Experimental work still ends with: `ADOPT`, `ADOPT_WITH_CONDITIONS`, `CONTINUE_EXPERIMENT`, `DEFER`, or `REJECT`. Implementation completion alone is insufficient for adoption.

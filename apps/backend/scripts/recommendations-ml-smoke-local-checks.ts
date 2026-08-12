@@ -26,7 +26,7 @@ export type SmokeMlOrderingStatus =
   | 'FALLBACK_NOT_READY'
   | 'FALLBACK_FAILED';
 
-export type SmokeRuntimeMode = 'DETERMINISTIC' | 'SHADOW' | 'ML_LOCAL';
+export type SmokeRuntimeMode = 'DETERMINISTIC' | 'SHADOW' | 'ML_PRIMARY';
 
 export type SmokeOrderingDecision = Readonly<{
   status: SmokeMlOrderingStatus;
@@ -161,7 +161,7 @@ const DISALLOWED_PII_KEYS = new Set([
 export const mlDecisionToken = (status: SmokeMlOrderingStatus): string => {
   switch (status) {
     case 'ML_RANKED':
-      return 'ml-local';
+      return 'ml-primary';
     case 'FALLBACK_NOT_READY':
       return 'fb-not-ready';
     case 'FALLBACK_FAILED':
@@ -177,7 +177,7 @@ export const buildSectionAlgorithmStamp = (input: {
   decision: SmokeOrderingDecision;
   effectiveBase?: string;
 }): string => {
-  if (input.runtimeMode !== 'ML_LOCAL') {
+  if (input.runtimeMode !== 'ML_PRIMARY') {
     return `learner-home-v1:${input.effectiveBase ?? 'legacy-v1'}`;
   }
   const token = input.sectionKey === 'suggested_materials' ? 'sm' : 'sp';
@@ -308,7 +308,7 @@ export const assertStampTruthful = (input: {
   );
 
   if (actualToken === undefined) {
-    // Full-home stamps always emit both tokens under ML_LOCAL; missing key is a misroute.
+    // Full-home stamps always emit both tokens under ML_PRIMARY; missing key is a misroute.
     if (otherToken === expected) {
       return {
         ok: false,
@@ -328,11 +328,11 @@ export const assertStampTruthful = (input: {
       input.decision.status === 'FALLBACK_FAILED' ||
       input.decision.status === 'DETERMINISTIC' ||
       input.decision.status === 'SHADOW') &&
-    actualToken === 'ml-local'
+    actualToken === 'ml-primary'
   ) {
     return { ok: false, code: 'FALLBACK_CLAIMS_ML_SUCCESS' };
   }
-  if (input.decision.status === 'ML_RANKED' && actualToken !== 'ml-local') {
+  if (input.decision.status === 'ML_RANKED' && actualToken !== 'ml-primary') {
     return {
       ok: false,
       code: 'ML_APPLIED_WITHOUT_STAMP',
@@ -581,7 +581,7 @@ export const classifyHardFailure = (code: string): boolean => {
     'STAMP_MISMATCH',
     'STAMP_DOMAIN_MISROUTE',
     'READY_WITHOUT_ARTIFACT',
-    'RUNTIME_MODE_NOT_ML_LOCAL',
+    'RUNTIME_MODE_NOT_ML_PRIMARY',
     'DOMAIN_NOT_READY',
     'LEARNER_RESOLUTION_FAILED',
     'SECTION_EVALUATION_BROKEN',
