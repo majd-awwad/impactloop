@@ -174,7 +174,7 @@ Future<SupplierIncomingRequest> completeIncomingRequest(
   final result = await ref
       .read(supplierRequestsRepositoryProvider)
       .completeRequest(requestId, confirmationCode: confirmationCode);
-  invalidateReservationSyncProviders(ref);
+  invalidateReservationSyncProviders(ref, reservationId: requestId);
   return result;
 }
 
@@ -288,13 +288,20 @@ Future<void> markDriverNoShowForDelivery(
   _invalidateReservationFollowUp(ref);
 }
 
-void invalidateReservationSyncProviders(WidgetRef ref) {
+/// Shared post-completion refresh for manual code and QR confirm paths.
+void invalidateReservationSyncProviders(
+  WidgetRef ref, {
+  String? reservationId,
+}) {
   ref.invalidate(incomingRequestsProvider);
   ref.invalidate(supplierNotificationsProvider);
   ref.invalidate(supplierDashboardProvider);
   ref.invalidate(pickupScheduleProvider);
   ref.invalidate(pickupScheduleSummaryProvider);
   ref.invalidate(supplierMyMaterialsProvider);
-  invalidateLearnerReservationCaches(ref);
+  invalidateLearnerReservationCaches(ref, reservationId: reservationId);
   ref.invalidate(homeSuggestedMaterialsProvider);
+  if (reservationId != null && reservationId.isNotEmpty) {
+    ref.invalidate(supplierReservationDetailProvider(reservationId));
+  }
 }
