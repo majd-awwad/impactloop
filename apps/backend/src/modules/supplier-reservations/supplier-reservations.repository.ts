@@ -1018,6 +1018,86 @@ export const declineSupplierReservation = async (input: {
   return { conflict: false as const, reservation };
 };
 
+/**
+ * Shared ACCEPTED → COMPLETED mutation for self-pickup.
+ * Callers must already have verified payment, ownership, and credential/code.
+ * Consumes any issued QR handover credential atomically with completion.
+ */
+export const finalizeAcceptedSelfPickupCompletion = async (
+  tx: Prisma.TransactionClient,
+  input: {
+    reservation: {
+      id: string;
+      materialId: string;
+      quantityRequested: Prisma.Decimal;
+      pickupWindowStart: Date | null;
+      pickupWindowEnd: Date | null;
+      handoverTokenHash: string | null;
+    };
+    ownerId: string;
+    now?: Date;
+  },
+): Promise<
+  | { ok: true; reservationId: string }
+  | { windowNotStarted: true }
+  | { windowExpired: true }
+  | { alreadyCompleted: true }
+> => {
+  const now = input.now ?? new Date();
+  const timing = evaluateHandoverWindow(
+    now,
+    input.reservation.pickupWindowStart,
+    input.reservation.pickupWindowEnd,
+  );
+
+  if (!timing.ok) {
+    if (timing.reason === 'NOT_STARTED') {
+      return { windowNotStarted: true };
+    }
+
+    return { windowExpired: true };
+  }
+
+  const updated = await tx.reservation.updateMany({
+    where: {
+      id: input.reservation.id,
+      ownerId: input.ownerId,
+      status: 'ACCEPTED',
+    },
+    data: {
+      status: 'COMPLETED',
+      completedAt: now,
+      ...(input.reservation.handoverTokenHash
+        ? { handoverTokenUsedAt: now }
+        : {}),
+    },
+  });
+
+  if (updated.count !== 1) {
+    return { alreadyCompleted: true };
+  }
+
+  await tx.reservationStatusHistory.create({
+    data: {
+      reservationId: input.reservation.id,
+      statusGroup: 'RESERVATION',
+      oldStatus: 'ACCEPTED',
+      newStatus: 'COMPLETED',
+      changedBy: input.ownerId,
+      note: formatReservationHistoryNote('PICKUP_COMPLETED_BY_SUPPLIER'),
+    },
+  });
+
+  await applyReservationCompletionToMaterial(tx, {
+    materialId: input.reservation.materialId,
+    reservationId: input.reservation.id,
+    quantityRequested: input.reservation.quantityRequested,
+    completedAt: now,
+  });
+
+  return { ok: true, reservationId: input.reservation.id };
+};
+
 export const completeSupplierReservation = async (input: {
   reservationId: string;
   ownerId: string;
@@ -1057,7 +1137,7 @@ export const completeSupplierReservation = async (input: {
 
     const reservationWithCode = await tx.reservation.findUniqueOrThrow({
       where: { id: existing.id },
-      select: { selfPickupCodeHash: true },
+      select: { selfPickupCodeHash: true, handoverTokenHash: true },
     });
 
     const codeVerification = await verifyHandoverCodeWithAttemptLimit(tx, {
@@ -1080,50 +1160,34 @@ export const completeSupplierReservation = async (input: {
       return { invalidCode: true as const, reservation: existing };
     }
 
-    const timing = evaluateHandoverWindow(
-      new Date(),
-      existing.pickupWindowStart,
-      existing.pickupWindowEnd,
-    );
+    const finalized = await finalizeAcceptedSelfPickupCompletion(tx, {
+      reservation: {
+        id: existing.id,
+        materialId: existing.materialId,
+        quantityRequested: existing.quantityRequested,
+        pickupWindowStart: existing.pickupWindowStart,
+        pickupWindowEnd: existing.pickupWindowEnd,
+        handoverTokenHash: reservationWithCode.handoverTokenHash,
+      },
+      ownerId: input.ownerId,
+    });
 
-    if (!timing.ok) {
-      if (timing.reason === 'NOT_STARTED') {
-        return { windowNotStarted: true as const, reservation: existing };
-      }
+    if ('windowNotStarted' in finalized) {
+      return { windowNotStarted: true as const, reservation: existing };
+    }
 
+    if ('windowExpired' in finalized) {
       return { windowExpired: true as const, reservation: existing };
     }
 
-    const now = new Date();
+    if ('alreadyCompleted' in finalized) {
+      const latest = await tx.reservation.findUniqueOrThrow({
+        where: { id: existing.id },
+      });
+      return { conflict: true as const, reservation: latest };
+    }
 
-    const updated = await tx.reservation.update({
-      where: { id: existing.id },
-      data: {
-        status: 'COMPLETED',
-        completedAt: now,
-      },
-      select: reservationMutationSelect,
-    });
-
-    await tx.reservationStatusHistory.create({
-      data: {
-        reservationId: updated.id,
-        statusGroup: 'RESERVATION',
-        oldStatus: 'ACCEPTED',
-        newStatus: 'COMPLETED',
-        changedBy: input.ownerId,
-        note: formatReservationHistoryNote('PICKUP_COMPLETED_BY_SUPPLIER'),
-      },
-    });
-
-    await applyReservationCompletionToMaterial(tx, {
-      materialId: existing.materialId,
-      reservationId: updated.id,
-      quantityRequested: existing.quantityRequested,
-      completedAt: now,
-    });
-
-    return { conflict: false as const, reservationId: updated.id };
+    return { conflict: false as const, reservationId: finalized.reservationId };
   });
 
   if (!outcome) {
@@ -1139,6 +1203,111 @@ export const completeSupplierReservation = async (input: {
   }
 
   if ('locked' in outcome && outcome.locked) {
+    return outcome;
+  }
+
+  if ('windowNotStarted' in outcome && outcome.windowNotStarted) {
+    return outcome;
+  }
+
+  if ('windowExpired' in outcome && outcome.windowExpired) {
+    return outcome;
+  }
+
+  const reservation = await loadSupplierReservationRecord(outcome.reservationId);
+  return { conflict: false as const, reservation };
+};
+
+export const completeSupplierReservationByHandoverToken = async (input: {
+  ownerId: string;
+  tokenHash: string;
+}) => {
+  const outcome = await runSerializableTransaction(async (tx) => {
+    const existing = await tx.reservation.findFirst({
+      where: {
+        handoverTokenHash: input.tokenHash,
+      },
+    });
+
+    if (!existing) {
+      return { invalidCredential: true as const };
+    }
+
+    // Do not reveal whether a valid credential exists for another supplier.
+    if (existing.ownerId !== input.ownerId) {
+      return { invalidCredential: true as const };
+    }
+
+    if (existing.handoverTokenUsedAt) {
+      if (existing.status === 'COMPLETED') {
+        return { conflict: true as const, reservation: existing };
+      }
+
+      return { invalidCredential: true as const };
+    }
+
+    const now = new Date();
+    if (
+      existing.handoverTokenExpiresAt &&
+      existing.handoverTokenExpiresAt.getTime() <= now.getTime()
+    ) {
+      return { expiredCredential: true as const };
+    }
+
+    if (existing.status !== 'ACCEPTED') {
+      return { conflict: true as const, reservation: existing };
+    }
+
+    const deliveryCount = await tx.delivery.count({
+      where: { reservationId: existing.id },
+    });
+
+    if (deliveryCount > 0 || existing.fulfillmentMethod !== 'PICKUP') {
+      return { conflict: true as const, reservation: existing };
+    }
+
+    await assertPickupPaymentSatisfiedOrThrow(existing.id, tx);
+
+    const finalized = await finalizeAcceptedSelfPickupCompletion(tx, {
+      reservation: {
+        id: existing.id,
+        materialId: existing.materialId,
+        quantityRequested: existing.quantityRequested,
+        pickupWindowStart: existing.pickupWindowStart,
+        pickupWindowEnd: existing.pickupWindowEnd,
+        handoverTokenHash: existing.handoverTokenHash,
+      },
+      ownerId: input.ownerId,
+      now,
+    });
+
+    if ('windowNotStarted' in finalized) {
+      return { windowNotStarted: true as const, reservation: existing };
+    }
+
+    if ('windowExpired' in finalized) {
+      return { windowExpired: true as const, reservation: existing };
+    }
+
+    if ('alreadyCompleted' in finalized) {
+      const latest = await tx.reservation.findUniqueOrThrow({
+        where: { id: existing.id },
+      });
+      return { conflict: true as const, reservation: latest };
+    }
+
+    return { conflict: false as const, reservationId: finalized.reservationId };
+  });
+
+  if ('invalidCredential' in outcome && outcome.invalidCredential) {
+    return outcome;
+  }
+
+  if ('expiredCredential' in outcome && outcome.expiredCredential) {
+    return outcome;
+  }
+
+  if ('conflict' in outcome && outcome.conflict) {
     return outcome;
   }
 
