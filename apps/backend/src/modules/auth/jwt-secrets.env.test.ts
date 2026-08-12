@@ -7,8 +7,10 @@ import {
   resolveJwtSecretsConfig,
 } from "../../config/jwt-secrets.env.js";
 
-const strongAccessSecret = "prod-grade-jwt-access-secret-value-01";
-const strongRefreshSecret = "prod-grade-jwt-refresh-secret-value-02";
+const strongAccessSecret =
+  "prod-grade-jwt-access-secret-value-01".padEnd(128, "x");
+const strongRefreshSecret =
+  "prod-grade-jwt-refresh-secret-value-02".padEnd(128, "y");
 
 describe("JWT signing secret configuration", () => {
   test("rejects missing JWT secrets in production", () => {
@@ -72,7 +74,22 @@ describe("JWT signing secret configuration", () => {
           JWT_ACCESS_SECRET: "short-access-secret",
           JWT_REFRESH_SECRET: strongRefreshSecret,
         }),
-      /at least 24 characters/i,
+      /at least 128 characters/i,
+    );
+  });
+
+  test("rejects production secrets one character below minimum length", () => {
+    const belowMinimum = strongAccessSecret.slice(0, 127);
+    assert.equal(belowMinimum.length, 127);
+
+    assert.throws(
+      () =>
+        resolveJwtSecretsConfig({
+          NODE_ENV: "production",
+          JWT_ACCESS_SECRET: belowMinimum,
+          JWT_REFRESH_SECRET: strongRefreshSecret,
+        }),
+      /at least 128 characters/i,
     );
   });
 
@@ -97,6 +114,22 @@ describe("JWT signing secret configuration", () => {
 
     assert.equal(config.jwtAccessSecret, strongAccessSecret);
     assert.equal(config.jwtRefreshSecret, strongRefreshSecret);
+    assert.ok(config.jwtAccessSecret.length >= 128);
+    assert.ok(config.jwtRefreshSecret.length >= 128);
+  });
+
+  test("accepts production secrets exactly at minimum length", () => {
+    const exactMinimumAccess = "a".repeat(128);
+    const exactMinimumRefresh = "b".repeat(128);
+
+    const config = resolveJwtSecretsConfig({
+      NODE_ENV: "production",
+      JWT_ACCESS_SECRET: exactMinimumAccess,
+      JWT_REFRESH_SECRET: exactMinimumRefresh,
+    });
+
+    assert.equal(config.jwtAccessSecret.length, 128);
+    assert.equal(config.jwtRefreshSecret.length, 128);
   });
 
   test("allows documented development fallbacks when unset", () => {
