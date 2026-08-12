@@ -796,6 +796,25 @@
   "pickupCodeRefundProcessing": "Pickup code is unavailable while your refund is processed.",
   "pickupCodeRefunded": "This reservation was refunded. No pickup code is required.",
   "pickupCodeNotApplicable": "Pickup code does not apply to this reservation.",
+  "showPickupQr": "Show Pickup QR",
+  "pickupQrDialogTitle": "Pickup QR",
+  "pickupQrInstructions": "Show this QR code to the supplier when receiving your material.",
+  "pickupQrMaterialLabel": "Material: {title}",
+  "@pickupQrMaterialLabel": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "pickupQrValidUntil": "Valid until {expiresAt}",
+  "@pickupQrValidUntil": {
+    "placeholders": {
+      "expiresAt": { "type": "String" }
+    }
+  },
+  "pickupQrExpired": "QR expired",
+  "pickupQrGenerateNew": "Generate a new QR",
+  "pickupQrIssueFailed": "Unable to generate pickup QR",
+  "pickupQrManualFallbackNote": "If scanning fails, use the manual pickup code below on this page.",
   "pickupWindowNotStarted": "Not started yet",
   "pickupWindowActiveNow": "Available now",
   "pickupWindowEnded": "Window ended",
@@ -2636,6 +2655,26 @@
   "supplierPickupConfirmationCodeLabel": "Pickup confirmation code",
   "supplierPickupConfirmationCodeHint": "Enter the pickup confirmation code the learner gives you when they receive the material.",
   "supplierPickupConfirmationCodeError": "Enter the 6-digit pickup code from the learner.",
+  "supplierPickupVerificationIntro": "Verify pickup with the learner''s QR code or confirmation code.",
+  "supplierPickupVerificationOr": "or",
+  "supplierScanPickupQr": "Scan Pickup QR",
+  "supplierPickupQrPointCamera": "Point the camera at the learner''s pickup QR.",
+  "supplierPickupQrVerifying": "Verifying pickup QR…",
+  "supplierPickupQrVerifiedTitle": "QR verified",
+  "supplierPickupQrLearnerLabel": "Learner",
+  "supplierPickupQrQuantityLabel": "Quantity",
+  "supplierPickupQrConfirmHandover": "Confirm handover",
+  "supplierPickupQrInvalidPayload": "This is not a valid ImpactLoop pickup QR.",
+  "supplierPickupQrCredentialUnavailable": "This pickup QR is invalid or no longer available.",
+  "supplierPickupQrVerifyFailed": "Unable to verify pickup QR.",
+  "supplierPickupQrConfirmFailed": "Unable to confirm handover. Try again or use the confirmation code.",
+  "supplierPickupQrCameraPermissionRequired": "Camera permission is required to scan the pickup QR.",
+  "supplierPickupQrCameraUnavailable": "Camera is unavailable on this device.",
+  "supplierPickupQrScanAgain": "Scan again",
+  "supplierPickupQrUseCodeInstead": "Use confirmation code instead",
+  "supplierPickupQrTryAgain": "Try again",
+  "supplierPickupQrHandoverCompletedTitle": "Handover completed",
+  "supplierPickupQrHandoverCompletedBody": "The material has been handed over successfully.",
   "supplierDeliveryWindowMustStartFuture": "Delivery window must start in the future.",
   "supplierInboxRefreshFailed": "We could not refresh incoming requests.",
   "supplierEmptyAllCaughtUp": "You are all caught up",

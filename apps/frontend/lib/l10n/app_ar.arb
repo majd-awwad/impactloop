@@ -795,6 +795,25 @@
   "pickupCodeRefundProcessing": "رمز الاستلام غير متاح أثناء معالجة الاسترداد.",
   "pickupCodeRefunded": "تم استرداد هذا الحجز. لا يلزم رمز استلام.",
   "pickupCodeNotApplicable": "رمز الاستلام لا ينطبق على هذا الحجز.",
+  "showPickupQr": "إظهار رمز QR للاستلام",
+  "pickupQrDialogTitle": "رمز QR للاستلام",
+  "pickupQrInstructions": "اعرض رمز QR هذا للمورّد عند استلام المادة.",
+  "pickupQrMaterialLabel": "المادة: {title}",
+  "@pickupQrMaterialLabel": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "pickupQrValidUntil": "صالح حتى {expiresAt}",
+  "@pickupQrValidUntil": {
+    "placeholders": {
+      "expiresAt": { "type": "String" }
+    }
+  },
+  "pickupQrExpired": "انتهت صلاحية رمز QR",
+  "pickupQrGenerateNew": "إنشاء رمز QR جديد",
+  "pickupQrIssueFailed": "تعذر إنشاء رمز QR للاستلام",
+  "pickupQrManualFallbackNote": "إذا تعذّر المسح، استخدم رمز الاستلام اليدوي في هذه الصفحة.",
   "pickupWindowNotStarted": "لم تبدأ بعد",
   "pickupWindowActiveNow": "متاحة الآن",
   "pickupWindowEnded": "انتهت",
@@ -2961,6 +2980,26 @@
   "supplierPickupConfirmationCodeLabel": "رمز تأكيد الاستلام",
   "supplierPickupConfirmationCodeHint": "أدخل رمز تأكيد الاستلام الذي يعطيك إياه المتعلم عند استلام المادة.",
   "supplierPickupConfirmationCodeError": "أدخل رمز الاستلام المكوّن من 6 أرقام من المتعلم.",
+  "supplierPickupVerificationIntro": "تحقق من الاستلام عبر رمز QR الخاص بالمتعلم أو رمز التأكيد.",
+  "supplierPickupVerificationOr": "أو",
+  "supplierScanPickupQr": "مسح رمز QR للاستلام",
+  "supplierPickupQrPointCamera": "وجّه الكاميرا نحو رمز QR للاستلام.",
+  "supplierPickupQrVerifying": "جارٍ التحقق من رمز QR للاستلام…",
+  "supplierPickupQrVerifiedTitle": "تم التحقق من رمز QR",
+  "supplierPickupQrLearnerLabel": "المتعلم",
+  "supplierPickupQrQuantityLabel": "الكمية",
+  "supplierPickupQrConfirmHandover": "تأكيد تسليم المادة",
+  "supplierPickupQrInvalidPayload": "رمز QR هذا ليس رمز استلام صالحًا في ImpactLoop.",
+  "supplierPickupQrCredentialUnavailable": "رمز QR للاستلام غير صالح أو لم يعد متاحًا.",
+  "supplierPickupQrVerifyFailed": "تعذر التحقق من رمز QR للاستلام.",
+  "supplierPickupQrConfirmFailed": "تعذر تأكيد التسليم. حاول مرة أخرى أو استخدم رمز التأكيد.",
+  "supplierPickupQrCameraPermissionRequired": "يلزم السماح باستخدام الكاميرا لمسح رمز الاستلام.",
+  "supplierPickupQrCameraUnavailable": "الكاميرا غير متاحة على هذا الجهاز.",
+  "supplierPickupQrScanAgain": "مسح رمز آخر",
+  "supplierPickupQrUseCodeInstead": "استخدام رمز التأكيد بدلًا من ذلك",
+  "supplierPickupQrTryAgain": "إعادة المحاولة",
+  "supplierPickupQrHandoverCompletedTitle": "تم التسليم بنجاح",
+  "supplierPickupQrHandoverCompletedBody": "تم تسليم المادة بنجاح.",
   "supplierDeliveryWindowMustStartFuture": "يجب أن تبدأ نافذة التوصيل في المستقبل.",
   "supplierInboxRefreshFailed": "تعذّر تحديث الطلبات الواردة.",
   "supplierEmptyAllCaughtUp": "أنت على اطلاع بكل شيء",
