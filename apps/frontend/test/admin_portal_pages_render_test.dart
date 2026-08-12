@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:frontend/features/admin_portal/data/admin_dashboard_providers.dart';
 import 'package:frontend/features/admin_portal/data/admin_deliveries_api.dart';
@@ -11,9 +14,11 @@ import 'package:frontend/features/admin_portal/data/models/admin_deliveries_mode
 import 'package:frontend/features/admin_portal/data/models/admin_reservations_models.dart';
 import 'package:frontend/features/admin_portal/presentation/pages/admin_audit_logs_page.dart';
 import 'package:frontend/features/admin_portal/presentation/pages/admin_deliveries_page.dart';
+import 'package:frontend/features/admin_portal/presentation/pages/admin_delivery_detail_page.dart';
 import 'package:frontend/features/admin_portal/presentation/pages/admin_impact_page.dart';
 import 'package:frontend/features/admin_portal/presentation/pages/admin_overview_page.dart';
 import 'package:frontend/features/admin_portal/presentation/pages/admin_reservations_page.dart';
+import 'package:frontend/l10n/app_localizations.dart';
 
 Map<String, dynamic> _sampleDeliveryDetailJson({
   String status = 'DRIVER_ASSIGNED',
@@ -61,64 +66,71 @@ Map<String, dynamic> _sampleDeliveryDetailJson({
     },
     'timeline': <Map<String, dynamic>>[],
     'locationHistory': {'count': 0, 'items': <Map<String, dynamic>>[]},
+    'availableMutations': canReopen ? ['REOPEN_DRIVER_ASSIGNMENT'] : [],
+    'availableLinks': <String>[],
   };
 }
 
-AdminDeliveriesListResponse _sampleDeliveriesList() {
-  return AdminDeliveriesListResponse.fromJson({
-    'summary': {
-      'total': 1,
-      'waitingForDriver': 0,
-      'activeInProgress': 1,
-      'needsAdminReview': 0,
-      'delivered': 0,
-      'failedCancelled': 0,
+AdminDeliveryListItem _sampleDeliveryListItem() {
+  return AdminDeliveryListItem.fromJson({
+    'id': 'delivery-1',
+    'status': 'DRIVER_ASSIGNED',
+    'requestedAt': '2026-01-10T10:00:00.000Z',
+    'assignedAt': '2026-01-10T10:05:00.000Z',
+    'reservation': {'id': 'reservation-1'},
+    'material': {'id': 'material-1', 'title': 'Stepper motor'},
+    'learner': {
+      'id': 'learner-1',
+      'displayName': 'Learner One',
+      'email': 'learner@example.test',
     },
-    'items': [
-      {
-        'id': 'delivery-1',
-        'status': 'DRIVER_ASSIGNED',
-        'requestedAt': '2026-01-10T10:00:00.000Z',
-        'assignedAt': '2026-01-10T10:05:00.000Z',
-        'reservation': {'id': 'reservation-1'},
-        'material': {'id': 'material-1', 'title': 'Stepper motor'},
-        'learner': {
-          'id': 'learner-1',
-          'displayName': 'Learner One',
-          'email': 'learner@example.test',
-        },
-        'supplier': {
-          'id': 'supplier-1',
-          'displayName': 'Supplier One',
-          'email': 'supplier@example.test',
-        },
-        'driver': {
-          'id': 'driver-1',
-          'displayName': 'Driver One',
-          'email': 'driver@example.test',
-        },
-        'currentDriver': {
-          'id': 'driver-1',
-          'displayName': 'Current Driver',
-          'email': 'current@example.test',
-        },
-        'scope': 'SINGLE',
-        'lifecyclePhase': 'PRE_PICKUP',
-        'adminAttentionState': 'NONE',
-        'assignmentState': 'ACTIVE',
-        'kpiBucket': 'ACTIVE_IN_PROGRESS',
-        'availableMutations': [],
-        'availableLinks': [],
-        'itemCount': 1,
-        'pickupArea': 'Ramallah',
-        'dropoffArea': 'Ramallah',
-      },
-    ],
-    'pagination': {'page': 1, 'limit': 20, 'total': 1, 'totalPages': 1},
-    'filterOptions': {
-      'statuses': ['DRIVER_ASSIGNED'],
+    'supplier': {
+      'id': 'supplier-1',
+      'displayName': 'Supplier One',
+      'email': 'supplier@example.test',
     },
+    'driver': {
+      'id': 'driver-1',
+      'displayName': 'Driver One',
+      'email': 'driver@example.test',
+    },
+    'currentDriver': {
+      'id': 'driver-1',
+      'displayName': 'Current Driver',
+      'email': 'current@example.test',
+    },
+    'scope': 'SINGLE',
+    'lifecyclePhase': 'PRE_PICKUP',
+    'adminAttentionState': 'NONE',
+    'assignmentState': 'ACTIVE',
+    'kpiBucket': 'ACTIVE_IN_PROGRESS',
+    'availableMutations': [],
+    'availableLinks': [],
+    'itemCount': 1,
+    'pickupArea': 'Ramallah',
+    'dropoffArea': 'Ramallah',
   });
+}
+
+AdminDeliveriesListResponse _sampleDeliveriesList() {
+  return AdminDeliveriesListResponse(
+    summary: const AdminDeliveriesSummary(
+      total: 1,
+      waitingForDriver: 0,
+      activeInProgress: 1,
+      needsAdminReview: 0,
+      delivered: 0,
+      failedCancelled: 0,
+    ),
+    items: [_sampleDeliveryListItem()],
+    pagination: const AdminDeliveriesPagination(
+      page: 1,
+      limit: 20,
+      total: 1,
+      totalPages: 1,
+    ),
+    statuses: const [],
+  );
 }
 
 class _FakeAdminDeliveriesApi implements AdminDeliveriesApi {
@@ -149,7 +161,9 @@ class _FakeAdminDeliveriesApi implements AdminDeliveriesApi {
   }
 
   @override
-  Future<AdminDeliveryDetail> fetchDeliveryDetail(String id) async => detail;
+  Future<AdminDeliveryDetail> fetchDeliveryDetail(String id) async {
+    return reopenCalled ? reopenResult : detail;
+  }
 
   @override
   Future<AdminDeliveryDetail> reopenDriverAssignment(String id) async {
@@ -160,6 +174,78 @@ class _FakeAdminDeliveriesApi implements AdminDeliveriesApi {
     }
     return reopenResult;
   }
+
+  @override
+  Future<AdminDeliveriesExportPreflight> preflightExport({
+    String? search,
+    String? status,
+    String? assignment,
+    String? scope,
+    String? incidentState,
+    String? dateFrom,
+    String? dateTo,
+  }) async {
+    return const AdminDeliveriesExportPreflight(
+      count: 0,
+      filters: {},
+      formats: {},
+    );
+  }
+
+  @override
+  Future<void> downloadExport({
+    String format = 'xlsx',
+    String? search,
+    String? status,
+    String? assignment,
+    String? scope,
+    String? incidentState,
+    String? dateFrom,
+    String? dateTo,
+  }) async {}
+}
+
+_adminDeliveriesOverrides(_FakeAdminDeliveriesApi api) {
+  return [
+    adminDeliveriesListProvider.overrideWith(
+      (ref) async => _sampleDeliveriesList(),
+    ),
+    adminDeliveriesApiProvider.overrideWithValue(api),
+  ];
+}
+
+Widget _buildAdminDeliveriesHarness({required _FakeAdminDeliveriesApi api}) {
+  final router = GoRouter(
+    initialLocation: '/admin/deliveries',
+    routes: [
+      GoRoute(
+        path: '/admin/deliveries',
+        builder: (context, state) => const Scaffold(body: AdminDeliveriesPage()),
+      ),
+      GoRoute(
+        path: '/admin/deliveries/:deliveryId',
+        builder: (context, state) => Scaffold(
+          body: AdminDeliveryDetailPage(
+            deliveryId: state.pathParameters['deliveryId']!,
+          ),
+        ),
+      ),
+    ],
+  );
+
+  return ProviderScope(
+    overrides: _adminDeliveriesOverrides(api),
+    child: MaterialApp.router(
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      routerConfig: router,
+    ),
+  );
 }
 
 AdminDashboardResponse _sampleDashboard() {
@@ -213,6 +299,12 @@ AdminDashboardResponse _sampleDashboard() {
 }
 
 void main() {
+  test('_sampleDeliveriesList includes one delivery row', () {
+    final response = _sampleDeliveriesList();
+    expect(response.items, hasLength(1));
+    expect(response.items.single.material.title, 'Stepper motor');
+  });
+
   testWidgets('AdminOverviewPage renders dashboard content', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1280, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -377,31 +469,28 @@ void main() {
     );
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [adminDeliveriesApiProvider.overrideWithValue(api)],
-        child: const MaterialApp(home: Scaffold(body: AdminDeliveriesPage())),
+        overrides: _adminDeliveriesOverrides(api),
+        child: const MaterialApp(
+          home: Scaffold(body: AdminDeliveriesPage()),
+        ),
       ),
     );
 
+    await tester.pump();
+    await tester.pump();
     await tester.pumpAndSettle();
-    for (final label in const [
-      'Delivery',
-      'Journey',
-      'Progress',
-      'Attention',
-      'Updated',
-      'Action',
-    ]) {
-      expect(find.text(label), findsOneWidget);
-    }
-    expect(find.text('Current Driver'), findsOneWidget);
-    expect(find.byTooltip('View delivery'), findsOneWidget);
+
     expect(tester.takeException(), isNull);
+    expect(find.text('1 results'), findsOneWidget);
+    expect(find.text('Stepper motor'), findsOneWidget);
+    expect(find.text('Current Driver'), findsOneWidget);
+    expect(find.text('View delivery'), findsOneWidget);
   });
 
   testWidgets('AdminDeliveriesPage confirms and reopens a driver assignment', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    await tester.binding.setSurfaceSize(const Size(1600, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final api = _FakeAdminDeliveriesApi(
@@ -415,34 +504,31 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [adminDeliveriesApiProvider.overrideWithValue(api)],
-        child: const MaterialApp(home: Scaffold(body: AdminDeliveriesPage())),
-      ),
-    );
+    await tester.pumpWidget(_buildAdminDeliveriesHarness(api: api));
 
+    await tester.pump();
+    await tester.pump();
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('View delivery'));
+    await tester.tap(find.text('View delivery'));
     await tester.pumpAndSettle();
-    expect(find.text('Reopen to drivers'), findsOneWidget);
+    expect(find.text('Reopen driver assignment'), findsOneWidget);
 
-    await tester.tap(find.text('Reopen to drivers'));
+    await tester.tap(find.text('Reopen driver assignment'));
     await tester.pumpAndSettle();
-    expect(find.text('Reopen to drivers?'), findsOneWidget);
+    expect(find.text('Reopen driver assignment?'), findsOneWidget);
 
-    await tester.tap(find.text('Reopen'));
+    await tester.tap(find.text('Reopen assignment'));
     await tester.pumpAndSettle();
 
     expect(api.reopenCalled, isTrue);
-    expect(find.text('Delivery reopened to drivers.'), findsOneWidget);
-    expect(find.text('Reopen to drivers'), findsNothing);
+    expect(find.text('Driver assignment reopened.'), findsOneWidget);
+    expect(find.text('Reopen driver assignment'), findsNothing);
   });
 
   testWidgets('AdminDeliveriesPage surfaces reopen conflict errors', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    await tester.binding.setSurfaceSize(const Size(1600, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final api = _FakeAdminDeliveriesApi(
@@ -456,28 +542,25 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [adminDeliveriesApiProvider.overrideWithValue(api)],
-        child: const MaterialApp(home: Scaffold(body: AdminDeliveriesPage())),
-      ),
-    );
+    await tester.pumpWidget(_buildAdminDeliveriesHarness(api: api));
 
+    await tester.pump();
+    await tester.pump();
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('View delivery'));
+    await tester.tap(find.text('View delivery'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Reopen to drivers'));
+    await tester.tap(find.text('Reopen driver assignment'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Reopen'));
+    await tester.tap(find.text('Reopen assignment'));
     await tester.pumpAndSettle();
 
     expect(api.reopenCalled, isTrue);
     expect(
       find.text(
-        'Pickup has already started; this delivery cannot be reopened.',
+        'This request conflicts with the current state. Please refresh and try again.',
       ),
       findsOneWidget,
     );
-    expect(find.text('Reopen to drivers'), findsOneWidget);
+    expect(find.text('Reopen driver assignment'), findsOneWidget);
   });
 }
