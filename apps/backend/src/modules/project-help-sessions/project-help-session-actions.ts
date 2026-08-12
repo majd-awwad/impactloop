@@ -167,6 +167,7 @@ export const deriveProjectHelpSessionAllowedActions = (
       canReportNoShow:
         session.status === 'SCHEDULED' &&
         meetingState.isAfterWindow &&
+        (session.autoFinalizeAt === null || now < session.autoFinalizeAt) &&
         session.learnerReportedAuthorNoShowAt === null,
 
     };
@@ -192,6 +193,7 @@ export const deriveProjectHelpSessionAllowedActions = (
     canReportNoShow:
       session.status === 'SCHEDULED' &&
       meetingState.isAfterWindow &&
+      (session.autoFinalizeAt === null || now < session.autoFinalizeAt) &&
       session.authorReportedLearnerNoShowAt === null,
 
     canRetryZoom: session.status === 'SCHEDULING_FAILED',

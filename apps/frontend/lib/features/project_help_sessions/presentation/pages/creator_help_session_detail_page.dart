@@ -523,6 +523,10 @@ class _CreatorHelpSessionDetailPageState
           ProjectHelpSessionsL10n.noShowWindowHint.resolve(context),
         if (actionState.noShowReported)
           ProjectHelpSessionsL10n.noShowReported.resolve(context),
+        if (actionState.isResolutionWindow)
+          ProjectHelpSessionsL10n.resolutionWindowAutoCloseHint.resolve(
+            context,
+          ),
       ],
     );
   }
@@ -609,6 +613,7 @@ class _CreatorHelpSessionDetailPageState
           if (actionState.phase == HelpSessionActionPhase.joinWindowActive)
             session.joinClosesAt,
           if (!actionState.canComplete) session.completionAvailableAt,
+          if (actionState.isResolutionWindow) session.autoFinalizeAt,
         ].whereType<DateTime>().where((value) => value.toUtc().isAfter(now));
         final boundaryAt = boundaries.isEmpty
             ? null

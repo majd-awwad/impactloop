@@ -247,6 +247,7 @@ export const notifyProjectHelpSessionZoomSchedulingFailed = async (
 
 export const notifyProjectHelpSessionCompleted = async (
   session: ProjectHelpSessionDetailRecord,
+  input: { actorId?: string | null } = {},
 ) =>
   createNotification({
     userId: session.learnerId,
@@ -259,7 +260,7 @@ export const notifyProjectHelpSessionCompleted = async (
     entityType: 'PROJECT_HELP_SESSION',
     entityId: session.id,
     actionType: 'OPEN_PROJECT_HELP_SESSION',
-    actorId: session.authorId,
+    actorId: input.actorId === undefined ? session.authorId : input.actorId,
     metadata: {
       ...baseMetadata(session),
       status: 'COMPLETED',

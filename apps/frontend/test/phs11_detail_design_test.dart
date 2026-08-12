@@ -64,6 +64,8 @@ ProjectHelpSession _session({
   DateTime? noShowReportedAt,
   DateTime? completionAvailableAt,
   DateTime? scheduledEndsAt,
+  DateTime? autoFinalizeAt,
+  bool autoFinalizationBlocked = false,
   DateTime? completedAt,
   DateTime? cancelledAt,
   ProjectHelpSessionCancelledByRole? cancelledByRole,
@@ -106,6 +108,8 @@ ProjectHelpSession _session({
     noShowReportedAt: noShowReportedAt,
     completionAvailableAt: completionAvailableAt,
     scheduledEndsAt: scheduledEndsAt,
+    autoFinalizeAt: autoFinalizeAt,
+    autoFinalizationBlocked: autoFinalizationBlocked,
     completedAt: completedAt,
     cancelledAt: cancelledAt,
     cancelledByRole: cancelledByRole,
@@ -520,6 +524,7 @@ void main() {
                 joinAvailableAt: now.subtract(const Duration(hours: 2)),
                 joinClosesAt: now.subtract(const Duration(minutes: 1)),
                 scheduledEndsAt: now.subtract(const Duration(hours: 1)),
+                autoFinalizeAt: now.add(const Duration(hours: 23)),
                 learnerAllowedActions:
                     const ProjectHelpSessionLearnerAllowedActions(
                       canJoin: false,
@@ -538,6 +543,12 @@ void main() {
       expect(find.text('Cancel request'), findsNothing);
       expect(
         find.text('Report that the project creator did not attend'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'If you take no action, the session will close automatically after 24 hours.',
+        ),
         findsOneWidget,
       );
     });
@@ -864,6 +875,7 @@ void main() {
                 joinAvailableAt: now.subtract(const Duration(hours: 2)),
                 joinClosesAt: now.subtract(const Duration(minutes: 1)),
                 scheduledEndsAt: now.subtract(const Duration(hours: 1)),
+                autoFinalizeAt: now.add(const Duration(hours: 23)),
                 authorAllowedActions:
                     const ProjectHelpSessionAuthorAllowedActions(
                       canJoin: false,
@@ -886,6 +898,12 @@ void main() {
       expect(find.text('Mark session as completed'), findsOneWidget);
       expect(
         find.text('Report that the learner did not attend'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'If you take no action, the session will close automatically after 24 hours.',
+        ),
         findsOneWidget,
       );
     });

@@ -451,6 +451,8 @@ class ProjectHelpSession {
     this.completedAt,
     this.scheduledEndsAt,
     this.completionAvailableAt,
+    this.autoFinalizeAt,
+    this.autoFinalizationBlocked = false,
     required this.meetingReady,
     this.provider,
     this.joinAvailableAt,
@@ -489,6 +491,8 @@ class ProjectHelpSession {
   final DateTime? completedAt;
   final DateTime? scheduledEndsAt;
   final DateTime? completionAvailableAt;
+  final DateTime? autoFinalizeAt;
+  final bool autoFinalizationBlocked;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool meetingReady;
@@ -555,6 +559,8 @@ class ProjectHelpSession {
       completedAt: _parseDate(json['completedAt']),
       scheduledEndsAt: _parseDate(json['scheduledEndsAt']),
       completionAvailableAt: _parseDate(json['completionAvailableAt']),
+      autoFinalizeAt: _parseDate(json['autoFinalizeAt']),
+      autoFinalizationBlocked: json['autoFinalizationBlocked'] == true,
       createdAt:
           _parseDate(json['createdAt']) ??
           DateTime.fromMillisecondsSinceEpoch(0),

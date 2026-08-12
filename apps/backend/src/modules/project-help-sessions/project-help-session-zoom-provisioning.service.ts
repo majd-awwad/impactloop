@@ -15,6 +15,7 @@ import {
   findHostSlotConflicts,
 } from './project-help-session.repository.js';
 import { transitionProjectHelpSessionStatus } from './project-help-session-transition.service.js';
+import { computeProjectHelpSessionAutoFinalizeAt } from './project-help-session-completion.js';
 import { validateFutureUtcInstant } from './project-help-session-time.js';
 import { getUtcIsoWeekStart } from './project-help-session-weekly-capacity.js';
 import {
@@ -108,6 +109,10 @@ const persistSchedulingSuccess = async (
         zoomCreatedAt: input.zoomCreatedAt,
         zoomLastFailureCode: null,
         zoomLastFailureAt: null,
+        autoFinalizeAt: computeProjectHelpSessionAutoFinalizeAt({
+          startsAt: session.selectedTimeOption!.startsAt,
+          durationMinutes: session.durationMinutes,
+        }),
       },
       buildId: session.buildId,
     });
@@ -329,6 +334,10 @@ export const retryZoomProvisioningForAuthor = async (
         data: {
           zoomLastFailureCode: null,
           zoomLastFailureAt: null,
+          autoFinalizeAt: computeProjectHelpSessionAutoFinalizeAt({
+            startsAt: session.selectedTimeOption!.startsAt,
+            durationMinutes: session.durationMinutes,
+          }),
         },
         buildId: session.buildId,
       });

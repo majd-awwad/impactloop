@@ -16,6 +16,7 @@ class HelpSessionActionState {
     required this.canComplete,
     required this.canReportNoShow,
     required this.noShowReported,
+    required this.isResolutionWindow,
   });
 
   final HelpSessionActionPhase phase;
@@ -24,6 +25,7 @@ class HelpSessionActionState {
   final bool canComplete;
   final bool canReportNoShow;
   final bool noShowReported;
+  final bool isResolutionWindow;
 
   bool get showDisabledJoin => phase == HelpSessionActionPhase.beforeJoinWindow;
   bool get showNoShowHint => phase == HelpSessionActionPhase.joinWindowActive;
@@ -41,6 +43,16 @@ HelpSessionActionState resolveHelpSessionActionState({
       session.status == ProjectHelpSessionStatus.declined ||
       session.status == ProjectHelpSessionStatus.completed;
   final current = (now ?? DateTime.now()).toUtc();
+  final scheduledEndsAt = session.scheduledEndsAt?.toUtc();
+  final autoFinalizeAt = session.autoFinalizeAt?.toUtc();
+  final isResolutionWindow =
+      session.status == ProjectHelpSessionStatus.scheduled &&
+      scheduledEndsAt != null &&
+      autoFinalizeAt != null &&
+      !session.autoFinalizationBlocked &&
+      !current.isBefore(scheduledEndsAt) &&
+      current.isBefore(autoFinalizeAt);
+
   var phase = HelpSessionActionPhase.negotiation;
   if (isTerminal) {
     phase = HelpSessionActionPhase.terminal;
@@ -65,5 +77,6 @@ HelpSessionActionState resolveHelpSessionActionState({
         ? authorActions.canReportNoShow
         : learnerActions.canReportNoShow,
     noShowReported: session.noShowReportedAt != null,
+    isResolutionWindow: isResolutionWindow,
   );
 }

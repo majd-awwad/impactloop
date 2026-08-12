@@ -346,6 +346,10 @@ class _LearnerHelpSessionDetailPageState
           ProjectHelpSessionsL10n.noShowWindowHint.resolve(context),
         if (actionState.noShowReported)
           ProjectHelpSessionsL10n.noShowReported.resolve(context),
+        if (actionState.isResolutionWindow)
+          ProjectHelpSessionsL10n.resolutionWindowAutoCloseHint.resolve(
+            context,
+          ),
       ],
     );
   }
@@ -429,7 +433,7 @@ class _LearnerHelpSessionDetailPageState
         final boundaryAt = switch (actionState.phase) {
           HelpSessionActionPhase.beforeJoinWindow => session.joinAvailableAt,
           HelpSessionActionPhase.joinWindowActive => session.joinClosesAt,
-          HelpSessionActionPhase.afterJoinWindow => null,
+          HelpSessionActionPhase.afterJoinWindow => session.autoFinalizeAt,
           _ => null,
         };
 

@@ -99,6 +99,10 @@ export const mapProjectHelpSessionPrivateDto = (
   completedAt: session.completedAt?.toISOString() ?? null,
   scheduledEndsAt: completionTiming.scheduledEndsAt,
   completionAvailableAt: completionTiming.completionAvailableAt,
+  autoFinalizeAt: session.autoFinalizeAt?.toISOString() ?? null,
+  autoFinalizationBlocked:
+    session.learnerReportedAuthorNoShowAt !== null ||
+    session.authorReportedLearnerNoShowAt !== null,
   createdAt: session.createdAt.toISOString(),
   updatedAt: session.updatedAt.toISOString(),
   meetingReady: meetingState.meetingReady,

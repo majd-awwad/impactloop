@@ -373,7 +373,12 @@ class ProjectHelpSessionsL10n {
     ar: 'يمكنك إكمال الجلسة بعد انتهاء موعدها المحدد.',
   );
 
-  static const markSessionCompleted  static const markSessionCompleted = LocalizedText(
+  static const resolutionWindowAutoCloseHint = LocalizedText(
+    en: 'If you take no action, the session will close automatically after 24 hours.',
+    ar: 'إذا لم تتخذ أي إجراء، ستُغلق الجلسة تلقائيًا بعد 24 ساعة.',
+  );
+
+  static const markSessionCompleted = LocalizedText(
     en: 'Mark session as completed',
     ar: 'تحديد الجلسة كمكتملة',
   );
@@ -667,6 +672,8 @@ class ProjectHelpSessionsL10n {
         'يمكن إكمال الجلسة بعد انتهاء موعدها المحدد.',
       'SESSION_CANCELLATION_WINDOW_CLOSED' =>
         'لم يعد إلغاء الجلسة متاحًا بعد فتح نافذة الانضمام.',
+      'SESSION_RESOLUTION_WINDOW_CLOSED' =>
+        'انتهت نافذة التسوية البالغة 24 ساعة، وسيتم إغلاق الجلسة تلقائيًا.',
       'SESSION_NO_SHOW_NOT_AVAILABLE' =>
         'يصبح الإبلاغ عن عدم الحضور متاحًا بعد انتهاء نافذة الانضمام.',
       'ZOOM_MEETING_NOT_FOUND' =>
@@ -726,6 +733,8 @@ class ProjectHelpSessionsL10n {
         'The session can be completed after its scheduled end time.',
       'SESSION_CANCELLATION_WINDOW_CLOSED' =>
         'The session can no longer be cancelled after the join window opens.',
+      'SESSION_RESOLUTION_WINDOW_CLOSED' =>
+        'The 24-hour resolution window has closed. The session will be finalized automatically.',
       'SESSION_NO_SHOW_NOT_AVAILABLE' =>
         'No-show reporting becomes available after the join window closes.',
       'ZOOM_MEETING_NOT_FOUND' =>

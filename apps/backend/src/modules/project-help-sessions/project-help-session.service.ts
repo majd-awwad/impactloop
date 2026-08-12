@@ -75,6 +75,8 @@ export const INVALID_SESSION_STATE = 'INVALID_SESSION_STATE';
 export const SESSION_CANCELLATION_WINDOW_CLOSED =
   'SESSION_CANCELLATION_WINDOW_CLOSED';
 export const SESSION_NO_SHOW_NOT_AVAILABLE = 'SESSION_NO_SHOW_NOT_AVAILABLE';
+export const SESSION_RESOLUTION_WINDOW_CLOSED =
+  'SESSION_RESOLUTION_WINDOW_CLOSED';
 
 const notFoundHelpSessionForCompletion = () =>
   new AppError('Help session not found.', 404, PROJECT_HELP_SESSION_NOT_FOUND);
@@ -885,6 +887,13 @@ export const authorCompleteProjectHelpSession = async (
   }
 
   if (!completionState.isCompletable) {
+    if (session.autoFinalizeAt && now >= session.autoFinalizeAt) {
+      throw new AppError(
+        'The resolution window has closed and the session is awaiting automatic finalization.',
+        409,
+        SESSION_RESOLUTION_WINDOW_CLOSED,
+      );
+    }
     throw new AppError(
       'The session can be completed after its scheduled end time.',
       409,

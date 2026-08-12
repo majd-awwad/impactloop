@@ -1437,6 +1437,7 @@ model ProjectHelpSession {
   zoomLastFailureAt     DateTime?                @map("zoom_last_failure_at")
   learnerReportedAuthorNoShowAt DateTime?        @map("learner_reported_author_no_show_at")
   authorReportedLearnerNoShowAt DateTime?        @map("author_reported_learner_no_show_at")
+  autoFinalizeAt        DateTime?                @map("auto_finalize_at")
   declinedReason        String?                  @map("declined_reason")
   declinedAt            DateTime?                @map("declined_at")
   cancelledById         String?                  @map("cancelled_by_id")
@@ -1458,6 +1459,7 @@ model ProjectHelpSession {
 
   @@index([learnerId, createdAt])
   @@index([authorId, status, createdAt])
+  @@index([status, autoFinalizeAt])
   @@index([projectId])
   @@index([buildId])
   @@map("project_help_sessions")
