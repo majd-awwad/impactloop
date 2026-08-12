@@ -17,9 +17,7 @@ export type FakeZoomBehavior = {
   getNotFoundMeetingIds?: Set<string>;
 };
 
-type StoredMeeting = CreatedZoomMeeting & { hostStartUrl: string };
-
-const meetings = new Map<string, StoredMeeting>();
+const meetings = new Map<string, CreatedZoomMeeting>();
 const createInputs: CreateZoomMeetingInput[] = [];
 let createCallCount = 0;
 let deleteCallCount = 0;
@@ -36,7 +34,6 @@ const buildMeetingId = (input: CreateZoomMeetingInput) => {
 
 const buildUrls = (meetingId: string) => ({
   joinUrl: `https://fake.zoom.test/j/${meetingId}`,
-  hostStartUrl: `https://fake.zoom.test/s/${meetingId}`,
 });
 
 export class FakeZoomMeetingProvider implements ZoomMeetingProvider {
@@ -53,10 +50,9 @@ export class FakeZoomMeetingProvider implements ZoomMeetingProvider {
       }
       const meetingId = buildMeetingId(input);
       const urls = buildUrls(meetingId);
-      const created: StoredMeeting = {
+      const created: CreatedZoomMeeting = {
         meetingId,
         joinUrl: urls.joinUrl,
-        hostStartUrl: urls.hostStartUrl,
         startsAt: input.startsAt,
         durationMinutes: input.durationMinutes,
       };
@@ -91,11 +87,6 @@ export class FakeZoomMeetingProvider implements ZoomMeetingProvider {
       throw new ZoomError('Fake Zoom meeting not found.', 404, 'ZOOM_MEETING_NOT_FOUND');
     }
     return { ...stored };
-  }
-
-  async getFreshHostStartUrl(meetingId: string): Promise<string> {
-    const details = await this.getMeeting(meetingId);
-    return details.hostStartUrl;
   }
 
   async deleteMeeting(meetingId: string): Promise<void> {

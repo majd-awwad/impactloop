@@ -47,13 +47,6 @@ export const mapProjectHelpSessionPrivateDto = (
     viewerRole,
     now,
   );
-  const learnerJoinUrl =
-    viewerRole === 'learner' &&
-    session.status === 'SCHEDULED' &&
-    meetingState.inWindow &&
-    session.zoomJoinUrl
-      ? session.zoomJoinUrl
-      : null;
   return {
   id: session.id,
   status: session.status,
@@ -82,7 +75,6 @@ export const mapProjectHelpSessionPrivateDto = (
   selectedTimeOptionId: session.selectedTimeOptionId,
   selectedStartsAt: getSelectedStartsAt(session),
   allowedActions,
-  ...(learnerJoinUrl ? { joinUrl: learnerJoinUrl } : {}),
   alternativeProposedAt: session.alternativeProposedAt?.toISOString() ?? null,
   confirmedAt: session.confirmedAt?.toISOString() ?? null,
   declinedReason:

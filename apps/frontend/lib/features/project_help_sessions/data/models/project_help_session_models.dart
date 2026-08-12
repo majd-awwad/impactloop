@@ -270,7 +270,7 @@ class ProjectHelpSessionAuthorAllowedActions {
     required this.canProposeAlternative,
     required this.canDecline,
     required this.canCancel,
-    required this.canStart,
+    required this.canJoin,
     required this.canRetryZoom,
     required this.canComplete,
   });
@@ -279,7 +279,7 @@ class ProjectHelpSessionAuthorAllowedActions {
   final bool canProposeAlternative;
   final bool canDecline;
   final bool canCancel;
-  final bool canStart;
+  final bool canJoin;
   final bool canRetryZoom;
   final bool canComplete;
 
@@ -291,7 +291,7 @@ class ProjectHelpSessionAuthorAllowedActions {
       canProposeAlternative: json['canProposeAlternative'] == true,
       canDecline: json['canDecline'] == true,
       canCancel: json['canCancel'] == true,
-      canStart: json['canStart'] == true,
+      canJoin: json['canJoin'] == true,
       canRetryZoom: json['canRetryZoom'] == true,
       canComplete: json['canComplete'] == true,
     );
@@ -302,7 +302,7 @@ class ProjectHelpSessionAuthorAllowedActions {
     canProposeAlternative: false,
     canDecline: false,
     canCancel: false,
-    canStart: false,
+    canJoin: false,
     canRetryZoom: false,
     canComplete: false,
   );
@@ -448,7 +448,6 @@ class ProjectHelpSession {
     this.joinAvailableAt,
     this.joinClosesAt,
     this.zoomFailureState,
-    this.joinUrl,
   });
 
   final String id;
@@ -488,7 +487,6 @@ class ProjectHelpSession {
   final DateTime? joinAvailableAt;
   final DateTime? joinClosesAt;
   final String? zoomFailureState;
-  final String? joinUrl;
 
   factory ProjectHelpSession.fromJson(Map<String, dynamic> json) {
     final status =
@@ -554,7 +552,6 @@ class ProjectHelpSession {
       joinAvailableAt: _parseDate(json['joinAvailableAt']),
       joinClosesAt: _parseDate(json['joinClosesAt']),
       zoomFailureState: json['zoomFailureState']?.toString(),
-      joinUrl: json['joinUrl']?.toString(),
     );
   }
 }
@@ -587,7 +584,7 @@ ProjectHelpSessionAuthorAllowedActions effectiveAuthorAllowedActions(
       canProposeAlternative: !hasAuthorAlternative,
       canDecline: true,
       canCancel: session.authorAllowedActions.canCancel,
-      canStart: session.authorAllowedActions.canStart,
+      canJoin: session.authorAllowedActions.canJoin,
       canRetryZoom: session.authorAllowedActions.canRetryZoom,
       canComplete: session.authorAllowedActions.canComplete,
     );
@@ -677,26 +674,6 @@ class CreateProjectHelpSessionRequestPayload {
       'learnerTimeZone': learnerTimeZone,
       'proposedTimes': sorted.map((time) => time.toUtc().toIso8601String()).toList(),
     };
-  }
-}
-
-class ProjectHelpSessionStartResult {
-  const ProjectHelpSessionStartResult({
-    required this.startUrl,
-    required this.startsAt,
-    required this.durationMinutes,
-  });
-
-  final String startUrl;
-  final DateTime startsAt;
-  final int durationMinutes;
-
-  factory ProjectHelpSessionStartResult.fromJson(Map<String, dynamic> json) {
-    return ProjectHelpSessionStartResult(
-      startUrl: json['startUrl']?.toString() ?? '',
-      startsAt: DateTime.parse(json['startsAt']?.toString() ?? ''),
-      durationMinutes: (json['durationMinutes'] as num?)?.toInt() ?? 15,
-    );
   }
 }
 

@@ -518,7 +518,7 @@ void main() {
         find.text('Add session notes to Project Notebook'),
         findsOneWidget,
       );
-      expect(find.text('Start Zoom session'), findsNothing);
+      expect(find.text('Join Zoom'), findsNothing);
     });
   });
 
@@ -537,7 +537,7 @@ void main() {
                   canProposeAlternative: true,
                   canDecline: true,
                   canCancel: true,
-                  canStart: false,
+                  canJoin: false,
                   canRetryZoom: false,
                   canComplete: false,
                 ),
@@ -571,7 +571,7 @@ void main() {
                 status: ProjectHelpSessionStatus.scheduled,
                 selectedStartsAt: DateTime.utc(2026, 6, 1, 12),
                 authorAllowedActions: const ProjectHelpSessionAuthorAllowedActions(
-                  canStart: true,
+                  canJoin: true,
                   canComplete: false,
                   canCancel: true,
                   canAcceptOption: false,
@@ -587,7 +587,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Join Zoom'), findsNothing);
       expect(
-        find.widgetWithText(FilledButton, 'Start Zoom session'),
+        find.widgetWithText(FilledButton, 'Join Zoom'),
         findsOneWidget,
       );
     });
@@ -607,7 +607,7 @@ void main() {
                   canAcceptOption: false,
                   canProposeAlternative: false,
                   canDecline: false,
-                  canStart: false,
+                  canJoin: false,
                   canComplete: false,
                 ),
               ),
@@ -630,7 +630,7 @@ void main() {
                 selectedStartsAt: DateTime.utc(2026, 6, 1, 12),
                 completionAvailableAt: DateTime.utc(2026, 6, 1, 12, 30),
                 authorAllowedActions: const ProjectHelpSessionAuthorAllowedActions(
-                  canStart: false,
+                  canJoin: false,
                   canComplete: false,
                   canCancel: true,
                   canAcceptOption: false,
@@ -660,7 +660,7 @@ void main() {
                 status: ProjectHelpSessionStatus.scheduled,
                 selectedStartsAt: DateTime.utc(2026, 6, 1, 12),
                 authorAllowedActions: const ProjectHelpSessionAuthorAllowedActions(
-                  canStart: false,
+                  canJoin: false,
                   canComplete: true,
                   canCancel: false,
                   canAcceptOption: false,
@@ -699,7 +699,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.text('Start Zoom session'), findsNothing);
+        expect(find.text('Join Zoom'), findsNothing);
         expect(find.text('Retry creating meeting'), findsNothing);
         expect(find.text('Mark session as completed'), findsNothing);
       }

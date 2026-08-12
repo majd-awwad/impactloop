@@ -44,9 +44,9 @@ class HelpSessionStatusCopy {
             ? (learnerActions.canJoin
                 ? ProjectHelpSessionsL10n.joinZoom.resolve(context)
                 : ProjectHelpSessionsL10n.joinOpensLater.resolve(context))
-            : (authorActions.canStart
-                ? ProjectHelpSessionsL10n.startZoom.resolve(context)
-                : ProjectHelpSessionsL10n.startZoomSoon.resolve(context)),
+            : (authorActions.canJoin
+                ? ProjectHelpSessionsL10n.joinZoom.resolve(context)
+                : ProjectHelpSessionsL10n.joinOpensLater.resolve(context)),
       ProjectHelpSessionStatus.declined =>
         ProjectHelpSessionsL10n.declinedTitle.resolve(context),
       ProjectHelpSessionStatus.cancelled =>

@@ -72,19 +72,15 @@ Future<void> completeHelpSessionSettingsMutation({
 }
 
 /// Zoom URL launch failures are not API mutation failures.
-void showHelpSessionZoomLaunchFailure(
-  BuildContext context, {
-  required bool isStart,
-}) {
+void showHelpSessionZoomLaunchFailure(BuildContext context) {
   if (!context.mounted) {
     return;
   }
-  final message = isStart
-      ? ProjectHelpSessionsL10n.startLaunchFailed.resolve(context)
-      : ProjectHelpSessionsL10n.joinLaunchFailed.resolve(context);
-  showInfoSnackBar(context, message);
+  showInfoSnackBar(
+    context,
+    ProjectHelpSessionsL10n.joinLaunchFailed.resolve(context),
+  );
 }
-
 bool isHelpSessionMutationGuardNoOp(Object? result, bool controllerBusy) {
   return result == null && controllerBusy;
 }

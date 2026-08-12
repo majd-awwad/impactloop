@@ -8,6 +8,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../application/help_session_mutation_feedback.dart';
 import '../../application/project_help_session_canonical_cache.dart';
 import '../../application/project_help_session_mutation.dart';
+import '../../application/project_help_session_private_zoom_action.dart';
 import '../../application/project_help_session_zoom_launcher.dart';
 import '../../application/project_help_sessions_providers.dart';
 import '../../data/models/project_help_session_models.dart';
@@ -184,19 +185,24 @@ class _LearnerHelpSessionDetailPageState
     if (_joinInFlight || !actions.canJoin) {
       return;
     }
+    final authSnapshot = captureProjectHelpSessionAuthSnapshot(ref);
+    if (authSnapshot == null) {
+      return;
+    }
     setState(() => _joinInFlight = true);
     try {
-      final cachedJoinUrl = session.joinUrl?.trim();
-      final joinUrl = cachedJoinUrl != null && cachedJoinUrl.isNotEmpty
-          ? cachedJoinUrl
-          : (await ref.read(projectHelpSessionsApiProvider).joinZoom(session.id))
+      final joinUrl =
+          (await ref.read(projectHelpSessionsApiProvider).joinZoom(session.id))
               .joinUrl;
-      if (!mounted) {
+      if (!mounted ||
+          !projectHelpSessionAuthSnapshotIsCurrent(ref, authSnapshot)) {
         return;
       }
-      final launched = await launchProjectHelpSessionZoomUrl(joinUrl);
+      final launched = await ref.read(
+        projectHelpSessionZoomJoinLauncherProvider,
+      )(joinUrl);
       if (!launched && mounted) {
-        showHelpSessionZoomLaunchFailure(context, isStart: false);
+        showHelpSessionZoomLaunchFailure(context);
       }
     } catch (error) {
       if (mounted) {

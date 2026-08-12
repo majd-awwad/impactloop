@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_response.dart';
+import '../../../core/auth/auth_interceptor.dart';
 import 'models/project_help_session_models.dart';
 
 class ProjectHelpSessionsApi {
@@ -17,6 +18,13 @@ class ProjectHelpSessionsApi {
     receiveTimeout: const Duration(seconds: 60),
   );
 
+  static final _privateZoomCapabilityRequestOptions = Options(
+    sendTimeout: const Duration(seconds: 60),
+    receiveTimeout: const Duration(seconds: 60),
+    // Private capability actions must never be replayed after an auth switch.
+    // A 401 is surfaced and the user may retry after re-authentication.
+    extra: const {AuthInterceptor.skipAuthRefreshExtraKey: true},
+  );
   String _availabilityPath(String projectId) =>
       '/api/learning-projects/$projectId/help-sessions/availability';
 
@@ -129,7 +137,7 @@ class ProjectHelpSessionsApi {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '$_learnerSessionsPath/$sessionId/zoom/join',
-        options: _zoomRequestOptions,
+        options: _privateZoomCapabilityRequestOptions,
       ),
       ProjectHelpSessionJoinResult.fromJson,
     );
@@ -251,16 +259,15 @@ class ProjectHelpSessionsApi {
     );
   }
 
-  Future<ProjectHelpSessionStartResult> startZoom(String sessionId) {
+  Future<ProjectHelpSessionJoinResult> joinAuthorZoom(String sessionId) {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
-        '$_authorSessionsPath/$sessionId/zoom/start',
-        options: _zoomRequestOptions,
+        '$_authorSessionsPath/$sessionId/zoom/join',
+        options: _privateZoomCapabilityRequestOptions,
       ),
-      ProjectHelpSessionStartResult.fromJson,
+      ProjectHelpSessionJoinResult.fromJson,
     );
   }
-
   Future<ProjectHelpSession> completeSession(String sessionId) {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(

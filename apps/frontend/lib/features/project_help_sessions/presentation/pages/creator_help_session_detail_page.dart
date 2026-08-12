@@ -8,6 +8,7 @@ import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../application/help_session_mutation_feedback.dart';
 import '../../application/project_help_session_canonical_cache.dart';
 import '../../application/project_help_session_mutation.dart';
+import '../../application/project_help_session_private_zoom_action.dart';
 import '../../application/project_help_session_zoom_launcher.dart';
 import '../../application/project_help_sessions_providers.dart';
 import '../../data/models/project_help_session_models.dart';
@@ -41,7 +42,7 @@ class CreatorHelpSessionDetailPage extends ConsumerStatefulWidget {
 class _CreatorHelpSessionDetailPageState
     extends ConsumerState<CreatorHelpSessionDetailPage> {
   String? _selectedOptionId;
-  bool _startInFlight = false;
+  bool _joinInFlight = false;
   bool _completeInFlight = false;
 
   @override
@@ -250,19 +251,28 @@ class _CreatorHelpSessionDetailPageState
     );
   }
 
-  Future<void> _startZoom(ProjectHelpSession session) async {
-    if (_startInFlight || !effectiveAuthorAllowedActions(session).canStart) {
+  Future<void> _joinZoom(ProjectHelpSession session) async {
+    if (_joinInFlight || !effectiveAuthorAllowedActions(session).canJoin) {
       return;
     }
-    setState(() => _startInFlight = true);
+    final authSnapshot = captureProjectHelpSessionAuthSnapshot(ref);
+    if (authSnapshot == null) {
+      return;
+    }
+    setState(() => _joinInFlight = true);
     try {
-      final result = await ref.read(projectHelpSessionsApiProvider).startZoom(session.id);
-      if (!mounted) {
+      final result = await ref
+          .read(projectHelpSessionsApiProvider)
+          .joinAuthorZoom(session.id);
+      if (!mounted ||
+          !projectHelpSessionAuthSnapshotIsCurrent(ref, authSnapshot)) {
         return;
       }
-      final launched = await launchProjectHelpSessionZoomStartUrl(result.startUrl);
+      final launched = await ref.read(
+        projectHelpSessionZoomJoinLauncherProvider,
+      )(result.joinUrl);
       if (!launched && mounted) {
-        showHelpSessionZoomLaunchFailure(context, isStart: true);
+        showHelpSessionZoomLaunchFailure(context);
       }
     } catch (error) {
       if (mounted) {
@@ -270,7 +280,7 @@ class _CreatorHelpSessionDetailPageState
       }
     } finally {
       if (mounted) {
-        setState(() => _startInFlight = false);
+        setState(() => _joinInFlight = false);
       }
     }
   }
@@ -394,18 +404,19 @@ class _CreatorHelpSessionDetailPageState
     if (session.status == ProjectHelpSessionStatus.scheduled ||
         session.status == ProjectHelpSessionStatus.zoomPending) {
       primary = HelpSessionActionSpec(
-        label: ProjectHelpSessionsL10n.startZoom.resolve(context),
-        onPressed: actions.canStart && !_startInFlight ? () => _startZoom(session) : null,
-        inFlight: _startInFlight,
-        disabledHint: !actions.canStart
-            ? ProjectHelpSessionsL10n.startZoomSoon.resolve(context)
+        label: ProjectHelpSessionsL10n.joinZoom.resolve(context),
+        onPressed: actions.canJoin && !_joinInFlight
+            ? () => _joinZoom(session)
             : null,
-        semanticLabel: actions.canStart
-            ? ProjectHelpSessionsL10n.startZoom.resolve(context)
-            : ProjectHelpSessionsL10n.startZoomSoon.resolve(context),
+        inFlight: _joinInFlight,
+        disabledHint: !actions.canJoin
+            ? ProjectHelpSessionsL10n.joinOpensLater.resolve(context)
+            : null,
+        semanticLabel: actions.canJoin
+            ? ProjectHelpSessionsL10n.joinZoom.resolve(context)
+            : ProjectHelpSessionsL10n.joinOpensLater.resolve(context),
       );
     }
-
     if (session.status == ProjectHelpSessionStatus.scheduled) {
       secondary.add(
         HelpSessionActionSpec(

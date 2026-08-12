@@ -25,7 +25,7 @@ import {
 import { ensureProjectHelpSessionNotebookPage } from './project-help-session-notebook-handoff.service.js';
 import { listLearnerHelpSessionProjectOptions } from './project-help-session-project-options.service.js';
 import {
-  getAuthorProjectHelpSessionZoomStart,
+  getAuthorProjectHelpSessionZoomJoin,
   getLearnerProjectHelpSessionZoomJoin,
 } from './project-help-session-zoom.service.js';
 import { retryZoomProvisioningForAuthor } from './project-help-session-zoom-provisioning.service.js';
@@ -273,15 +273,14 @@ export const learnerJoinProjectHelpSessionZoomHandler = async (
   res.json(successResponse('Help session join details fetched successfully', join));
 };
 
-export const authorStartProjectHelpSessionZoomHandler = async (
+export const authorJoinProjectHelpSessionZoomHandler = async (
   req: Request,
   res: Response,
 ) => {
   const { sessionId } = readValidatedParams<{ sessionId: string }>(req);
-  const start = await getAuthorProjectHelpSessionZoomStart(req.auth!.sub, sessionId);
-  res.json(successResponse('Help session start details fetched successfully', start));
+  const join = await getAuthorProjectHelpSessionZoomJoin(req.auth!.sub, sessionId);
+  res.json(successResponse('Help session join details fetched successfully', join));
 };
-
 export const authorCancelProjectHelpSessionHandler = async (
   req: Request,
   res: Response,

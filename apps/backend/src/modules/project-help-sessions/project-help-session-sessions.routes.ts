@@ -13,7 +13,7 @@ import {
   authorDeclineProjectHelpSessionHandler,
   authorProposeProjectHelpSessionAlternativeHandler,
   authorRetryProjectHelpSessionZoomHandler,
-  authorStartProjectHelpSessionZoomHandler,
+  authorJoinProjectHelpSessionZoomHandler,
   createProjectHelpSessionRequestHandler,
   getAuthorProjectHelpSessionHandler,
   getLearnerProjectHelpSessionHandler,
@@ -200,10 +200,10 @@ projectHelpSessionsRouter.post(
 );
 
 projectHelpSessionsRouter.post(
-  '/author/:sessionId/zoom/start',
+  '/author/:sessionId/zoom/join',
   privateNoStoreMiddleware,
   authMiddleware,
   requireRoles('LEARNER'),
   validate(projectHelpSessionIdParamSchema, 'params'),
-  asyncHandler(authorStartProjectHelpSessionZoomHandler),
+  asyncHandler(authorJoinProjectHelpSessionZoomHandler),
 );

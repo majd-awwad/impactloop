@@ -636,7 +636,7 @@ void main() {
           canProposeAlternative: true,
           canDecline: true,
           canCancel: true,
-          canStart: false,
+          canJoin: false,
           canRetryZoom: false,
           canComplete: false,
         ),

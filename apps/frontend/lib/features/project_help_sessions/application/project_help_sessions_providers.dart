@@ -11,6 +11,11 @@ final projectHelpSessionsApiProvider = Provider<ProjectHelpSessionsApi>((ref) {
   return ProjectHelpSessionsApi(ref.watch(apiClientProvider));
 });
 
+Future<void> _ensureProjectHelpSessionAuthScope(Ref ref) async {
+  await _ensureProjectHelpSessionAuthScope(ref);
+  requireAuthenticatedLearner(ref);
+  watchLearnerBuildsSessionFromRef(ref);
+}
 enum LearnerHelpSessionListFilter {
   all,
   active,
@@ -78,7 +83,7 @@ bool _matchesClientFilter(
 
 final learnerHelpSessionsProvider =
     FutureProvider.autoDispose<ProjectHelpSessionListResult>((ref) async {
-  await ensureLearnerBuildsSessionReady(ref);
+  await _ensureProjectHelpSessionAuthScope(ref);
   final query = ref.watch(learnerHelpSessionsQueryProvider);
   final api = ref.read(projectHelpSessionsApiProvider);
   final result = await api.fetchSessions(
@@ -105,26 +110,26 @@ final learnerHelpSessionsProvider =
 
 final learnerHelpSessionDetailProvider = FutureProvider.autoDispose
     .family<ProjectHelpSession, String>((ref, sessionId) async {
-  await ensureLearnerBuildsSessionReady(ref);
+  await _ensureProjectHelpSessionAuthScope(ref);
   return ref.read(projectHelpSessionsApiProvider).fetchSession(sessionId);
 });
 
 final projectHelpSessionAvailabilityProvider = FutureProvider.autoDispose
     .family<ProjectHelpSessionAvailability, String>((ref, projectId) async {
-  await ensureLearnerBuildsSessionReady(ref);
+  await _ensureProjectHelpSessionAuthScope(ref);
   return ref.read(projectHelpSessionsApiProvider).fetchAvailability(projectId);
 });
 
 final projectHelpSessionProjectOptionsProvider = FutureProvider.autoDispose
     .family<ProjectHelpSessionProjectOptionsResult, String?>((ref, query) async {
-  await ensureLearnerBuildsSessionReady(ref);
+  await _ensureProjectHelpSessionAuthScope(ref);
   return ref
       .read(projectHelpSessionsApiProvider)
       .fetchProjectOptions(query: query);
 });
 final activeHelpSessionForBuildProvider = FutureProvider.autoDispose
     .family<ProjectHelpSession?, String>((ref, buildId) async {
-  await ensureLearnerBuildsSessionReady(ref);
+  await _ensureProjectHelpSessionAuthScope(ref);
   final result = await ref.read(projectHelpSessionsApiProvider).fetchSessions(
         page: 1,
         limit: 5,
@@ -262,12 +267,6 @@ class ProjectHelpSessionActionController extends Notifier<bool> {
     );
   }
 
-  Future<ProjectHelpSessionStartResult?> startZoom(String sessionId) {
-    return _guard(
-      () => ref.read(projectHelpSessionsApiProvider).startZoom(sessionId),
-    );
-  }
-
   Future<ProjectHelpSession?> completeSession(String sessionId) {
     return _guard(
       () => ref.read(projectHelpSessionsApiProvider).completeSession(sessionId),
@@ -394,7 +393,7 @@ bool _matchesAuthorClientFilter(
 
 final authorHelpSessionsProvider =
     FutureProvider.autoDispose<ProjectHelpSessionListResult>((ref) async {
-  await ensureLearnerBuildsSessionReady(ref);
+  await _ensureProjectHelpSessionAuthScope(ref);
   final query = ref.watch(authorHelpSessionsQueryProvider);
   final api = ref.read(projectHelpSessionsApiProvider);
   final result = await api.fetchAuthorSessions(
@@ -434,13 +433,13 @@ final authorHelpSessionsProvider =
 
 final authorHelpSessionDetailProvider = FutureProvider.autoDispose
     .family<ProjectHelpSession, String>((ref, sessionId) async {
-  await ensureLearnerBuildsSessionReady(ref);
+  await _ensureProjectHelpSessionAuthScope(ref);
   return ref.read(projectHelpSessionsApiProvider).fetchAuthorSession(sessionId);
 });
 
 final projectHelpSessionSettingsProvider = FutureProvider.autoDispose
     .family<ProjectHelpSessionSettings, String>((ref, projectId) async {
-  await ensureLearnerBuildsSessionReady(ref);
+  await _ensureProjectHelpSessionAuthScope(ref);
   return ref.read(projectHelpSessionsApiProvider).fetchSettings(projectId);
 });
 
@@ -456,7 +455,7 @@ final hasAuthoredProjectSubmissionsProvider =
 
 final authorHelpSessionsEntryVisibleProvider =
     FutureProvider.autoDispose<bool>((ref) async {
-  await ensureLearnerBuildsSessionReady(ref);
+  await _ensureProjectHelpSessionAuthScope(ref);
   if (await ref.watch(hasAuthoredProjectSubmissionsProvider.future)) {
     return true;
   }

@@ -44,7 +44,7 @@ export type ProjectHelpSessionAuthorAllowedActions = {
 
   canCancel: boolean;
 
-  canStart: boolean;
+  canJoin: boolean;
 
   canRetryZoom: boolean;
 
@@ -168,7 +168,7 @@ export const deriveProjectHelpSessionAllowedActions = (
 
     canCancel,
 
-    canStart: meetingState.meetingReady && meetingState.inWindow,
+    canJoin: meetingState.meetingReady && meetingState.inWindow,
 
     canRetryZoom: session.status === 'SCHEDULING_FAILED',
 

@@ -23,7 +23,7 @@ ProjectHelpSession _authorSession({
     canProposeAlternative: true,
     canDecline: true,
     canCancel: false,
-    canStart: false,
+    canJoin: false,
     canRetryZoom: false,
     canComplete: false,
   ),
@@ -190,7 +190,7 @@ void main() {
                   canProposeAlternative: true,
                   canDecline: true,
                   canCancel: false,
-                  canStart: false,
+                  canJoin: false,
                   canRetryZoom: false,
     canComplete: false,
                 ),
@@ -221,7 +221,7 @@ void main() {
                   canProposeAlternative: false,
                   canDecline: false,
                   canCancel: true,
-                  canStart: false,
+                  canJoin: false,
                   canRetryZoom: true,
                   canComplete: false,
                 ),
@@ -237,7 +237,7 @@ void main() {
       );
     });
 
-    testWidgets('SCHEDULED shows disabled start when canStart false', (tester) async {
+    testWidgets('SCHEDULED shows disabled Join when canJoin is false', (tester) async {
       await tester.pumpWidget(
         _wrap(
           const CreatorHelpSessionDetailPage(sessionId: 'session-author-1'),
@@ -250,7 +250,7 @@ void main() {
                   canProposeAlternative: false,
                   canDecline: false,
                   canCancel: true,
-                  canStart: false,
+                  canJoin: false,
                   canRetryZoom: false,
     canComplete: false,
                 ),
@@ -260,13 +260,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final startButton = find.widgetWithText(
+      final joinButton = find.widgetWithText(
         FilledButton,
-        ProjectHelpSessionsL10n.startZoom.en,
+        ProjectHelpSessionsL10n.joinZoom.en,
       );
-      expect(tester.widget<FilledButton>(startButton).onPressed, isNull);
+      expect(tester.widget<FilledButton>(joinButton).onPressed, isNull);
       expect(
-        find.text(ProjectHelpSessionsL10n.startZoomSoon.en),
+        find.text(ProjectHelpSessionsL10n.joinOpensLater.en),
         findsWidgets,
       );
     });

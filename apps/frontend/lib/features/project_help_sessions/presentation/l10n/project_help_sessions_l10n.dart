@@ -553,18 +553,6 @@ class ProjectHelpSessionsL10n {
     ar: 'تم تأكيد الموعد، لكن تعذر تجهيز اجتماع Zoom.',
   );
 
-  static const startZoom = LocalizedText(en: 'Start Zoom session', ar: 'بدء جلسة Zoom');
-
-  static const startZoomSoon = LocalizedText(
-    en: 'The Start button becomes available 15 minutes before the session.',
-    ar: 'سيصبح زر البدء متاحًا قبل الموعد بـ15 دقيقة.',
-  );
-
-  static const startLaunchFailed = LocalizedText(
-    en: 'Could not open Zoom. Try again.',
-    ar: 'تعذر فتح جلسة Zoom. حاول مرة أخرى.',
-  );
-
   static const viewDetails = LocalizedText(en: 'View details', ar: 'عرض التفاصيل');
 
   static LocalizedText authorStatusLabel(ProjectHelpSessionStatus status) =>
@@ -635,12 +623,11 @@ class ProjectHelpSessionsL10n {
       'SESSION_NOT_JOINABLE_YET' => 'لم يحن وقت الانضمام بعد.',
       'SESSION_JOIN_WINDOW_CLOSED' =>
         'انتهت فترة الانضمام إلى هذه الجلسة.',
-      'SESSION_NOT_STARTABLE_YET' => 'لم يحن وقت بدء الجلسة بعد.',
-      'SESSION_START_WINDOW_CLOSED' => 'انتهت فترة بدء هذه الجلسة.',
       'SESSION_NOT_COMPLETABLE_YET' =>
         'يمكن إكمال الجلسة بعد انتهاء موعدها المحدد.',
       'ZOOM_MEETING_NOT_FOUND' =>
         'لم يعد اجتماع Zoom متاحًا. تحقق من حالة الجلسة.',
+      'ZOOM_NOT_READY' => 'رابط اجتماع Zoom غير جاهز بعد.',
       'HELP_SESSION_NO_DURATION_ENABLED' =>
         'يجب تفعيل مدة جلسة واحدة على الأقل.',
       'HELP_SESSION_WEEKLY_LIMIT_OUT_OF_RANGE' =>
@@ -696,13 +683,11 @@ class ProjectHelpSessionsL10n {
       'SESSION_NOT_JOINABLE_YET' => 'It is not time to join yet.',
       'SESSION_JOIN_WINDOW_CLOSED' =>
         'The join window for this session has closed.',
-      'SESSION_NOT_STARTABLE_YET' => 'It is not time to start the session yet.',
-      'SESSION_START_WINDOW_CLOSED' =>
-        'The start window for this session has closed.',
       'SESSION_NOT_COMPLETABLE_YET' =>
         'The session can be completed after its scheduled end time.',
       'ZOOM_MEETING_NOT_FOUND' =>
         'The Zoom meeting is no longer available. Check the session status.',
+      'ZOOM_NOT_READY' => 'The Zoom meeting link is not ready yet.',
       'HELP_SESSION_NO_DURATION_ENABLED' =>
         'At least one session duration must be enabled.',
       'HELP_SESSION_WEEKLY_LIMIT_OUT_OF_RANGE' =>

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/config/api_config.dart';
@@ -18,5 +19,9 @@ Future<bool> launchProjectHelpSessionZoomUrl(String joinUrl) async {
   return false;
 }
 
-Future<bool> launchProjectHelpSessionZoomStartUrl(String startUrl) =>
-    launchProjectHelpSessionZoomUrl(startUrl);
+typedef ProjectHelpSessionZoomLauncher = Future<bool> Function(String url);
+
+final projectHelpSessionZoomJoinLauncherProvider =
+    Provider<ProjectHelpSessionZoomLauncher>(
+      (ref) => launchProjectHelpSessionZoomUrl,
+    );

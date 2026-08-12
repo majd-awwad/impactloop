@@ -6,6 +6,7 @@ import '../../supplier_portal/application/supplier_portal_refresh.dart';
 import '../../home/application/home_suggested_materials_provider.dart';
 import '../../home/application/learner_home_provider.dart';
 import '../../locations/application/saved_locations_providers.dart';
+import '../../project_help_sessions/application/project_help_session_auth_cleanup.dart';
 import '../data/auth_repository.dart';
 import '../data/models/auth_tokens.dart';
 import '../data/models/become_learner_request.dart';
@@ -81,6 +82,7 @@ class AuthController extends Notifier<AuthState> {
         hasBootstrapped: true,
         error: next.error,
       );
+      _invalidateProjectHelpSessionProvidersSafely();
     });
 
     return const AuthState();
@@ -97,6 +99,15 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  void _invalidateProjectHelpSessionProvidersSafely() {
+    try {
+      invalidateProjectHelpSessionAuthScopedState(ref);
+    } catch (_) {
+      // Private PHS state must be dropped at the auth boundary. A later route
+      // load will fetch from the server if no provider instance exists yet.
+    }
+  }
+
   void _resetAuthenticatedProvidersSafely() {
     try {
       ref.read(authSessionExpiryProvider.notifier).clear();
@@ -107,6 +118,7 @@ class AuthController extends Notifier<AuthState> {
     } catch (_) {
       // A provider reset must never turn a successful login into a failure.
     }
+    _invalidateProjectHelpSessionProvidersSafely();
   }
 
   Future<void> bootstrapSession() {
@@ -140,6 +152,7 @@ class AuthController extends Notifier<AuthState> {
         isLoading: false,
         hasBootstrapped: true,
       );
+      _resetAuthenticatedProvidersSafely();
     } catch (_) {
       state = const AuthState(isLoading: false, hasBootstrapped: true);
     }
@@ -157,6 +170,7 @@ class AuthController extends Notifier<AuthState> {
         isLoading: false,
         hasBootstrapped: true,
       );
+      _resetAuthenticatedProvidersSafely();
 
       return user;
     } on ApiException catch (error) {
@@ -210,22 +224,31 @@ class AuthController extends Notifier<AuthState> {
       isLoading: false,
       hasBootstrapped: true,
     );
+    _resetAuthenticatedProvidersSafely();
 
     return establishedUser;
   }
 
   Future<void> refreshCurrentUser() async {
     final user = await _repository.me();
+    final identityChanged = state.user?.id != user.id;
     state = state.copyWith(user: user);
+    if (identityChanged) {
+      _invalidateProjectHelpSessionProvidersSafely();
+    }
   }
 
   void syncAuthenticatedUser(User user) {
+    final identityChanged = state.user?.id != user.id;
     state = AuthState(
       user: user,
       accessToken: _repository.accessToken,
       isLoading: false,
       hasBootstrapped: true,
     );
+    if (identityChanged) {
+      _resetAuthenticatedProvidersSafely();
+    }
   }
 
   Future<String> refresh() async {
@@ -254,23 +277,21 @@ class AuthController extends Notifier<AuthState> {
   Future<ApiException?> logout() async {
     state = state.copyWith(isLoading: true, clearError: true);
 
+    ApiException? logoutError;
     try {
       await _repository.logout();
-      _invalidateSupplierPortalProvidersSafely();
-      state = const AuthState(isLoading: false, hasBootstrapped: true);
-      return null;
     } on ApiException catch (error) {
-      state = AuthState(isLoading: false, hasBootstrapped: true, error: error);
-      return error;
+      logoutError = error;
     } catch (error) {
-      final apiError = normalizeApiException(error);
-      state = AuthState(
-        isLoading: false,
-        hasBootstrapped: true,
-        error: apiError,
-      );
-      return apiError;
+      logoutError = normalizeApiException(error);
     }
+    state = AuthState(
+      isLoading: false,
+      hasBootstrapped: true,
+      error: logoutError,
+    );
+    _resetAuthenticatedProvidersSafely();
+    return logoutError;
   }
 
   Future<User> loadMe() async {
@@ -278,6 +299,7 @@ class AuthController extends Notifier<AuthState> {
 
     try {
       final user = await _repository.me();
+      final identityChanged = state.user?.id != user.id;
 
       state = state.copyWith(
         user: user,
@@ -285,6 +307,9 @@ class AuthController extends Notifier<AuthState> {
         isLoading: false,
         hasBootstrapped: true,
       );
+      if (identityChanged) {
+        _invalidateProjectHelpSessionProvidersSafely();
+      }
 
       return user;
     } on ApiException catch (error) {
