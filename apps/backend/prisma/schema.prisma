@@ -1435,6 +1435,8 @@ model ProjectHelpSession {
   zoomCreatedAt         DateTime?                @map("zoom_created_at")
   zoomLastFailureCode   String?                  @map("zoom_last_failure_code")
   zoomLastFailureAt     DateTime?                @map("zoom_last_failure_at")
+  learnerReportedAuthorNoShowAt DateTime?        @map("learner_reported_author_no_show_at")
+  authorReportedLearnerNoShowAt DateTime?        @map("author_reported_learner_no_show_at")
   declinedReason        String?                  @map("declined_reason")
   declinedAt            DateTime?                @map("declined_at")
   cancelledById         String?                  @map("cancelled_by_id")

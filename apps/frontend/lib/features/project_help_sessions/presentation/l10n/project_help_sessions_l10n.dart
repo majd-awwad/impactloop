@@ -65,7 +65,10 @@ class ProjectHelpSessionsL10n {
   static const slot2 = LocalizedText(en: 'Option 2', ar: 'الموعد الثاني');
   static const slot3 = LocalizedText(en: 'Option 3', ar: 'الموعد الثالث');
 
-  static const selectDate = LocalizedText(en: 'Select date', ar: 'اختر التاريخ');
+  static const selectDate = LocalizedText(
+    en: 'Select date',
+    ar: 'اختر التاريخ',
+  );
   static const selectTime = LocalizedText(en: 'Select time', ar: 'اختر الوقت');
   static const selectDateAndTime = LocalizedText(
     en: 'Select date and time',
@@ -79,9 +82,9 @@ class ProjectHelpSessionsL10n {
   );
 
   static LocalizedText projectCreatorLabel(String displayName) => LocalizedText(
-        en: 'Project creator: $displayName',
-        ar: 'صاحب المشروع: $displayName',
-      );
+    en: 'Project creator: $displayName',
+    ar: 'صاحب المشروع: $displayName',
+  );
 
   static const requestSubmittedSuccess = LocalizedText(
     en: 'Help session request sent.',
@@ -123,6 +126,46 @@ class ProjectHelpSessionsL10n {
   static const joinOpensLater = LocalizedText(
     en: 'Join opens closer to the session start time.',
     ar: 'يفتح الانضمام قبل موعد الجلسة بقليل.',
+  );
+
+  static LocalizedText joinOpensAt(String value) => LocalizedText(
+    en: 'Join opens at $value.',
+    ar: 'يفتح الانضمام في $value.',
+  );
+
+  static const noShowWindowHint = LocalizedText(
+    en: 'If the other participant does not attend, reporting will become available after the join window closes.',
+    ar: 'إذا لم يحضر الطرف الآخر، سيظهر خيار الإبلاغ بعد انتهاء نافذة الانضمام.',
+  );
+
+  static const reportAuthorNoShow = LocalizedText(
+    en: 'Report that the project creator did not attend',
+    ar: 'الإبلاغ عن عدم حضور صاحب المشروع',
+  );
+
+  static const reportLearnerNoShow = LocalizedText(
+    en: 'Report that the learner did not attend',
+    ar: 'الإبلاغ عن عدم حضور المتعلم',
+  );
+
+  static const noShowConfirmTitle = LocalizedText(
+    en: 'Submit a no-show report?',
+    ar: 'إرسال بلاغ عدم حضور؟',
+  );
+
+  static const noShowConfirmBody = LocalizedText(
+    en: 'Confirm only if the other participant did not attend during the full join window.',
+    ar: 'أكّد فقط إذا لم يحضر الطرف الآخر طوال نافذة الانضمام كاملة.',
+  );
+
+  static const noShowConfirmAction = LocalizedText(
+    en: 'Submit report',
+    ar: 'إرسال البلاغ',
+  );
+
+  static const noShowReported = LocalizedText(
+    en: 'No-show report submitted.',
+    ar: 'تم إرسال بلاغ عدم الحضور.',
   );
 
   static const zoomPreparing = LocalizedText(
@@ -170,10 +213,7 @@ class ProjectHelpSessionsL10n {
     ar: 'سيتم إغلاق طلب الجلسة الحالي، ويمكنك إرسال طلب جديد لاحقًا.',
   );
 
-  static const rejectTime = LocalizedText(
-    en: 'Reject time',
-    ar: 'رفض الموعد',
-  );
+  static const rejectTime = LocalizedText(en: 'Reject time', ar: 'رفض الموعد');
 
   static const cancelTitle = LocalizedText(
     en: 'Cancel help session?',
@@ -200,10 +240,7 @@ class ProjectHelpSessionsL10n {
     ar: 'السبب (اختياري)',
   );
 
-  static const cancelReasonRequired = LocalizedText(
-    en: 'Reason',
-    ar: 'السبب',
-  );
+  static const cancelReasonRequired = LocalizedText(en: 'Reason', ar: 'السبب');
 
   static const declinedTitle = LocalizedText(
     en: 'Help session request declined',
@@ -265,10 +302,7 @@ class ProjectHelpSessionsL10n {
     ar: 'إدارة الجلسة',
   );
 
-  static const nextStep = LocalizedText(
-    en: 'Next step',
-    ar: 'الخطوة التالية',
-  );
+  static const nextStep = LocalizedText(en: 'Next step', ar: 'الخطوة التالية');
 
   static const acceptSelectedTimeHint = LocalizedText(
     en: 'Select one of the proposed times to enable acceptance.',
@@ -280,10 +314,8 @@ class ProjectHelpSessionsL10n {
     ar: 'العودة إلى المشروع',
   );
 
-  static LocalizedText learnerLabel(String displayName) => LocalizedText(
-        en: 'Learner: $displayName',
-        ar: 'المتعلم: $displayName',
-      );
+  static LocalizedText learnerLabel(String displayName) =>
+      LocalizedText(en: 'Learner: $displayName', ar: 'المتعلم: $displayName');
 
   static const youCancelled = LocalizedText(en: 'You', ar: 'أنت');
   static const creatorCancelled = LocalizedText(
@@ -317,10 +349,8 @@ class ProjectHelpSessionsL10n {
   );
 
   static const completedLearnerBody = LocalizedText(
-    en:
-        'You can now record what you learned and your next steps in your private Project Notebook.',
-    ar:
-        'يمكنك الآن تسجيل ما تعلمته والخطوات التالية في دفتر المشروع الخاص بك.',
+    en: 'You can now record what you learned and your next steps in your private Project Notebook.',
+    ar: 'يمكنك الآن تسجيل ما تعلمته والخطوات التالية في دفتر المشروع الخاص بك.',
   );
 
   static const addSessionNotesToNotebook = LocalizedText(
@@ -343,7 +373,7 @@ class ProjectHelpSessionsL10n {
     ar: 'يمكنك إكمال الجلسة بعد انتهاء موعدها المحدد.',
   );
 
-  static const markSessionCompleted = LocalizedText(
+  static const markSessionCompleted  static const markSessionCompleted = LocalizedText(
     en: 'Mark session as completed',
     ar: 'تحديد الجلسة كمكتملة',
   );
@@ -354,10 +384,8 @@ class ProjectHelpSessionsL10n {
   );
 
   static const completionConfirmBody = LocalizedText(
-    en:
-        'The session will be closed and the learner will be notified. The Zoom link will no longer be available from ImpactLoop.',
-    ar:
-        'سيتم إغلاق الجلسة وإبلاغ المتعلم، ولن يعود رابط Zoom متاحًا من ImpactLoop.',
+    en: 'The session will be closed and the learner will be notified. The Zoom link will no longer be available from ImpactLoop.',
+    ar: 'سيتم إغلاق الجلسة وإبلاغ المتعلم، ولن يعود رابط Zoom متاحًا من ImpactLoop.',
   );
 
   static const completionConfirmPrimary = LocalizedText(
@@ -381,7 +409,10 @@ class ProjectHelpSessionsL10n {
   static const filterActive = LocalizedText(en: 'Active', ar: 'نشطة');
   static const filterScheduled = LocalizedText(en: 'Scheduled', ar: 'مجدولة');
   static const filterCompleted = LocalizedText(en: 'Completed', ar: 'مكتملة');
-  static const filterClosed = LocalizedText(en: 'Cancelled/Declined', ar: 'ملغاة/مرفوضة');
+  static const filterClosed = LocalizedText(
+    en: 'Cancelled/Declined',
+    ar: 'ملغاة/مرفوضة',
+  );
 
   static const authorListTitle = LocalizedText(
     en: 'Project help requests',
@@ -389,8 +420,8 @@ class ProjectHelpSessionsL10n {
   );
 
   static const authorListSubtitle = LocalizedText(
-    en: 'Review learner requests, choose a time, and start scheduled Zoom sessions.',
-    ar: 'راجع طلبات المتعلمين، اختر موعدًا مناسبًا، وابدأ جلسات Zoom المجدولة.',
+    en: 'Review learner requests, choose a time, and join scheduled Zoom sessions.',
+    ar: 'راجع طلبات المتعلمين، اختر موعدًا مناسبًا، وانضم إلى جلسات Zoom المجدولة.',
   );
 
   static const submissionsHelpRequestsAction = LocalizedText(
@@ -423,7 +454,10 @@ class ProjectHelpSessionsL10n {
     ar: 'إدارة مشاريعي',
   );
 
-  static const authorFilterNew = LocalizedText(en: 'New requests', ar: 'طلبات جديدة');
+  static const authorFilterNew = LocalizedText(
+    en: 'New requests',
+    ar: 'طلبات جديدة',
+  );
   static const authorFilterWaiting = LocalizedText(
     en: 'Waiting for learner',
     ar: 'بانتظار المتعلم',
@@ -464,7 +498,10 @@ class ProjectHelpSessionsL10n {
     ar: 'لن يتم عرض بريدك الإلكتروني أو رقم هاتفك للمتعلم. تنظم ImpactLoop الطلب والموعد، ويتم إنشاء اجتماع Zoom بعد تأكيد الموعد.',
   );
 
-  static const settingsSave = LocalizedText(en: 'Save settings', ar: 'حفظ الإعدادات');
+  static const settingsSave = LocalizedText(
+    en: 'Save settings',
+    ar: 'حفظ الإعدادات',
+  );
 
   static const settingsAvailable = LocalizedText(en: 'Available', ar: 'متاحة');
   static const settingsPaused = LocalizedText(en: 'Paused', ar: 'متوقفة');
@@ -484,7 +521,10 @@ class ProjectHelpSessionsL10n {
     ar: 'اقتراح موعد بديل',
   );
 
-  static const declineRequest = LocalizedText(en: 'Decline request', ar: 'رفض الطلب');
+  static const declineRequest = LocalizedText(
+    en: 'Decline request',
+    ar: 'رفض الطلب',
+  );
 
   static const acceptConfirmTitle = LocalizedText(
     en: 'Confirm session time',
@@ -531,7 +571,10 @@ class ProjectHelpSessionsL10n {
     ar: 'سيتم إغلاق الطلب وإبلاغ المتعلم. يمكنه إرسال طلب جديد لاحقًا.',
   );
 
-  static const declinePrimary = LocalizedText(en: 'Decline request', ar: 'رفض الطلب');
+  static const declinePrimary = LocalizedText(
+    en: 'Decline request',
+    ar: 'رفض الطلب',
+  );
 
   static const zoomRetryTitle = LocalizedText(
     en: 'Could not prepare Zoom meeting',
@@ -553,7 +596,10 @@ class ProjectHelpSessionsL10n {
     ar: 'تم تأكيد الموعد، لكن تعذر تجهيز اجتماع Zoom.',
   );
 
-  static const viewDetails = LocalizedText(en: 'View details', ar: 'عرض التفاصيل');
+  static const viewDetails = LocalizedText(
+    en: 'View details',
+    ar: 'عرض التفاصيل',
+  );
 
   static LocalizedText authorStatusLabel(ProjectHelpSessionStatus status) =>
       statusLabel(status);
@@ -561,70 +607,68 @@ class ProjectHelpSessionsL10n {
   static LocalizedText statusLabel(ProjectHelpSessionStatus status) {
     return switch (status) {
       ProjectHelpSessionStatus.pending => const LocalizedText(
-          en: 'Pending',
-          ar: 'قيد الانتظار',
-        ),
+        en: 'Pending',
+        ar: 'قيد الانتظار',
+      ),
       ProjectHelpSessionStatus.alternativeProposed => const LocalizedText(
-          en: 'Alternative proposed',
-          ar: 'موعد بديل مقترح',
-        ),
+        en: 'Alternative proposed',
+        ar: 'موعد بديل مقترح',
+      ),
       ProjectHelpSessionStatus.zoomPending => const LocalizedText(
-          en: 'Preparing meeting',
-          ar: 'تجهيز الاجتماع',
-        ),
+        en: 'Preparing meeting',
+        ar: 'تجهيز الاجتماع',
+      ),
       ProjectHelpSessionStatus.schedulingFailed => const LocalizedText(
-          en: 'Setup delayed',
-          ar: 'تأخر الإعداد',
-        ),
+        en: 'Setup delayed',
+        ar: 'تأخر الإعداد',
+      ),
       ProjectHelpSessionStatus.scheduled => const LocalizedText(
-          en: 'Scheduled',
-          ar: 'مجدولة',
-        ),
+        en: 'Scheduled',
+        ar: 'مجدولة',
+      ),
       ProjectHelpSessionStatus.declined => const LocalizedText(
-          en: 'Declined',
-          ar: 'مرفوضة',
-        ),
+        en: 'Declined',
+        ar: 'مرفوضة',
+      ),
       ProjectHelpSessionStatus.cancelled => const LocalizedText(
-          en: 'Cancelled',
-          ar: 'ملغاة',
-        ),
+        en: 'Cancelled',
+        ar: 'ملغاة',
+      ),
       ProjectHelpSessionStatus.completed => const LocalizedText(
-          en: 'Completed',
-          ar: 'مكتملة',
-        ),
+        en: 'Completed',
+        ar: 'مكتملة',
+      ),
     };
   }
 
-  static LocalizedText durationLabel(int minutes) => LocalizedText(
-        en: '$minutes min',
-        ar: '$minutes د',
-      );
+  static LocalizedText durationLabel(int minutes) =>
+      LocalizedText(en: '$minutes min', ar: '$minutes د');
 
   static LocalizedText timezoneDisplay(String timezone) => LocalizedText(
-        en: 'Times will be shown in: $timezone',
-        ar: 'سيتم عرض المواعيد حسب المنطقة الزمنية: $timezone',
-      );
+    en: 'Times will be shown in: $timezone',
+    ar: 'سيتم عرض المواعيد حسب المنطقة الزمنية: $timezone',
+  );
 
   static String errorMessage(String? code) {
     return switch (code) {
-      'HELP_SESSIONS_DISABLED' =>
-        'صاحب المشروع لا يستقبل طلبات جلسات حاليًا.',
+      'HELP_SESSIONS_DISABLED' => 'صاحب المشروع لا يستقبل طلبات جلسات حاليًا.',
       'AUTHOR_UNAVAILABLE' => 'جلسات المساعدة غير متاحة لهذا المشروع.',
       'BUILD_NOT_ELIGIBLE' => 'لا يمكن طلب جلسة لهذا التنفيذ حاليًا.',
-      'ACTIVE_SESSION_EXISTS' =>
-        'لديك طلب جلسة نشط لهذا المشروع بالفعل.',
+      'ACTIVE_SESSION_EXISTS' => 'لديك طلب جلسة نشط لهذا المشروع بالفعل.',
       'DURATION_NOT_ALLOWED' => 'مدة الجلسة المختارة غير متاحة.',
       'WEEKLY_LIMIT_REACHED' =>
         'وصلت إلى الحد الأسبوعي للجلسات في هذا الأسبوع.',
-      'INVALID_TIME_OPTIONS' ||
-      'OPTION_NOT_AVAILABLE' =>
+      'INVALID_TIME_OPTIONS' || 'OPTION_NOT_AVAILABLE' =>
         'لم يعد هذا الموعد متاحًا للاختيار. حدّث الطلب وحاول مجددًا.',
       'TIME_SLOT_UNAVAILABLE' => 'هذا الموعد لم يعد متاحًا. اختر موعدًا آخر.',
       'SESSION_NOT_JOINABLE_YET' => 'لم يحن وقت الانضمام بعد.',
-      'SESSION_JOIN_WINDOW_CLOSED' =>
-        'انتهت فترة الانضمام إلى هذه الجلسة.',
+      'SESSION_JOIN_WINDOW_CLOSED' => 'انتهت فترة الانضمام إلى هذه الجلسة.',
       'SESSION_NOT_COMPLETABLE_YET' =>
         'يمكن إكمال الجلسة بعد انتهاء موعدها المحدد.',
+      'SESSION_CANCELLATION_WINDOW_CLOSED' =>
+        'لم يعد إلغاء الجلسة متاحًا بعد فتح نافذة الانضمام.',
+      'SESSION_NO_SHOW_NOT_AVAILABLE' =>
+        'يصبح الإبلاغ عن عدم الحضور متاحًا بعد انتهاء نافذة الانضمام.',
       'ZOOM_MEETING_NOT_FOUND' =>
         'لم يعد اجتماع Zoom متاحًا. تحقق من حالة الجلسة.',
       'ZOOM_NOT_READY' => 'رابط اجتماع Zoom غير جاهز بعد.',
@@ -648,16 +692,12 @@ class ProjectHelpSessionsL10n {
         'استغرق تجهيز رابط Zoom وقتًا أطول من المعتاد. انتظر قليلًا ثم حاول مرة أخرى.',
       'NETWORK_ERROR' =>
         'تعذر الاتصال بالخادم. تحقق من الاتصال وحاول مرة أخرى.',
-      'VALIDATION_ERROR' =>
-        'تحقق من الحقول المطلوبة وحاول مرة أخرى.',
+      'VALIDATION_ERROR' => 'تحقق من الحقول المطلوبة وحاول مرة أخرى.',
       'INVALID_SESSION_STATE' ||
-      'HELP_SESSION_INVALID_STATE' =>
-        'لا يمكن إلغاء الجلسة في حالتها الحالية.',
-      'INTERNAL_ERROR' =>
-        'حدث خطأ غير متوقع. حاول مرة أخرى.',
+      'HELP_SESSION_INVALID_STATE' => 'لا يمكن إلغاء الجلسة في حالتها الحالية.',
+      'INTERNAL_ERROR' => 'حدث خطأ غير متوقع. حاول مرة أخرى.',
       'PROJECT_HELP_SESSION_NOT_FOUND' ||
-      'NOT_FOUND' =>
-        'تعذر العثور على الجلسة.',
+      'NOT_FOUND' => 'تعذر العثور على الجلسة.',
       _ => '',
     };
   }
@@ -666,17 +706,16 @@ class ProjectHelpSessionsL10n {
     return switch (code) {
       'HELP_SESSIONS_DISABLED' =>
         'The project creator is not accepting help-session requests right now.',
-      'AUTHOR_UNAVAILABLE' =>
-        'Help sessions are unavailable for this project.',
+      'AUTHOR_UNAVAILABLE' => 'Help sessions are unavailable for this project.',
       'BUILD_NOT_ELIGIBLE' =>
         'This build is not eligible for a help session right now.',
       'ACTIVE_SESSION_EXISTS' =>
         'You already have an active help session for this project.',
-      'DURATION_NOT_ALLOWED' => 'The selected session duration is not available.',
+      'DURATION_NOT_ALLOWED' =>
+        'The selected session duration is not available.',
       'WEEKLY_LIMIT_REACHED' =>
         'You reached the weekly session limit for this week.',
-      'INVALID_TIME_OPTIONS' ||
-      'OPTION_NOT_AVAILABLE' =>
+      'INVALID_TIME_OPTIONS' || 'OPTION_NOT_AVAILABLE' =>
         'This time option is no longer available. Refresh and try again.',
       'TIME_SLOT_UNAVAILABLE' =>
         'This time slot is no longer available. Choose another one.',
@@ -685,6 +724,10 @@ class ProjectHelpSessionsL10n {
         'The join window for this session has closed.',
       'SESSION_NOT_COMPLETABLE_YET' =>
         'The session can be completed after its scheduled end time.',
+      'SESSION_CANCELLATION_WINDOW_CLOSED' =>
+        'The session can no longer be cancelled after the join window opens.',
+      'SESSION_NO_SHOW_NOT_AVAILABLE' =>
+        'No-show reporting becomes available after the join window closes.',
       'ZOOM_MEETING_NOT_FOUND' =>
         'The Zoom meeting is no longer available. Check the session status.',
       'ZOOM_NOT_READY' => 'The Zoom meeting link is not ready yet.',
@@ -708,26 +751,22 @@ class ProjectHelpSessionsL10n {
         'Zoom is taking longer than usual. Wait a moment and try again.',
       'NETWORK_ERROR' =>
         'Could not reach the server. Check your connection and try again.',
-      'VALIDATION_ERROR' =>
-        'Check the required fields and try again.',
-      'INVALID_SESSION_STATE' ||
-      'HELP_SESSION_INVALID_STATE' =>
+      'VALIDATION_ERROR' => 'Check the required fields and try again.',
+      'INVALID_SESSION_STATE' || 'HELP_SESSION_INVALID_STATE' =>
         'This session cannot be cancelled in its current state.',
-      'INTERNAL_ERROR' =>
-        'Something unexpected went wrong. Please try again.',
+      'INTERNAL_ERROR' => 'Something unexpected went wrong. Please try again.',
       'PROJECT_HELP_SESSION_NOT_FOUND' ||
-      'NOT_FOUND' =>
-        'The help session could not be found.',
+      'NOT_FOUND' => 'The help session could not be found.',
       _ => '',
     };
   }
 
   static LocalizedText localizedError(String? code) => LocalizedText(
-        en: errorMessageEn(code).isEmpty
-            ? 'Something went wrong. Please try again.'
-            : errorMessageEn(code),
-        ar: errorMessage(code).isEmpty
-            ? 'حدث خطأ. حاول مرة أخرى.'
-            : errorMessage(code),
-      );
+    en: errorMessageEn(code).isEmpty
+        ? 'Something went wrong. Please try again.'
+        : errorMessageEn(code),
+    ar: errorMessage(code).isEmpty
+        ? 'حدث خطأ. حاول مرة أخرى.'
+        : errorMessage(code),
+  );
 }

@@ -105,6 +105,10 @@ export const mapProjectHelpSessionPrivateDto = (
   provider: meetingState.meetingReady ? ('ZOOM' as const) : null,
   joinAvailableAt: meetingState.joinAvailableAt,
   joinClosesAt: meetingState.joinClosesAt,
+  noShowReportedAt:
+    viewerRole === 'learner'
+      ? session.learnerReportedAuthorNoShowAt?.toISOString() ?? null
+      : session.authorReportedLearnerNoShowAt?.toISOString() ?? null,
   zoomFailureState:
     session.status === 'SCHEDULING_FAILED' ? session.zoomLastFailureCode : null,
   };

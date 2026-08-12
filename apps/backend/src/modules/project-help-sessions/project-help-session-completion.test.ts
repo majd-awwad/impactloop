@@ -16,13 +16,17 @@ import {
   getLearnerProjectHelpSession,
   INVALID_SESSION_STATE,
   PROJECT_HELP_SESSION_NOT_FOUND,
+  reportProjectHelpSessionNoShow,
+  SESSION_CANCELLATION_WINDOW_CLOSED,
+  SESSION_NO_SHOW_NOT_AVAILABLE,
   SESSION_NOT_COMPLETABLE_YET,
   setProjectHelpSessionNowForTests,
 } from './project-help-session.service.js';
 import { computeProjectHelpSessionScheduledEnd } from './project-help-session-completion.js';
+import { computeProjectHelpSessionMeetingWindow } from './project-help-session-zoom-windows.js';
 import { ensureProjectHelpSessionNotebookPage } from './project-help-session-notebook-handoff.service.js';
 import {
-  getAuthorProjectHelpSessionZoomStart,
+  getAuthorProjectHelpSessionZoomJoin,
   getLearnerProjectHelpSessionZoomJoin,
 } from './project-help-session-zoom.service.js';
 import {
@@ -123,6 +127,141 @@ after(async () => {
 });
 
 describe('project help session completion (PHS-06)', () => {
+  test('scheduled action rules follow before, active, after, and terminal phases', async () => {
+    const { author, learner, session } = await setupScheduledSession('phases');
+    const stored = await prisma.projectHelpSession.findUniqueOrThrow({
+      where: { id: session.id },
+      include: { selectedTimeOption: true },
+    });
+    const window = computeProjectHelpSessionMeetingWindow({
+      startsAt: stored.selectedTimeOption!.startsAt,
+      durationMinutes: stored.durationMinutes,
+    });
+
+    setProjectHelpSessionNowForTests(
+      new Date(window.joinAvailableAt.getTime() - 1),
+    );
+    const beforeLearner = await getLearnerProjectHelpSession(
+      learner.id,
+      session.id,
+    );
+    const beforeAuthor = await getAuthorProjectHelpSession(author.id, session.id);
+    assert.equal(beforeLearner.allowedActions.canCancel, true);
+    assert.equal(beforeLearner.allowedActions.canJoin, false);
+    assert.equal(beforeLearner.allowedActions.canReportNoShow, false);
+    assert.equal(beforeAuthor.allowedActions.canComplete, false);
+
+    setProjectHelpSessionNowForTests(window.joinAvailableAt);
+    const activeLearner = await getLearnerProjectHelpSession(
+      learner.id,
+      session.id,
+    );
+    const activeAuthor = await getAuthorProjectHelpSession(author.id, session.id);
+    assert.equal(activeLearner.allowedActions.canCancel, false);
+    assert.equal(activeLearner.allowedActions.canJoin, true);
+    assert.equal(activeAuthor.allowedActions.canCancel, false);
+    assert.equal(activeAuthor.allowedActions.canJoin, true);
+    await assertAppError(
+      cancelProjectHelpSession({
+        sessionId: session.id,
+        actorId: learner.id,
+        actorRole: 'learner',
+        reason: 'Too late',
+      }),
+      { statusCode: 409, code: SESSION_CANCELLATION_WINDOW_CLOSED },
+    );
+    await assertAppError(
+      reportProjectHelpSessionNoShow({
+        sessionId: session.id,
+        actorId: learner.id,
+        actorRole: 'learner',
+      }),
+      { statusCode: 409, code: SESSION_NO_SHOW_NOT_AVAILABLE },
+    );
+
+    setProjectHelpSessionNowForTests(
+      new Date(window.joinClosesAt.getTime() + 1),
+    );
+    const afterLearner = await getLearnerProjectHelpSession(
+      learner.id,
+      session.id,
+    );
+    const afterAuthor = await getAuthorProjectHelpSession(author.id, session.id);
+    assert.equal(afterLearner.allowedActions.canJoin, false);
+    assert.equal(afterLearner.allowedActions.canCancel, false);
+    assert.equal(afterLearner.allowedActions.canReportNoShow, true);
+    assert.equal(afterAuthor.allowedActions.canComplete, true);
+    assert.equal(afterAuthor.allowedActions.canReportNoShow, true);
+
+    const learnerReport = await reportProjectHelpSessionNoShow({
+      sessionId: session.id,
+      actorId: learner.id,
+      actorRole: 'learner',
+    });
+    const authorReport = await reportProjectHelpSessionNoShow({
+      sessionId: session.id,
+      actorId: author.id,
+      actorRole: 'author',
+    });
+    assert.ok(learnerReport.noShowReportedAt);
+    assert.ok(authorReport.noShowReportedAt);
+    assert.equal(learnerReport.allowedActions.canReportNoShow, false);
+    assert.equal(authorReport.allowedActions.canReportNoShow, false);
+
+    const completed = await authorCompleteProjectHelpSession(author.id, session.id);
+    assert.equal(completed.status, 'COMPLETED');
+    assert.equal(completed.allowedActions.canJoin, false);
+    assert.equal(completed.allowedActions.canCancel, false);
+    assert.equal(completed.allowedActions.canComplete, false);
+    assert.equal(completed.allowedActions.canReportNoShow, false);
+    await assertAppError(
+      reportProjectHelpSessionNoShow({
+        sessionId: session.id,
+        actorId: learner.id,
+        actorRole: 'learner',
+      }),
+      { statusCode: 409, code: INVALID_SESSION_STATE },
+    );
+  });
+
+  test('no-show reporting enforces canonical participant ownership', async () => {
+    const { author, learner, session } = await setupScheduledSession('no-show-auth');
+    const stranger = await createLearner('no-show-stranger');
+    const stored = await prisma.projectHelpSession.findUniqueOrThrow({
+      where: { id: session.id },
+      include: { selectedTimeOption: true },
+    });
+    const window = computeProjectHelpSessionMeetingWindow({
+      startsAt: stored.selectedTimeOption!.startsAt,
+      durationMinutes: stored.durationMinutes,
+    });
+    setProjectHelpSessionNowForTests(
+      new Date(window.joinClosesAt.getTime() + 1),
+    );
+    for (const attempt of [
+      reportProjectHelpSessionNoShow({
+        sessionId: session.id,
+        actorId: author.id,
+        actorRole: 'learner',
+      }),
+      reportProjectHelpSessionNoShow({
+        sessionId: session.id,
+        actorId: learner.id,
+        actorRole: 'author',
+      }),
+      reportProjectHelpSessionNoShow({
+        sessionId: session.id,
+        actorId: stranger.id,
+        actorRole: 'learner',
+      }),
+    ]) {
+      await assertAppError(attempt, {
+        statusCode: 404,
+        code: 'NOT_FOUND',
+      });
+    }
+  });
+
   test('authorization: only canonical author can complete', async () => {
     const { author, learner, session } = await setupScheduledSession('auth');
     const scheduledEnd = await scheduledEndFor(session.id);
@@ -267,7 +406,7 @@ describe('project help session completion (PHS-06)', () => {
     assert.ok(stored?.status === 'COMPLETED' || stored?.status === 'CANCELLED');
   });
 
-  test('completed blocks cancel/join/start', async () => {
+  test('completed blocks cancel and both private Join actions', async () => {
     const { author, learner, session } = await setupScheduledSession('terminal');
     const scheduledEnd = await scheduledEndFor(session.id);
     setProjectHelpSessionNowForTests(scheduledEnd);
@@ -289,7 +428,7 @@ describe('project help session completion (PHS-06)', () => {
     );
 
     await assertAppError(
-      getAuthorProjectHelpSessionZoomStart(author.id, session.id),
+      getAuthorProjectHelpSessionZoomJoin(author.id, session.id),
       { statusCode: 409, code: 'HELP_SESSION_INVALID_STATE' },
     );
   });

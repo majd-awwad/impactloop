@@ -32,7 +32,10 @@ ProjectHelpSession _session({
       id: 'project-1',
       title: 'Solar Lamp',
     ),
-    build: const ProjectHelpSessionBuildSummary(id: 'build-1', attemptNumber: 1),
+    build: const ProjectHelpSessionBuildSummary(
+      id: 'build-1',
+      attemptNumber: 1,
+    ),
     learner: const ProjectHelpSessionUserSummary(
       id: 'learner-1',
       displayName: 'Learner',
@@ -59,35 +62,35 @@ ProjectHelpSession _session({
 class _LearnerAuth extends AuthController {
   @override
   AuthState build() => AuthState(
-        user: User(
-          id: 'learner-1',
-          email: 'learner@test.com',
-          displayName: 'Learner',
-          accountStatus: 'ACTIVE',
-          activeRole: 'LEARNER',
-          roles: const ['LEARNER'],
-          createdAt: DateTime.utc(2026),
-        ),
-        accessToken: 'token',
-        hasBootstrapped: true,
-      );
+    user: User(
+      id: 'learner-1',
+      email: 'learner@test.com',
+      displayName: 'Learner',
+      accountStatus: 'ACTIVE',
+      activeRole: 'LEARNER',
+      roles: const ['LEARNER'],
+      createdAt: DateTime.utc(2026),
+    ),
+    accessToken: 'token',
+    hasBootstrapped: true,
+  );
 }
 
 class _AuthorAuth extends AuthController {
   @override
   AuthState build() => AuthState(
-        user: User(
-          id: 'author-1',
-          email: 'author@test.com',
-          displayName: 'Author',
-          accountStatus: 'ACTIVE',
-          activeRole: 'LEARNER',
-          roles: const ['LEARNER'],
-          createdAt: DateTime.utc(2026),
-        ),
-        accessToken: 'token',
-        hasBootstrapped: true,
-      );
+    user: User(
+      id: 'author-1',
+      email: 'author@test.com',
+      displayName: 'Author',
+      accountStatus: 'ACTIVE',
+      activeRole: 'LEARNER',
+      roles: const ['LEARNER'],
+      createdAt: DateTime.utc(2026),
+    ),
+    accessToken: 'token',
+    hasBootstrapped: true,
+  );
 }
 
 Widget _wrap(
@@ -96,10 +99,7 @@ Widget _wrap(
   List overrides = const [],
 }) {
   return ProviderScope(
-    overrides: [
-      authControllerProvider.overrideWith(auth),
-      ...overrides,
-    ],
+    overrides: [authControllerProvider.overrideWith(auth), ...overrides],
     child: MaterialApp(
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -113,8 +113,7 @@ Widget _wrap(
 
 void main() {
   group('PHS-06 author completion', () {
-    testWidgets('scheduled before end disables complete and shows availability',
-        (tester) async {
+    testWidgets('scheduled before end hides complete action', (tester) async {
       final availableAt = DateTime.now().toUtc().add(const Duration(hours: 1));
       await tester.pumpWidget(
         _wrap(
@@ -141,13 +140,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final button = find.widgetWithText(
-        OutlinedButton,
-        ProjectHelpSessionsL10n.markSessionCompleted.en,
+      expect(
+        find.text(ProjectHelpSessionsL10n.markSessionCompleted.en),
+        findsNothing,
       );
-      expect(button, findsOneWidget);
-      expect(tester.widget<OutlinedButton>(button).onPressed, isNull);
-      expect(find.textContaining('Completion available at'), findsOneWidget);
     });
 
     testWidgets('canComplete enables completion action', (tester) async {
@@ -197,7 +193,7 @@ void main() {
       );
       await tester.pump();
       expect(boundaryCalls, 0);
-      await tester.pump(const Duration(milliseconds: 60));
+      await tester.pump(const Duration(milliseconds: 600));
       expect(boundaryCalls, 1);
       await tester.pump(const Duration(seconds: 1));
       expect(boundaryCalls, 1);
@@ -205,8 +201,9 @@ void main() {
   });
 
   group('PHS-06 learner completed', () {
-    testWidgets('completed state shows notebook CTA only when completed',
-        (tester) async {
+    testWidgets('completed state shows final summary without action buttons', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrap(
           const LearnerHelpSessionDetailPage(sessionId: 'session-1'),
@@ -225,10 +222,19 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text(ProjectHelpSessionsL10n.addSessionNotesToNotebook.en),
-        findsOneWidget,
+        find.text(ProjectHelpSessionsL10n.completedTitle.en),
+        findsWidgets,
       );
       expect(find.text(ProjectHelpSessionsL10n.joinZoom.en), findsNothing);
+      expect(find.text(ProjectHelpSessionsL10n.cancelRequest.en), findsNothing);
+      expect(
+        find.text(ProjectHelpSessionsL10n.markSessionCompleted.en),
+        findsNothing,
+      );
+      expect(
+        find.text(ProjectHelpSessionsL10n.reportAuthorNoShow.en),
+        findsNothing,
+      );
     });
 
     testWidgets('scheduled state hides notebook CTA', (tester) async {
@@ -269,7 +275,10 @@ void main() {
           createdAt: DateTime.utc(2026),
           relatedEntityType: 'PROJECT_HELP_SESSION',
           relatedEntityId: 'session-1',
-          metadata: const {'recipientRole': 'LEARNER', 'sessionId': 'session-1'},
+          metadata: const {
+            'recipientRole': 'LEARNER',
+            'sessionId': 'session-1',
+          },
         ),
       );
       expect(route, learnerHelpSessionDetailRoute('session-1'));

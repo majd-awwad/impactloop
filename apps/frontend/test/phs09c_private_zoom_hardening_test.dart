@@ -226,6 +226,25 @@ void main() {
   );
 
   test(
+    'learner and author no-show reports use their private POST routes',
+    () async {
+      final adapter = _PrivateZoomActionAdapter();
+      final dio = Dio()..httpClientAdapter = adapter;
+      final api = ProjectHelpSessionsApi(dio);
+      await api.reportAuthorNoShow('session-1');
+      await api.reportLearnerNoShow('session-1');
+      expect(adapter.requests.map((request) => request.method), [
+        'POST',
+        'POST',
+      ]);
+      expect(adapter.requests.map((request) => request.path), [
+        '/api/project-help-sessions/learner/session-1/no-show',
+        '/api/project-help-sessions/author/session-1/no-show',
+      ]);
+    },
+  );
+
+  test(
     'logout clears PHS caches and User B refetches the same family key',
     () async {
       final repository = _SwitchingAuthRepository(_user('israa'));

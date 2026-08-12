@@ -12,7 +12,7 @@ class ProjectHelpSessionsApi {
   static const _learnerSessionsPath = '/api/project-help-sessions/learner';
   static const _authorSessionsPath = '/api/project-help-sessions/author';
 
-  /// Zoom start/join can call the real Zoom API and exceed the default client timeout.
+  /// Provisioning retries can call the real Zoom API and exceed the default timeout.
   static final _zoomRequestOptions = Options(
     sendTimeout: const Duration(seconds: 60),
     receiveTimeout: const Duration(seconds: 60),
@@ -25,6 +25,7 @@ class ProjectHelpSessionsApi {
     // A 401 is surfaced and the user may retry after re-authentication.
     extra: const {AuthInterceptor.skipAuthRefreshExtraKey: true},
   );
+
   String _availabilityPath(String projectId) =>
       '/api/learning-projects/$projectId/help-sessions/availability';
 
@@ -55,6 +56,7 @@ class ProjectHelpSessionsApi {
       ProjectHelpSessionProjectOptionsResult.fromJson,
     );
   }
+
   Future<ProjectHelpSession> createRequest({
     required String buildId,
     required CreateProjectHelpSessionRequestPayload payload,
@@ -74,10 +76,7 @@ class ProjectHelpSessionsApi {
     String? status,
     String? buildId,
   }) {
-    final queryParameters = <String, dynamic>{
-      'page': page,
-      'limit': limit,
-    };
+    final queryParameters = <String, dynamic>{'page': page, 'limit': limit};
     if (status != null) {
       queryParameters['status'] = status;
     }
@@ -143,6 +142,15 @@ class ProjectHelpSessionsApi {
     );
   }
 
+  Future<ProjectHelpSession> reportAuthorNoShow(String sessionId) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_learnerSessionsPath/$sessionId/no-show',
+      ),
+      ProjectHelpSession.fromJson,
+    );
+  }
+
   Future<ProjectHelpSessionSettings> fetchSettings(String projectId) {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>(_settingsPath(projectId)),
@@ -169,10 +177,7 @@ class ProjectHelpSessionsApi {
     String? status,
     String? projectId,
   }) {
-    final queryParameters = <String, dynamic>{
-      'page': page,
-      'limit': limit,
-    };
+    final queryParameters = <String, dynamic>{'page': page, 'limit': limit};
     if (status != null) {
       queryParameters['status'] = status;
     }
@@ -268,6 +273,16 @@ class ProjectHelpSessionsApi {
       ProjectHelpSessionJoinResult.fromJson,
     );
   }
+
+  Future<ProjectHelpSession> reportLearnerNoShow(String sessionId) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_authorSessionsPath/$sessionId/no-show',
+      ),
+      ProjectHelpSession.fromJson,
+    );
+  }
+
   Future<ProjectHelpSession> completeSession(String sessionId) {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(

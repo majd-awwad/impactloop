@@ -19,14 +19,14 @@ ProjectHelpSession _authorSession({
   ProjectHelpSessionStatus status = ProjectHelpSessionStatus.pending,
   ProjectHelpSessionAuthorAllowedActions authorAllowedActions =
       const ProjectHelpSessionAuthorAllowedActions(
-    canAcceptOption: true,
-    canProposeAlternative: true,
-    canDecline: true,
-    canCancel: false,
-    canJoin: false,
-    canRetryZoom: false,
-    canComplete: false,
-  ),
+        canAcceptOption: true,
+        canProposeAlternative: true,
+        canDecline: true,
+        canCancel: false,
+        canJoin: false,
+        canRetryZoom: false,
+        canComplete: false,
+      ),
   List<ProjectHelpSessionTimeOption> timeOptions = const [],
 }) {
   return ProjectHelpSession(
@@ -36,7 +36,10 @@ ProjectHelpSession _authorSession({
       id: 'project-1',
       title: 'Solar Lamp',
     ),
-    build: const ProjectHelpSessionBuildSummary(id: 'build-1', attemptNumber: 1),
+    build: const ProjectHelpSessionBuildSummary(
+      id: 'build-1',
+      attemptNumber: 1,
+    ),
     learner: const ProjectHelpSessionUserSummary(
       id: 'learner-1',
       displayName: 'Learner One',
@@ -60,18 +63,18 @@ ProjectHelpSession _authorSession({
 class _AuthController extends AuthController {
   @override
   AuthState build() => AuthState(
-        user: User(
-          id: 'author-1',
-          email: 'author@test.com',
-          displayName: 'Author',
-          accountStatus: 'ACTIVE',
-          activeRole: 'LEARNER',
-          roles: const ['LEARNER'],
-          createdAt: DateTime.utc(2026),
-        ),
-        accessToken: 'token',
-        hasBootstrapped: true,
-      );
+    user: User(
+      id: 'author-1',
+      email: 'author@test.com',
+      displayName: 'Author',
+      accountStatus: 'ACTIVE',
+      activeRole: 'LEARNER',
+      roles: const ['LEARNER'],
+      createdAt: DateTime.utc(2026),
+    ),
+    accessToken: 'token',
+    hasBootstrapped: true,
+  );
 }
 
 Widget _wrap(Widget child, {List overrides = const []}) {
@@ -185,15 +188,16 @@ void main() {
             authorHelpSessionDetailProvider('session-author-1').overrideWith(
               (ref) async => _authorSession(
                 timeOptions: options,
-                authorAllowedActions: const ProjectHelpSessionAuthorAllowedActions(
-                  canAcceptOption: true,
-                  canProposeAlternative: true,
-                  canDecline: true,
-                  canCancel: false,
-                  canJoin: false,
-                  canRetryZoom: false,
-    canComplete: false,
-                ),
+                authorAllowedActions:
+                    const ProjectHelpSessionAuthorAllowedActions(
+                      canAcceptOption: true,
+                      canProposeAlternative: true,
+                      canDecline: true,
+                      canCancel: false,
+                      canJoin: false,
+                      canRetryZoom: false,
+                      canComplete: false,
+                    ),
               ),
             ),
           ],
@@ -216,15 +220,16 @@ void main() {
             authorHelpSessionDetailProvider('session-author-1').overrideWith(
               (ref) async => _authorSession(
                 status: ProjectHelpSessionStatus.schedulingFailed,
-                authorAllowedActions: const ProjectHelpSessionAuthorAllowedActions(
-                  canAcceptOption: false,
-                  canProposeAlternative: false,
-                  canDecline: false,
-                  canCancel: true,
-                  canJoin: false,
-                  canRetryZoom: true,
-                  canComplete: false,
-                ),
+                authorAllowedActions:
+                    const ProjectHelpSessionAuthorAllowedActions(
+                      canAcceptOption: false,
+                      canProposeAlternative: false,
+                      canDecline: false,
+                      canCancel: true,
+                      canJoin: false,
+                      canRetryZoom: true,
+                      canComplete: false,
+                    ),
               ),
             ),
           ],
@@ -237,7 +242,9 @@ void main() {
       );
     });
 
-    testWidgets('SCHEDULED shows disabled Join when canJoin is false', (tester) async {
+    testWidgets('SCHEDULED shows disabled Join when canJoin is false', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrap(
           const CreatorHelpSessionDetailPage(sessionId: 'session-author-1'),
@@ -245,15 +252,16 @@ void main() {
             authorHelpSessionDetailProvider('session-author-1').overrideWith(
               (ref) async => _authorSession(
                 status: ProjectHelpSessionStatus.scheduled,
-                authorAllowedActions: const ProjectHelpSessionAuthorAllowedActions(
-                  canAcceptOption: false,
-                  canProposeAlternative: false,
-                  canDecline: false,
-                  canCancel: true,
-                  canJoin: false,
-                  canRetryZoom: false,
-    canComplete: false,
-                ),
+                authorAllowedActions:
+                    const ProjectHelpSessionAuthorAllowedActions(
+                      canAcceptOption: false,
+                      canProposeAlternative: false,
+                      canDecline: false,
+                      canCancel: true,
+                      canJoin: false,
+                      canRetryZoom: false,
+                      canComplete: false,
+                    ),
               ),
             ),
           ],
@@ -276,9 +284,9 @@ void main() {
         _wrap(
           const CreatorHelpSessionDetailPage(sessionId: 'session-author-1'),
           overrides: [
-            authorHelpSessionDetailProvider('session-author-1').overrideWith(
-              (ref) async => _authorSession(),
-            ),
+            authorHelpSessionDetailProvider(
+              'session-author-1',
+            ).overrideWith((ref) async => _authorSession()),
           ],
         ),
       );

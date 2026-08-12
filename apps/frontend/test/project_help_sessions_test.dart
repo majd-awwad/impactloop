@@ -20,7 +20,9 @@ import 'package:frontend/features/project_help_sessions/presentation/widgets/bui
 import 'package:frontend/features/project_help_sessions/presentation/widgets/help_session_request_form.dart';
 import 'package:frontend/features/profile/presentation/widgets/learner_profile_dashboard_widgets.dart';
 
-ProjectBuild _testBuild({ProjectBuildStatus status = ProjectBuildStatus.inProgress}) {
+ProjectBuild _testBuild({
+  ProjectBuildStatus status = ProjectBuildStatus.inProgress,
+}) {
   return ProjectBuild(
     id: 'build-1',
     projectId: 'project-1',
@@ -76,7 +78,10 @@ ProjectHelpSession _session({
       id: 'project-1',
       title: 'Solar Lamp',
     ),
-    build: const ProjectHelpSessionBuildSummary(id: 'build-1', attemptNumber: 1),
+    build: const ProjectHelpSessionBuildSummary(
+      id: 'build-1',
+      attemptNumber: 1,
+    ),
     learner: const ProjectHelpSessionUserSummary(
       id: 'learner-1',
       displayName: 'Learner One',
@@ -118,18 +123,18 @@ const _authorUnavailable = ProjectHelpSessionAvailability(
 class _AuthController extends AuthController {
   @override
   AuthState build() => AuthState(
-        user: User(
-          id: 'learner-1',
-          email: 'learner@test.com',
-          displayName: 'Learner',
-          accountStatus: 'ACTIVE',
-          activeRole: 'LEARNER',
-          roles: const ['LEARNER'],
-          createdAt: DateTime.utc(2026),
-        ),
-        accessToken: 'token',
-        hasBootstrapped: true,
-      );
+    user: User(
+      id: 'learner-1',
+      email: 'learner@test.com',
+      displayName: 'Learner',
+      accountStatus: 'ACTIVE',
+      activeRole: 'LEARNER',
+      roles: const ['LEARNER'],
+      createdAt: DateTime.utc(2026),
+    ),
+    accessToken: 'token',
+    hasBootstrapped: true,
+  );
 }
 
 Widget _wrap(Widget child, {List overrides = const []}) {
@@ -181,7 +186,10 @@ void main() {
         code: 'VALIDATION_ERROR',
         details: {
           'issues': [
-            {'path': 'proposedTimes', 'message': 'Proposed times must be distinct.'},
+            {
+              'path': 'proposedTimes',
+              'message': 'Proposed times must be distinct.',
+            },
           ],
         },
       );
@@ -207,10 +215,7 @@ void main() {
         contains('Meeting setup is delayed'),
       );
       expect(
-        resolveProjectHelpSessionErrorMessage(
-          'TIMEOUT',
-          isArabic: false,
-        ),
+        resolveProjectHelpSessionErrorMessage('TIMEOUT', isArabic: false),
         contains('longer than usual'),
       );
     });
@@ -222,10 +227,12 @@ void main() {
         _wrap(
           BuildHelpSessionSection(buildRecord: _testBuild()),
           overrides: [
-            projectHelpSessionAvailabilityProvider('project-1')
-                .overrideWith((ref) async => _available),
-            activeHelpSessionForBuildProvider('build-1')
-                .overrideWith((ref) async => null),
+            projectHelpSessionAvailabilityProvider(
+              'project-1',
+            ).overrideWith((ref) async => _available),
+            activeHelpSessionForBuildProvider(
+              'build-1',
+            ).overrideWith((ref) async => null),
           ],
         ),
       );
@@ -239,10 +246,12 @@ void main() {
         _wrap(
           BuildHelpSessionSection(buildRecord: _testBuild()),
           overrides: [
-            projectHelpSessionAvailabilityProvider('project-1')
-                .overrideWith((ref) async => _disabled),
-            activeHelpSessionForBuildProvider('build-1')
-                .overrideWith((ref) async => null),
+            projectHelpSessionAvailabilityProvider(
+              'project-1',
+            ).overrideWith((ref) async => _disabled),
+            activeHelpSessionForBuildProvider(
+              'build-1',
+            ).overrideWith((ref) async => null),
           ],
         ),
       );
@@ -257,15 +266,19 @@ void main() {
       );
     });
 
-    testWidgets('shows unavailable copy for author unavailable', (tester) async {
+    testWidgets('shows unavailable copy for author unavailable', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrap(
           BuildHelpSessionSection(buildRecord: _testBuild()),
           overrides: [
-            projectHelpSessionAvailabilityProvider('project-1')
-                .overrideWith((ref) async => _authorUnavailable),
-            activeHelpSessionForBuildProvider('build-1')
-                .overrideWith((ref) async => null),
+            projectHelpSessionAvailabilityProvider(
+              'project-1',
+            ).overrideWith((ref) async => _authorUnavailable),
+            activeHelpSessionForBuildProvider(
+              'build-1',
+            ).overrideWith((ref) async => null),
           ],
         ),
       );
@@ -282,8 +295,9 @@ void main() {
         _wrap(
           BuildHelpSessionSection(buildRecord: _testBuild()),
           overrides: [
-            projectHelpSessionAvailabilityProvider('project-1')
-                .overrideWith((ref) async => _available),
+            projectHelpSessionAvailabilityProvider(
+              'project-1',
+            ).overrideWith((ref) async => _available),
             activeHelpSessionForBuildProvider('build-1').overrideWith(
               (ref) async => _session(status: ProjectHelpSessionStatus.pending),
             ),
@@ -314,11 +328,7 @@ void main() {
     testWidgets('rejects short problem description', (tester) async {
       await tester.binding.setSurfaceSize(const Size(900, 1600));
       addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(
-        _wrap(
-          _requestForm(),
-        ),
-      );
+      await tester.pumpWidget(_wrap(_requestForm()));
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField).first, 'too short');
@@ -357,9 +367,7 @@ void main() {
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: const [Locale('ar'), Locale('en')],
-            home: Scaffold(
-              body: _requestForm(),
-            ),
+            home: Scaffold(body: _requestForm()),
           ),
         ),
       );
@@ -399,7 +407,8 @@ void main() {
           const LearnerHelpSessionDetailPage(sessionId: 'session-1'),
           overrides: [
             learnerHelpSessionDetailProvider('session-1').overrideWith(
-              (ref) async => _session(status: ProjectHelpSessionStatus.zoomPending),
+              (ref) async =>
+                  _session(status: ProjectHelpSessionStatus.zoomPending),
             ),
           ],
         ),
@@ -418,14 +427,19 @@ void main() {
             learnerHelpSessionDetailProvider('session-1').overrideWith(
               (ref) async => _session(
                 status: ProjectHelpSessionStatus.scheduled,
-                selectedStartsAt: DateTime.utc(2026, 6, 1, 12),
-                joinAvailableAt: DateTime.utc(2026, 6, 1, 11, 45),
-                learnerAllowedActions: const ProjectHelpSessionLearnerAllowedActions(
-                  canAcceptAlternative: false,
-                  canRejectAlternative: false,
-                  canCancel: true,
-                  canJoin: false,
+                selectedStartsAt: DateTime.now().toUtc().add(
+                  const Duration(days: 1, minutes: 15),
                 ),
+                joinAvailableAt: DateTime.now().toUtc().add(
+                  const Duration(days: 1),
+                ),
+                learnerAllowedActions:
+                    const ProjectHelpSessionLearnerAllowedActions(
+                      canAcceptAlternative: false,
+                      canRejectAlternative: false,
+                      canCancel: true,
+                      canJoin: false,
+                    ),
               ),
             ),
           ],
@@ -435,9 +449,11 @@ void main() {
 
       expect(find.widgetWithText(FilledButton, 'Join Zoom'), findsOneWidget);
       expect(
-        tester.widget<FilledButton>(
-          find.widgetWithText(FilledButton, 'Join Zoom'),
-        ).onPressed,
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Join Zoom'),
+            )
+            .onPressed,
         isNull,
       );
     });
@@ -450,12 +466,13 @@ void main() {
             learnerHelpSessionDetailProvider('session-1').overrideWith(
               (ref) async => _session(
                 status: ProjectHelpSessionStatus.scheduled,
-                learnerAllowedActions: const ProjectHelpSessionLearnerAllowedActions(
-                  canAcceptAlternative: false,
-                  canRejectAlternative: false,
-                  canCancel: true,
-                  canJoin: true,
-                ),
+                learnerAllowedActions:
+                    const ProjectHelpSessionLearnerAllowedActions(
+                      canAcceptAlternative: false,
+                      canRejectAlternative: false,
+                      canCancel: true,
+                      canJoin: true,
+                    ),
               ),
             ),
           ],
@@ -556,9 +573,9 @@ void main() {
         ProviderScope(
           overrides: [
             authControllerProvider.overrideWith(_AuthController.new),
-            learnerHelpSessionDetailProvider('session-1').overrideWith(
-              (ref) async => _session(),
-            ),
+            learnerHelpSessionDetailProvider(
+              'session-1',
+            ).overrideWith((ref) async => _session()),
           ],
           child: MaterialApp.router(
             routerConfig: router,

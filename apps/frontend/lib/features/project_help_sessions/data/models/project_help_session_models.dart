@@ -148,25 +148,24 @@ enum ProjectHelpSessionStatus {
   }
 
   String get apiValue => switch (this) {
-        ProjectHelpSessionStatus.pending => 'PENDING',
-        ProjectHelpSessionStatus.alternativeProposed => 'ALTERNATIVE_PROPOSED',
-        ProjectHelpSessionStatus.zoomPending => 'ZOOM_PENDING',
-        ProjectHelpSessionStatus.schedulingFailed => 'SCHEDULING_FAILED',
-        ProjectHelpSessionStatus.scheduled => 'SCHEDULED',
-        ProjectHelpSessionStatus.declined => 'DECLINED',
-        ProjectHelpSessionStatus.cancelled => 'CANCELLED',
-        ProjectHelpSessionStatus.completed => 'COMPLETED',
-      };
+    ProjectHelpSessionStatus.pending => 'PENDING',
+    ProjectHelpSessionStatus.alternativeProposed => 'ALTERNATIVE_PROPOSED',
+    ProjectHelpSessionStatus.zoomPending => 'ZOOM_PENDING',
+    ProjectHelpSessionStatus.schedulingFailed => 'SCHEDULING_FAILED',
+    ProjectHelpSessionStatus.scheduled => 'SCHEDULED',
+    ProjectHelpSessionStatus.declined => 'DECLINED',
+    ProjectHelpSessionStatus.cancelled => 'CANCELLED',
+    ProjectHelpSessionStatus.completed => 'COMPLETED',
+  };
 
   bool get isActive => switch (this) {
-        ProjectHelpSessionStatus.pending ||
-        ProjectHelpSessionStatus.alternativeProposed ||
-        ProjectHelpSessionStatus.zoomPending ||
-        ProjectHelpSessionStatus.schedulingFailed ||
-        ProjectHelpSessionStatus.scheduled =>
-          true,
-        _ => false,
-      };
+    ProjectHelpSessionStatus.pending ||
+    ProjectHelpSessionStatus.alternativeProposed ||
+    ProjectHelpSessionStatus.zoomPending ||
+    ProjectHelpSessionStatus.schedulingFailed ||
+    ProjectHelpSessionStatus.scheduled => true,
+    _ => false,
+  };
 }
 
 enum ProjectHelpSessionTimeOptionType { learnerProposed, authorAlternative }
@@ -223,7 +222,8 @@ class ProjectHelpSessionTimeOption {
       type: typeValue == 'AUTHOR_ALTERNATIVE'
           ? ProjectHelpSessionTimeOptionType.authorAlternative
           : ProjectHelpSessionTimeOptionType.learnerProposed,
-      startsAt: _parseDate(json['startsAt']) ??
+      startsAt:
+          _parseDate(json['startsAt']) ??
           DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       proposedBy: ProjectHelpSessionUserSummary.fromJson(
         (json['proposedBy'] as Map?)?.cast<String, dynamic>() ?? const {},
@@ -238,12 +238,14 @@ class ProjectHelpSessionLearnerAllowedActions {
     required this.canRejectAlternative,
     required this.canCancel,
     required this.canJoin,
+    this.canReportNoShow = false,
   });
 
   final bool canAcceptAlternative;
   final bool canRejectAlternative;
   final bool canCancel;
   final bool canJoin;
+  final bool canReportNoShow;
 
   factory ProjectHelpSessionLearnerAllowedActions.fromJson(
     Map<String, dynamic> json,
@@ -253,6 +255,7 @@ class ProjectHelpSessionLearnerAllowedActions {
       canRejectAlternative: json['canRejectAlternative'] == true,
       canCancel: json['canCancel'] == true,
       canJoin: json['canJoin'] == true,
+      canReportNoShow: json['canReportNoShow'] == true,
     );
   }
 
@@ -261,6 +264,7 @@ class ProjectHelpSessionLearnerAllowedActions {
     canRejectAlternative: false,
     canCancel: false,
     canJoin: false,
+    canReportNoShow: false,
   );
 }
 
@@ -271,6 +275,7 @@ class ProjectHelpSessionAuthorAllowedActions {
     required this.canDecline,
     required this.canCancel,
     required this.canJoin,
+    this.canReportNoShow = false,
     required this.canRetryZoom,
     required this.canComplete,
   });
@@ -280,6 +285,7 @@ class ProjectHelpSessionAuthorAllowedActions {
   final bool canDecline;
   final bool canCancel;
   final bool canJoin;
+  final bool canReportNoShow;
   final bool canRetryZoom;
   final bool canComplete;
 
@@ -292,6 +298,7 @@ class ProjectHelpSessionAuthorAllowedActions {
       canDecline: json['canDecline'] == true,
       canCancel: json['canCancel'] == true,
       canJoin: json['canJoin'] == true,
+      canReportNoShow: json['canReportNoShow'] == true,
       canRetryZoom: json['canRetryZoom'] == true,
       canComplete: json['canComplete'] == true,
     );
@@ -303,6 +310,7 @@ class ProjectHelpSessionAuthorAllowedActions {
     canDecline: false,
     canCancel: false,
     canJoin: false,
+    canReportNoShow: false,
     canRetryZoom: false,
     canComplete: false,
   );
@@ -334,11 +342,11 @@ class ProjectHelpSessionSettings {
   }
 
   Map<String, dynamic> toJson() => {
-        'isEnabled': isEnabled,
-        'allow15Minutes': allow15Minutes,
-        'allow30Minutes': allow30Minutes,
-        'weeklyLimit': weeklyLimit,
-      };
+    'isEnabled': isEnabled,
+    'allow15Minutes': allow15Minutes,
+    'allow30Minutes': allow30Minutes,
+    'weeklyLimit': weeklyLimit,
+  };
 
   ProjectHelpSessionSettings copyWith({
     bool? isEnabled,
@@ -447,6 +455,7 @@ class ProjectHelpSession {
     this.provider,
     this.joinAvailableAt,
     this.joinClosesAt,
+    this.noShowReportedAt,
     this.zoomFailureState,
   });
 
@@ -486,12 +495,13 @@ class ProjectHelpSession {
   final String? provider;
   final DateTime? joinAvailableAt;
   final DateTime? joinClosesAt;
+  final DateTime? noShowReportedAt;
   final String? zoomFailureState;
 
   factory ProjectHelpSession.fromJson(Map<String, dynamic> json) {
     final status =
         ProjectHelpSessionStatus.fromApi(json['status']?.toString()) ??
-            ProjectHelpSessionStatus.pending;
+        ProjectHelpSessionStatus.pending;
     final options = json['timeOptions'];
     return ProjectHelpSession(
       id: json['id']?.toString() ?? '',
@@ -518,17 +528,19 @@ class ProjectHelpSession {
       learnerTimeZone: json['learnerTimeZone']?.toString() ?? 'UTC',
       timeOptions: options is List
           ? options
-              .whereType<Map>()
-              .map(
-                (item) => ProjectHelpSessionTimeOption.fromJson(
-                  item.cast<String, dynamic>(),
-                ),
-              )
-              .toList()
+                .whereType<Map>()
+                .map(
+                  (item) => ProjectHelpSessionTimeOption.fromJson(
+                    item.cast<String, dynamic>(),
+                  ),
+                )
+                .toList()
           : const [],
       selectedTimeOptionId: json['selectedTimeOptionId']?.toString(),
       selectedStartsAt: _parseDate(json['selectedStartsAt']),
-      learnerAllowedActions: _parseLearnerAllowedActions(json['allowedActions']),
+      learnerAllowedActions: _parseLearnerAllowedActions(
+        json['allowedActions'],
+      ),
       authorAllowedActions: _parseAuthorAllowedActions(json['allowedActions']),
       alternativeProposedAt: _parseDate(json['alternativeProposedAt']),
       confirmedAt: _parseDate(json['confirmedAt']),
@@ -544,13 +556,16 @@ class ProjectHelpSession {
       scheduledEndsAt: _parseDate(json['scheduledEndsAt']),
       completionAvailableAt: _parseDate(json['completionAvailableAt']),
       createdAt:
-          _parseDate(json['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+          _parseDate(json['createdAt']) ??
+          DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt:
-          _parseDate(json['updatedAt']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+          _parseDate(json['updatedAt']) ??
+          DateTime.fromMillisecondsSinceEpoch(0),
       meetingReady: json['meetingReady'] == true,
       provider: json['provider']?.toString(),
       joinAvailableAt: _parseDate(json['joinAvailableAt']),
       joinClosesAt: _parseDate(json['joinClosesAt']),
+      noShowReportedAt: _parseDate(json['noShowReportedAt']),
       zoomFailureState: json['zoomFailureState']?.toString(),
     );
   }
@@ -566,6 +581,7 @@ ProjectHelpSessionLearnerAllowedActions effectiveLearnerAllowedActions(
       canRejectAlternative: true,
       canCancel: true,
       canJoin: false,
+      canReportNoShow: false,
     );
   }
   return session.learnerAllowedActions;
@@ -585,6 +601,7 @@ ProjectHelpSessionAuthorAllowedActions effectiveAuthorAllowedActions(
       canDecline: true,
       canCancel: session.authorAllowedActions.canCancel,
       canJoin: session.authorAllowedActions.canJoin,
+      canReportNoShow: session.authorAllowedActions.canReportNoShow,
       canRetryZoom: session.authorAllowedActions.canRetryZoom,
       canComplete: session.authorAllowedActions.canComplete,
     );
@@ -614,13 +631,12 @@ class ProjectHelpSessionListResult {
     return ProjectHelpSessionListResult(
       items: items is List
           ? items
-              .whereType<Map>()
-              .map(
-                (item) => ProjectHelpSession.fromJson(
-                  item.cast<String, dynamic>(),
-                ),
-              )
-              .toList()
+                .whereType<Map>()
+                .map(
+                  (item) =>
+                      ProjectHelpSession.fromJson(item.cast<String, dynamic>()),
+                )
+                .toList()
           : const [],
       page: (pagination['page'] as num?)?.toInt() ?? 1,
       limit: (pagination['limit'] as num?)?.toInt() ?? 20,
@@ -672,7 +688,9 @@ class CreateProjectHelpSessionRequestPayload {
       if (projectStepId != null) 'projectStepId': projectStepId,
       'durationMinutes': durationMinutes,
       'learnerTimeZone': learnerTimeZone,
-      'proposedTimes': sorted.map((time) => time.toUtc().toIso8601String()).toList(),
+      'proposedTimes': sorted
+          .map((time) => time.toUtc().toIso8601String())
+          .toList(),
     };
   }
 }
@@ -686,7 +704,9 @@ class ProjectHelpSessionNotebookHandoff {
   final String buildId;
   final String pageId;
 
-  factory ProjectHelpSessionNotebookHandoff.fromJson(Map<String, dynamic> json) {
+  factory ProjectHelpSessionNotebookHandoff.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return ProjectHelpSessionNotebookHandoff(
       buildId: json['buildId']?.toString() ?? '',
       pageId: json['pageId']?.toString() ?? '',
@@ -694,7 +714,9 @@ class ProjectHelpSessionNotebookHandoff {
   }
 }
 
-ProjectHelpSessionLearnerAllowedActions _parseLearnerAllowedActions(Object? raw) {
+ProjectHelpSessionLearnerAllowedActions _parseLearnerAllowedActions(
+  Object? raw,
+) {
   if (raw is! Map) {
     return ProjectHelpSessionLearnerAllowedActions.empty;
   }
