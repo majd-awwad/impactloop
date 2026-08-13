@@ -4,9 +4,9 @@ import '../../../../shared/widgets/learner_discovery/learner_discovery.dart';
 class LearningProjectCardLayout {
   const LearningProjectCardLayout._();
 
-  static const double coverHeight = 168;
-  static const double gridCardHeight = 484;
-  static const double compactCardHeight = 188;
+  static const double coverHeight = 148;
+  static const double gridCardHeight = 440;
+  static const double compactCardHeight = 156;
   static const double compactImageWidth = 112;
 
   static int columnsForWidth(double width) {

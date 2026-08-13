@@ -7,7 +7,6 @@ import '../../domain/models/learning_project.dart';
 import '../../domain/models/project_material_coverage.dart';
 import '../l10n/learning_hub_coverage_l10n.dart';
 import '../../presentation/theme/learning_ui_palette.dart';
-import 'learning_hub_text.dart';
 
 class ProjectComponentsSection extends StatefulWidget {
   const ProjectComponentsSection({
@@ -46,7 +45,7 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
         : widget.components.take(_collapsedVisibleCount).toList();
 
     return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
@@ -66,20 +65,22 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
             children: [
               Icon(Icons.inventory_2_outlined, color: palette.lime, size: 22),
               const SizedBox(width: AppSpacing.sm),
-              Text(
-                const LocalizedText(
-                  en: 'Required components',
-                  ar: 'المكونات المطلوبة',
-                ).resolve(context),
-                style: textTheme.titleLarge?.copyWith(
-                  color: palette.textPrimary,
-                  fontWeight: FontWeight.w700,
+              Expanded(
+                child: Text(
+                  const LocalizedText(
+                    en: 'Required components',
+                    ar: 'المكونات المطلوبة',
+                  ).resolve(context),
+                  style: textTheme.titleLarge?.copyWith(
+                    color: palette.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  textAlign: TextAlign.start,
                 ),
-                textAlign: TextAlign.start,
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
           Wrap(
             alignment: WrapAlignment.start,
             spacing: AppSpacing.sm,
@@ -142,29 +143,30 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
               ),
             ),
           ],
-          const SizedBox(height: AppSpacing.lg),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.md,
-            ),
-            decoration: BoxDecoration(
-              color: palette.cardSurfaceAlt,
-              borderRadius: AppRadius.lgAll,
-              border: Border.all(color: palette.borderSubtle),
-            ),
-            child: Text(
-              const LocalizedText(
-                en: 'Public availability shows whether ImpactLoop currently lists materials that can satisfy each required component.',
-                ar: 'يعرض التوفر العام ما إذا كانت المنصة تدرج حاليًا مواد يمكن أن تلبي كل مكوّن مطلوب.',
-              ).resolve(context),
-              style: textTheme.bodyMedium?.copyWith(
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline_rounded,
+                size: 18,
                 color: palette.textSecondary,
-                height: 1.45,
               ),
-              textAlign: TextAlign.start,
-            ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  const LocalizedText(
+                    en: 'Public availability shows whether ImpactLoop currently lists materials that can satisfy each required component.',
+                    ar: 'يعرض التوفر العام ما إذا كانت المنصة تدرج حاليًا مواد يمكن أن تلبي كل مكوّن مطلوب.',
+                  ).resolve(context),
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: palette.textSecondary,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.start,
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -2,6 +2,7 @@ import type {
   LearningProjectStatus,
   ProjectBuildItemStatus,
 } from '../../generated/prisma/client.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { AppError } from '../../utils/app-error.js';
 import type { AccessTokenPayload } from '../../utils/jwt.js';
 import {
@@ -102,6 +103,16 @@ type ProjectBuildRecord = NonNullable<
 
 const findBuildItem = (build: ProjectBuildRecord | null, itemId: string) =>
   build?.items.find((item) => item.id === itemId) ?? null;
+
+const assertUserDoesNotOwnProject = (
+  project: { createdBy: string },
+  userId: string,
+  message: string,
+) => {
+  if (project.createdBy === userId) {
+    throw new AppError(message, 403, COMMON_ERROR_CODES.forbidden);
+  }
+};
 
 const decimalToSerializable = (value: { toNumber(): number } | number): number => {
   if (typeof value === 'number') {
@@ -1514,6 +1525,20 @@ export const startProjectBuildById = async (
   id: string,
   userId: string,
 ) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    id,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  assertUserDoesNotOwnProject(
+    project,
+    userId,
+    'Project owners cannot start learner builds for their own projects.',
+  );
+
   const existingBuild = await learningProjectsRepository.findProjectBuild(
     id,
     userId,
@@ -1545,6 +1570,20 @@ export const startProjectBuildAgainById = async (
   id: string,
   userId: string,
 ) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    id,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  assertUserDoesNotOwnProject(
+    project,
+    userId,
+    'Project owners cannot start learner builds for their own projects.',
+  );
+
   const build = await learningProjectsRepository.startProjectBuildAgain(id, userId);
 
   if (!build) {
@@ -1963,6 +2002,12 @@ export const reviewLearningProjectById = async (
   if (!project) {
     throw new AppError('Learning project not found', 404, 'NOT_FOUND');
   }
+
+  assertUserDoesNotOwnProject(
+    project,
+    userId,
+    'Project owners cannot review or rate their own projects.',
+  );
 
   const review = await learningProjectsRepository.upsertProjectReview({
     projectId: id,

@@ -37,9 +37,14 @@ class LearningProjectCreatorFooter extends StatelessWidget {
 }
 
 class LearningProjectCreatorRow extends StatelessWidget {
-  const LearningProjectCreatorRow({super.key, required this.creator});
+  const LearningProjectCreatorRow({
+    super.key,
+    required this.creator,
+    this.enableProfileNavigation = true,
+  });
 
   final LearningProjectCreator creator;
+  final bool enableProfileNavigation;
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +54,7 @@ class LearningProjectCreatorRow extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: AppRadius.mdAll,
-        onTap: () => context.push(route),
+        onTap: enableProfileNavigation ? () => context.push(route) : null,
         child: Padding(
           padding: const EdgeInsetsDirectional.symmetric(
             vertical: AppSpacing.xs,
@@ -92,10 +97,12 @@ class LearningProjectCreatorRow extends StatelessWidget {
         ),
       ),
     );
-    final profileButton = OutlinedButton(
-      onPressed: () => context.push(route),
-      child: Text(context.l10n.learningViewProfile),
-    );
+    final profileButton = enableProfileNavigation
+        ? OutlinedButton(
+            onPressed: () => context.push(route),
+            child: Text(context.l10n.learningViewProfile),
+          )
+        : null;
 
     return Container(
       key: const ValueKey('learning-project-creator-panel'),
@@ -108,7 +115,7 @@ class LearningProjectCreatorRow extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          if (constraints.maxWidth < 460) {
+          if (constraints.maxWidth < 460 && profileButton != null) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -122,8 +129,10 @@ class LearningProjectCreatorRow extends StatelessWidget {
           return Row(
             children: [
               Expanded(child: identity),
-              const SizedBox(width: AppSpacing.md),
-              profileButton,
+              if (profileButton != null) ...[
+                const SizedBox(width: AppSpacing.md),
+                profileButton,
+              ],
             ],
           );
         },

@@ -434,6 +434,7 @@ export const findPublicLearningProjectById = async (id: string) => {
     },
     select: {
       id: true,
+      createdBy: true,
     },
   });
 };

@@ -9,12 +9,18 @@ import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../domain/models/learning_project.dart';
+import '../l10n/project_reviews_l10n.dart';
 import '../theme/learning_ui_palette.dart';
 
 class ProjectReviewsSection extends ConsumerStatefulWidget {
-  const ProjectReviewsSection({super.key, required this.project});
+  const ProjectReviewsSection({
+    super.key,
+    required this.project,
+    this.canReview = true,
+  });
 
   final LearningProject project;
+  final bool canReview;
 
   @override
   ConsumerState<ProjectReviewsSection> createState() =>
@@ -68,7 +74,10 @@ class _ProjectReviewsSectionState extends ConsumerState<ProjectReviewsSection> {
     }
 
     if (authState.user?.hasRole('LEARNER') != true) {
-      showInfoSnackBar(context, 'Use a learner account to review projects.');
+      showInfoSnackBar(
+        context,
+        ProjectReviewsL10n(context).learnerAccountRequired,
+      );
       return false;
     }
 
@@ -81,7 +90,7 @@ class _ProjectReviewsSectionState extends ConsumerState<ProjectReviewsSection> {
     }
 
     if (_rating < 1 || _rating > 5) {
-      showInfoSnackBar(context, 'Choose a rating from 1 to 5 stars.');
+      showInfoSnackBar(context, ProjectReviewsL10n(context).chooseRating);
       return;
     }
 
@@ -103,7 +112,7 @@ class _ProjectReviewsSectionState extends ConsumerState<ProjectReviewsSection> {
       }
 
       ref.invalidate(learningProjectProvider(widget.project.id));
-      showInfoSnackBar(context, 'Review saved.');
+      showInfoSnackBar(context, ProjectReviewsL10n(context).reviewSaved);
     } catch (error) {
       if (!mounted) {
         return;
@@ -142,7 +151,7 @@ class _ProjectReviewsSectionState extends ConsumerState<ProjectReviewsSection> {
         _rating = 0;
         _commentController.clear();
       });
-      showInfoSnackBar(context, 'Review removed.');
+      showInfoSnackBar(context, ProjectReviewsL10n(context).reviewRemoved);
     } catch (error) {
       if (!mounted) {
         return;
@@ -165,7 +174,7 @@ class _ProjectReviewsSectionState extends ConsumerState<ProjectReviewsSection> {
     final hasViewerReview = widget.project.viewerReview != null;
 
     return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
@@ -181,38 +190,43 @@ class _ProjectReviewsSectionState extends ConsumerState<ProjectReviewsSection> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 840;
-          final form = _ReviewForm(
-            rating: _rating,
-            controller: _commentController,
-            hasViewerReview: hasViewerReview,
-            isSubmitting: _isSubmitting,
-            isDeleting: _isDeleting,
-            onRatingChanged: (rating) => setState(() {
-              _rating = rating;
-            }),
-            onSubmit: _submitReview,
-            onDelete: hasViewerReview ? _deleteReview : null,
-          );
+          final form = widget.canReview
+              ? _ReviewForm(
+                  rating: _rating,
+                  controller: _commentController,
+                  hasViewerReview: hasViewerReview,
+                  isSubmitting: _isSubmitting,
+                  isDeleting: _isDeleting,
+                  onRatingChanged: (rating) => setState(() {
+                    _rating = rating;
+                  }),
+                  onSubmit: _submitReview,
+                  onDelete: hasViewerReview ? _deleteReview : null,
+                )
+              : null;
           final reviews = _RecentReviews(
             project: widget.project,
             hasReviews: hasReviews,
+            canReview: widget.canReview,
           );
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _ReviewsHeader(project: widget.project),
-              const SizedBox(height: AppSpacing.lg),
-              if (compact) ...[
+              const SizedBox(height: AppSpacing.md),
+              if (form == null)
+                reviews
+              else if (compact) ...[
                 form,
-                const SizedBox(height: AppSpacing.lg),
+                const SizedBox(height: AppSpacing.md),
                 reviews,
               ] else
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(flex: 5, child: reviews),
-                    const SizedBox(width: AppSpacing.lg),
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(flex: 4, child: form),
                   ],
                 ),
@@ -233,16 +247,17 @@ class _ReviewsHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
     final textTheme = Theme.of(context).textTheme;
+    final l10n = ProjectReviewsL10n(context);
     final summary = project.hasRatings
-        ? '${project.ratingValue.toStringAsFixed(1)} from ${project.ratingCount} ${project.ratingCount == 1 ? 'review' : 'reviews'}'
-        : 'No learner reviews yet';
+        ? l10n.ratingSummary(project.ratingValue, project.ratingCount)
+        : l10n.noReviews;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 44,
-          height: 44,
+          width: 38,
+          height: 38,
           decoration: BoxDecoration(
             color: palette.limeSoft,
             borderRadius: AppRadius.mdAll,
@@ -305,10 +320,11 @@ class _ReviewForm extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
     final textTheme = Theme.of(context).textTheme;
+    final l10n = ProjectReviewsL10n(context);
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: palette.cardSurfaceAlt,
+        color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
         border: Border.all(color: palette.borderSubtle),
       ),
@@ -318,7 +334,7 @@ class _ReviewForm extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              hasViewerReview ? 'Update your review' : 'Review this project',
+              hasViewerReview ? l10n.updateYourReview : l10n.reviewThisProject,
               style: textTheme.labelLarge?.copyWith(
                 color: palette.textPrimary,
                 fontWeight: FontWeight.w700,
@@ -329,12 +345,17 @@ class _ReviewForm extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: controller,
-              minLines: 3,
-              maxLines: 5,
+              minLines: 2,
+              maxLines: 4,
               maxLength: 1200,
               decoration: InputDecoration(
-                hintText:
-                    'What helped, what was missing, or what would you change?',
+                hintText: l10n.reviewHint,
+                filled: true,
+                fillColor: palette.cardSurface,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: AppRadius.mdAll,
+                  borderSide: BorderSide(color: palette.borderSubtle),
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -356,7 +377,7 @@ class _ReviewForm extends StatelessWidget {
                         )
                       : const Icon(Icons.check_rounded),
                   label: Text(
-                    hasViewerReview ? 'Update review' : 'Post review',
+                    hasViewerReview ? l10n.updateReview : l10n.postReview,
                   ),
                 ),
                 if (onDelete != null)
@@ -373,7 +394,7 @@ class _ReviewForm extends StatelessWidget {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.delete_outline_rounded),
-                    label: const Text('Remove'),
+                    label: Text(l10n.remove),
                   ),
               ],
             ),
@@ -393,6 +414,7 @@ class _StarRatingInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final l10n = ProjectReviewsL10n(context);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -401,7 +423,7 @@ class _StarRatingInput extends StatelessWidget {
         final selected = star <= value;
         return IconButton(
           visualDensity: VisualDensity.compact,
-          tooltip: '$star ${star == 1 ? 'star' : 'stars'}',
+          tooltip: l10n.starLabel(star),
           onPressed: () => onChanged(star),
           icon: Icon(
             selected ? Icons.star_rounded : Icons.star_border_rounded,
@@ -414,31 +436,54 @@ class _StarRatingInput extends StatelessWidget {
 }
 
 class _RecentReviews extends StatelessWidget {
-  const _RecentReviews({required this.project, required this.hasReviews});
+  const _RecentReviews({
+    required this.project,
+    required this.hasReviews,
+    required this.canReview,
+  });
 
   final LearningProject project;
   final bool hasReviews;
+  final bool canReview;
 
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
     final textTheme = Theme.of(context).textTheme;
+    final l10n = ProjectReviewsL10n(context);
 
     if (!hasReviews) {
       return DecoratedBox(
         decoration: BoxDecoration(
-          color: palette.cardSurfaceAlt,
+          color: palette.cardSurface,
           borderRadius: AppRadius.lgAll,
           border: Border.all(color: palette.borderSubtle),
         ),
         child: Padding(
-          padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
-          child: Text(
-            'No reviews yet. Be the first learner to rate this project.',
-            style: textTheme.bodyMedium?.copyWith(
-              color: palette.textSecondary,
-              height: 1.45,
-            ),
+          padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
+          child: Row(
+            children: [
+              Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 18,
+                color: palette.textSecondary,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  canReview
+                      ? l10n.firstReview
+                      : const LocalizedText(
+                          en: 'No learner reviews yet.',
+                          ar: 'لا توجد مراجعات من المتعلمين بعد.',
+                        ).resolve(context),
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: palette.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -466,11 +511,12 @@ class _ReviewTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
     final textTheme = Theme.of(context).textTheme;
+    final l10n = ProjectReviewsL10n(context);
     final comment = review.comment;
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: palette.cardSurfaceAlt,
+        color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
         border: Border.all(
           color: review.isViewerReview
@@ -487,7 +533,9 @@ class _ReviewTile extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    review.isViewerReview ? 'Your review' : review.reviewerName,
+                    review.isViewerReview
+                        ? l10n.yourReview
+                        : review.reviewerName,
                     style: textTheme.labelLarge?.copyWith(
                       color: palette.textPrimary,
                       fontWeight: FontWeight.w700,

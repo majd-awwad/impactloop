@@ -172,9 +172,18 @@ after(async () => {
     });
   }
   if (ids.builds.length > 0) {
+    await prisma.projectBuildLearningSession.deleteMany({
+      where: { buildId: { in: ids.builds } },
+    });
     await prisma.projectBuild.deleteMany({ where: { id: { in: ids.builds } } });
   }
   if (ids.projects.length > 0) {
+    await prisma.projectLearningQuestion.deleteMany({
+      where: { pack: { projectId: { in: ids.projects } } },
+    });
+    await prisma.projectLearningPack.deleteMany({
+      where: { projectId: { in: ids.projects } },
+    });
     await prisma.learningProject.deleteMany({ where: { id: { in: ids.projects } } });
   }
   if (ids.materials.length > 0) {
@@ -199,6 +208,7 @@ describe('learning hub core learner journey', () => {
   });
 
   test('published project browse → build → request → reserve → acquire → complete build', async () => {
+    const author = await createLearnerUser('journey-author');
     const learner = await createLearnerUser('journey');
     const supplier = await createSupplierUser('journey');
     const projectCategory = await prisma.category.create({
@@ -230,7 +240,7 @@ describe('learning hub core learner journey', () => {
     ids.locations.push(location.id);
 
     const project = await createPublishedProjectWithSteps({
-      authorId: learner.id,
+      authorId: author.id,
       projectCategoryId: projectCategory.id,
       materialCategoryId: materialCategory.id,
     });

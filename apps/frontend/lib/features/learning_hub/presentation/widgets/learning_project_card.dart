@@ -74,6 +74,11 @@ class LearningProjectCard extends StatelessWidget {
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  ProjectMaterialCoverageChip(
+                                    project: project,
+                                    compact: true,
+                                  ),
                                   const Spacer(),
                                   Wrap(
                                     spacing: AppSpacing.sm,
@@ -97,11 +102,6 @@ class LearningProjectCard extends StatelessWidget {
                                               .resolve(context),
                                         ),
                                     ],
-                                  ),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  ProjectMaterialCoverageChip(
-                                    project: project,
-                                    compact: true,
                                   ),
                                   const SizedBox(height: AppSpacing.xs),
                                   ProjectEngagementStrip(
@@ -190,7 +190,7 @@ class _ProjectCardHeader extends StatelessWidget {
                 ),
               ),
             Padding(
-              padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+              padding: const EdgeInsetsDirectional.all(AppSpacing.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

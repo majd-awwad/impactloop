@@ -69,7 +69,7 @@ class _PublicUserProfileBody extends StatelessWidget {
     return SingleChildScrollView(
       padding: const EdgeInsetsDirectional.fromSTEB(
         AppSpacing.md,
-        AppSpacing.lg,
+        AppSpacing.md,
         AppSpacing.md,
         AppSpacing.xl,
       ),
@@ -81,10 +81,10 @@ class _PublicUserProfileBody extends StatelessWidget {
             children: [
               _PublicUserProfileHero(profile: profile),
               if (profile.supplier case final supplier?) ...[
-                const SizedBox(height: AppSpacing.lg),
+                const SizedBox(height: AppSpacing.md),
                 _SupplierActivityCard(supplier: supplier),
               ],
-              const SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: AppSpacing.lg),
               Text(
                 context.l10n.publicUserPublishedProjects,
                 style: AppTextStyles.title(
@@ -141,7 +141,7 @@ class _PublicUserProfileHero extends StatelessWidget {
     return Container(
       key: const ValueKey('public-user-profile-hero'),
       clipBehavior: Clip.antiAlias,
-      padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: AlignmentDirectional.topStart,
@@ -163,7 +163,7 @@ class _PublicUserProfileHero extends StatelessWidget {
               UserAvatar(
                 displayName: profile.displayName,
                 profileImageUrl: profile.avatarUrl,
-                radius: compact ? 42 : 54,
+                radius: compact ? 36 : 44,
                 backgroundColor: palette.cardSurface,
                 foregroundColor: palette.textPrimary,
               ),
@@ -179,7 +179,7 @@ class _PublicUserProfileHero extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.display(context).copyWith(
                         color: palette.textPrimary,
-                        fontSize: compact ? 25 : 30,
+                        fontSize: compact ? 23 : 27,
                         height: 1.15,
                       ),
                     ),
@@ -228,7 +228,7 @@ class _PublicUserProfileHero extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 identity,
-                const SizedBox(height: AppSpacing.lg),
+                const SizedBox(height: AppSpacing.md),
                 Row(
                   children: stats
                       .expand((stat) sync* {
@@ -246,7 +246,7 @@ class _PublicUserProfileHero extends StatelessWidget {
           return Row(
             children: [
               Expanded(flex: 3, child: identity),
-              const SizedBox(width: AppSpacing.xl),
+              const SizedBox(width: AppSpacing.lg),
               Flexible(
                 flex: 2,
                 child: Row(
@@ -287,7 +287,7 @@ class _ProfileStat extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 180),
       padding: const EdgeInsetsDirectional.symmetric(
         horizontal: AppSpacing.md,
-        vertical: AppSpacing.md,
+        vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
         color: palette.cardSurface.withValues(alpha: 0.88),
