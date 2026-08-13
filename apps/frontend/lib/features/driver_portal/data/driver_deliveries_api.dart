@@ -9,6 +9,8 @@ import 'models/driver_deliveries_list_result.dart';
 import 'models/driver_location_ping_request.dart';
 import 'models/update_driver_delivery_status_request.dart';
 import 'models/driver_archive.dart';
+import 'models/delivery_handover_verify_preview.dart';
+import 'models/supplier_pickup_handover_verify_preview.dart';
 
 class DriverDeliveriesApi {
   const DriverDeliveriesApi(this._client);
@@ -192,6 +194,54 @@ class DriverDeliveriesApi {
       (json) => DriverDelivery.fromJson(
         Map<String, dynamic>.from(json['delivery'] as Map? ?? json),
       ),
+    );
+  }
+
+  Future<DeliveryHandoverVerifyPreview> verifyDeliveryHandoverCredential(
+    String handoverToken,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/driver/deliveries/handover/verify',
+        data: {'handoverToken': handoverToken},
+      ),
+      DeliveryHandoverVerifyPreview.fromJson,
+    );
+  }
+
+  Future<DriverDelivery> confirmDeliveryHandoverCredential(
+    String handoverToken,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/driver/deliveries/handover/confirm',
+        data: {'handoverToken': handoverToken},
+      ),
+      DriverDelivery.fromJson,
+    );
+  }
+
+  Future<SupplierPickupHandoverVerifyPreview> verifySupplierPickupHandoverCredential(
+    String handoverToken,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/driver/deliveries/pickup-handover/verify',
+        data: {'handoverToken': handoverToken},
+      ),
+      SupplierPickupHandoverVerifyPreview.fromJson,
+    );
+  }
+
+  Future<DriverDelivery> confirmSupplierPickupHandoverCredential(
+    String handoverToken,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/driver/deliveries/pickup-handover/confirm',
+        data: {'handoverToken': handoverToken},
+      ),
+      DriverDelivery.fromJson,
     );
   }
 }

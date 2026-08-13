@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../deliveries/application/learner_deliveries_provider.dart';
+import '../../reservations/application/learner_reservation_cache.dart';
 import '../../../shared/location/current_location_service.dart';
 import '../data/driver_deliveries_repository.dart';
 import '../data/models/driver_delivery_failure_request.dart';
@@ -184,4 +186,19 @@ void leaveDriverDeliveryDetail(WidgetRef ref) {
   ref
       .read(driverDeliveryActionControllerProvider.notifier)
       .refreshAfterLeavingDeliveryPage();
+}
+
+/// Shared post-completion refresh for manual code and QR confirm paths.
+void invalidateDriverDeliverySyncProviders(
+  WidgetRef ref, {
+  String? deliveryId,
+  String? reservationId,
+}) {
+  ref.invalidate(activeDriverDeliveriesProvider);
+  ref.invalidate(availableDriverDeliveriesProvider);
+  if (deliveryId != null && deliveryId.isNotEmpty) {
+    ref.invalidate(driverDeliveryDetailProvider(deliveryId));
+    ref.invalidate(learnerDeliveryProvider(deliveryId));
+  }
+  invalidateLearnerReservationCaches(ref, reservationId: reservationId);
 }
