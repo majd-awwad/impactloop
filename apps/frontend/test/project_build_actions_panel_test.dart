@@ -410,4 +410,7 @@ class _BuildPanelRepository implements LearningProjectRepository {
         projectId: projectId,
         locale: locale,
       );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

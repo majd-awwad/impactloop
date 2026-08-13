@@ -213,6 +213,33 @@ void main() {
       expect(LearningHubApiMapper.formatDurationMinutes(90), '1 hr 30 min');
     });
 
+    test(
+      'Arabic duration and component labels do not fall back to English',
+      () {
+        expect(
+          LearningHubApiMapper.formatDurationMinutesArabic(null),
+          'وقت مرن',
+        );
+        expect(
+          LearningHubApiMapper.formatDurationMinutesArabic(30),
+          '30 دقيقة',
+        );
+        expect(
+          LearningHubApiMapper.formatDurationMinutesArabic(60),
+          'ساعة واحدة',
+        );
+        expect(
+          LearningHubApiMapper.formatDurationMinutesArabic(90),
+          'ساعة واحدة و30 دقيقة',
+        );
+        expect(
+          LearningHubApiMapper.formatComponentCountArabic(1),
+          'مكوّن واحد',
+        );
+        expect(LearningHubApiMapper.formatComponentCountArabic(3), '3 مكوّنات');
+      },
+    );
+
     test('maps learner submission moderation fields and actions', () {
       final submission = LearningHubApiMapper.submissionFromJson({
         'id': '44444444-4444-4444-4444-444444444444',
@@ -327,8 +354,14 @@ void main() {
 
       expect(build.guideConversationId, 'conv-1');
       expect(build.stepProgress.currentStep?.title, 'Place the LED');
-      expect(build.stepProgress.nextAction, ProjectBuildNextAction.completeCurrentStep);
-      expect(build.stepProgress.steps.first.state, ProjectBuildStepState.current);
+      expect(
+        build.stepProgress.nextAction,
+        ProjectBuildNextAction.completeCurrentStep,
+      );
+      expect(
+        build.stepProgress.steps.first.state,
+        ProjectBuildStepState.current,
+      );
       expect(build.stepProgress.steps.last.state, ProjectBuildStepState.locked);
     });
   });
