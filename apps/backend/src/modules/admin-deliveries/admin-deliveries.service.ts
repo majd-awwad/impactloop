@@ -15,6 +15,9 @@ import {
   composeAdminDeliveryContract,
   type DeliveryIncidentContract,
 } from './admin-deliveries.classifier.js';
+import { prisma } from '../../database/prisma.js';
+import { finalizeReturnedDeliveryInTransaction } from '../delivery-returns/delivery-return-resolution.js';
+import { flushPostCommitPaymentRefunds } from '../payments/payments.lifecycle.js';
 
 type OwnerWithSupplier = {
   id: string;
@@ -48,6 +51,40 @@ const formatLocationLabel = (location: LocationSummary | null | undefined) => {
 
 const deliveryStatusLabel = (status: DeliveryStatus) =>
   status.replaceAll('_', ' ').toLowerCase();
+
+export const finalizeOperationalReturnedDelivery = async (
+  deliveryId: string,
+  adminUserId: string,
+) => {
+  const result = await prisma.$transaction(async (tx) => {
+    const delivery = await tx.delivery.findUnique({
+      where: { id: deliveryId },
+      select: {
+        id: true,
+        status: true,
+        incidentReports: {
+          where: { reasonCode: 'DELIVERY_FAILED', targetRole: 'LEARNER' },
+          select: { id: true, status: true },
+        },
+      },
+    });
+    if (!delivery) throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+    if (delivery.incidentReports.length > 0) {
+      throw new AppError(
+        'Resolve the learner no-show report to finalize this delivery.',
+        409,
+        'DELIVERY_NOSHOW_REVIEW_REQUIRED',
+      );
+    }
+    return finalizeReturnedDeliveryInTransaction(tx, {
+      deliveryId,
+      adminUserId,
+      outcome: 'LEARNER_NOT_RESPONSIBLE',
+    });
+  });
+  await flushPostCommitPaymentRefunds(result.postCommitRefunds);
+  return getAdminDeliveryById(deliveryId);
+};
 
 type TimelineEvent = {
   key: string;
@@ -408,6 +445,67 @@ const mapDetail = (
     learnerNote: delivery.learnerNote,
     driverNote: delivery.driverNote,
     failureReason: delivery.failureReason,
+    returnRecovery: {
+      requiredAt: delivery.returnRequiredAt?.toISOString() ?? null,
+      reason: delivery.returnReason,
+      returnedAt: delivery.returnedToSupplierAt?.toISOString() ?? null,
+      confirmedBy: delivery.returnConfirmedBy
+        ? {
+            displayName: delivery.returnConfirmedBy.displayName,
+            email: delivery.returnConfirmedBy.email,
+          }
+        : null,
+      custodyDriver: delivery.returnCustodyDriverProfile
+        ? {
+            displayName:
+              delivery.returnCustodyDriverProfile.user.displayName,
+            email: delivery.returnCustodyDriverProfile.user.email,
+          }
+        : null,
+      resolutionOutcome: delivery.resolutionOutcome,
+      administrativelyResolvedAt:
+        delivery.administrativelyResolvedAt?.toISOString() ?? null,
+      carriedItems: delivery.pickupItems.map((item) => ({
+        title: item.materialTitle,
+        quantity: Number(item.quantity),
+        unit: item.unit,
+        condition: item.condition,
+      })),
+    },
+    attempts: delivery.attempts.map((attempt) => ({
+      attemptNumber: attempt.attemptNumber,
+      attemptedAt: attempt.attemptedAt.toISOString(),
+      failureReason: attempt.failureReason,
+      learnerContactAttempted: attempt.learnerContactAttempted,
+      note: attempt.note,
+      outcome: attempt.outcome,
+      retryWindowStart: attempt.retryWindowStart?.toISOString() ?? null,
+      retryWindowEnd: attempt.retryWindowEnd?.toISOString() ?? null,
+      retryDeadline: attempt.retryDeadline?.toISOString() ?? null,
+    })),
+    payment: {
+      material: delivery.reservation.materialPaymentOrders[0]
+        ? {
+            method:
+              delivery.reservation.materialPaymentOrders[0].paymentMethod,
+            status: delivery.reservation.materialPaymentOrders[0].status,
+            amount: Number(delivery.reservation.materialPaymentOrders[0].amount),
+            currency: delivery.reservation.materialPaymentOrders[0].currency,
+          }
+        : null,
+      deliveryFee: delivery.deliveryGroup?.deliveryFeePaymentOrders[0]
+        ? {
+            method:
+              delivery.deliveryGroup.deliveryFeePaymentOrders[0].paymentMethod,
+            status: delivery.deliveryGroup.deliveryFeePaymentOrders[0].status,
+            amount: Number(
+              delivery.deliveryGroup.deliveryFeePaymentOrders[0].amount,
+            ),
+            currency:
+              delivery.deliveryGroup.deliveryFeePaymentOrders[0].currency,
+          }
+        : null,
+    },
     canReopenDriverAssignment: canReopen,
     ...contract,
     reservation: {
@@ -607,6 +705,10 @@ export const listAdminDeliveries = async (query: AdminDeliveriesListQuery) => {
         'PICKED_UP',
         'ON_THE_WAY',
         'ARRIVED_DROPOFF',
+        'REDELIVERY_PENDING',
+        'REDELIVERY_SCHEDULED',
+        'RETURN_TO_SUPPLIER_REQUIRED',
+        'RETURNED_TO_SUPPLIER',
         'DELIVERED',
         'CANCELLED',
         'FAILED_PICKUP',

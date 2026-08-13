@@ -94,8 +94,12 @@ describe('delivery retry lifecycle contract', () => {
     );
   });
 
-  test('retry states retain assignment capacity, custody, and driver issue access', () => {
-    for (const status of ['REDELIVERY_PENDING', 'REDELIVERY_SCHEDULED'] as const) {
+  test('retry and return states retain assignment capacity and custody', () => {
+    for (const status of [
+      'REDELIVERY_PENDING',
+      'REDELIVERY_SCHEDULED',
+      'RETURN_TO_SUPPLIER_REQUIRED',
+    ] as const) {
       assert.equal(ACTIVE_DELIVERY_STATUSES.includes(status), true);
       assert.equal(DRIVER_IN_PROGRESS_ASSIGNED_STATUSES.includes(status), true);
       assert.equal(MATERIAL_IN_CUSTODY_DELIVERY_STATUSES.includes(status), true);
@@ -104,7 +108,7 @@ describe('delivery retry lifecycle contract', () => {
           reservationStatus: 'ACCEPTED',
           deliveryStatus: status,
         }),
-        true,
+        status !== 'RETURN_TO_SUPPLIER_REQUIRED',
       );
     }
   });

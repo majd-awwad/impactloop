@@ -145,6 +145,14 @@ String monitoringStatusLabel(String status) {
       return 'On the way';
     case 'ARRIVED_DROPOFF':
       return 'Arrived at dropoff';
+    case 'REDELIVERY_PENDING':
+      return 'Redelivery pending';
+    case 'REDELIVERY_SCHEDULED':
+      return 'Redelivery scheduled';
+    case 'RETURN_TO_SUPPLIER_REQUIRED':
+      return 'Return to supplier required';
+    case 'RETURNED_TO_SUPPLIER':
+      return 'Returned to supplier';
     case 'DELIVERED':
       return 'Delivered';
     case 'FAILED_PICKUP':

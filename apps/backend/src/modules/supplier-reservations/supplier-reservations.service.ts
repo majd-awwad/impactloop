@@ -406,6 +406,18 @@ export const mapSupplierReservation = (
         deliveredAt: latestDelivery.deliveredAt?.toISOString() ?? null,
         failedAt: latestDelivery.failedAt?.toISOString() ?? null,
         failureReason: latestDelivery.failureReason,
+        returnRequiredAt:
+          latestDelivery.returnRequiredAt?.toISOString() ?? null,
+        returnReason: latestDelivery.returnReason,
+        returnedToSupplierAt:
+          latestDelivery.returnedToSupplierAt?.toISOString() ?? null,
+        canConfirmReturn:
+          latestDelivery.status === 'RETURN_TO_SUPPLIER_REQUIRED',
+        returnedItems: latestDelivery.pickupItems.map((item) => ({
+          title: item.materialTitle,
+          quantity: Number(item.quantity),
+          unit: item.unit,
+        })),
         recoveryRequired:
           reservation.status === 'AWAITING_RESOLUTION' ||
           latestDelivery.status === 'AWAITING_RESOLUTION',

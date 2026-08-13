@@ -33,6 +33,16 @@ import {
   activeConfirmedDeliveryWindowUpdate,
   activePickupWindowReservationUpdate,
 } from '../../test-utils/handover-test-windows.js';
+import {
+  confirmSupplierDeliveryReturn,
+  expireDueDeliveryRetriesBatch,
+} from '../delivery-returns/delivery-returns.service.js';
+import { finalizeReturnedDeliveryInTransaction } from '../delivery-returns/delivery-return-resolution.js';
+import {
+  rejectAdminNoShowReport,
+  verifyAdminNoShowReport,
+} from '../admin-no-show-reports/admin-no-show-reports.service.js';
+import { finalizeOperationalReturnedDelivery } from '../admin-deliveries/admin-deliveries.service.js';
 
 const TEST_MARKER = '[test-phase5-failures]';
 
@@ -93,6 +103,40 @@ async function createMaterial(
 
 async function cleanup(ctx: TestContext) {
   if (ctx.createdReservationIds.length) {
+    const deliveryGroupIds = (
+      await prisma.reservation.findMany({
+        where: {
+          id: { in: ctx.createdReservationIds },
+          deliveryGroupId: { not: null },
+        },
+        select: { deliveryGroupId: true },
+      })
+    )
+      .map((reservation) => reservation.deliveryGroupId)
+      .filter((id): id is string => id != null);
+    const paymentOrders = await prisma.paymentOrder.findMany({
+      where: {
+        OR: [
+          { reservationId: { in: ctx.createdReservationIds } },
+          ...(deliveryGroupIds.length
+            ? [{ deliveryGroupId: { in: deliveryGroupIds } }]
+            : []),
+        ],
+      },
+      select: { id: true },
+    });
+    const paymentOrderIds = paymentOrders.map((order) => order.id);
+    if (paymentOrderIds.length) {
+      await prisma.paymentRefund.deleteMany({
+        where: { paymentOrderId: { in: paymentOrderIds } },
+      });
+      await prisma.paymentAttempt.deleteMany({
+        where: { paymentOrderId: { in: paymentOrderIds } },
+      });
+      await prisma.paymentOrder.deleteMany({
+        where: { id: { in: paymentOrderIds } },
+      });
+    }
     await prisma.noShowReport.deleteMany({
       where: { reservationId: { in: ctx.createdReservationIds } },
     });
@@ -176,6 +220,59 @@ async function acceptDeliveryReservation(ctx: TestContext) {
   return { material, reservation, delivery };
 }
 
+async function createDeliveryPaymentOrders(input: {
+  learnerId: string;
+  reservationId: string;
+  deliveryGroupId: string | null;
+  method: 'CARD' | 'CASH';
+}) {
+  const status = input.method === 'CARD' ? 'PAID' : 'REQUIRES_PAYMENT';
+  const materialOrder = await prisma.paymentOrder.create({
+    data: {
+      payerUserId: input.learnerId,
+      purpose: 'MATERIAL_SUBTOTAL',
+      paymentMethod: input.method,
+      status,
+      currency: 'NIS',
+      amount: 10,
+      reservationId: input.reservationId,
+      paidAt: input.method === 'CARD' ? new Date() : null,
+    },
+  });
+  const feeOrder = await prisma.paymentOrder.create({
+    data: {
+      payerUserId: input.learnerId,
+      purpose: 'DELIVERY_FEE',
+      paymentMethod: input.method,
+      status,
+      currency: 'NIS',
+      amount: 5,
+      ...(input.deliveryGroupId
+        ? { deliveryGroupId: input.deliveryGroupId }
+        : { reservationId: input.reservationId }),
+      paidAt: input.method === 'CARD' ? new Date() : null,
+    },
+  });
+  if (input.method === 'CARD') {
+    for (const order of [materialOrder, feeOrder]) {
+      await prisma.paymentAttempt.create({
+        data: {
+          paymentOrderId: order.id,
+          provider: 'MOCK',
+          providerMode: 'LOCAL',
+          status: 'SUCCEEDED',
+          amount: order.amount,
+          currency: order.currency,
+          amountMinor: Number(order.amount) * 100,
+          providerRef: `return-test-${order.id}`,
+          succeededAt: new Date(),
+        },
+      });
+    }
+  }
+  return { materialOrder, feeOrder };
+}
+
 async function resetDriverState(ctx: TestContext) {
   const profile = await prisma.driverProfile.findUnique({
     where: { userId: ctx.driverId },
@@ -210,6 +307,7 @@ async function resetDriverState(ctx: TestContext) {
           'ARRIVED_DROPOFF',
           'REDELIVERY_PENDING',
           'REDELIVERY_SCHEDULED',
+          'RETURN_TO_SUPPLIER_REQUIRED',
         ],
       },
     },
@@ -669,7 +767,7 @@ describe('fulfillment failures phase 5', () => {
   });
 
   test('first failed dropoff creates a non-terminal retry attempt', async () => {
-    const { delivery } = await acceptDeliveryReservation(ctx);
+    const { material, reservation, delivery } = await acceptDeliveryReservation(ctx);
     await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'ARRIVED_DROPOFF');
 
     const mapped = await markDriverDeliveryFailed(ctx.driverId, delivery.id, {
@@ -762,7 +860,14 @@ describe('fulfillment failures phase 5', () => {
   });
 
   test('second learner-unreachable failure records attempt two then uses final no-show path', async () => {
-    const { delivery } = await acceptDeliveryReservation(ctx);
+    const { material, reservation, delivery } =
+      await acceptDeliveryReservation(ctx);
+    const cardOrders = await createDeliveryPaymentOrders({
+      learnerId: ctx.learnerId,
+      reservationId: reservation.id,
+      deliveryGroupId: delivery.deliveryGroupId,
+      method: 'CARD',
+    });
     await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'ARRIVED_DROPOFF');
     const retryStart = new Date(Date.now() + 60 * 60_000);
     const retryEnd = new Date(retryStart.getTime() + 60 * 60_000);
@@ -784,13 +889,355 @@ describe('fulfillment failures phase 5', () => {
       learnerContactAttempted: true,
       note: 'Final attempt also unreachable.',
     });
-    assert.equal(result.status, 'LEARNER_NO_SHOW');
+    assert.equal(result.status, 'RETURN_TO_SUPPLIER_REQUIRED');
     assert.equal(
       await prisma.deliveryAttempt.count({ where: { deliveryId: delivery.id } }),
       2,
     );
     assert.equal(
       await prisma.noShowReport.count({ where: { deliveryId: delivery.id } }),
+      1,
+    );
+    const beforeReturn = await prisma.delivery.findUniqueOrThrow({
+      where: { id: delivery.id },
+      include: { assignments: true },
+    });
+    assert.ok(beforeReturn.assignedDriverProfileId);
+    assert.equal(
+      beforeReturn.assignments.filter((row) => row.status === 'ACTIVE').length,
+      1,
+    );
+    assert.equal(beforeReturn.returnReason, 'FINAL_ATTEMPT_FAILED');
+    assert.equal(beforeReturn.learnerDeliveryHandoverTokenHash, null);
+    assert.deepEqual(
+      (
+        await prisma.paymentOrder.findMany({
+          where: { id: { in: [cardOrders.materialOrder.id, cardOrders.feeOrder.id] } },
+          orderBy: { purpose: 'asc' },
+          select: { status: true },
+        })
+      ).map((order) => order.status),
+      ['PAID', 'PAID'],
+    );
+    assert.equal(
+      (await prisma.reservation.findUniqueOrThrow({ where: { id: reservation.id } }))
+        .status,
+      'ACCEPTED',
+    );
+    const heldBeforeReturn = await getMaterialQuantityState(prisma, material.id);
+    assert.equal(decimalToNumber(heldBeforeReturn!.availableQuantity), 4);
+    await assert.rejects(
+      () =>
+        updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+          status: 'DELIVERED',
+          confirmationCode: deriveHandoverCode(
+            'learner-delivery',
+            delivery.id,
+          ),
+        }),
+      (error: unknown) => error instanceof AppError,
+    );
+    await assert.rejects(
+      () => confirmSupplierDeliveryReturn(ctx.learnerId, delivery.id),
+      (error: unknown) =>
+        error instanceof AppError && error.code === 'NOT_FOUND',
+    );
+    await assert.rejects(
+      () =>
+        prisma.$transaction((tx) =>
+          finalizeReturnedDeliveryInTransaction(tx, {
+            deliveryId: delivery.id,
+            adminUserId: ctx.supplierId,
+            outcome: 'LEARNER_NOT_RESPONSIBLE',
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'DELIVERY_RETURN_CONFIRMATION_REQUIRED',
+    );
+    const otherDriverProfile = await prisma.driverProfile.findUniqueOrThrow({
+      where: { userId: ctx.otherDriverId },
+      select: { id: true },
+    });
+    await prisma.delivery.update({
+      where: { id: delivery.id },
+      data: { returnCustodyDriverProfileId: otherDriverProfile.id },
+    });
+    await assert.rejects(
+      () => confirmSupplierDeliveryReturn(ctx.supplierId, delivery.id),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'DELIVERY_RETURN_STATE_CONFLICT',
+    );
+    await prisma.delivery.update({
+      where: { id: delivery.id },
+      data: {
+        returnCustodyDriverProfileId: beforeReturn.assignedDriverProfileId,
+      },
+    });
+
+    const confirmed = await confirmSupplierDeliveryReturn(
+      ctx.supplierId,
+      delivery.id,
+    );
+    assert.equal(confirmed.outcome, 'CONFIRMED');
+    const afterReturn = await prisma.delivery.findUniqueOrThrow({
+      where: { id: delivery.id },
+      include: { assignments: true },
+    });
+    assert.equal(afterReturn.status, 'RETURNED_TO_SUPPLIER');
+    assert.equal(afterReturn.assignedDriverProfileId, null);
+    assert.equal(
+      afterReturn.assignments.filter((row) => row.status === 'ACTIVE').length,
+      0,
+    );
+    assert.equal(
+      (await prisma.reservation.findUniqueOrThrow({ where: { id: reservation.id } }))
+        .status,
+      'AWAITING_RESOLUTION',
+    );
+    const releasedAfterReturn = await getMaterialQuantityState(prisma, material.id);
+    assert.equal(decimalToNumber(releasedAfterReturn!.availableQuantity), 5);
+    const driverAfterReturn = await prisma.driverProfile.findUniqueOrThrow({
+      where: { userId: ctx.driverId },
+      select: { availability: true },
+    });
+    assert.notEqual(driverAfterReturn.availability, 'ON_DELIVERY');
+
+    const duplicate = await confirmSupplierDeliveryReturn(
+      ctx.supplierId,
+      delivery.id,
+    );
+    assert.equal(duplicate.outcome, 'ALREADY_CONFIRMED');
+    const report = await prisma.noShowReport.findFirstOrThrow({
+      where: { deliveryId: delivery.id },
+    });
+    await rejectAdminNoShowReport(
+      ctx.supplierId,
+      report.id,
+      'Learner responsibility was not established.',
+    );
+    const resolved = await prisma.delivery.findUniqueOrThrow({
+      where: { id: delivery.id },
+    });
+    assert.equal(resolved.resolutionOutcome, 'LEARNER_NOT_RESPONSIBLE');
+    assert.ok(resolved.administrativelyResolvedAt);
+    assert.equal(
+      (await prisma.reservation.findUniqueOrThrow({
+        where: { id: reservation.id },
+      })).status,
+      'FULFILLMENT_FAILED',
+    );
+    const cardAfterResolution = await prisma.paymentOrder.findMany({
+      where: { id: { in: [cardOrders.materialOrder.id, cardOrders.feeOrder.id] } },
+      select: { purpose: true, status: true },
+    });
+    assert.ok(
+      ['REFUND_PENDING', 'REFUNDED'].includes(
+        cardAfterResolution.find((order) => order.purpose === 'MATERIAL_SUBTOTAL')!
+          .status,
+      ),
+    );
+    assert.ok(
+      ['REFUND_PENDING', 'REFUNDED'].includes(
+        cardAfterResolution.find((order) => order.purpose === 'DELIVERY_FEE')!
+          .status,
+      ),
+    );
+  });
+
+  test('second operational failure requires return without learner report', async () => {
+    const { reservation, delivery } = await acceptDeliveryReservation(ctx);
+    const cashOrders = await createDeliveryPaymentOrders({
+      learnerId: ctx.learnerId,
+      reservationId: reservation.id,
+      deliveryGroupId: delivery.deliveryGroupId,
+      method: 'CASH',
+    });
+    await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'ARRIVED_DROPOFF');
+    const retryStart = new Date(Date.now() + 60 * 60_000);
+    const retryEnd = new Date(retryStart.getTime() + 60 * 60_000);
+    await markDriverDeliveryFailed(ctx.driverId, delivery.id, {
+      reason: 'ADDRESS_OR_ACCESS_ISSUE',
+      learnerContactAttempted: true,
+      retryWindowStart: retryStart.toISOString(),
+      retryWindowEnd: retryEnd.toISOString(),
+    });
+    await updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+      status: 'ON_THE_WAY',
+    });
+    await updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+      status: 'ARRIVED_DROPOFF',
+    });
+    const result = await markDriverDeliveryFailed(ctx.driverId, delivery.id, {
+      reason: 'ADDRESS_OR_ACCESS_ISSUE',
+      learnerContactAttempted: true,
+    });
+    assert.equal(result.status, 'RETURN_TO_SUPPLIER_REQUIRED');
+    assert.equal(
+      await prisma.deliveryAttempt.count({ where: { deliveryId: delivery.id } }),
+      2,
+    );
+    assert.equal(
+      await prisma.noShowReport.count({ where: { deliveryId: delivery.id } }),
+      0,
+    );
+    assert.deepEqual(
+      (
+        await prisma.paymentOrder.findMany({
+          where: { id: { in: [cashOrders.materialOrder.id, cashOrders.feeOrder.id] } },
+          select: { status: true },
+        })
+      ).map((order) => order.status),
+      ['REQUIRES_PAYMENT', 'REQUIRES_PAYMENT'],
+    );
+    await confirmSupplierDeliveryReturn(ctx.supplierId, delivery.id);
+    await finalizeOperationalReturnedDelivery(delivery.id, ctx.supplierId);
+    assert.equal(
+      (await prisma.reservation.findUniqueOrThrow({
+        where: { id: reservation.id },
+      })).status,
+      'FULFILLMENT_FAILED',
+    );
+    const cashAfterResolution = await prisma.paymentOrder.findMany({
+      where: { id: { in: [cashOrders.materialOrder.id, cashOrders.feeOrder.id] } },
+      select: { status: true },
+    });
+    assert.equal(cashAfterResolution.every((order) => order.status === 'CANCELLED'), true);
+    assert.equal(
+      await prisma.paymentRefund.count({
+        where: { paymentOrderId: { in: [cashOrders.materialOrder.id, cashOrders.feeOrder.id] } },
+      }),
+      0,
+    );
+  });
+
+  test('verified learner final failure refunds CARD material and retains delivery fee', async () => {
+    const { reservation, delivery } = await acceptDeliveryReservation(ctx);
+    const orders = await createDeliveryPaymentOrders({
+      learnerId: ctx.learnerId,
+      reservationId: reservation.id,
+      deliveryGroupId: delivery.deliveryGroupId,
+      method: 'CARD',
+    });
+    await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'ARRIVED_DROPOFF');
+    const retryStart = new Date(Date.now() + 60 * 60_000);
+    const retryEnd = new Date(retryStart.getTime() + 60 * 60_000);
+    await markDriverDeliveryFailed(ctx.driverId, delivery.id, {
+      reason: 'LEARNER_UNAVAILABLE',
+      learnerContactAttempted: true,
+      retryWindowStart: retryStart.toISOString(),
+      retryWindowEnd: retryEnd.toISOString(),
+    });
+    await updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+      status: 'ON_THE_WAY',
+    });
+    await updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+      status: 'ARRIVED_DROPOFF',
+    });
+    await markDriverDeliveryFailed(ctx.driverId, delivery.id, {
+      reason: 'LEARNER_UNAVAILABLE',
+      learnerContactAttempted: true,
+    });
+    await confirmSupplierDeliveryReturn(ctx.supplierId, delivery.id);
+    const report = await prisma.noShowReport.findFirstOrThrow({
+      where: { deliveryId: delivery.id },
+    });
+    await verifyAdminNoShowReport(
+      ctx.supplierId,
+      report.id,
+      'Final learner unavailability verified.',
+    );
+
+    const resolvedOrders = await prisma.paymentOrder.findMany({
+      where: { id: { in: [orders.materialOrder.id, orders.feeOrder.id] } },
+      select: { purpose: true, status: true },
+    });
+    assert.ok(
+      ['REFUND_PENDING', 'REFUNDED'].includes(
+        resolvedOrders.find((order) => order.purpose === 'MATERIAL_SUBTOTAL')!
+          .status,
+      ),
+    );
+    assert.equal(
+      resolvedOrders.find((order) => order.purpose === 'DELIVERY_FEE')?.status,
+      'PAID',
+    );
+    assert.equal(
+      (await prisma.reservation.findUniqueOrThrow({
+        where: { id: reservation.id },
+      })).status,
+      'FULFILLMENT_FAILED',
+    );
+  });
+
+  test('expired retry becomes return-required without fabricated attempt or report', async () => {
+    const { delivery } = await acceptDeliveryReservation(ctx);
+    await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'ARRIVED_DROPOFF');
+    await markDriverDeliveryFailed(ctx.driverId, delivery.id, {
+      reason: 'LEARNER_UNAVAILABLE',
+      learnerContactAttempted: true,
+    });
+    await prisma.deliveryAttempt.update({
+      where: {
+        deliveryId_attemptNumber: {
+          deliveryId: delivery.id,
+          attemptNumber: 1,
+        },
+      },
+      data: { retryDeadline: new Date(Date.now() - 60_000) },
+    });
+
+    const firstRun = await expireDueDeliveryRetriesBatch(10);
+    assert.ok(firstRun.transitioned.includes(delivery.id));
+    const stored = await prisma.delivery.findUniqueOrThrow({
+      where: { id: delivery.id },
+      include: { assignments: true, attempts: true },
+    });
+    assert.equal(stored.status, 'RETURN_TO_SUPPLIER_REQUIRED');
+    assert.equal(stored.returnReason, 'RETRY_DEADLINE_EXPIRED');
+    assert.equal(stored.attempts.length, 1);
+    assert.equal(stored.assignments.filter((row) => row.status === 'ACTIVE').length, 1);
+    assert.equal(
+      await prisma.noShowReport.count({ where: { deliveryId: delivery.id } }),
+      0,
+    );
+
+    const rerun = await expireDueDeliveryRetriesBatch(10);
+    assert.equal(rerun.transitioned.includes(delivery.id), false);
+  });
+
+  test('expired scheduled retry becomes return-required without another attempt', async () => {
+    const { delivery } = await acceptDeliveryReservation(ctx);
+    await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'ARRIVED_DROPOFF');
+    const retryStart = new Date(Date.now() + 60 * 60_000);
+    const retryEnd = new Date(retryStart.getTime() + 60 * 60_000);
+    await markDriverDeliveryFailed(ctx.driverId, delivery.id, {
+      reason: 'LEARNER_UNAVAILABLE',
+      learnerContactAttempted: true,
+      retryWindowStart: retryStart.toISOString(),
+      retryWindowEnd: retryEnd.toISOString(),
+    });
+    await prisma.deliveryAttempt.update({
+      where: {
+        deliveryId_attemptNumber: {
+          deliveryId: delivery.id,
+          attemptNumber: 1,
+        },
+      },
+      data: { retryDeadline: new Date(Date.now() - 60_000) },
+    });
+
+    const result = await expireDueDeliveryRetriesBatch(10);
+    assert.ok(result.transitioned.includes(delivery.id));
+    const stored = await prisma.delivery.findUniqueOrThrow({
+      where: { id: delivery.id },
+      include: { attempts: true, assignments: true },
+    });
+    assert.equal(stored.status, 'RETURN_TO_SUPPLIER_REQUIRED');
+    assert.equal(stored.attempts.length, 1);
+    assert.equal(
+      stored.assignments.filter((row) => row.status === 'ACTIVE').length,
       1,
     );
   });

@@ -36,6 +36,7 @@ class _AdminDeliveryDetailPageState
     extends ConsumerState<AdminDeliveryDetailPage> {
   String _tab = 'Overview';
   var _isReopening = false;
+  var _isFinalizingReturn = false;
 
   void _back() => context.popOrGo('/admin/deliveries');
 
@@ -84,6 +85,50 @@ class _AdminDeliveryDetailPageState
     }
   }
 
+  Future<void> _finalizeReturnedDelivery(AdminDeliveryDetail detail) async {
+    if (_isFinalizingReturn) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AppDialogShell(
+        title: const Text('Finalize returned delivery?'),
+        content: const Text(
+          'Use this only for an operational failure with no learner no-show report. The learner will be treated as not responsible and eligible CARD orders will be refunded.',
+        ),
+        footer: AppDialogFooter.decision(
+          secondaryAction: TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(AdminL10n.of(context).cancel),
+          ),
+          primaryAction: FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Finalize resolution'),
+          ),
+        ),
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _isFinalizingReturn = true);
+    try {
+      await ref
+          .read(adminDeliveriesApiProvider)
+          .finalizeReturnedDelivery(detail.id);
+      ref.invalidate(adminDeliveryDetailProvider(widget.deliveryId));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Returned delivery finalized.')),
+        );
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isFinalizingReturn = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final detailAsync = ref.watch(
@@ -106,9 +151,10 @@ class _AdminDeliveryDetailPageState
         child: _DeliveryWorkspace(
           detail: detail,
           tab: _tab,
-          busy: _isReopening,
+          busy: _isReopening || _isFinalizingReturn,
           onTab: (value) => setState(() => _tab = value),
           onReopen: () => _reopen(detail),
+          onFinalizeReturn: () => _finalizeReturnedDelivery(detail),
         ),
       ),
     );
@@ -142,6 +188,7 @@ class _DeliveryWorkspace extends StatelessWidget {
     required this.busy,
     required this.onTab,
     required this.onReopen,
+    required this.onFinalizeReturn,
   });
 
   final AdminDeliveryDetail detail;
@@ -149,6 +196,7 @@ class _DeliveryWorkspace extends StatelessWidget {
   final bool busy;
   final ValueChanged<String> onTab;
   final VoidCallback onReopen;
+  final VoidCallback onFinalizeReturn;
 
   @override
   Widget build(BuildContext context) {
@@ -166,7 +214,13 @@ class _DeliveryWorkspace extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _Header(detail: detail, busy: busy, onReopen: onReopen, onTab: onTab),
+        _Header(
+          detail: detail,
+          busy: busy,
+          onReopen: onReopen,
+          onFinalizeReturn: onFinalizeReturn,
+          onTab: onTab,
+        ),
         const SizedBox(height: 16),
         _StateStrip(detail: detail),
         const SizedBox(height: 16),
@@ -194,11 +248,13 @@ class _Header extends StatelessWidget {
     required this.detail,
     required this.busy,
     required this.onReopen,
+    required this.onFinalizeReturn,
     required this.onTab,
   });
   final AdminDeliveryDetail detail;
   final bool busy;
   final VoidCallback onReopen;
+  final VoidCallback onFinalizeReturn;
   final ValueChanged<String> onTab;
 
   @override
@@ -228,6 +284,12 @@ class _Header extends StatelessWidget {
                       )
                     : const Icon(Icons.refresh, size: 18),
                 label: const Text('Reopen driver assignment'),
+              ),
+            if (detail.canFinalizeOperationalReturn)
+              FilledButton.icon(
+                onPressed: busy ? null : onFinalizeReturn,
+                icon: const Icon(Icons.task_alt_outlined, size: 18),
+                label: const Text('Finalize operational return'),
               ),
             if (links.contains(DeliveryLink.openIncident) && incident != null)
               OutlinedButton.icon(
@@ -465,6 +527,10 @@ class _OverviewTab extends StatelessWidget {
       ];
       final main = <Widget>[
         _SummaryCard(detail: detail),
+        if (detail.returnRequiredAt != null || detail.returnedAt != null) ...[
+          const SizedBox(height: 14),
+          _ReturnRecoveryCard(detail: detail),
+        ],
         const SizedBox(height: 14),
         _PeopleCard(detail: detail),
         const SizedBox(height: 14),
@@ -492,6 +558,59 @@ class _OverviewTab extends StatelessWidget {
         ],
       );
     },
+  );
+}
+
+class _ReturnRecoveryCard extends StatelessWidget {
+  const _ReturnRecoveryCard({required this.detail});
+  final AdminDeliveryDetail detail;
+
+  @override
+  Widget build(BuildContext context) => _Panel(
+    title: 'Delivery recovery',
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Info(label: 'Physical attempts', value: '${detail.attemptCount}'),
+        _Info(
+          label: 'Return reason',
+          value: humanizeEnum(detail.returnReason ?? 'NOT_RECORDED'),
+        ),
+        _Info(
+          label: 'Return required',
+          value: formatAdminDateTime(detail.returnRequiredAt) ?? '—',
+        ),
+        _Info(
+          label: 'Physical return confirmed',
+          value: formatAdminDateTime(detail.returnedAt) ?? 'Not yet',
+        ),
+        _Info(
+          label: 'Administrative outcome',
+          value: detail.resolutionOutcome == null
+              ? 'Pending'
+              : humanizeEnum(detail.resolutionOutcome!),
+        ),
+        _Info(
+          label: 'Material payment',
+          value: [
+            detail.materialPaymentMethod,
+            detail.materialPaymentStatus,
+          ].whereType<String>().map(humanizeEnum).join(' · '),
+        ),
+        _Info(
+          label: 'Delivery fee',
+          value: [
+            detail.deliveryFeePaymentMethod,
+            detail.deliveryFeePaymentStatus,
+          ].whereType<String>().map(humanizeEnum).join(' · '),
+        ),
+        if (detail.returnedItemLines.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          const Text('Authoritative carried items'),
+          for (final item in detail.returnedItemLines) Text('• $item'),
+        ],
+      ],
+    ),
   );
 }
 

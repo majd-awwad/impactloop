@@ -889,9 +889,8 @@ export const markDriverDeliveryFailed = async (input: {
     });
 
     const learnerAccountable = normalizedReason === 'LEARNER_UNREACHABLE';
-    const newDeliveryStatus: DeliveryStatus = learnerAccountable
-      ? 'LEARNER_NO_SHOW'
-      : 'FAILED_DELIVERY';
+    const newDeliveryStatus: DeliveryStatus =
+      'RETURN_TO_SUPPLIER_REQUIRED';
 
     if (learnerAccountable) {
       await createNoShowReportOnce(tx, {
@@ -929,10 +928,15 @@ export const markDriverDeliveryFailed = async (input: {
       },
       data: {
         status: newDeliveryStatus,
-        assignedDriverProfileId: null,
         failedAt: now,
         failureReason: failureNote,
         driverNote: input.note?.trim() || delivery.driverNote,
+        returnRequiredAt: now,
+        returnReason: 'FINAL_ATTEMPT_FAILED',
+        returnCustodyDriverProfileId: profile.id,
+        learnerDeliveryHandoverTokenHash: null,
+        learnerDeliveryHandoverTokenIssuedAt: null,
+        learnerDeliveryHandoverTokenExpiresAt: null,
       },
     });
     if (deliveryChanged.count !== 1) {
@@ -952,26 +956,11 @@ export const markDriverDeliveryFailed = async (input: {
       },
     });
 
-    const reservation = await transitionFailureReservations(tx, {
-      delivery,
-      changedByUserId: input.driverUserId,
-      note: delivery.deliveryGroupId
-        ? 'Grouped delivery failed after pickup'
-        : 'Delivery failed after pickup',
-      groupedState,
-    });
-
-    await releaseDriverFromDelivery(tx, {
-      deliveryId: delivery.id,
-      driverProfileId: profile.id,
-      releaseReason: 'Delivery failed',
-      expectedActiveCount: groupedState ? 1 : undefined,
-    });
-
     return {
-      outcome: 'UPDATED' as const,
-      reservation,
+      outcome: 'FINAL_RETURN_REQUIRED' as const,
+      reservation: delivery.reservation,
       delivery: updatedDelivery,
+      learnerAccountable,
     };
   });
 

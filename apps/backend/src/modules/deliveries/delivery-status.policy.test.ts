@@ -15,6 +15,7 @@ test('terminal delivery policy covers completed, failed, and resolution states',
     'DRIVER_NO_SHOW',
     'LEARNER_NO_SHOW',
     'AWAITING_RESOLUTION',
+    'RETURNED_TO_SUPPLIER',
   ]);
 
   for (const status of TERMINAL_DELIVERY_STATUSES) {
@@ -25,4 +26,5 @@ test('terminal delivery policy covers completed, failed, and resolution states',
   assert.equal(isTerminalDeliveryStatus('DRIVER_ASSIGNED'), false);
   assert.equal(isTerminalDeliveryStatus('PICKED_UP'), false);
   assert.equal(isTerminalDeliveryStatus('ON_THE_WAY'), false);
+  assert.equal(isTerminalDeliveryStatus('RETURN_TO_SUPPLIER_REQUIRED'), false);
 });

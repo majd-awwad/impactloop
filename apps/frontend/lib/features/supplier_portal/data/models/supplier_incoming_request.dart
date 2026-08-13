@@ -701,6 +701,11 @@ class SupplierDeliverySummary {
     this.failedAt,
     this.failureReason,
     this.recoveryRequired,
+    this.returnRequiredAt,
+    this.returnReason,
+    this.returnedToSupplierAt,
+    this.canConfirmReturn = false,
+    this.returnedItems = const [],
   });
 
   final String? deliveryId;
@@ -713,6 +718,11 @@ class SupplierDeliverySummary {
   final DateTime? failedAt;
   final String? failureReason;
   final bool? recoveryRequired;
+  final DateTime? returnRequiredAt;
+  final String? returnReason;
+  final DateTime? returnedToSupplierAt;
+  final bool canConfirmReturn;
+  final List<SupplierReturnedItem> returnedItems;
 
   factory SupplierDeliverySummary.fromJson(Map<String, dynamic> json) =>
       SupplierDeliverySummary(
@@ -726,7 +736,41 @@ class SupplierDeliverySummary {
         failedAt: _jsonDate(json['failedAt']),
         failureReason: json['failureReason'] as String?,
         recoveryRequired: json['recoveryRequired'] as bool?,
+        returnRequiredAt: _jsonDate(json['returnRequiredAt']),
+        returnReason: json['returnReason'] as String?,
+        returnedToSupplierAt: _jsonDate(json['returnedToSupplierAt']),
+        canConfirmReturn: json['canConfirmReturn'] == true,
+        returnedItems: _immutableList(
+          (json['returnedItems'] as List? ?? const <dynamic>[])
+              .whereType<Map>()
+              .map(
+                (item) => SupplierReturnedItem.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              ),
+        ),
       );
+}
+
+class SupplierReturnedItem {
+  const SupplierReturnedItem({
+    required this.title,
+    required this.quantity,
+    required this.unit,
+  });
+
+  final String title;
+  final num quantity;
+  final String unit;
+
+  factory SupplierReturnedItem.fromJson(Map<String, dynamic> json) =>
+      SupplierReturnedItem(
+        title: json['title'] as String? ?? '',
+        quantity: json['quantity'] as num? ?? 0,
+        unit: json['unit'] as String? ?? '',
+      );
+
+  String get presentation => '$title × ${quantity.toString()} $unit'.trim();
 }
 
 class SupplierGroupSummary {

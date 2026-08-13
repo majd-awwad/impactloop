@@ -28,7 +28,7 @@ void main() {
     final ar = AppLocalizationsAr();
     final labels = LearnerUiLabels(ar);
 
-    expect(learnerDeliveryStatuses, hasLength(15));
+    expect(learnerDeliveryStatuses, hasLength(17));
     for (final status in learnerDeliveryStatuses) {
       expect(labels.deliveryStatus(status), isNot(ar.unknownStatus));
       expect(deliveryStatusAppTone(status).name, isNot('neutral'));
@@ -38,6 +38,23 @@ void main() {
     expect(isSuccessfulLearnerDeliveryStatus('DELIVERED'), isTrue);
     expect(isTerminalLearnerDeliveryStatus('DELIVERED'), isTrue);
     expect(isSuccessfulLearnerDeliveryStatus('COMPLETED'), isFalse);
+  });
+
+  test('return recovery statuses are localized and have custody semantics', () {
+    final en = LearnerUiLabels(AppLocalizationsEn());
+    final ar = LearnerUiLabels(AppLocalizationsAr());
+
+    expect(isActiveLearnerDeliveryStatus('RETURN_TO_SUPPLIER_REQUIRED'), isTrue);
+    expect(isTerminalLearnerDeliveryStatus('RETURN_TO_SUPPLIER_REQUIRED'), isFalse);
+    expect(isTerminalLearnerDeliveryStatus('RETURNED_TO_SUPPLIER'), isTrue);
+    for (final status in const [
+      'RETURN_TO_SUPPLIER_REQUIRED',
+      'RETURNED_TO_SUPPLIER',
+    ]) {
+      expect(en.deliveryStatus(status), isNot(AppLocalizationsEn().unknownStatus));
+      expect(ar.deliveryStatus(status), isNot(AppLocalizationsAr().unknownStatus));
+      expect(en.deliveryStatus(status).toLowerCase(), isNot(contains('strike')));
+    }
   });
 
   test('retry statuses are active and localized in English and Arabic', () {

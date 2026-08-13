@@ -120,6 +120,25 @@ Future<void> _pumpDetail(
                       detail.schedule!.confirmedDeliveryWindow!,
                     ),
                 },
+              if (detail.delivery != null)
+                'delivery': {
+                  'deliveryId': detail.delivery!.deliveryId,
+                  'status': detail.delivery!.status,
+                  'canConfirmReturn': detail.delivery!.canConfirmReturn,
+                  'returnReason': detail.delivery!.returnReason,
+                  'driver': {
+                    'displayName': detail.delivery!.driver?.displayName,
+                  },
+                  'returnedItems': detail.delivery!.returnedItems
+                      .map(
+                        (item) => {
+                          'title': item.title,
+                          'quantity': item.quantity,
+                          'unit': item.unit,
+                        },
+                      )
+                      .toList(),
+                },
             },
           ),
         ),
@@ -235,5 +254,59 @@ void main() {
 
     expect(find.text(en.supplierSupplierDeliveryPickupWindow), findsNothing);
     expect(find.text(en.supplierNoWindowProposed), findsOneWidget);
+  });
+
+  testWidgets('supplier sees authoritative grouped return confirmation only when applicable', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final detail = SupplierReservationDetail.fromJson({
+      ..._pendingPayload(),
+      'status': 'ACCEPTED',
+      'request': {'fulfillmentMethod': 'DELIVERY'},
+      'delivery': {
+        'deliveryId': 'delivery-return-1',
+        'status': 'RETURN_TO_SUPPLIER_REQUIRED',
+        'canConfirmReturn': true,
+        'returnReason': 'FINAL_ATTEMPT_FAILED',
+        'driver': {'displayName': 'Returning Driver'},
+        'returnedItems': [
+          {'title': 'Wood', 'quantity': 2, 'unit': 'kg'},
+          {'title': 'Metal', 'quantity': 3, 'unit': 'pieces'},
+        ],
+      },
+    });
+    await _pumpDetail(tester, detail);
+
+    expect(find.text(en.supplierReturnRequiredTitle), findsOneWidget);
+    expect(find.text(en.supplierConfirmMaterialReturned), findsOneWidget);
+    expect(find.textContaining('Wood'), findsOneWidget);
+    expect(find.textContaining('Metal'), findsOneWidget);
+    expect(find.text('Returning Driver'), findsWidgets);
+  });
+
+  testWidgets('supplier confirmation is hidden outside return-required state', (
+    tester,
+  ) async {
+    final detail = SupplierReservationDetail.fromJson({
+      ..._pendingPayload(),
+      'status': 'ACCEPTED',
+      'request': {'fulfillmentMethod': 'DELIVERY'},
+      'delivery': {
+        'deliveryId': 'delivery-active-1',
+        'status': 'ON_THE_WAY',
+        'canConfirmReturn': false,
+        'returnedItems': const [],
+      },
+    });
+    await _pumpDetail(tester, detail);
+
+    expect(find.text(en.supplierConfirmMaterialReturned), findsNothing);
   });
 }

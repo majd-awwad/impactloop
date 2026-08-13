@@ -130,6 +130,7 @@ import {
   listAdminDeliveriesHandler,
   preflightAdminDeliveriesExportHandler,
   reopenAdminDeliveryDriverAssignmentHandler,
+  finalizeOperationalReturnedDeliveryHandler,
 } from '../admin-deliveries/admin-deliveries.controller.js';
 import {
   adminDeliveriesExportDownloadQuerySchema,
@@ -618,6 +619,14 @@ adminRouter.get(
   requireRoles('ADMIN'),
   validate(adminDeliveriesExportDownloadQuerySchema, 'query'),
   asyncHandler(exportAdminDeliveriesHandler),
+);
+
+adminRouter.post(
+  '/deliveries/:id/finalize-returned',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminDeliveryIdParamSchema, 'params'),
+  asyncHandler(finalizeOperationalReturnedDeliveryHandler),
 );
 
 adminRouter.post(

@@ -63,6 +63,9 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
       throw UnsupportedError('Mock reservation details are not configured.');
 
   @override
+  Future<void> confirmDeliveryReturn(String deliveryId) async {}
+
+  @override
   Future<SupplierIncomingRequest> acceptRequest(
     String requestId,
     SupplierPickupWindow pickupWindow,

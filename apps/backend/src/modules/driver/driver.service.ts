@@ -400,6 +400,10 @@ const mapAssignedDelivery = (delivery: DriverDeliveryRecord) => ({
   retryDeadline:
     delivery.attempts.find((attempt) => attempt.attemptNumber === 1)
       ?.retryDeadline?.toISOString() ?? null,
+  returnRequiredAt: delivery.returnRequiredAt?.toISOString() ?? null,
+  returnReason: delivery.returnReason,
+  returnedToSupplierAt:
+    delivery.returnedToSupplierAt?.toISOString() ?? null,
   canDriverReportPickupFailed: canDriverMarkPickupFailed({
     reservationStatus: delivery.reservation.status,
     deliveryStatus: delivery.status,

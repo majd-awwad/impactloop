@@ -56,6 +56,11 @@ class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
   }
 
   @override
+  Future<void> confirmDeliveryReturn(String deliveryId) {
+    return _api.confirmDeliveryReturn(deliveryId);
+  }
+
+  @override
   Future<SupplierIncomingRequest> acceptRequest(
     String requestId,
     SupplierPickupWindow pickupWindow,

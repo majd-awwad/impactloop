@@ -19,6 +19,10 @@ abstract class SupplierRequestsRepository {
 
   Future<SupplierReservationDetail> fetchReservationDetail(String requestId);
 
+  /// Confirms that the supplier physically received all authoritative carried
+  /// items for a failed delivery.
+  Future<void> confirmDeliveryReturn(String deliveryId);
+
   Future<SupplierIncomingRequest> acceptRequest(
     String requestId,
     SupplierPickupWindow pickupWindow,

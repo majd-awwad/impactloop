@@ -369,6 +369,7 @@ class LearnerDelivery {
   bool get shouldShowLearnerDeliveryCode =>
       isActive &&
       normalizeDeliveryStatus(status) != 'REDELIVERY_PENDING' &&
+      normalizeDeliveryStatus(status) != 'RETURN_TO_SUPPLIER_REQUIRED' &&
       learnerDeliveryCode != null &&
       learnerDeliveryCode!.trim().isNotEmpty;
 

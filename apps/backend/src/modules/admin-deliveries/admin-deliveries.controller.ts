@@ -14,6 +14,7 @@ import {
   getAdminDeliveryById,
   listAdminDeliveries,
   reopenAdminDeliveryDriverAssignment,
+  finalizeOperationalReturnedDelivery,
 } from './admin-deliveries.service.js';
 import type {
   AdminDeliveriesExportDownloadQuery,
@@ -69,4 +70,13 @@ export const reopenAdminDeliveryDriverAssignmentHandler = async (
   const adminUserId = req.auth!.sub;
   const result = await reopenAdminDeliveryDriverAssignment(id, adminUserId);
   res.json(successResponse('Delivery reopened to drivers', result));
+};
+
+export const finalizeOperationalReturnedDeliveryHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<AdminDeliveryIdParams>(req);
+  const result = await finalizeOperationalReturnedDelivery(id, req.auth!.sub);
+  res.json(successResponse('Returned delivery resolved.', result));
 };

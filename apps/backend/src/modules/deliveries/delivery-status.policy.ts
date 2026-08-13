@@ -8,6 +8,7 @@ export const TERMINAL_DELIVERY_STATUSES = [
   'DRIVER_NO_SHOW',
   'LEARNER_NO_SHOW',
   'AWAITING_RESOLUTION',
+  'RETURNED_TO_SUPPLIER',
 ] as const satisfies readonly DeliveryStatus[];
 
 export type TerminalDeliveryStatus =

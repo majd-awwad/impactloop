@@ -8,6 +8,7 @@ import { expireDuePendingReservationsBatch } from './reservations.pending-expiry
 import { expireDueMissedPickupsBatch } from './reservations.missed-pickup-expiry.repository.js';
 import { escalateDueNoDriverDeliveriesBatch } from './reservations.no-driver-auto-escalation.repository.js';
 import { escalateDueAssignedDriverPickupsBatch } from './reservations.stale-assigned-driver-auto-escalation.repository.js';
+import { expireDueDeliveryRetriesBatch } from '../delivery-returns/delivery-returns.service.js';
 
 const LOCK_NAME = 'impactloop:reservation-lifecycle';
 const CONSECUTIVE_FAILURE_THRESHOLD = 3;
@@ -50,6 +51,7 @@ export type ReservationLifecycleBatchResult = {
   missedPickupExpired: number;
   noDriverEscalated: number;
   assignedDriverEscalated: number;
+  deliveryRetriesExpired: number;
   projectHelpSessionsAutoCompleted: number;
   durationMs: number;
 };
@@ -192,6 +194,7 @@ export class ReservationLifecycleWorker {
             missedPickupExpired: result.missedPickupExpired,
             noDriverEscalated: result.noDriverEscalated,
             assignedDriverEscalated: result.assignedDriverEscalated,
+            deliveryRetriesExpired: result.deliveryRetriesExpired,
             projectHelpSessionsAutoCompleted:
               result.projectHelpSessionsAutoCompleted,
           },
@@ -288,6 +291,10 @@ export class ReservationLifecycleWorker {
     const assignedDriverEscalated = await escalateDueAssignedDriverPickupsBatch(
       this.batchSize,
     );
+    const deliveryRetriesExpired = await expireDueDeliveryRetriesBatch(
+      this.batchSize,
+      new Date(this.now()),
+    );
     const projectHelpSessionsAutoFinalized =
       await autoFinalizeDueProjectHelpSessionsBatch(
         this.batchSize,
@@ -299,6 +306,7 @@ export class ReservationLifecycleWorker {
       missedPickupExpired.length +
       noDriverEscalated.length +
       assignedDriverEscalated.length +
+      deliveryRetriesExpired.transitioned.length +
       projectHelpSessionsAutoFinalized.transitionCount;
 
     const dueCount =
@@ -306,6 +314,7 @@ export class ReservationLifecycleWorker {
       missedPickupExpired.length +
       noDriverEscalated.length +
       assignedDriverEscalated.length +
+      deliveryRetriesExpired.dueCount +
       projectHelpSessionsAutoFinalized.dueCount;
 
     return {
@@ -316,6 +325,7 @@ export class ReservationLifecycleWorker {
       missedPickupExpired: missedPickupExpired.length,
       noDriverEscalated: noDriverEscalated.length,
       assignedDriverEscalated: assignedDriverEscalated.length,
+      deliveryRetriesExpired: deliveryRetriesExpired.transitioned.length,
       projectHelpSessionsAutoCompleted:
         projectHelpSessionsAutoFinalized.transitionCount,
       durationMs: Math.round((performance.now() - startedAt) * 100) / 100,

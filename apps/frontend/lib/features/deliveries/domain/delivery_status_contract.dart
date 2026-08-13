@@ -8,6 +8,8 @@ const learnerDeliveryStatuses = <String>{
   'ARRIVED_DROPOFF',
   'REDELIVERY_PENDING',
   'REDELIVERY_SCHEDULED',
+  'RETURN_TO_SUPPLIER_REQUIRED',
+  'RETURNED_TO_SUPPLIER',
   'DELIVERED',
   'CANCELLED',
   'FAILED_PICKUP',
@@ -26,6 +28,7 @@ const activeLearnerDeliveryStatuses = <String>{
   'ARRIVED_DROPOFF',
   'REDELIVERY_PENDING',
   'REDELIVERY_SCHEDULED',
+  'RETURN_TO_SUPPLIER_REQUIRED',
 };
 
 const terminalLearnerDeliveryStatuses = <String>{
@@ -36,6 +39,7 @@ const terminalLearnerDeliveryStatuses = <String>{
   'DRIVER_NO_SHOW',
   'LEARNER_NO_SHOW',
   'AWAITING_RESOLUTION',
+  'RETURNED_TO_SUPPLIER',
 };
 
 String normalizeDeliveryStatus(String? status) =>

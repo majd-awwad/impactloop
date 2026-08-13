@@ -31,6 +31,7 @@ import type {
   SubmitNoDriverPickupWindowInput,
   SubmitNoShowReportInput,
 } from './supplier-reservations.validation.js';
+import { confirmSupplierDeliveryReturn } from '../delivery-returns/delivery-returns.service.js';
 
 export const listSupplierReservationsHandler = async (
   req: Request,
@@ -56,6 +57,15 @@ export const getSupplierReservationHandler = async (
   const reservation = await getSupplierReservationDetail(req.auth!.sub, id);
 
   res.json(successResponse('Supplier reservation loaded.', reservation));
+};
+
+export const confirmSupplierDeliveryReturnHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<ReservationIdParams>(req);
+  const result = await confirmSupplierDeliveryReturn(req.auth!.sub, id);
+  res.json(successResponse('Material return confirmed.', result));
 };
 
 export const acceptSupplierReservationHandler = async (

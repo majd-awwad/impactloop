@@ -236,6 +236,9 @@ class DriverDelivery {
     this.scheduleOccurrence = 0,
     this.deliveryAttempts = const [],
     this.retryDeadline,
+    this.returnRequiredAt,
+    this.returnReason,
+    this.returnedToSupplierAt,
   });
 
   final String id;
@@ -282,6 +285,9 @@ class DriverDelivery {
   final int scheduleOccurrence;
   final List<DriverDeliveryAttempt> deliveryAttempts;
   final DateTime? retryDeadline;
+  final DateTime? returnRequiredAt;
+  final String? returnReason;
+  final DateTime? returnedToSupplierAt;
 
   factory DriverDelivery.fromJson(Map<String, dynamic> json) {
     final itemsJson = json['items'];
@@ -383,6 +389,9 @@ class DriverDelivery {
       scheduleOccurrence: (json['scheduleOccurrence'] as num?)?.toInt() ?? 0,
       deliveryAttempts: attempts,
       retryDeadline: _dateFromJson(json['retryDeadline']),
+      returnRequiredAt: _dateFromJson(json['returnRequiredAt']),
+      returnReason: json['returnReason'] as String?,
+      returnedToSupplierAt: _dateFromJson(json['returnedToSupplierAt']),
     );
   }
 
@@ -423,6 +432,7 @@ const driverAutoPingEligibleStatuses = {
   'PICKED_UP',
   'REDELIVERY_PENDING',
   'REDELIVERY_SCHEDULED',
+  'RETURN_TO_SUPPLIER_REQUIRED',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
 };

@@ -314,6 +314,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get statusRedeliveryScheduled => 'تمت جدولة إعادة التوصيل';
 
   @override
+  String get statusReturnToSupplierRequired =>
+      'تعذّر إكمال التوصيل. تُعاد المادة إلى المورّد وستتم مراجعة الحالة.';
+
+  @override
+  String get statusReturnedToSupplier =>
+      'أُعيدت المادة إلى المورّد والحالة قيد المراجعة';
+
+  @override
   String get statusDelivered => 'تم التوصيل';
 
   @override
@@ -6096,6 +6104,37 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplierFailureRecovery => 'فشل / استعادة';
 
   @override
+  String get supplierReturnRequiredTitle => 'يجب إعادة المادة';
+
+  @override
+  String get supplierReturnRequiredBody =>
+      'تعذّر إكمال التوصيل. سيعيد السائق المواد التي استلمها. أكّد الاستلام فقط بعد وصولها.';
+
+  @override
+  String get supplierReturnReasonFinalAttempt =>
+      'تعذّر إكمال محاولة التوصيل النهائية.';
+
+  @override
+  String get supplierReturnReasonRetryExpired =>
+      'انتهت مهلة إعادة التوصيل قبل إكمال محاولة أخرى.';
+
+  @override
+  String get supplierReturnedItems => 'المواد قيد الإعادة';
+
+  @override
+  String get supplierConfirmMaterialReturned => 'تأكيد إعادة المادة';
+
+  @override
+  String get supplierConfirmReturnTitle => 'تأكيد الإعادة الفعلية';
+
+  @override
+  String get supplierConfirmReturnBody =>
+      'أكّد أن السائق أعاد فعليًا جميع المواد المدرجة.';
+
+  @override
+  String get supplierReturnConfirmed => 'تم تأكيد إعادة المادة.';
+
+  @override
   String get supplierDeliveryNotCreated =>
       'لم يُختَر التوصيل أو يُنشأ لهذا الحجز.';
 
@@ -7959,6 +7998,30 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get driverStatusRedeliveryScheduled => 'تمت جدولة إعادة التوصيل';
+
+  @override
+  String get driverStatusReturnToSupplierRequired => 'إعادة إلى المورّد';
+
+  @override
+  String get driverStatusReturnedToSupplier => 'أُعيدت إلى المورّد';
+
+  @override
+  String get driverReturnToSupplierTitle => 'إعادة إلى المورّد';
+
+  @override
+  String get driverReturnToSupplierBody =>
+      'أعِد جميع المواد التي بحوزتك إلى المورّد. تبقى المواد في عهدتك حتى يؤكد المورّد استلامها.';
+
+  @override
+  String get driverReturnReasonFinalAttempt =>
+      'تعذّر إكمال محاولة التوصيل النهائية.';
+
+  @override
+  String get driverReturnReasonRetryExpired => 'انتهت مهلة إعادة التوصيل.';
+
+  @override
+  String get driverWaitingSupplierConfirmation =>
+      'بانتظار تأكيد المورّد للاستلام';
 
   @override
   String get driverStatusChangedRefresh =>

@@ -86,6 +86,8 @@ class LearnerUiLabels {
     'ARRIVED_DROPOFF' => l10n.statusArrivedDropoff,
     'REDELIVERY_PENDING' => l10n.statusRedeliveryPending,
     'REDELIVERY_SCHEDULED' => l10n.statusRedeliveryScheduled,
+    'RETURN_TO_SUPPLIER_REQUIRED' => l10n.statusReturnToSupplierRequired,
+    'RETURNED_TO_SUPPLIER' => l10n.statusReturnedToSupplier,
     'DELIVERED' => l10n.statusDelivered,
     'CANCELLED' => l10n.statusDeliveryCancelled,
     'FAILED_PICKUP' => l10n.statusPickupFailed,

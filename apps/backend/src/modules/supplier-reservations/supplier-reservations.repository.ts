@@ -74,7 +74,15 @@ export const reservationInclude = {
       deliveredAt: true,
       failedAt: true,
       failureReason: true,
+      returnRequiredAt: true,
+      returnReason: true,
+      returnedToSupplierAt: true,
+      returnConfirmedByUserId: true,
       deliveryGroupId: true,
+      pickupItems: {
+        where: { wasPicked: true },
+        select: { materialTitle: true, quantity: true, unit: true },
+      },
       assignedDriverProfile: {
         select: {
           id: true,
@@ -111,6 +119,14 @@ export const reservationInclude = {
           deliveredAt: true,
           failedAt: true,
           failureReason: true,
+          returnRequiredAt: true,
+          returnReason: true,
+          returnedToSupplierAt: true,
+          returnConfirmedByUserId: true,
+          pickupItems: {
+            where: { wasPicked: true },
+            select: { materialTitle: true, quantity: true, unit: true },
+          },
           assignedDriverProfile: {
             select: {
               id: true,
@@ -224,7 +240,15 @@ const supplierReservationListSelect = {
       deliveredAt: true,
       failedAt: true,
       failureReason: true,
+      returnRequiredAt: true,
+      returnReason: true,
+      returnedToSupplierAt: true,
+      returnConfirmedByUserId: true,
       deliveryGroupId: true,
+      pickupItems: {
+        where: { wasPicked: true },
+        select: { materialTitle: true, quantity: true, unit: true },
+      },
       assignedDriverProfile: {
         select: {
           id: true,
@@ -259,6 +283,14 @@ const supplierReservationListSelect = {
           deliveredAt: true,
           failedAt: true,
           failureReason: true,
+          returnRequiredAt: true,
+          returnReason: true,
+          returnedToSupplierAt: true,
+          returnConfirmedByUserId: true,
+          pickupItems: {
+            where: { wasPicked: true },
+            select: { materialTitle: true, quantity: true, unit: true },
+          },
           assignedDriverProfile: {
             select: {
               id: true,

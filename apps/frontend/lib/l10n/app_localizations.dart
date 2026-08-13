@@ -662,6 +662,18 @@ abstract class AppLocalizations {
   /// **'Redelivery scheduled'**
   String get statusRedeliveryScheduled;
 
+  /// No description provided for @statusReturnToSupplierRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery could not be completed. The material is being returned to the supplier and the case will be reviewed.'**
+  String get statusReturnToSupplierRequired;
+
+  /// No description provided for @statusReturnedToSupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Material returned to supplier; case under review'**
+  String get statusReturnedToSupplier;
+
   /// No description provided for @statusDelivered.
   ///
   /// In en, this message translates to:
@@ -10545,6 +10557,60 @@ abstract class AppLocalizations {
   /// **'Failure / recovery'**
   String get supplierFailureRecovery;
 
+  /// No description provided for @supplierReturnRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Material return required'**
+  String get supplierReturnRequiredTitle;
+
+  /// No description provided for @supplierReturnRequiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The delivery could not be completed. The driver will return the carried material. Confirm receipt only after it arrives.'**
+  String get supplierReturnRequiredBody;
+
+  /// No description provided for @supplierReturnReasonFinalAttempt.
+  ///
+  /// In en, this message translates to:
+  /// **'The final delivery attempt could not be completed.'**
+  String get supplierReturnReasonFinalAttempt;
+
+  /// No description provided for @supplierReturnReasonRetryExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The redelivery deadline expired before another attempt could be completed.'**
+  String get supplierReturnReasonRetryExpired;
+
+  /// No description provided for @supplierReturnedItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Materials being returned'**
+  String get supplierReturnedItems;
+
+  /// No description provided for @supplierConfirmMaterialReturned.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm material returned'**
+  String get supplierConfirmMaterialReturned;
+
+  /// No description provided for @supplierConfirmReturnTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm physical return'**
+  String get supplierConfirmReturnTitle;
+
+  /// No description provided for @supplierConfirmReturnBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm that the returning driver physically handed back every listed material.'**
+  String get supplierConfirmReturnBody;
+
+  /// No description provided for @supplierReturnConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Material return confirmed.'**
+  String get supplierReturnConfirmed;
+
   /// No description provided for @supplierDeliveryNotCreated.
   ///
   /// In en, this message translates to:
@@ -13736,6 +13802,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Redelivery scheduled'**
   String get driverStatusRedeliveryScheduled;
+
+  /// No description provided for @driverStatusReturnToSupplierRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to supplier'**
+  String get driverStatusReturnToSupplierRequired;
+
+  /// No description provided for @driverStatusReturnedToSupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Returned to supplier'**
+  String get driverStatusReturnedToSupplier;
+
+  /// No description provided for @driverReturnToSupplierTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to supplier'**
+  String get driverReturnToSupplierTitle;
+
+  /// No description provided for @driverReturnToSupplierBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Return every carried material to the supplier. The material remains in your custody until the supplier confirms receipt.'**
+  String get driverReturnToSupplierBody;
+
+  /// No description provided for @driverReturnReasonFinalAttempt.
+  ///
+  /// In en, this message translates to:
+  /// **'The final delivery attempt could not be completed.'**
+  String get driverReturnReasonFinalAttempt;
+
+  /// No description provided for @driverReturnReasonRetryExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The redelivery deadline expired.'**
+  String get driverReturnReasonRetryExpired;
+
+  /// No description provided for @driverWaitingSupplierConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the supplier to confirm receipt'**
+  String get driverWaitingSupplierConfirmation;
 
   /// No description provided for @driverStatusChangedRefresh.
   ///

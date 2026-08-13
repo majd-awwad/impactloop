@@ -625,6 +625,17 @@ class AdminDeliveryDetail {
     this.hasMoreLinkedIncidents = false,
     this.group,
     this.tracking,
+    this.returnRequiredAt,
+    this.returnReason,
+    this.returnedAt,
+    this.resolutionOutcome,
+    this.administrativelyResolvedAt,
+    this.returnedItemLines = const [],
+    this.attemptCount = 0,
+    this.materialPaymentMethod,
+    this.materialPaymentStatus,
+    this.deliveryFeePaymentMethod,
+    this.deliveryFeePaymentStatus,
   });
 
   final String id;
@@ -671,6 +682,22 @@ class AdminDeliveryDetail {
   final List<AdminDeliveryTimelineItem> timeline;
   final AdminDeliveryLocationHistory locationHistory;
   final bool canReopenDriverAssignment;
+  final String? returnRequiredAt;
+  final String? returnReason;
+  final String? returnedAt;
+  final String? resolutionOutcome;
+  final String? administrativelyResolvedAt;
+  final List<String> returnedItemLines;
+  final int attemptCount;
+  final String? materialPaymentMethod;
+  final String? materialPaymentStatus;
+  final String? deliveryFeePaymentMethod;
+  final String? deliveryFeePaymentStatus;
+
+  bool get canFinalizeOperationalReturn =>
+      status == 'RETURNED_TO_SUPPLIER' &&
+      incidentCount == 0 &&
+      administrativelyResolvedAt == null;
 
   bool get canShowReopenDriverAssignmentAction =>
       canReopenDriverAssignment &&
@@ -680,6 +707,18 @@ class AdminDeliveryDetail {
   factory AdminDeliveryDetail.fromJson(Map<String, dynamic> json) {
     final mutationValues = _strings(json['availableMutations']);
     final linkValues = _strings(json['availableLinks']);
+    final recovery = json['returnRecovery'] is Map
+        ? Map<String, dynamic>.from(json['returnRecovery'] as Map)
+        : const <String, dynamic>{};
+    final payment = json['payment'] is Map
+        ? Map<String, dynamic>.from(json['payment'] as Map)
+        : const <String, dynamic>{};
+    final materialPayment = payment['material'] is Map
+        ? Map<String, dynamic>.from(payment['material'] as Map)
+        : const <String, dynamic>{};
+    final feePayment = payment['deliveryFee'] is Map
+        ? Map<String, dynamic>.from(payment['deliveryFee'] as Map)
+        : const <String, dynamic>{};
     return AdminDeliveryDetail(
       id: json['id'] as String? ?? '',
       status: json['status'] as String? ?? '',
@@ -780,6 +819,26 @@ class AdminDeliveryDetail {
               json['tracking'] as Map<String, dynamic>,
             )
           : null,
+      returnRequiredAt: recovery['requiredAt'] as String?,
+      returnReason: recovery['reason'] as String?,
+      returnedAt: recovery['returnedAt'] as String?,
+      resolutionOutcome: recovery['resolutionOutcome'] as String?,
+      administrativelyResolvedAt:
+          recovery['administrativelyResolvedAt'] as String?,
+      returnedItemLines:
+          (recovery['carriedItems'] as List<dynamic>? ?? const [])
+              .whereType<Map>()
+              .map((item) {
+                final value = Map<String, dynamic>.from(item);
+                return '${value['title'] ?? 'Material'} × ${value['quantity'] ?? 0} ${value['unit'] ?? ''}'
+                    .trim();
+              })
+              .toList(growable: false),
+      attemptCount: (json['attempts'] as List<dynamic>? ?? const []).length,
+      materialPaymentMethod: materialPayment['method'] as String?,
+      materialPaymentStatus: materialPayment['status'] as String?,
+      deliveryFeePaymentMethod: feePayment['method'] as String?,
+      deliveryFeePaymentStatus: feePayment['status'] as String?,
     );
   }
 }

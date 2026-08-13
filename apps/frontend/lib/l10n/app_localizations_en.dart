@@ -320,6 +320,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusRedeliveryScheduled => 'Redelivery scheduled';
 
   @override
+  String get statusReturnToSupplierRequired =>
+      'Delivery could not be completed. The material is being returned to the supplier and the case will be reviewed.';
+
+  @override
+  String get statusReturnedToSupplier =>
+      'Material returned to supplier; case under review';
+
+  @override
   String get statusDelivered => 'Delivered';
 
   @override
@@ -6162,6 +6170,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supplierFailureRecovery => 'Failure / recovery';
 
   @override
+  String get supplierReturnRequiredTitle => 'Material return required';
+
+  @override
+  String get supplierReturnRequiredBody =>
+      'The delivery could not be completed. The driver will return the carried material. Confirm receipt only after it arrives.';
+
+  @override
+  String get supplierReturnReasonFinalAttempt =>
+      'The final delivery attempt could not be completed.';
+
+  @override
+  String get supplierReturnReasonRetryExpired =>
+      'The redelivery deadline expired before another attempt could be completed.';
+
+  @override
+  String get supplierReturnedItems => 'Materials being returned';
+
+  @override
+  String get supplierConfirmMaterialReturned => 'Confirm material returned';
+
+  @override
+  String get supplierConfirmReturnTitle => 'Confirm physical return';
+
+  @override
+  String get supplierConfirmReturnBody =>
+      'Confirm that the returning driver physically handed back every listed material.';
+
+  @override
+  String get supplierReturnConfirmed => 'Material return confirmed.';
+
+  @override
   String get supplierDeliveryNotCreated =>
       'Delivery has not been selected or created for this reservation.';
 
@@ -8050,6 +8089,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get driverStatusRedeliveryScheduled => 'Redelivery scheduled';
+
+  @override
+  String get driverStatusReturnToSupplierRequired => 'Return to supplier';
+
+  @override
+  String get driverStatusReturnedToSupplier => 'Returned to supplier';
+
+  @override
+  String get driverReturnToSupplierTitle => 'Return to supplier';
+
+  @override
+  String get driverReturnToSupplierBody =>
+      'Return every carried material to the supplier. The material remains in your custody until the supplier confirms receipt.';
+
+  @override
+  String get driverReturnReasonFinalAttempt =>
+      'The final delivery attempt could not be completed.';
+
+  @override
+  String get driverReturnReasonRetryExpired =>
+      'The redelivery deadline expired.';
+
+  @override
+  String get driverWaitingSupplierConfirmation =>
+      'Waiting for the supplier to confirm receipt';
 
   @override
   String get driverStatusChangedRefresh =>

@@ -30,6 +30,7 @@ test('historical ownership requires assignment evidence and excludes only curren
           'ARRIVED_DROPOFF',
           'REDELIVERY_PENDING',
           'REDELIVERY_SCHEDULED',
+          'RETURN_TO_SUPPLIER_REQUIRED',
         ],
       },
     },

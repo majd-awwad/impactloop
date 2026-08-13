@@ -319,6 +319,23 @@ class _SummaryPanel extends StatelessWidget {
               body: l10n.driverMaterialRemainsInCustody,
             ),
           ],
+          if (delivery.status == 'RETURN_TO_SUPPLIER_REQUIRED') ...[
+            _InlineNotice(
+              icon: Icons.assignment_return_outlined,
+              title: l10n.driverReturnToSupplierTitle,
+              body: l10n.driverReturnToSupplierBody,
+            ),
+            _InfoRow(
+              label: l10n.supplierFailureRecovery,
+              value: _driverReturnReason(delivery.returnReason, l10n),
+            ),
+            _InfoRow(
+              label: l10n.supplierReturnedItems,
+              value: delivery.hasGroupedItems
+                  ? delivery.groupedItemLines.join('\n')
+                  : '${delivery.material.title} × ${delivery.material.quantityLabel}',
+            ),
+          ],
           if (delivery.learnerNote?.trim().isNotEmpty == true)
             _InfoRow(
               label: l10n.driverLearnerNote,
@@ -415,7 +432,13 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             ),
             const SizedBox(height: AppSpacing.md),
           ],
-          if (nextStatus == null)
+          if (widget.delivery.status == 'RETURN_TO_SUPPLIER_REQUIRED')
+            _InlineNotice(
+              icon: Icons.inventory_2_outlined,
+              title: l10n.driverWaitingSupplierConfirmation,
+              body: l10n.driverReturnToSupplierBody,
+            )
+          else if (nextStatus == null)
             _InlineNotice(
               icon: Icons.check_circle_outline,
               title: l10n.driverNoNextAction,
@@ -1058,6 +1081,13 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
     if (time == null) return null;
     return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
+}
+
+String _driverReturnReason(String? reason, AppLocalizations l10n) {
+  return switch (reason?.trim().toUpperCase()) {
+    'RETRY_DEADLINE_EXPIRED' => l10n.driverReturnReasonRetryExpired,
+    _ => l10n.driverReturnReasonFinalAttempt,
+  };
 }
 
 class _DriverIncidentFormResult {

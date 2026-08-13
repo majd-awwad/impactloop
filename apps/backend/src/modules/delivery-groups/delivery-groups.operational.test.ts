@@ -35,6 +35,7 @@ import {
   requestSupplierRescheduleForPickupRecoveryReport,
 } from '../admin-no-show-reports/admin-delivery-pickup-recovery.repository.js';
 import { getMaterialQuantityState } from '../reservations/reservations.quantity.js';
+import { confirmSupplierDeliveryReturn } from '../delivery-returns/delivery-returns.service.js';
 
 const TEST_MARKER = '[test-delivery-group-operational]';
 
@@ -1257,6 +1258,107 @@ describe('operational delivery groups', () => {
     assert.equal(
       afterComplete.find((row) => row.id === third.id)?.status,
       'ACCEPTED',
+    );
+  });
+
+  test('final grouped return confirms only authoritative carried items atomically', async () => {
+    const { first, second, third, groupId, scheduling } =
+      await createTripleGroupedReservations(ctx);
+    await acceptDeliveryReservation(ctx, first.id, scheduling);
+    await acceptDeliveryReservation(ctx, second.id, scheduling);
+    await acceptDeliveryReservation(ctx, third.id, scheduling);
+    const delivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: groupId },
+    });
+    ctx.createdDeliveryIds.push(delivery.id);
+
+    await prisma.reservation.updateMany({
+      where: { id: { in: [first.id, second.id, third.id] } },
+      data: activePickupWindowReservationUpdate(),
+    });
+    await acceptDelivery(ctx.driverUserId, delivery.id);
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'ARRIVED_PICKUP',
+    });
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'PICKED_UP',
+      confirmationCode: deriveHandoverCode('supplier-handover', delivery.id),
+      pickedReservationIds: [first.id, second.id],
+      unpicked: [
+        {
+          reservationId: third.id,
+          reason: 'MATERIAL_NOT_READY',
+          note: 'Not handed to the driver',
+        },
+      ],
+    });
+    const firstWindowStart = new Date(Date.now() - 5 * 60_000);
+    const firstWindowEnd = new Date(Date.now() + 60 * 60_000);
+    await setDriverDeliveryWindow(ctx.driverUserId, delivery.id, {
+      start: firstWindowStart.toISOString(),
+      end: firstWindowEnd.toISOString(),
+    });
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'ON_THE_WAY',
+    });
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'ARRIVED_DROPOFF',
+    });
+    const retryStart = new Date(Date.now() + 60 * 60_000);
+    const retryEnd = new Date(retryStart.getTime() + 60 * 60_000);
+    await markDriverDeliveryFailed(ctx.driverUserId, delivery.id, {
+      reason: 'ADDRESS_OR_ACCESS_ISSUE',
+      learnerContactAttempted: true,
+      retryWindowStart: retryStart.toISOString(),
+      retryWindowEnd: retryEnd.toISOString(),
+    });
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'ON_THE_WAY',
+    });
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'ARRIVED_DROPOFF',
+    });
+    await markDriverDeliveryFailed(ctx.driverUserId, delivery.id, {
+      reason: 'ADDRESS_OR_ACCESS_ISSUE',
+      learnerContactAttempted: true,
+    });
+
+    const before = await prisma.reservation.findMany({
+      where: { id: { in: [first.id, second.id, third.id] } },
+      select: { id: true, status: true },
+    });
+    assert.equal(before.find((row) => row.id === first.id)?.status, 'ACCEPTED');
+    assert.equal(before.find((row) => row.id === second.id)?.status, 'ACCEPTED');
+    assert.equal(
+      before.find((row) => row.id === third.id)?.status,
+      'AWAITING_SUPPLIER_CONFIRMATION',
+    );
+
+    const confirmed = await confirmSupplierDeliveryReturn(
+      ctx.supplierId,
+      delivery.id,
+    );
+    assert.equal(confirmed.outcome, 'CONFIRMED');
+    assert.equal(confirmed.items.length, 2);
+    assert.deepEqual(
+      new Set(confirmed.items.map((item) => item.reservationId)),
+      new Set([first.id, second.id]),
+    );
+    const after = await prisma.reservation.findMany({
+      where: { id: { in: [first.id, second.id, third.id] } },
+      select: { id: true, status: true },
+    });
+    assert.equal(
+      after.find((row) => row.id === first.id)?.status,
+      'AWAITING_RESOLUTION',
+    );
+    assert.equal(
+      after.find((row) => row.id === second.id)?.status,
+      'AWAITING_RESOLUTION',
+    );
+    assert.equal(
+      after.find((row) => row.id === third.id)?.status,
+      'AWAITING_SUPPLIER_CONFIRMATION',
     );
   });
 

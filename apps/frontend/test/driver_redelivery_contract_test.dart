@@ -69,6 +69,28 @@ void main() {
     expect(delivery.nextStatus, 'ON_THE_WAY');
   });
 
+  test('return-required projection retains carried group details and has no learner handover action', () {
+    final delivery = DriverDelivery.fromJson({
+      ...deliveryJson('RETURN_TO_SUPPLIER_REQUIRED'),
+      'returnRequiredAt': '2026-08-14T10:00:00.000Z',
+      'returnReason': 'FINAL_ATTEMPT_FAILED',
+      'canDriverReportDeliveryFailed': false,
+      'canDriverReportDriverIssue': false,
+      'groupedDelivery': true,
+      'items': [
+        {'title': 'Wood', 'quantity': 2, 'unit': 'kg'},
+        {'title': 'Metal', 'quantity': 3, 'unit': 'pieces'},
+      ],
+    });
+
+    expect(delivery.nextStatus, isNull);
+    expect(delivery.returnReason, 'FINAL_ATTEMPT_FAILED');
+    expect(delivery.isAutoPingEligible, isTrue);
+    expect(delivery.canDriverReportDeliveryFailed, isFalse);
+    expect(delivery.canDriverReportDriverIssue, isFalse);
+    expect(delivery.groupedItemLines, hasLength(2));
+  });
+
   test(
     'failure payload includes contact evidence and optional immediate window',
     () {

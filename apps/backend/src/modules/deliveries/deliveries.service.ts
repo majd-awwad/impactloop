@@ -49,6 +49,7 @@ export const ACTIVE_DELIVERY_STATUSES = [
   'ARRIVED_DROPOFF',
   'REDELIVERY_PENDING',
   'REDELIVERY_SCHEDULED',
+  'RETURN_TO_SUPPLIER_REQUIRED',
 ] as const satisfies readonly DeliveryStatus[];
 
 /** Driver may send location pings only after supplier pickup is confirmed. */
@@ -58,6 +59,7 @@ export const LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES = [
   'ARRIVED_DROPOFF',
   'REDELIVERY_PENDING',
   'REDELIVERY_SCHEDULED',
+  'RETURN_TO_SUPPLIER_REQUIRED',
 ] as const satisfies readonly DeliveryStatus[];
 
 /** @deprecated Use LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES for pings. */
@@ -71,6 +73,7 @@ export const LEARNER_DRIVER_COORDINATE_VISIBLE_STATUSES = [
   'ARRIVED_DROPOFF',
   'REDELIVERY_PENDING',
   'REDELIVERY_SCHEDULED',
+  'RETURN_TO_SUPPLIER_REQUIRED',
 ] as const satisfies readonly DeliveryStatus[];
 
 export const canLearnerTrackDriver = (status: DeliveryStatus) =>
@@ -96,6 +99,10 @@ export const learnerTrackingMessage = (status: DeliveryStatus) => {
       return 'Delivery could not be completed. The driver is arranging another attempt.';
     case 'REDELIVERY_SCHEDULED':
       return 'Delivery has been rescheduled.';
+    case 'RETURN_TO_SUPPLIER_REQUIRED':
+      return 'Delivery could not be completed. The material is being returned to the supplier.';
+    case 'RETURNED_TO_SUPPLIER':
+      return 'The material was returned to the supplier and the case is under review.';
     case 'DELIVERED':
       return 'Delivery completed.';
     case 'CANCELLED':

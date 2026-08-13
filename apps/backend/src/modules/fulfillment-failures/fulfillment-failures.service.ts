@@ -338,13 +338,11 @@ export const markDriverDeliveryFailed = async (
     return loadDriverDelivery(deliveryId);
   }
 
-  if (result.outcome === 'UPDATED') {
-    await notifyDriverDeliveryMovedToAdminReview({
-      deliveryId,
-      driverUserId,
-    });
-    // FAILED_DELIVERY keeps the material in custody, so the shared hold is
-    // unchanged. Only the affected learner's reservation behavior is freshened.
+  if (result.outcome === 'FINAL_RETURN_REQUIRED') {
+    const { notifyDeliveryReturnRequired } = await import(
+      '../delivery-returns/delivery-return-notifications.js'
+    );
+    await notifyDeliveryReturnRequired(deliveryId, 'FINAL_ATTEMPT_FAILED');
     invalidateLearnerHomeCache(result.reservation.requesterId);
     return loadDriverDelivery(deliveryId);
   }
