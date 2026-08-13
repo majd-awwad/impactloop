@@ -2119,11 +2119,6 @@ class _ReservationDetailBody extends StatelessWidget {
             label: 'Email',
             value: detail.learner.email.isEmpty ? '—' : detail.learner.email,
           ),
-          AdminDetailRow(
-            label: 'User ID',
-            value: detail.learner.id.isEmpty ? '—' : detail.learner.id,
-            muted: true,
-          ),
         ],
       ),
     );
@@ -2218,16 +2213,15 @@ class _ReservationDetailBody extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _TwoColRow(
-              leftLabel: 'Delivery ID',
-              leftValue: delivery.id.isEmpty ? '—' : delivery.id,
-              leftMuted: true,
-              rightLabel: 'Driver',
-              rightValue: delivery.driver != null
+              leftLabel: 'Driver',
+              leftValue: delivery.driver != null
                   ? displayPersonLabel(
                       delivery.driver!.displayName,
                       delivery.driver!.email,
                     )
                   : '—',
+              rightLabel: 'Status',
+              rightValue: deliveryStatusLabel(delivery.status),
             ),
             const SizedBox(height: AppSpacing.md),
             OutlinedButton.icon(
@@ -2577,14 +2571,12 @@ class _TwoColRow extends StatelessWidget {
     required this.leftValue,
     required this.rightLabel,
     required this.rightValue,
-    this.leftMuted = false,
   });
 
   final String leftLabel;
   final String leftValue;
   final String rightLabel;
   final String rightValue;
-  final bool leftMuted;
 
   @override
   Widget build(BuildContext context) {
@@ -2595,7 +2587,6 @@ class _TwoColRow extends StatelessWidget {
           child: _MiniField(
             label: leftLabel,
             value: leftValue,
-            muted: leftMuted,
           ),
         ),
         const SizedBox(width: AppSpacing.md),
@@ -2611,12 +2602,10 @@ class _MiniField extends StatelessWidget {
   const _MiniField({
     required this.label,
     required this.value,
-    this.muted = false,
   });
 
   final String label;
   final String value;
-  final bool muted;
 
   @override
   Widget build(BuildContext context) {
@@ -2634,9 +2623,8 @@ class _MiniField extends StatelessWidget {
         Text(
           value,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: muted ? colors.textMuted : colors.textPrimary,
-            fontWeight: muted ? FontWeight.w500 : FontWeight.w600,
-            fontSize: muted ? 12 : null,
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w600,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,

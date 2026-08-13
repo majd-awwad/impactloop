@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
@@ -288,12 +289,11 @@ class _Identity extends StatelessWidget {
         runSpacing: 6,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Tooltip(
-            message: detail.id,
-            child: Text(
-              _shortId(detail.id),
-              style: AdminTypography.pageTitle(palette),
-            ),
+          Text(
+            detail.material.title.trim().isEmpty
+                ? context.l10n.viewDeliveryDetails
+                : detail.material.title.trim(),
+            style: AdminTypography.pageTitle(palette),
           ),
           AppStatusBadge(
             label: deliveryStatusLabel(detail.status),
@@ -316,15 +316,14 @@ class _Identity extends StatelessWidget {
       ),
       const SizedBox(height: 7),
       Text(
-        '${_shortId(detail.reservation.id)} · ${formatAdminDateTime(detail.requestedAt) ?? detail.requestedAt}',
+        formatAdminDateTime(detail.requestedAt) ?? detail.requestedAt,
         style: AdminTypography.pageSubtitle(palette),
       ),
       if (detail.primaryIncident != null)
         Padding(
           padding: const EdgeInsets.only(top: 5),
           child: _Badge(
-            label:
-                '${_shortId(detail.primaryIncident!.id)} ${humanizeEnum(detail.primaryIncident!.operationalState)}',
+            label: humanizeEnum(detail.primaryIncident!.operationalState),
             tone: AppStatusTone.warning,
           ),
         ),
@@ -723,7 +722,6 @@ class _IncidentSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Info(label: 'Report', value: _shortId(incident.id)),
           _Info(label: 'Reason', value: humanizeEnum(incident.reasonCode)),
           _Info(label: AdminL10n.of(context).status, value: humanizeEnum(incident.status)),
           _Info(label: 'Workflow', value: humanizeEnum(incident.workflowType)),
@@ -755,7 +753,6 @@ class _GroupSummaryCard extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _Info(label: 'Group ID', value: _shortId(detail.group!.id)),
         _Info(label: 'Items', value: '${detail.group!.itemCount}'),
         _Info(label: AdminL10n.of(context).status, value: humanizeEnum(detail.group!.status)),
         OutlinedButton(
@@ -838,9 +835,9 @@ class _GroupTab extends StatelessWidget {
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final reservation in group.reservations)
+                for (final (index, reservation) in group.reservations.indexed)
                   _Info(
-                    label: _shortId(reservation.id),
+                    label: '${context.l10n.checkoutOrderIdLabel} ${index + 1}',
                     value: humanizeEnum(reservation.status),
                   ),
                 if (group.hasMoreItems)
@@ -1078,7 +1075,7 @@ class _GroupItem extends StatelessWidget {
     title: Text(
       item.materialTitle?.isNotEmpty == true
           ? item.materialTitle!
-          : _shortId(item.reservationId),
+          : context.l10n.reservationDetailsTitle,
     ),
     subtitle: Text(
       '${item.learnerName ?? '—'} · ${item.quantity == null ? '—' : '${item.quantity} ${item.unit ?? ''}'}',
@@ -1093,9 +1090,9 @@ class _IncidentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListTile(
     leading: const Icon(Icons.report_outlined),
-    title: Text(_shortId(incident.id)),
+    title: Text(humanizeEnum(incident.reasonCode)),
     subtitle: Text(
-      '${humanizeEnum(incident.reasonCode)}\n${humanizeEnum(incident.workflowType)} · ${humanizeEnum(incident.operationalState)}',
+      '${humanizeEnum(incident.workflowType)} · ${humanizeEnum(incident.operationalState)}',
     ),
     trailing: Text(humanizeEnum(incident.status)),
   );
@@ -1184,13 +1181,6 @@ class _DetailFailure extends StatelessWidget {
       ),
     ),
   );
-}
-
-String _shortId(String value) {
-  final clean = value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '');
-  return clean.isEmpty
-      ? '—'
-      : 'DLV-${clean.substring(0, clean.length.clamp(0, 7)).toUpperCase()}';
 }
 
 String _phaseLabel(LifecyclePhase value) => switch (value) {

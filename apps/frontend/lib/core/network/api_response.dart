@@ -31,6 +31,17 @@ Map<String, dynamic>? _apiErrorBody(Object? responseBody) {
   return nested is Map ? Map<String, dynamic>.from(nested) : null;
 }
 
+String _safeApiResponseMessage(Object? rawMessage, int? statusCode) {
+  final message = rawMessage is String ? rawMessage.trim() : '';
+  if (statusCode != null && statusCode >= 500) {
+    return 'Request failed';
+  }
+  if (message.isEmpty || containsInternalIdentifier(message)) {
+    return 'Request failed';
+  }
+  return message;
+}
+
 ApiException mapDioException(DioException error) {
   if (error.type == DioExceptionType.cancel) {
     return const ApiException(message: 'Request cancelled', code: 'CANCELLED');
@@ -55,13 +66,15 @@ ApiException mapDioException(DioException error) {
     final errorBody = _apiErrorBody(responseBody);
 
     return ApiException(
-      message: responseBody['message'] as String? ?? 'Request failed',
+      message: _safeApiResponseMessage(
+        responseBody['message'],
+        error.response?.statusCode,
+      ),
       code: errorBody?['code'] as String?,
       statusCode: error.response?.statusCode,
       details: errorBody?['details'] is Map
           ? Map<String, dynamic>.from(errorBody!['details'] as Map)
           : null,
-      requestId: errorBody?['requestId'] as String?,
     );
   }
 
@@ -87,13 +100,12 @@ Future<T> unwrapApiResponse<T>(
       final errorBody = _apiErrorBody(body);
 
       throw ApiException(
-        message: body['message'] as String? ?? 'Request failed',
+        message: _safeApiResponseMessage(body['message'], response.statusCode),
         code: errorBody?['code'] as String?,
         statusCode: response.statusCode,
         details: errorBody?['details'] is Map
             ? Map<String, dynamic>.from(errorBody!['details'] as Map)
             : null,
-        requestId: errorBody?['requestId'] as String?,
       );
     }
 
@@ -126,13 +138,12 @@ Future<T?> unwrapNullableApiResponse<T>(
       final errorBody = _apiErrorBody(body);
 
       throw ApiException(
-        message: body['message'] as String? ?? 'Request failed',
+        message: _safeApiResponseMessage(body['message'], response.statusCode),
         code: errorBody?['code'] as String?,
         statusCode: response.statusCode,
         details: errorBody?['details'] is Map
             ? Map<String, dynamic>.from(errorBody!['details'] as Map)
             : null,
-        requestId: errorBody?['requestId'] as String?,
       );
     }
 
@@ -163,13 +174,12 @@ Future<void> unwrapApiVoidResponse(
       final errorBody = _apiErrorBody(body);
 
       throw ApiException(
-        message: body['message'] as String? ?? 'Request failed',
+        message: _safeApiResponseMessage(body['message'], response.statusCode),
         code: errorBody?['code'] as String?,
         statusCode: response.statusCode,
         details: errorBody?['details'] is Map
             ? Map<String, dynamic>.from(errorBody!['details'] as Map)
             : null,
-        requestId: errorBody?['requestId'] as String?,
       );
     }
   } on DioException catch (error) {

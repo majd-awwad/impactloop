@@ -214,14 +214,6 @@ class _Identity extends StatelessWidget {
                   fontSize: 13,
                 ),
               ),
-              const SizedBox(height: 3),
-              Text(
-                'RSV-${_shortId(request.id)}',
-                style: context.supplierLabel().copyWith(
-                  fontSize: 11,
-                  color: colors.textMuted,
-                ),
-              ),
             ],
           ),
         ),
@@ -442,9 +434,6 @@ class _Actions extends StatelessWidget {
     );
   }
 }
-
-String _shortId(String id) =>
-    id.length <= 8 ? id.toUpperCase() : id.substring(0, 8).toUpperCase();
 
 bool _isQuietTerminal(SupplierIncomingRequest request) {
   final adminReview =

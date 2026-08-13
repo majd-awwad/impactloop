@@ -174,23 +174,22 @@ void main() {
     },
   );
 
-  test('unknown Driver errors retain request-id diagnostics', () {
+  test('unknown Driver errors omit request-id diagnostics from UI copy', () {
     final en = lookupAppLocalizations(const Locale('en'));
     final message = localizedApiErrorMessage(
       const ApiException(
         message: 'Unexpected Driver API conflict',
         code: 'UNKNOWN_DRIVER_CONFLICT',
         statusCode: 409,
-        requestId: 'req-driver-123',
       ),
       en,
     );
 
     expect(message, contains('Unexpected Driver API conflict'));
-    expect(message, contains('req-driver-123'));
+    expect(message, isNot(contains('req-driver-123')));
   });
 
-  test('nested backend request ID reaches the localized unknown fallback', () {
+  test('nested backend request ID is ignored by the localized fallback', () {
     final request = RequestOptions(path: '/api/driver/deliveries');
     final mapped = mapDioException(
       DioException(
@@ -216,8 +215,8 @@ void main() {
       mapped,
       lookupAppLocalizations(const Locale('en')),
     );
-    expect(mapped.requestId, 'req-nested-500');
-    expect(message, contains('req-nested-500'));
+    expect(message, isNot(contains('req-nested-500')));
+    expect(message, lookupAppLocalizations(const Locale('en')).serverError);
   });
 
   test(

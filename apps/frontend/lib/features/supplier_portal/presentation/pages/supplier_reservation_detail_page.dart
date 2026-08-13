@@ -477,7 +477,7 @@ class _HeaderCard extends StatelessWidget {
                         Text(materialTitle, style: context.supplierTitle()),
                         const SizedBox(height: AppSpacing.xs),
                         Text(
-                          '$learnerName  ·  ${_shortId(reservation.id)}',
+                          learnerName,
                           style: context.supplierBody().copyWith(
                             color: colors.textSecondary,
                           ),
@@ -1159,8 +1159,6 @@ class _FulfillmentCard extends ConsumerWidget {
                     : _deliveryStatusLabel(context, delivery!.status!),
               ),
               if (driver?.displayName != null) (l.driver, driver!.displayName!),
-              if (detail.group?.groupId != null)
-                (l.supplierGroupLabel, _shortId(detail.group!.groupId!)),
             ],
           ),
           if (showHandover) ...[
@@ -1298,7 +1296,6 @@ class _IncidentCard extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         _InfoGrid(
           rows: [
-            if (incident.id != null) (l.supplierReportIdLabel, _shortId(incident.id!)),
             if (incident.reasonCode != null)
               (l.reason, _reasonLabel(context, incident.reasonCode!)),
             if (incident.status != null)
@@ -1339,7 +1336,6 @@ class _GroupCard extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         _InfoGrid(
           rows: [
-            if (group.groupId != null) (l.supplierGroupIdLabel, _shortId(group.groupId!)),
             if (group.status != null) (l.supplierStatus, _reasonLabel(context, group.status!)),
             if (group.itemCount != null) (l.supplierItemsLabel, '${group.itemCount}'),
             if (group.driver?.displayName != null)
@@ -1937,9 +1933,6 @@ String? _string(Map<String, dynamic>? map, String key) => map?[key] as String?;
 
 String? _nonEmpty(String? value) =>
     value == null || value.trim().isEmpty ? null : value.trim();
-
-String _shortId(String id) =>
-    id.length <= 10 ? id.toUpperCase() : id.substring(0, 8).toUpperCase();
 
 String _quantity(double value) => value == value.roundToDouble()
     ? value.toInt().toString()

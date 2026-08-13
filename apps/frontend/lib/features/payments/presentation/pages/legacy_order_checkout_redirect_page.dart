@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../auth/application/auth_route_helpers.dart';
 import '../../data/payments_repository.dart';
 
@@ -35,20 +36,16 @@ class _LegacyOrderCheckoutRedirectPageState
       final reservationId = order.reservationId;
       if (!mounted) return;
       if (reservationId == null || reservationId.isEmpty) {
-        // DELIVERY_FEE orders are group-scoped; surface a clear recovery path.
-        setState(
-          () => _error =
-              'Open checkout from the reservation details page to continue.',
-        );
+        setState(() => _error = context.l10n.checkoutMissingBody);
         return;
       }
       context.go(learnerReservationCheckoutRoute(reservationId));
     } on ApiException catch (error) {
       if (!mounted) return;
-      setState(() => _error = error.message);
-    } catch (error) {
+      setState(() => _error = localizedApiErrorMessage(error, context.l10n));
+    } catch (_) {
       if (!mounted) return;
-      setState(() => _error = error.toString());
+      setState(() => _error = context.l10n.somethingWentWrong);
     }
   }
 
@@ -66,7 +63,7 @@ class _LegacyOrderCheckoutRedirectPageState
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => context.go(learnerReservationsRoute),
-                  child: const Text('Back to reservations'),
+                  child: Text(context.l10n.backToReservations),
                 ),
               ],
             ),

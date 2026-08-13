@@ -214,20 +214,6 @@ String? formatPaymentNotificationAmount(
   return l10n.reservationMoneyAmountWithCurrency(amount);
 }
 
-String paymentNotificationReservationLabel(
-  AppNotification notification, {
-  int maxChars = 8,
-}) {
-  final id = paymentNotificationReservationId(notification);
-  if (id == null) {
-    return '';
-  }
-  if (id.length <= maxChars) {
-    return '#$id';
-  }
-  return '#${id.substring(0, 4)}…${id.substring(id.length - 4)}';
-}
-
 /// Semantic accent for payment notification tiles (not color-only meaning).
 class PaymentNotificationVisualStyle {
   const PaymentNotificationVisualStyle({

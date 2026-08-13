@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_section_card.dart';
@@ -191,7 +192,7 @@ class _IncidentHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = '#${_shortId(report.id)} – ${_reportTitle(report)}';
+    final title = _reportTitle(report);
     return AppSectionCard(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: LayoutBuilder(
@@ -200,11 +201,6 @@ class _IncidentHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               AppBackAction(onBack: onBack),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                '#${_shortId(report.id)}',
-                style: Theme.of(context).textTheme.labelLarge,
-              ),
               const SizedBox(height: AppSpacing.xs),
               Wrap(
                 spacing: AppSpacing.sm,
@@ -551,14 +547,10 @@ class _IncidentOverviewCard extends StatelessWidget {
               : '${report.reviewedByName?.trim().isNotEmpty == true ? report.reviewedByName : 'Admin'} · ${_formatDateTime(report.reviewedAt!)}',
         ),
         _KeyValue(
-          label: 'Reservation',
-          value: '#${_shortId(report.reservationId)}',
-        ),
-        _KeyValue(
           label: 'Delivery',
           value: report.deliveryId == null
               ? '—'
-              : '#${_shortId(report.deliveryId!)}',
+              : context.l10n.viewDelivery,
           link: report.deliveryId == null
               ? null
               : () => context.push(
@@ -1138,9 +1130,6 @@ IconData _timelineIcon(String status, bool delivery) {
         : Icons.assignment_ind_outlined;
   return Icons.circle_outlined;
 }
-
-String _shortId(String id) =>
-    id.length <= 8 ? id : id.substring(0, 8).toUpperCase();
 
 String _quantity(double value) => value == value.roundToDouble()
     ? value.toInt().toString()

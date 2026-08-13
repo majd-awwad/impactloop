@@ -1096,9 +1096,7 @@ class _IncidentIdentity extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
     final material = report.materialTitle.trim();
-    final metadata = material.isEmpty
-        ? shortIdentifier(report.id)
-        : '${shortIdentifier(report.id)} · $material';
+    final metadata = material.isEmpty ? report.reporterName : material;
     return Row(
       children: [
         Container(
@@ -1130,7 +1128,7 @@ class _IncidentIdentity extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Tooltip(
-                message: '${report.id} · ${report.materialTitle}',
+                message: metadata,
                 child: Text(
                   metadata,
                   maxLines: 1,
@@ -1453,14 +1451,6 @@ class _ErrorPanel extends StatelessWidget {
     ),
     );
   }
-}
-
-String shortIdentifier(String id) {
-  final value = id.trim();
-  if (value.isEmpty) return '—';
-  return value.length <= 10
-      ? value
-      : '${value.substring(0, 4)}…${value.substring(value.length - 4)}';
 }
 
 class AdminIncidentReportsExportDialog extends StatefulWidget {

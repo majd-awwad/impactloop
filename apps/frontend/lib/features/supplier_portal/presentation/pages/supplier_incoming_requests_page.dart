@@ -174,7 +174,6 @@ class _SupplierIncomingRequestsPageState
     BuildContext context,
     SupplierIncomingRequest request,
   ) {
-    final ui = SupplierReservationUiHelpers.of(context);
     final actions = request.availableActions
         .where((item) => item.isExecutable)
         .toList();
@@ -244,10 +243,7 @@ class _SupplierIncomingRequestsPageState
               Text(request.materialTitle, style: sheetContext.supplierTitle()),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                l.requestLine(
-                  _shortId(request.id),
-                  ui.reservationStatus(request),
-                ),
+                ui.reservationStatus(request),
                 style: sheetContext.supplierBody().copyWith(
                   color: sheetContext.supplierColors.textSecondary,
                 ),
@@ -1370,9 +1366,6 @@ class _InboxError extends StatelessWidget {
     ),
   );
 }
-
-String _shortId(String id) =>
-    id.length <= 8 ? id : id.substring(0, 8).toUpperCase();
 
 class _InboxAction {
   const _InboxAction(this.label, this.onPressed);

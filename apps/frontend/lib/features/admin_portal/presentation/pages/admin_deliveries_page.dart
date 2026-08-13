@@ -1102,7 +1102,7 @@ class _DeliveryColumn extends StatelessWidget {
         ? (item.group?.reservationCount ?? item.itemCount)
         : item.itemCount;
     final detail =
-        '${_shortDeliveryId(item.id)} · $itemCount ${itemCount == 1 ? 'item' : 'items'}${item.hasMoreItems ? ' · + more' : ''}';
+        '$itemCount ${itemCount == 1 ? 'item' : 'items'}${item.hasMoreItems ? ' · + more' : ''}';
     return Row(
       children: [
         Container(
@@ -1137,14 +1137,11 @@ class _DeliveryColumn extends StatelessWidget {
                   ).copyWith(fontSize: 14),
                 ),
                 const SizedBox(height: 3),
-                Tooltip(
-                  message: item.id,
-                  child: Text(
-                    detail,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AdminTypography.kpiHelper(palette),
-                  ),
+                Text(
+                  detail,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AdminTypography.kpiHelper(palette),
                 ),
                 if (item.scope == DeliveryScope.grouped) ...[
                   const SizedBox(height: 4),
@@ -1424,15 +1421,6 @@ class _DeliveryCard extends StatelessWidget {
   }
 }
 
-String _shortDeliveryId(String id) {
-  final trimmed = id.trim();
-  if (trimmed.toUpperCase().startsWith('DLV-')) return trimmed;
-  final compact = trimmed.replaceAll(RegExp(r'[^A-Za-z0-9]'), '');
-  return compact.isEmpty
-      ? 'Delivery'
-      : 'DLV-${compact.substring(0, compact.length.clamp(0, 7)).toUpperCase()}';
-}
-
 String _lifecycleLabel(LifecyclePhase phase) => switch (phase) {
   LifecyclePhase.waitingAssignment => 'Waiting for assignment',
   LifecyclePhase.prePickup => 'Pre-pickup',
@@ -1628,13 +1616,6 @@ class _DeliveryDetailDialogState extends ConsumerState<_DeliveryDetailDialog> {
                   value: detail.material.title.isEmpty
                       ? '—'
                       : detail.material.title,
-                ),
-                AdminDetailRow(
-                  label: 'Reservation',
-                  value: detail.reservation.id.isEmpty
-                      ? '—'
-                      : detail.reservation.id,
-                  muted: true,
                 ),
                 AdminDetailRow(
                   label: 'Requested at',

@@ -11,9 +11,6 @@ class CheckoutResultView extends StatelessWidget {
   const CheckoutResultView({
     super.key,
     required this.phase,
-    this.reservationId,
-    this.sessionId,
-    this.failureMessage,
     this.onBackToReservation,
     this.onViewReservations,
     this.onRetry,
@@ -22,9 +19,6 @@ class CheckoutResultView extends StatelessWidget {
   });
 
   final CheckoutPhase phase;
-  final String? reservationId;
-  final String? sessionId;
-  final String? failureMessage;
   final VoidCallback? onBackToReservation;
   final VoidCallback? onViewReservations;
   final VoidCallback? onRetry;
@@ -35,7 +29,6 @@ class CheckoutResultView extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = AppThemeColors.of(context);
-    final referenceId = sessionId ?? reservationId;
 
     return switch (phase) {
       CheckoutPhase.processing => _ProcessingBody(l10n: l10n, colors: colors),
@@ -49,7 +42,6 @@ class CheckoutResultView extends StatelessWidget {
           body: phase == CheckoutPhase.alreadyPaid
               ? l10n.checkoutAlreadyPaidBody
               : l10n.checkoutSuccessBody,
-          referenceId: referenceId,
           primaryLabel: l10n.checkoutBackToReservation,
           onPrimary: onBackToReservation,
           secondaryLabel: l10n.checkoutViewAllReservations,
@@ -60,7 +52,7 @@ class CheckoutResultView extends StatelessWidget {
           iconColor: colors.danger,
           iconBg: colors.dangerSoft,
           title: l10n.checkoutFailureTitle,
-          body: failureMessage ?? l10n.checkoutFailureBody,
+          body: l10n.checkoutFailureBody,
           primaryLabel: l10n.checkoutRetry,
           onPrimary: onRetry,
           secondaryLabel: l10n.checkoutChangeMethod,
@@ -91,7 +83,6 @@ class CheckoutResultView extends StatelessWidget {
           iconBg: colors.warningSoft,
           title: l10n.checkoutPartiallyRefundedTitle,
           body: l10n.checkoutPartiallyRefundedBody,
-          referenceId: referenceId,
           primaryLabel: l10n.checkoutBackToReservation,
           onPrimary: onBackToReservation,
           secondaryLabel: l10n.checkoutViewAllReservations,
@@ -103,7 +94,6 @@ class CheckoutResultView extends StatelessWidget {
           iconBg: colors.surfaceMuted,
           title: l10n.checkoutRefundedTitle,
           body: l10n.checkoutRefundedBody,
-          referenceId: referenceId,
           primaryLabel: l10n.checkoutBackToReservation,
           onPrimary: onBackToReservation,
         ),
@@ -113,7 +103,6 @@ class CheckoutResultView extends StatelessWidget {
           iconBg: colors.dangerSoft,
           title: l10n.checkoutOrderCancelledTitle,
           body: l10n.checkoutOrderCancelledBody,
-          referenceId: referenceId,
           primaryLabel: l10n.checkoutBackToReservation,
           onPrimary: onBackToReservation,
         ),
@@ -123,7 +112,6 @@ class CheckoutResultView extends StatelessWidget {
           iconBg: colors.dangerSoft,
           title: l10n.checkoutInvariantBlockedTitle,
           body: l10n.checkoutInvariantBlockedBody,
-          referenceId: referenceId,
           primaryLabel: l10n.checkoutBackToReservation,
           onPrimary: onBackToReservation,
           secondaryLabel: l10n.checkoutViewAllReservations,
@@ -209,7 +197,6 @@ class _ResultBody extends StatelessWidget {
     required this.iconBg,
     required this.title,
     required this.body,
-    this.referenceId,
     this.primaryLabel,
     this.onPrimary,
     this.secondaryLabel,
@@ -222,7 +209,6 @@ class _ResultBody extends StatelessWidget {
   final Color iconBg;
   final String title;
   final String body;
-  final String? referenceId;
   final String? primaryLabel;
   final VoidCallback? onPrimary;
   final String? secondaryLabel;
@@ -231,7 +217,6 @@ class _ResultBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     final colors = AppThemeColors.of(context);
 
     return Center(
@@ -263,16 +248,6 @@ class _ResultBody extends StatelessWidget {
                 height: 1.45,
               ),
             ),
-            if (referenceId != null && referenceId!.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                '${l10n.checkoutSuccessTransactionLabel}: $referenceId',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.label(context).copyWith(
-                  color: colors.textMuted,
-                ),
-              ),
-            ],
             if (primaryLabel != null && onPrimary != null) ...[
               const SizedBox(height: AppSpacing.lg),
               SizedBox(

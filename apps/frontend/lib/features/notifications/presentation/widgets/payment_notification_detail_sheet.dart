@@ -55,7 +55,6 @@ class PaymentNotificationDetailSheet extends StatelessWidget {
     final status = paymentNotificationStatusCaption(notification, l10n);
     final nextStep = paymentNotificationNextStepCopy(notification, l10n);
     final actionLabel = paymentNotificationActionLabel(notification, l10n);
-    final reservationLabel = paymentNotificationReservationLabel(notification);
     final materialTitle = paymentNotificationMaterialTitle(notification);
     final relativeTime = LocalizedFormatters(
       l10n,
@@ -127,16 +126,6 @@ class PaymentNotificationDetailSheet extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    if (reservationLabel.isNotEmpty) ...[
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        reservationLabel,
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.label(context).copyWith(
-                          color: palette.textMuted,
-                        ),
-                      ),
-                    ],
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       copy.body,
