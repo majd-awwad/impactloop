@@ -3,10 +3,7 @@ import '../../../../shared/models/localized_text.dart';
 class LearningProjectBuildL10n {
   const LearningProjectBuildL10n._();
 
-  static const acquired = LocalizedText(
-    en: 'Acquired',
-    ar: 'تم الحصول عليها',
-  );
+  static const acquired = LocalizedText(en: 'Acquired', ar: 'تم الحصول عليها');
 
   static const materialAcquired = LocalizedText(
     en: 'Material acquired',
@@ -29,10 +26,8 @@ class LearningProjectBuildL10n {
   );
 
   static const materialSelectedNotReady = LocalizedText(
-    en:
-        'Material selected — not ready yet. Reserve or acquire this material before using it in your build.',
-    ar:
-        'تم اختيار المادة — ليست جاهزة بعد. احجز المادة أو احصل عليها قبل استخدامها في البناء.',
+    en: 'Material selected — not ready yet. Reserve or acquire this material before using it in your build.',
+    ar: 'تم اختيار المادة — ليست جاهزة بعد. احجز المادة أو احصل عليها قبل استخدامها في البناء.',
   );
 
   static const inProgress = LocalizedText(
@@ -55,15 +50,9 @@ class LearningProjectBuildL10n {
     ar: 'الحجز يحتاج إلى معالجة',
   );
 
-  static const selected = LocalizedText(
-    en: 'Selected',
-    ar: 'تم اختيار مادة',
-  );
+  static const selected = LocalizedText(en: 'Selected', ar: 'تم اختيار مادة');
 
-  static const reserved = LocalizedText(
-    en: 'Reserved',
-    ar: 'محجوزة',
-  );
+  static const reserved = LocalizedText(en: 'Reserved', ar: 'محجوزة');
 
   static const alreadyOwned = LocalizedText(
     en: 'Already owned',
@@ -88,17 +77,13 @@ class LearningProjectBuildL10n {
   static LocalizedText partiallyAcquiredDetail({
     required double acquired,
     required double required,
-  }) =>
-      LocalizedText(
-        en:
-            'Partially acquired — ${_formatQuantityLabel(acquired)} acquired, ${_formatQuantityLabel(required)} required',
-        ar:
-            'تم الحصول على جزء من الكمية — تم الحصول على ${_formatQuantityLabel(acquired)}، المطلوب ${_formatQuantityLabel(required)}',
-      );
+  }) => LocalizedText(
+    en: 'Partially acquired — ${_formatQuantityLabel(acquired)} acquired, ${_formatQuantityLabel(required)} required',
+    ar: 'تم الحصول على جزء من الكمية — تم الحصول على ${_formatQuantityLabel(acquired)}، المطلوب ${_formatQuantityLabel(required)}',
+  );
 
   static const acquiredIncompatibleUnit = LocalizedText(
-    en:
-        'This acquired material is not compatible with the required component unit.',
+    en: 'This acquired material is not compatible with the required component unit.',
     ar: 'المادة التي تم الحصول عليها غير متوافقة مع وحدة المكوّن المطلوبة.',
   );
 
@@ -118,15 +103,11 @@ class LearningProjectBuildL10n {
   );
 
   static const removeAcquiredAllocationBody = LocalizedText(
-    en:
-        'The completed reservation and acquisition history will remain available.',
+    en: 'The completed reservation and acquisition history will remain available.',
     ar: 'سيبقى الحجز المكتمل وسجل الحصول على المادة محفوظين.',
   );
 
-  static const missing = LocalizedText(
-    en: 'Missing',
-    ar: 'مفقودة',
-  );
+  static const missing = LocalizedText(en: 'Missing', ar: 'مفقودة');
 
   static const linkedOption = LocalizedText(
     en: 'Linked option',
@@ -148,10 +129,7 @@ class LearningProjectBuildL10n {
     ar: 'ربط بالمكوّن',
   );
 
-  static const startBuild = LocalizedText(
-    en: 'Start build',
-    ar: 'ابدأ البناء',
-  );
+  static const startBuild = LocalizedText(en: 'Start build', ar: 'ابدأ البناء');
 
   static const continueChecklist = LocalizedText(
     en: 'Continue checklist',
@@ -173,15 +151,45 @@ class LearningProjectBuildL10n {
     ar: 'خطّط لهذا البناء',
   );
 
-  static const unlinkMaterial = LocalizedText(
-    en: 'Unlink',
-    ar: 'إلغاء الربط',
+  static const learnerAccountRequired = LocalizedText(
+    en: 'Use a learner account to start builds.',
+    ar: 'استخدم حساب متعلم لبدء البناء.',
   );
 
-  static const cancel = LocalizedText(
-    en: 'Cancel',
-    ar: 'إلغاء',
+  static const checklistUnavailable = LocalizedText(
+    en: 'Checklist status is unavailable right now.',
+    ar: 'حالة قائمة التحقق غير متاحة حاليًا.',
   );
+
+  static const continueChecklistSummary = LocalizedText(
+    en: 'Continue your saved checklist for this project.',
+    ar: 'تابع قائمة التحقق المحفوظة لهذا المشروع.',
+  );
+
+  static const startChecklistSummary = LocalizedText(
+    en: 'Start a checklist from the required components and track readiness.',
+    ar: 'ابدأ قائمة تحقق من المكوّنات المطلوبة وتابع جاهزيتها.',
+  );
+
+  static LocalizedText readyCount({required int ready, required int total}) =>
+      LocalizedText(
+        en: '$ready of $total ready in your build',
+        ar: '$ready من $total جاهزة في مشروعك',
+      );
+
+  static LocalizedText componentCount(int count) => LocalizedText(
+    en: count == 1 ? '1 component' : '$count components',
+    ar: count == 1 ? 'مكوّن واحد' : '$count مكوّنات',
+  );
+
+  static LocalizedText stepCount(int count) => LocalizedText(
+    en: count == 1 ? '1 step' : '$count steps',
+    ar: count == 1 ? 'خطوة واحدة' : '$count خطوات',
+  );
+
+  static const unlinkMaterial = LocalizedText(en: 'Unlink', ar: 'إلغاء الربط');
+
+  static const cancel = LocalizedText(en: 'Cancel', ar: 'إلغاء');
 
   static String _formatQuantityLabel(double value) {
     if (value == value.roundToDouble()) {
@@ -194,22 +202,16 @@ class LearningProjectBuildL10n {
   static LocalizedText quantityAvailableRequired({
     required double available,
     required double required,
-  }) =>
-      LocalizedText(
-        en:
-            '${_formatQuantityLabel(available)} available, ${_formatQuantityLabel(required)} required',
-        ar:
-            'المتوفر ${_formatQuantityLabel(available)}، المطلوب ${_formatQuantityLabel(required)}',
-      );
+  }) => LocalizedText(
+    en: '${_formatQuantityLabel(available)} available, ${_formatQuantityLabel(required)} required',
+    ar: 'المتوفر ${_formatQuantityLabel(available)}، المطلوب ${_formatQuantityLabel(required)}',
+  );
 
   static LocalizedText quantityAcquiredRequired({
     required double acquired,
     required double required,
-  }) =>
-      LocalizedText(
-        en:
-            '${_formatQuantityLabel(acquired)} acquired, ${_formatQuantityLabel(required)} required',
-        ar:
-            'تم الحصول على ${_formatQuantityLabel(acquired)}، المطلوب ${_formatQuantityLabel(required)}',
-      );
+  }) => LocalizedText(
+    en: '${_formatQuantityLabel(acquired)} acquired, ${_formatQuantityLabel(required)} required',
+    ar: 'تم الحصول على ${_formatQuantityLabel(acquired)}، المطلوب ${_formatQuantityLabel(required)}',
+  );
 }

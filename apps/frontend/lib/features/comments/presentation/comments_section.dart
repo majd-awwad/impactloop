@@ -12,18 +12,19 @@ import '../../../shared/widgets/supplier/supplier_identity_widgets.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/comments_providers.dart';
 import '../domain/comment_models.dart';
+import 'comments_l10n.dart';
 
 class CommentsSection extends ConsumerStatefulWidget {
   const CommentsSection({
     super.key,
     required this.targetType,
     required this.targetId,
-    this.title = 'Comments',
+    this.title,
   });
 
   final CommentTargetType targetType;
   final String targetId;
-  final String title;
+  final String? title;
 
   @override
   ConsumerState<CommentsSection> createState() => _CommentsSectionState();
@@ -146,11 +147,11 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
 
     final body = _composerController.text.trim();
     if (body.isEmpty) {
-      showInfoSnackBar(context, 'Write a comment before posting.');
+      showInfoSnackBar(context, CommentsL10n(context).writeBeforePosting);
       return;
     }
     if (body.length > 1000) {
-      showInfoSnackBar(context, 'Comments can be at most 1000 characters.');
+      showInfoSnackBar(context, CommentsL10n(context).commentLimit);
       return;
     }
 
@@ -292,11 +293,12 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = CommentsL10n(context);
     final rootsAsync = ref.watch(rootCommentsProvider(_key));
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.cardPadding),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: AppRadius.lgAll,
@@ -308,19 +310,19 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            widget.title,
+            widget.title ?? l10n.comments,
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Share a thought or reply in the thread. Replies stay under the same comment.',
+            l10n.intro,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
           _Composer(
             controller: _composerController,
             submitting: _submitting,
@@ -329,7 +331,7 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
             onCancel: _cancelComposerMode,
             onSubmit: _submitComposer,
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
           rootsAsync.when(
             loading: () => const Padding(
               padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
@@ -338,7 +340,7 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
             error: (error, _) => Text(
               error is ApiException
                   ? localizedApiErrorMessage(error, context.l10n)
-                  : 'Could not load comments.',
+                  : l10n.loadFailed,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.error,
               ),
@@ -346,7 +348,7 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
             data: (page) {
               if (page.items.isEmpty) {
                 return Text(
-                  'No comments yet. Be the first to start the discussion.',
+                  l10n.empty,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -379,7 +381,7 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
                                 onPressed: () =>
                                     _loadReplies(root, reset: true),
                                 child: Text(
-                                  'View ${root.repliesCount} ${root.repliesCount == 1 ? 'reply' : 'replies'}',
+                                  l10n.viewReplies(root.repliesCount),
                                 ),
                               ),
                             if (_expandedRoots.contains(root.id)) ...[
@@ -420,7 +422,7 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
                                   !_loadingReplies.contains(root.id))
                                 TextButton(
                                   onPressed: () => _loadReplies(root),
-                                  child: const Text('Load more replies'),
+                                  child: Text(l10n.loadMoreReplies),
                                 ),
                             ],
                           ],
@@ -459,10 +461,11 @@ class _Composer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = CommentsL10n(context);
     final modeLabel = editing
-        ? 'Editing your comment'
+        ? l10n.editing
         : replyingTo != null
-        ? 'Replying to ${replyingTo!.author.displayName}'
+        ? l10n.replyingTo(replyingTo!.author.displayName)
         : null;
 
     return Column(
@@ -479,22 +482,22 @@ class _Composer extends StatelessWidget {
                   ),
                 ),
               ),
-              TextButton(onPressed: onCancel, child: const Text('Cancel')),
+              TextButton(onPressed: onCancel, child: Text(l10n.cancel)),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
         ],
         TextField(
           controller: controller,
-          minLines: 2,
-          maxLines: 5,
+          minLines: 1,
+          maxLines: 4,
           maxLength: 1000,
           decoration: InputDecoration(
             hintText: editing
-                ? 'Update your comment'
+                ? l10n.updateComment
                 : replyingTo != null
-                ? 'Write a reply…'
-                : 'Write a comment…',
+                ? l10n.writeReply
+                : l10n.writeComment,
             border: OutlineInputBorder(borderRadius: AppRadius.mdAll),
           ),
         ),
@@ -509,7 +512,7 @@ class _Composer extends StatelessWidget {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Text(editing ? 'Save' : 'Post'),
+                : Text(editing ? l10n.save : l10n.post),
           ),
         ),
       ],
@@ -535,109 +538,127 @@ class _CommentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = CommentsL10n(context);
     final showMention =
         isReply &&
         comment.replyTo != null &&
         comment.replyTo!.id != (comment.rootCommentId ?? '');
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SupplierIdentityAvatar(
-          displayName: comment.author.displayName,
-          avatarUrl: comment.author.avatarUrl,
-          radius: isReply ? 14 : 18,
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: isReply
+            ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.42)
+            : theme.colorScheme.surfaceContainerLow,
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
         ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      comment.author.displayName,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  if (comment.editedAt != null && !comment.isDeleted)
-                    Text(
-                      'Edited',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              if (comment.isDeleted)
-                Text(
-                  'This comment was removed.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontStyle: FontStyle.italic,
-                  ),
-                )
-              else ...[
-                if (showMention)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                    child: Text(
-                      'Replying to ${comment.replyTo!.author.displayName}',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                Text(comment.body ?? '', style: theme.textTheme.bodyMedium),
-              ],
-              if (!comment.isDeleted) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Wrap(
-                  spacing: AppSpacing.sm,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SupplierIdentityAvatar(
+            displayName: comment.author.displayName,
+            avatarUrl: comment.author.avatarUrl,
+            radius: isReply ? 14 : 18,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    TextButton(
-                      onPressed: onReply,
-                      style: TextButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    Expanded(
+                      child: Text(
+                        comment.author.displayName,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                      child: const Text('Reply'),
                     ),
-                    if (onEdit != null)
-                      TextButton(
-                        onPressed: onEdit,
-                        style: TextButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: EdgeInsets.zero,
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    if (comment.editedAt != null && !comment.isDeleted)
+                      Text(
+                        l10n.edited,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
-                        child: const Text('Edit'),
-                      ),
-                    if (onDelete != null)
-                      TextButton(
-                        onPressed: onDelete,
-                        style: TextButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: EdgeInsets.zero,
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: const Text('Delete'),
                       ),
                   ],
                 ),
+                const SizedBox(height: AppSpacing.xs),
+                if (comment.isDeleted)
+                  Text(
+                    l10n.removed,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  )
+                else ...[
+                  if (showMention)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(
+                        bottom: AppSpacing.xs,
+                      ),
+                      child: Text(
+                        l10n.replyingTo(comment.replyTo!.author.displayName),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  Text(comment.body ?? '', style: theme.textTheme.bodyMedium),
+                ],
+                if (!comment.isDeleted) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    children: [
+                      TextButton.icon(
+                        onPressed: onReply,
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        icon: const Icon(Icons.reply_rounded, size: 16),
+                        label: Text(l10n.reply),
+                      ),
+                      if (onEdit != null)
+                        TextButton.icon(
+                          onPressed: onEdit,
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          icon: const Icon(Icons.edit_outlined, size: 16),
+                          label: Text(l10n.edit),
+                        ),
+                      if (onDelete != null)
+                        TextButton.icon(
+                          onPressed: onDelete,
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          icon: const Icon(Icons.delete_outline, size: 16),
+                          label: Text(l10n.delete),
+                        ),
+                    ],
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

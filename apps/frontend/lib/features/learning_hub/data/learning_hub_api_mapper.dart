@@ -347,7 +347,7 @@ class LearningHubApiMapper {
         ? const LocalizedText(en: '', ar: '')
         : LocalizedText(
             en: formatComponentCount(componentCount),
-            ar: formatComponentCount(componentCount),
+            ar: formatComponentCountArabic(componentCount),
           );
 
     final materialCoverageJson = _asMap(json['materialCoverage']);
@@ -367,7 +367,7 @@ class LearningHubApiMapper {
       difficulty: mapDifficultyLabel(difficultyKey),
       duration: LocalizedText(
         en: formatDurationMinutes(durationMinutes),
-        ar: formatDurationMinutes(durationMinutes),
+        ar: formatDurationMinutesArabic(durationMinutes),
       ),
       ratingLabel: const LocalizedText(en: 'learners', ar: 'متعلم'),
       ratingValue: rating.value,
@@ -450,6 +450,34 @@ class LearningHubApiMapper {
     }
 
     return '$count components';
+  }
+
+  static String formatDurationMinutesArabic(int? minutes) {
+    if (minutes == null || minutes <= 0) {
+      return 'وقت مرن';
+    }
+
+    if (minutes < 60) {
+      return '$minutes دقيقة';
+    }
+
+    final hours = minutes ~/ 60;
+    final remainder = minutes % 60;
+    final hourLabel = hours == 1 ? 'ساعة واحدة' : '$hours ساعات';
+
+    if (remainder == 0) {
+      return hourLabel;
+    }
+
+    return '$hourLabel و$remainder دقيقة';
+  }
+
+  static String formatComponentCountArabic(int count) {
+    if (count == 1) {
+      return 'مكوّن واحد';
+    }
+
+    return '$count مكوّنات';
   }
 
   static List<ProjectRequiredComponentItem> _mapRequiredComponents(

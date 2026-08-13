@@ -15,15 +15,19 @@ class LearningHubCoverageL10n {
 
   String t(String en, String ar) => isArabic ? ar : en;
 
-  String get publicCoverageTitle => t(
-    'Material availability',
-    'توفر المواد',
-  );
+  String get publicCoverageTitle => t('Material availability', 'توفر المواد');
 
-  String get personalReadinessTitle => t(
-    'Your build readiness',
-    'جاهزية مشروعك',
-  );
+  String totalMaterials(int count) =>
+      isArabic ? '$count مطلوبة' : '$count required';
+
+  String availableMaterials(int count) =>
+      isArabic ? '$count متوفرة' : '$count available';
+
+  String missingMaterials(int count) =>
+      isArabic ? '$count غير متوفرة' : '$count unavailable';
+
+  String get personalReadinessTitle =>
+      t('Your build readiness', 'جاهزية مشروعك');
 
   String publicCoverageSummary(ProjectMaterialCoverageSummary summary) {
     if (summary.totalRequiredComponents == 0) {
@@ -41,10 +45,7 @@ class LearningHubCoverageL10n {
     }
 
     if (summary.missingComponents == 1) {
-      return t(
-        '1 material currently missing',
-        'مادة واحدة غير متوفرة حاليًا',
-      );
+      return t('1 material currently missing', 'مادة واحدة غير متوفرة حاليًا');
     }
 
     if (summary.missingComponents > 1) {
@@ -136,32 +137,18 @@ class LearningHubCoverageL10n {
 
   String get filterAny => t('Any availability', 'أي حالة توفر');
 
-  String get filterFull => t(
-    'All materials available',
-    'جميع المواد متوفرة',
-  );
+  String get filterFull => t('All materials available', 'جميع المواد متوفرة');
 
-  String get filterMost => t(
-    'Most materials available',
-    'معظم المواد متوفرة',
-  );
+  String get filterMost => t('Most materials available', 'معظم المواد متوفرة');
 
-  String get filterSome => t(
-    'Some materials available',
-    'بعض المواد متوفرة',
-  );
+  String get filterSome => t('Some materials available', 'بعض المواد متوفرة');
 
-  String get filterNone => t(
-    'No materials available',
-    'لا توجد مواد متوفرة',
-  );
+  String get filterNone => t('No materials available', 'لا توجد مواد متوفرة');
 
   String get sortRecommended => t('Recommended', 'مقترحة');
 
-  String get sortMostAvailable => t(
-    'Most materials available',
-    'الأكثر توفرًا للمواد',
-  );
+  String get sortMostAvailable =>
+      t('Most materials available', 'الأكثر توفرًا للمواد');
 
   String get sortShortestDuration => t('Shortest duration', 'الأقصر مدة');
 
