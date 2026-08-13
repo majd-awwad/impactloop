@@ -10,6 +10,8 @@ import 'models/driver_delivery_detail_result.dart';
 import 'models/driver_location_ping_request.dart';
 import 'models/update_driver_delivery_status_request.dart';
 import 'models/driver_archive.dart';
+import 'models/delivery_handover_verify_preview.dart';
+import 'models/supplier_pickup_handover_verify_preview.dart';
 
 final driverDeliveriesApiProvider = Provider<DriverDeliveriesApi>((ref) {
   return DriverDeliveriesApi(ref.read(apiClientProvider));
@@ -102,5 +104,29 @@ class DriverDeliveriesRepository {
     required String note,
   }) {
     return _api.reportDriverIssue(deliveryId, note: note);
+  }
+
+  Future<DeliveryHandoverVerifyPreview> verifyDeliveryHandoverCredential(
+    String handoverToken,
+  ) {
+    return _api.verifyDeliveryHandoverCredential(handoverToken);
+  }
+
+  Future<DriverDelivery> confirmDeliveryHandoverCredential(
+    String handoverToken,
+  ) {
+    return _api.confirmDeliveryHandoverCredential(handoverToken);
+  }
+
+  Future<SupplierPickupHandoverVerifyPreview> verifySupplierPickupHandoverCredential(
+    String handoverToken,
+  ) {
+    return _api.verifySupplierPickupHandoverCredential(handoverToken);
+  }
+
+  Future<DriverDelivery> confirmSupplierPickupHandoverCredential(
+    String handoverToken,
+  ) {
+    return _api.confirmSupplierPickupHandoverCredential(handoverToken);
   }
 }

@@ -4,6 +4,7 @@ import '../../../core/network/api_response.dart';
 import 'models/learner_delivery.dart';
 import 'models/learner_delivery_tracking.dart';
 import 'models/request_delivery_request.dart';
+import 'models/delivery_handover_credential.dart';
 
 class DeliveriesApi {
   const DeliveriesApi(this._client);
@@ -54,6 +55,17 @@ class DeliveriesApi {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>('/api/deliveries/$deliveryId/tracking'),
       LearnerDeliveryTracking.fromJson,
+    );
+  }
+
+  Future<DeliveryHandoverCredential> issueDeliveryHandoverCredential(
+    String deliveryId,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/deliveries/$deliveryId/handover-credential',
+      ),
+      DeliveryHandoverCredential.fromJson,
     );
   }
 }

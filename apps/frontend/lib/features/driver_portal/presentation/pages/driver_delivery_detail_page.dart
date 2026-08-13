@@ -21,7 +21,6 @@ import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/bidi_text.dart';
-import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../application/driver_deliveries_provider.dart';
@@ -30,6 +29,8 @@ import '../../application/driver_location_auto_ping_controller.dart';
 import '../../data/models/driver_delivery.dart';
 import '../../data/models/update_driver_delivery_status_request.dart';
 import '../driver_delivery_timing_presentation.dart';
+import '../widgets/driver_delivery_completion_flow.dart';
+import '../widgets/driver_supplier_pickup_completion_flow.dart';
 import '../widgets/driver_route_block.dart';
 import '../widgets/partial_pickup_selection_dialog.dart';
 import 'driver_history_detail_page.dart';
@@ -496,22 +497,37 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
         unpicked = selection.unpicked;
       }
 
-      confirmationCode = await HandoverCodeInputDialog.show(
+      final completed = await runDriverSupplierPickupCompletionFlow(
         context,
-        title: l10n.driverSupplierHandoverCode,
-        message: l10n.driverSupplierHandoverCodeMessage,
-        confirmLabel: l10n.driverMarkPickedUp,
+        ref,
+        deliveryId: widget.delivery.id,
+        reservationId: widget.delivery.reservationId,
+        note: _noteController.text,
+        pickedReservationIds: pickedReservationIds,
+        unpicked: unpicked,
+        showSuccessSnackBar: false,
       );
-      if (confirmationCode == null || !mounted) return;
+      if (!completed || !mounted) return;
+
+      showInfoSnackBar(context, l10n.driverStatusPickedUpSuccess);
+      _noteController.clear();
+      return;
     } else if (nextStatus == 'DELIVERED') {
-      confirmationCode = await HandoverCodeInputDialog.show(
+      final completed = await runDriverDeliveryCompletionFlow(
         context,
-        title: l10n.driverLearnerDeliveryCode,
-        message: l10n.driverLearnerDeliveryCodeMessage,
-        confirmLabel: l10n.driverMarkDelivered,
-        confirmTone: AppStatusTone.success,
+        ref,
+        deliveryId: widget.delivery.id,
+        reservationId: widget.delivery.reservationId,
+        note: _noteController.text,
+        showSuccessSnackBar: false,
       );
-      if (confirmationCode == null || !mounted) return;
+      if (!completed || !mounted) return;
+
+      context.popOrGo('/driver/active');
+      leaveDriverDeliveryDetail(ref);
+      showInfoSnackBar(context, l10n.driverDeliveryMarkedDelivered);
+      _noteController.clear();
+      return;
     }
 
     try {

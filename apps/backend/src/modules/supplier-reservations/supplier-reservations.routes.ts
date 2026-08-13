@@ -45,6 +45,9 @@ import {
   verifyHandoverCredentialHandler,
 } from '../handover-credentials/handover-credentials.controller.js';
 import { handoverCredentialTokenBodySchema } from '../handover-credentials/handover-credentials.validation.js';
+import {
+  issueSupplierPickupHandoverCredentialHandler,
+} from '../supplier-pickup-handover-credentials/supplier-pickup-handover-credentials.controller.js';
 
 export const supplierReservationsRouter = Router();
 
@@ -78,6 +81,14 @@ supplierReservationsRouter.post(
   requireRoles('SUPPLIER'),
   validate(handoverCredentialTokenBodySchema),
   asyncHandler(confirmHandoverCredentialHandler),
+);
+
+supplierReservationsRouter.post(
+  '/:id/driver-pickup-handover-credential',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(reservationIdParamsSchema, 'params'),
+  asyncHandler(issueSupplierPickupHandoverCredentialHandler),
 );
 
 supplierReservationsRouter.get(

@@ -1484,6 +1484,150 @@ class AppLocalizationsAr extends AppLocalizations {
       'إذا تعذّر المسح، استخدم رمز الاستلام اليدوي في هذه الصفحة.';
 
   @override
+  String get showDeliveryQr => 'إظهار رمز QR للتسليم';
+
+  @override
+  String get deliveryQrDialogTitle => 'رمز QR للتسليم';
+
+  @override
+  String get deliveryQrInstructions =>
+      'اعرض رمز QR هذا للسائق عند استلام المادة.';
+
+  @override
+  String deliveryQrValidUntil(String expiresAt) {
+    return 'صالح حتى $expiresAt';
+  }
+
+  @override
+  String get deliveryQrExpired => 'انتهت صلاحية رمز QR';
+
+  @override
+  String get deliveryQrGenerateNew => 'إنشاء رمز QR جديد';
+
+  @override
+  String get deliveryQrIssueFailed => 'تعذر إنشاء رمز QR للتسليم';
+
+  @override
+  String get deliveryQrManualFallbackNote =>
+      'إذا تعذّر المسح، استخدم رمز التسليم اليدوي في هذه الصفحة.';
+
+  @override
+  String get driverScanDeliveryQr => 'مسح رمز QR للتسليم';
+
+  @override
+  String get driverDeliveryQrPointCamera =>
+      'وجّه الكاميرا نحو رمز QR للتسليم الخاص بالمتعلّم.';
+
+  @override
+  String get driverDeliveryQrVerifying => 'جارٍ التحقق من رمز QR للتسليم…';
+
+  @override
+  String get driverDeliveryQrVerifiedTitle => 'تم التحقق من رمز QR';
+
+  @override
+  String get driverDeliveryQrLearnerLabel => 'المتعلّم';
+
+  @override
+  String get driverDeliveryQrConfirmHandover => 'تأكيد تسليم المادة';
+
+  @override
+  String get driverDeliveryQrInvalidPayload =>
+      'رمز QR هذا ليس رمز تسليم صالحًا في ImpactLoop.';
+
+  @override
+  String get driverDeliveryQrVerifyFailed => 'تعذر التحقق من رمز QR للتسليم.';
+
+  @override
+  String get driverDeliveryQrConfirmFailed =>
+      'تعذر تأكيد التسليم. حاول مرة أخرى أو استخدم رمز التأكيد.';
+
+  @override
+  String get driverDeliveryQrHandoverCompletedBody => 'تم تسليم المادة بنجاح.';
+
+  @override
+  String get driverDeliveryQrCredentialUnavailable =>
+      'رمز QR للتسليم غير صالح أو لم يعد متاحًا.';
+
+  @override
+  String get driverDeliveryQrCameraPermissionRequired =>
+      'يلزم السماح باستخدام الكاميرا لمسح رمز التسليم.';
+
+  @override
+  String get driverDeliveryQrCameraUnavailable =>
+      'الكاميرا غير متاحة على هذا الجهاز.';
+
+  @override
+  String get driverScanSupplierPickupQr => 'مسح رمز QR الخاص بالمورّد';
+
+  @override
+  String get driverSupplierPickupQrPointCamera =>
+      'وجّه الكاميرا نحو رمز QR لاستلام المورّد.';
+
+  @override
+  String get driverSupplierPickupQrVerifying =>
+      'جارٍ التحقق من رمز QR للاستلام…';
+
+  @override
+  String get driverSupplierPickupQrVerifiedTitle =>
+      'تم التحقق من رمز QR للاستلام';
+
+  @override
+  String get driverSupplierPickupQrInvalidPayload =>
+      'رمز QR هذا ليس رمز استلام صالحًا من المورّد في ImpactLoop.';
+
+  @override
+  String get driverSupplierPickupQrVerifyFailed =>
+      'تعذر التحقق من رمز QR للاستلام.';
+
+  @override
+  String get driverSupplierPickupQrConfirmFailed =>
+      'تعذر تأكيد الاستلام. حاول مرة أخرى أو استخدم رمز تسليم المورّد.';
+
+  @override
+  String get driverSupplierPickupQrHandoverCompletedBody =>
+      'تم استلام المادة بنجاح.';
+
+  @override
+  String get driverSupplierPickupQrCredentialUnavailable =>
+      'رمز QR للاستلام غير صالح أو لم يعد متاحًا.';
+
+  @override
+  String get driverSupplierPickupQrCameraPermissionRequired =>
+      'يلزم السماح باستخدام الكاميرا لمسح رمز استلام المورّد.';
+
+  @override
+  String get driverSupplierPickupQrCameraUnavailable =>
+      'الكاميرا غير متاحة على هذا الجهاز.';
+
+  @override
+  String get driverSupplierPickupQrScanAgain => 'مسح رمز آخر';
+
+  @override
+  String get useSupplierHandoverCodeInstead =>
+      'استخدام رمز تسليم المورّد بدلًا من ذلك';
+
+  @override
+  String get completeSupplierPickupDialogTitle => 'تأكيد استلام المورّد';
+
+  @override
+  String get completeSupplierPickupScanQr => 'مسح رمز QR الخاص بالمورّد';
+
+  @override
+  String get completeSupplierPickupManualCode => 'رمز تسليم المورّد';
+
+  @override
+  String get confirmPickup => 'تأكيد الاستلام';
+
+  @override
+  String get completeDeliveryDialogTitle => 'إكمال التسليم';
+
+  @override
+  String get completeDeliveryScanQr => 'مسح رمز QR للتسليم';
+
+  @override
+  String get completeDeliveryManualCode => 'رمز تسليم المتعلّم';
+
+  @override
   String get pickupWindowNotStarted => 'لم تبدأ بعد';
 
   @override
@@ -6399,6 +6543,37 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get supplierDriverHandoverCodeInstructions =>
       'أعطِ هذا الرمز للسائق بعد تسليم المادة.';
+
+  @override
+  String get driverPickupVerification => 'التحقق من استلام السائق';
+
+  @override
+  String get driverPickupVerificationBody => 'وصل السائق لاستلام هذه المادة.';
+
+  @override
+  String get supplierDriverPickupQrDialogTitle => 'رمز QR لاستلام السائق';
+
+  @override
+  String get supplierDriverPickupQrInstructions =>
+      'اعرض رمز QR هذا للسائق عند استلام المادة.';
+
+  @override
+  String supplierDriverPickupQrValidUntil(String expiresAt) {
+    return 'صالح حتى $expiresAt';
+  }
+
+  @override
+  String get supplierDriverPickupQrExpired => 'انتهت صلاحية رمز QR';
+
+  @override
+  String get supplierDriverPickupQrGenerateNew => 'إنشاء رمز QR جديد';
+
+  @override
+  String get supplierDriverPickupQrIssueFailed => 'تعذر إنشاء رمز QR للاستلام';
+
+  @override
+  String get supplierDriverPickupQrManualFallbackNote =>
+      'إذا تعذّر المسح، استخدم رمز تسليم المورّد أعلاه.';
 
   @override
   String get supplierReportedToAdmin => 'أُبلغ للمشرف';

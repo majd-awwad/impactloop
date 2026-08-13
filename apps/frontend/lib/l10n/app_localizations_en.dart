@@ -1502,6 +1502,149 @@ class AppLocalizationsEn extends AppLocalizations {
       'If scanning fails, use the manual pickup code below on this page.';
 
   @override
+  String get showDeliveryQr => 'Show Delivery QR';
+
+  @override
+  String get deliveryQrDialogTitle => 'Delivery QR';
+
+  @override
+  String get deliveryQrInstructions =>
+      'Show this QR code to the driver when receiving your material.';
+
+  @override
+  String deliveryQrValidUntil(String expiresAt) {
+    return 'Valid until $expiresAt';
+  }
+
+  @override
+  String get deliveryQrExpired => 'QR expired';
+
+  @override
+  String get deliveryQrGenerateNew => 'Generate a new QR';
+
+  @override
+  String get deliveryQrIssueFailed => 'Unable to generate delivery QR';
+
+  @override
+  String get deliveryQrManualFallbackNote =>
+      'If scanning fails, use the manual delivery code below on this page.';
+
+  @override
+  String get driverScanDeliveryQr => 'Scan Delivery QR';
+
+  @override
+  String get driverDeliveryQrPointCamera =>
+      'Point the camera at the learner\'s delivery QR.';
+
+  @override
+  String get driverDeliveryQrVerifying => 'Verifying delivery QR…';
+
+  @override
+  String get driverDeliveryQrVerifiedTitle => 'QR verified';
+
+  @override
+  String get driverDeliveryQrLearnerLabel => 'Learner';
+
+  @override
+  String get driverDeliveryQrConfirmHandover => 'Confirm handover';
+
+  @override
+  String get driverDeliveryQrInvalidPayload =>
+      'This is not a valid ImpactLoop delivery QR.';
+
+  @override
+  String get driverDeliveryQrVerifyFailed => 'Unable to verify delivery QR.';
+
+  @override
+  String get driverDeliveryQrConfirmFailed =>
+      'Unable to confirm handover. Try again or use the confirmation code.';
+
+  @override
+  String get driverDeliveryQrHandoverCompletedBody =>
+      'The material has been delivered successfully.';
+
+  @override
+  String get driverDeliveryQrCredentialUnavailable =>
+      'This delivery QR is invalid or no longer available.';
+
+  @override
+  String get driverDeliveryQrCameraPermissionRequired =>
+      'Camera permission is required to scan the delivery QR.';
+
+  @override
+  String get driverDeliveryQrCameraUnavailable =>
+      'Camera is unavailable on this device.';
+
+  @override
+  String get driverScanSupplierPickupQr => 'Scan Supplier Pickup QR';
+
+  @override
+  String get driverSupplierPickupQrPointCamera =>
+      'Point the camera at the supplier\'s pickup QR.';
+
+  @override
+  String get driverSupplierPickupQrVerifying => 'Verifying pickup QR…';
+
+  @override
+  String get driverSupplierPickupQrVerifiedTitle => 'Pickup QR verified';
+
+  @override
+  String get driverSupplierPickupQrInvalidPayload =>
+      'This is not a valid ImpactLoop supplier pickup QR.';
+
+  @override
+  String get driverSupplierPickupQrVerifyFailed =>
+      'Unable to verify pickup QR.';
+
+  @override
+  String get driverSupplierPickupQrConfirmFailed =>
+      'Unable to confirm pickup. Try again or use the supplier handover code.';
+
+  @override
+  String get driverSupplierPickupQrHandoverCompletedBody =>
+      'The material has been picked up successfully.';
+
+  @override
+  String get driverSupplierPickupQrCredentialUnavailable =>
+      'This pickup QR is invalid or no longer available.';
+
+  @override
+  String get driverSupplierPickupQrCameraPermissionRequired =>
+      'Camera permission is required to scan the supplier pickup QR.';
+
+  @override
+  String get driverSupplierPickupQrCameraUnavailable =>
+      'Camera is unavailable on this device.';
+
+  @override
+  String get driverSupplierPickupQrScanAgain => 'Scan again';
+
+  @override
+  String get useSupplierHandoverCodeInstead =>
+      'Use supplier handover code instead';
+
+  @override
+  String get completeSupplierPickupDialogTitle => 'Confirm supplier pickup';
+
+  @override
+  String get completeSupplierPickupScanQr => 'Scan Supplier Pickup QR';
+
+  @override
+  String get completeSupplierPickupManualCode => 'Supplier handover code';
+
+  @override
+  String get confirmPickup => 'Confirm pickup';
+
+  @override
+  String get completeDeliveryDialogTitle => 'Complete delivery';
+
+  @override
+  String get completeDeliveryScanQr => 'Scan Delivery QR';
+
+  @override
+  String get completeDeliveryManualCode => 'Learner delivery code';
+
+  @override
   String get pickupWindowNotStarted => 'Not started yet';
 
   @override
@@ -6472,6 +6615,39 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get supplierDriverHandoverCodeInstructions =>
       'Give this code to the driver after handing over the material.';
+
+  @override
+  String get driverPickupVerification => 'Driver pickup verification';
+
+  @override
+  String get driverPickupVerificationBody =>
+      'The driver has arrived to collect this material.';
+
+  @override
+  String get supplierDriverPickupQrDialogTitle => 'Supplier Pickup QR';
+
+  @override
+  String get supplierDriverPickupQrInstructions =>
+      'Show this QR to the driver when they collect the material.';
+
+  @override
+  String supplierDriverPickupQrValidUntil(String expiresAt) {
+    return 'Valid until $expiresAt';
+  }
+
+  @override
+  String get supplierDriverPickupQrExpired => 'QR expired';
+
+  @override
+  String get supplierDriverPickupQrGenerateNew => 'Generate a new QR';
+
+  @override
+  String get supplierDriverPickupQrIssueFailed =>
+      'Unable to generate pickup QR';
+
+  @override
+  String get supplierDriverPickupQrManualFallbackNote =>
+      'If scanning fails, use the supplier handover code above.';
 
   @override
   String get supplierReportedToAdmin => 'Reported to admin';

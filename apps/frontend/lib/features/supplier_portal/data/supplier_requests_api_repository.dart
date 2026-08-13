@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../reservations/data/models/handover_credential.dart';
 import '../../reservations/data/models/reservation_message.dart';
 import 'models/handover_verify_preview.dart';
 import 'models/supplier_incoming_request.dart';
@@ -76,6 +77,13 @@ class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
     required String confirmationCode,
   }) {
     return _api.completeRequest(requestId, confirmationCode: confirmationCode);
+  }
+
+  @override
+  Future<HandoverCredential> issueDriverPickupHandoverCredential(
+    String reservationId,
+  ) {
+    return _api.issueDriverPickupHandoverCredential(reservationId);
   }
 
   @override

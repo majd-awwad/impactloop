@@ -77,6 +77,7 @@ import {
   validatePartialPickupSelection,
   type PartialPickupUnpickedItem,
 } from './driver-partial-pickup.js';
+import { assertDeliveryGroupPaymentReadyOrThrow } from '../payments/payments.readiness.js';
 
 const fulfillMaterialRequestsForReservations = async (
   reservationIds: string[],
@@ -1453,6 +1454,436 @@ export const updateDriverDeliveryStatus = async (
     default:
       throw new AppError('Unable to update delivery.', 500, 'INTERNAL_ERROR');
   }
+};
+
+export const completeDeliveryByHandoverToken = async (
+  driverUserId: string,
+  tokenHash: string,
+) => {
+  const result = await runSerializableTransaction(async (tx) => {
+    const profile = await findActiveDriverProfile(driverUserId, tx);
+    const delivery = await tx.delivery.findFirst({
+      where: { learnerDeliveryHandoverTokenHash: tokenHash },
+      select: {
+        id: true,
+        status: true,
+        reservationId: true,
+        deliveryGroupId: true,
+        assignedDriverProfileId: true,
+        learnerDeliveryHandoverTokenHash: true,
+        learnerDeliveryHandoverTokenExpiresAt: true,
+        learnerDeliveryHandoverTokenUsedAt: true,
+        reservation: {
+          select: {
+            confirmedDeliveryWindowStart: true,
+            confirmedDeliveryWindowEnd: true,
+          },
+        },
+        assignments: {
+          where: { status: 'ACTIVE' },
+          select: { driverProfileId: true },
+        },
+      },
+    });
+
+    if (!delivery) {
+      return { invalidCredential: true as const };
+    }
+
+    if (delivery.assignedDriverProfileId !== profile.id) {
+      return { invalidCredential: true as const };
+    }
+
+    if (delivery.learnerDeliveryHandoverTokenUsedAt) {
+      if (delivery.status === 'DELIVERED') {
+        const updated = await tx.delivery.findUniqueOrThrow({
+          where: { id: delivery.id },
+          include: driverDeliveryInclude,
+        });
+        return {
+          conflict: true as const,
+          delivery: mapAssignedDelivery(updated),
+        };
+      }
+
+      return { invalidCredential: true as const };
+    }
+
+    const now = new Date();
+    if (
+      delivery.learnerDeliveryHandoverTokenExpiresAt &&
+      delivery.learnerDeliveryHandoverTokenExpiresAt.getTime() <= now.getTime()
+    ) {
+      return { expiredCredential: true as const };
+    }
+
+    if (isTerminalDeliveryStatus(delivery.status)) {
+      return { invalidCredential: true as const };
+    }
+
+    if (delivery.status !== 'ARRIVED_DROPOFF') {
+      return { invalidCredential: true as const };
+    }
+
+    if (
+      delivery.assignments.length !== 1 ||
+      delivery.assignments[0]?.driverProfileId !== profile.id
+    ) {
+      return { invalidCredential: true as const };
+    }
+
+    const timing = evaluateHandoverWindow(
+      now,
+      delivery.reservation.confirmedDeliveryWindowStart,
+      delivery.reservation.confirmedDeliveryWindowEnd,
+    );
+
+    if (!timing.ok) {
+      if (timing.reason === 'NOT_STARTED') {
+        return { windowNotStarted: true as const };
+      }
+
+      return { windowExpired: true as const };
+    }
+
+    if (delivery.deliveryGroupId) {
+      try {
+        await assertDeliveryGroupPaymentReadyOrThrow(
+          delivery.deliveryGroupId,
+          tx,
+        );
+      } catch (error) {
+        if (
+          error instanceof AppError &&
+          error.code === 'DELIVERY_PAYMENT_NOT_READY'
+        ) {
+          return { paymentNotReady: true as const };
+        }
+
+        throw error;
+      }
+    }
+
+    const updateCount = await tx.delivery.updateMany({
+      where: {
+        id: delivery.id,
+        status: 'ARRIVED_DROPOFF',
+        assignedDriverProfileId: profile.id,
+        learnerDeliveryHandoverTokenHash: tokenHash,
+        learnerDeliveryHandoverTokenUsedAt: null,
+      },
+      data: {
+        status: 'DELIVERED',
+        deliveredAt: now,
+        learnerDeliveryHandoverTokenUsedAt: now,
+      },
+    });
+
+    if (updateCount.count !== 1) {
+      return { invalidCredential: true as const };
+    }
+
+    const latestDelivery = await tx.delivery.findUniqueOrThrow({
+      where: { id: delivery.id },
+      select: {
+        id: true,
+        reservationId: true,
+        deliveryGroupId: true,
+        reservation: {
+          select: {
+            status: true,
+            materialId: true,
+            quantityRequested: true,
+          },
+        },
+      },
+    });
+
+    const completedReservationIds = await completeReservationsForDeliveredDelivery(
+      tx,
+      {
+        delivery: latestDelivery,
+        driverUserId,
+        completedAt: now,
+      },
+    );
+
+    await reconcileDriverAvailability(tx, profile.id);
+
+    await tx.deliveryStatusHistory.create({
+      data: {
+        deliveryId: delivery.id,
+        oldStatus: delivery.status,
+        newStatus: 'DELIVERED',
+        changedByUserId: driverUserId,
+        note: null,
+      },
+    });
+
+    return {
+      success: true as const,
+      deliveryId: delivery.id,
+      completedReservationIds,
+    };
+  });
+
+  if ('invalidCredential' in result && result.invalidCredential) {
+    return result;
+  }
+
+  if ('expiredCredential' in result && result.expiredCredential) {
+    return result;
+  }
+
+  if ('windowNotStarted' in result && result.windowNotStarted) {
+    return result;
+  }
+
+  if ('windowExpired' in result && result.windowExpired) {
+    return result;
+  }
+
+  if ('paymentNotReady' in result && result.paymentNotReady) {
+    return result;
+  }
+
+  if ('conflict' in result && result.conflict) {
+    return result;
+  }
+
+  const updatedDelivery = await prisma.delivery.findUniqueOrThrow({
+    where: { id: result.deliveryId },
+    include: driverDeliveryInclude,
+  });
+
+  invalidateLearnerHomeForReservationTransition('ACCEPTED', 'COMPLETED');
+  await fulfillMaterialRequestsForReservations(result.completedReservationIds);
+
+  return {
+    conflict: false as const,
+    delivery: mapAssignedDelivery(updatedDelivery),
+  };
+};
+
+export const completePickupByHandoverToken = async (
+  driverUserId: string,
+  tokenHash: string,
+) => {
+  const result = await runSerializableTransaction(async (tx) => {
+    const profile = await findActiveDriverProfile(driverUserId, tx);
+    const delivery = await tx.delivery.findFirst({
+      where: { supplierPickupHandoverTokenHash: tokenHash },
+      select: {
+        id: true,
+        status: true,
+        reservationId: true,
+        deliveryGroupId: true,
+        assignedDriverProfileId: true,
+        supplierPickupHandoverTokenHash: true,
+        supplierPickupHandoverTokenExpiresAt: true,
+        supplierPickupHandoverTokenUsedAt: true,
+        reservation: {
+          select: {
+            materialId: true,
+            quantityRequested: true,
+            supplierPickupWindowStart: true,
+            supplierPickupWindowEnd: true,
+            material: {
+              select: {
+                title: true,
+                unit: true,
+                condition: true,
+              },
+            },
+          },
+        },
+        deliveryGroup: {
+          select: {
+            reservations: {
+              where: {
+                status: 'ACCEPTED',
+                fulfillmentMethod: 'DELIVERY',
+              },
+              select: {
+                id: true,
+                materialId: true,
+                quantityRequested: true,
+                material: {
+                  select: {
+                    title: true,
+                    unit: true,
+                    condition: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        assignments: {
+          where: { status: 'ACTIVE' },
+          select: { driverProfileId: true },
+        },
+      },
+    });
+
+    if (!delivery) {
+      return { invalidCredential: true as const };
+    }
+
+    if (delivery.assignedDriverProfileId !== profile.id) {
+      return { invalidCredential: true as const };
+    }
+
+    if (delivery.supplierPickupHandoverTokenUsedAt) {
+      if (delivery.status === 'PICKED_UP') {
+        const updated = await tx.delivery.findUniqueOrThrow({
+          where: { id: delivery.id },
+          include: driverDeliveryInclude,
+        });
+        return {
+          conflict: true as const,
+          delivery: mapAssignedDelivery(updated),
+        };
+      }
+
+      return { invalidCredential: true as const };
+    }
+
+    const now = new Date();
+    if (
+      delivery.supplierPickupHandoverTokenExpiresAt &&
+      delivery.supplierPickupHandoverTokenExpiresAt.getTime() <= now.getTime()
+    ) {
+      return { expiredCredential: true as const };
+    }
+
+    if (isTerminalDeliveryStatus(delivery.status)) {
+      return { invalidCredential: true as const };
+    }
+
+    if (delivery.status !== 'ARRIVED_PICKUP') {
+      return { invalidCredential: true as const };
+    }
+
+    const groupMembers = delivery.deliveryGroup?.reservations ?? [];
+    const pickupMembers =
+      groupMembers.length > 0
+        ? groupMembers
+        : [
+            {
+              id: delivery.reservationId,
+              materialId: delivery.reservation.materialId,
+              quantityRequested: delivery.reservation.quantityRequested,
+              material: delivery.reservation.material,
+            },
+          ];
+
+    if (pickupMembers.length > 1) {
+      return { invalidCredential: true as const };
+    }
+
+    if (
+      delivery.assignments.length !== 1 ||
+      delivery.assignments[0]?.driverProfileId !== profile.id
+    ) {
+      return { invalidCredential: true as const };
+    }
+
+    const timing = evaluateHandoverWindow(
+      now,
+      delivery.reservation.supplierPickupWindowStart,
+      delivery.reservation.supplierPickupWindowEnd,
+    );
+
+    if (!timing.ok) {
+      if (timing.reason === 'NOT_STARTED') {
+        return { windowNotStarted: true as const };
+      }
+
+      return { windowExpired: true as const };
+    }
+
+    await tx.deliveryPickupItem.createMany({
+      data: pickupMembers.map((member) => ({
+        deliveryId: delivery.id,
+        reservationId: member.id,
+        materialId: member.materialId,
+        materialTitle: member.material.title,
+        quantity: member.quantityRequested,
+        unit: member.material.unit,
+        condition: member.material.condition,
+        wasPicked: true,
+        recordedAt: now,
+      })),
+      skipDuplicates: true,
+    });
+
+    const updateCount = await tx.delivery.updateMany({
+      where: {
+        id: delivery.id,
+        status: 'ARRIVED_PICKUP',
+        assignedDriverProfileId: profile.id,
+        supplierPickupHandoverTokenHash: tokenHash,
+        supplierPickupHandoverTokenUsedAt: null,
+      },
+      data: {
+        status: 'PICKED_UP',
+        pickedUpAt: now,
+        supplierPickupHandoverTokenUsedAt: now,
+      },
+    });
+
+    if (updateCount.count !== 1) {
+      return { invalidCredential: true as const };
+    }
+
+    await tx.deliveryStatusHistory.create({
+      data: {
+        deliveryId: delivery.id,
+        oldStatus: delivery.status,
+        newStatus: 'PICKED_UP',
+        changedByUserId: driverUserId,
+        note: null,
+      },
+    });
+
+    return {
+      success: true as const,
+      deliveryId: delivery.id,
+    };
+  });
+
+  if ('invalidCredential' in result && result.invalidCredential) {
+    return result;
+  }
+
+  if ('expiredCredential' in result && result.expiredCredential) {
+    return result;
+  }
+
+  if ('windowNotStarted' in result && result.windowNotStarted) {
+    return result;
+  }
+
+  if ('windowExpired' in result && result.windowExpired) {
+    return result;
+  }
+
+  if ('conflict' in result && result.conflict) {
+    return result;
+  }
+
+  const updatedDelivery = await prisma.delivery.findUniqueOrThrow({
+    where: { id: result.deliveryId },
+    include: driverDeliveryInclude,
+  });
+
+  await notifyDriverDropoffTime(result.deliveryId);
+
+  return {
+    conflict: false as const,
+    delivery: mapAssignedDelivery(updatedDelivery),
+  };
 };
 
 export const createDeliveryLocationPing = async (

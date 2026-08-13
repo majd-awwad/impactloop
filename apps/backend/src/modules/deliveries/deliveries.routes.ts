@@ -12,6 +12,7 @@ import {
   listMyDeliveriesHandler,
 } from './deliveries.controller.js';
 import { deliveryIdParamsSchema } from './deliveries.validation.js';
+import { issueDeliveryHandoverCredentialHandler } from '../delivery-handover-credentials/delivery-handover-credentials.controller.js';
 
 export const deliveriesRouter = Router();
 deliveriesRouter.use(privateNoStoreMiddleware);
@@ -37,4 +38,12 @@ deliveriesRouter.get(
   requireRoles('LEARNER'),
   validate(deliveryIdParamsSchema, 'params'),
   asyncHandler(getMyDeliveryHandler),
+);
+
+deliveriesRouter.post(
+  '/:id/handover-credential',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(deliveryIdParamsSchema, 'params'),
+  asyncHandler(issueDeliveryHandoverCredentialHandler),
 );

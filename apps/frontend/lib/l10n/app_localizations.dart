@@ -2516,6 +2516,252 @@ abstract class AppLocalizations {
   /// **'If scanning fails, use the manual pickup code below on this page.'**
   String get pickupQrManualFallbackNote;
 
+  /// No description provided for @showDeliveryQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Delivery QR'**
+  String get showDeliveryQr;
+
+  /// No description provided for @deliveryQrDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery QR'**
+  String get deliveryQrDialogTitle;
+
+  /// No description provided for @deliveryQrInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Show this QR code to the driver when receiving your material.'**
+  String get deliveryQrInstructions;
+
+  /// No description provided for @deliveryQrValidUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Valid until {expiresAt}'**
+  String deliveryQrValidUntil(String expiresAt);
+
+  /// No description provided for @deliveryQrExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'QR expired'**
+  String get deliveryQrExpired;
+
+  /// No description provided for @deliveryQrGenerateNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate a new QR'**
+  String get deliveryQrGenerateNew;
+
+  /// No description provided for @deliveryQrIssueFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to generate delivery QR'**
+  String get deliveryQrIssueFailed;
+
+  /// No description provided for @deliveryQrManualFallbackNote.
+  ///
+  /// In en, this message translates to:
+  /// **'If scanning fails, use the manual delivery code below on this page.'**
+  String get deliveryQrManualFallbackNote;
+
+  /// No description provided for @driverScanDeliveryQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan Delivery QR'**
+  String get driverScanDeliveryQr;
+
+  /// No description provided for @driverDeliveryQrPointCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Point the camera at the learner\'\'s delivery QR.'**
+  String get driverDeliveryQrPointCamera;
+
+  /// No description provided for @driverDeliveryQrVerifying.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying delivery QR…'**
+  String get driverDeliveryQrVerifying;
+
+  /// No description provided for @driverDeliveryQrVerifiedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'QR verified'**
+  String get driverDeliveryQrVerifiedTitle;
+
+  /// No description provided for @driverDeliveryQrLearnerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner'**
+  String get driverDeliveryQrLearnerLabel;
+
+  /// No description provided for @driverDeliveryQrConfirmHandover.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm handover'**
+  String get driverDeliveryQrConfirmHandover;
+
+  /// No description provided for @driverDeliveryQrInvalidPayload.
+  ///
+  /// In en, this message translates to:
+  /// **'This is not a valid ImpactLoop delivery QR.'**
+  String get driverDeliveryQrInvalidPayload;
+
+  /// No description provided for @driverDeliveryQrVerifyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to verify delivery QR.'**
+  String get driverDeliveryQrVerifyFailed;
+
+  /// No description provided for @driverDeliveryQrConfirmFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to confirm handover. Try again or use the confirmation code.'**
+  String get driverDeliveryQrConfirmFailed;
+
+  /// No description provided for @driverDeliveryQrHandoverCompletedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The material has been delivered successfully.'**
+  String get driverDeliveryQrHandoverCompletedBody;
+
+  /// No description provided for @driverDeliveryQrCredentialUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This delivery QR is invalid or no longer available.'**
+  String get driverDeliveryQrCredentialUnavailable;
+
+  /// No description provided for @driverDeliveryQrCameraPermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera permission is required to scan the delivery QR.'**
+  String get driverDeliveryQrCameraPermissionRequired;
+
+  /// No description provided for @driverDeliveryQrCameraUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera is unavailable on this device.'**
+  String get driverDeliveryQrCameraUnavailable;
+
+  /// No description provided for @driverScanSupplierPickupQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan Supplier Pickup QR'**
+  String get driverScanSupplierPickupQr;
+
+  /// No description provided for @driverSupplierPickupQrPointCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Point the camera at the supplier\'\'s pickup QR.'**
+  String get driverSupplierPickupQrPointCamera;
+
+  /// No description provided for @driverSupplierPickupQrVerifying.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying pickup QR…'**
+  String get driverSupplierPickupQrVerifying;
+
+  /// No description provided for @driverSupplierPickupQrVerifiedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup QR verified'**
+  String get driverSupplierPickupQrVerifiedTitle;
+
+  /// No description provided for @driverSupplierPickupQrInvalidPayload.
+  ///
+  /// In en, this message translates to:
+  /// **'This is not a valid ImpactLoop supplier pickup QR.'**
+  String get driverSupplierPickupQrInvalidPayload;
+
+  /// No description provided for @driverSupplierPickupQrVerifyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to verify pickup QR.'**
+  String get driverSupplierPickupQrVerifyFailed;
+
+  /// No description provided for @driverSupplierPickupQrConfirmFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to confirm pickup. Try again or use the supplier handover code.'**
+  String get driverSupplierPickupQrConfirmFailed;
+
+  /// No description provided for @driverSupplierPickupQrHandoverCompletedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The material has been picked up successfully.'**
+  String get driverSupplierPickupQrHandoverCompletedBody;
+
+  /// No description provided for @driverSupplierPickupQrCredentialUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This pickup QR is invalid or no longer available.'**
+  String get driverSupplierPickupQrCredentialUnavailable;
+
+  /// No description provided for @driverSupplierPickupQrCameraPermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera permission is required to scan the supplier pickup QR.'**
+  String get driverSupplierPickupQrCameraPermissionRequired;
+
+  /// No description provided for @driverSupplierPickupQrCameraUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera is unavailable on this device.'**
+  String get driverSupplierPickupQrCameraUnavailable;
+
+  /// No description provided for @driverSupplierPickupQrScanAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan again'**
+  String get driverSupplierPickupQrScanAgain;
+
+  /// No description provided for @useSupplierHandoverCodeInstead.
+  ///
+  /// In en, this message translates to:
+  /// **'Use supplier handover code instead'**
+  String get useSupplierHandoverCodeInstead;
+
+  /// No description provided for @completeSupplierPickupDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm supplier pickup'**
+  String get completeSupplierPickupDialogTitle;
+
+  /// No description provided for @completeSupplierPickupScanQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan Supplier Pickup QR'**
+  String get completeSupplierPickupScanQr;
+
+  /// No description provided for @completeSupplierPickupManualCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier handover code'**
+  String get completeSupplierPickupManualCode;
+
+  /// No description provided for @confirmPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm pickup'**
+  String get confirmPickup;
+
+  /// No description provided for @completeDeliveryDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete delivery'**
+  String get completeDeliveryDialogTitle;
+
+  /// No description provided for @completeDeliveryScanQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan Delivery QR'**
+  String get completeDeliveryScanQr;
+
+  /// No description provided for @completeDeliveryManualCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner delivery code'**
+  String get completeDeliveryManualCode;
+
   /// No description provided for @pickupWindowNotStarted.
   ///
   /// In en, this message translates to:
@@ -11060,6 +11306,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Give this code to the driver after handing over the material.'**
   String get supplierDriverHandoverCodeInstructions;
+
+  /// No description provided for @driverPickupVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver pickup verification'**
+  String get driverPickupVerification;
+
+  /// No description provided for @driverPickupVerificationBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The driver has arrived to collect this material.'**
+  String get driverPickupVerificationBody;
+
+  /// No description provided for @supplierDriverPickupQrDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier Pickup QR'**
+  String get supplierDriverPickupQrDialogTitle;
+
+  /// No description provided for @supplierDriverPickupQrInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Show this QR to the driver when they collect the material.'**
+  String get supplierDriverPickupQrInstructions;
+
+  /// No description provided for @supplierDriverPickupQrValidUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Valid until {expiresAt}'**
+  String supplierDriverPickupQrValidUntil(String expiresAt);
+
+  /// No description provided for @supplierDriverPickupQrExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'QR expired'**
+  String get supplierDriverPickupQrExpired;
+
+  /// No description provided for @supplierDriverPickupQrGenerateNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate a new QR'**
+  String get supplierDriverPickupQrGenerateNew;
+
+  /// No description provided for @supplierDriverPickupQrIssueFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to generate pickup QR'**
+  String get supplierDriverPickupQrIssueFailed;
+
+  /// No description provided for @supplierDriverPickupQrManualFallbackNote.
+  ///
+  /// In en, this message translates to:
+  /// **'If scanning fails, use the supplier handover code above.'**
+  String get supplierDriverPickupQrManualFallbackNote;
 
   /// No description provided for @supplierReportedToAdmin.
   ///
