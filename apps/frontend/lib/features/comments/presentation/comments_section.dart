@@ -75,7 +75,31 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
   }
 
   Future<void> _refreshRoots() async {
-    ref.invalidate(rootCommentsProvider(_key));
+    final _ = await ref.refresh(rootCommentsProvider(_key).future);
+  }
+
+  bool _isTopLevelComment(CommentItem comment) {
+    return comment.parentCommentId == null && comment.rootCommentId == null;
+  }
+
+  bool _belongsToRoot(CommentItem comment, String rootId) {
+    return comment.id != rootId &&
+        (comment.rootCommentId == rootId || comment.parentCommentId == rootId);
+  }
+
+  CommentItem _rootReference(String rootId) {
+    return CommentItem(
+      id: rootId,
+      body: null,
+      status: 'VISIBLE',
+      isDeleted: false,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      author: const CommentAuthor(id: '', displayName: ''),
+      canEdit: false,
+      canDelete: false,
+      repliesCount: 0,
+    );
   }
 
   Future<void> _loadReplies(CommentItem root, {bool reset = false}) async {
@@ -113,10 +137,17 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
       }
 
       setState(() {
+        final validReplies = page.items
+            .where((comment) => _belongsToRoot(comment, root.id))
+            .toList();
         final existing = reset
             ? <CommentItem>[]
             : (_loadedReplies[root.id] ?? <CommentItem>[]);
-        _loadedReplies[root.id] = [...existing, ...page.items];
+        final repliesById = <String, CommentItem>{
+          for (final reply in existing) reply.id: reply,
+          for (final reply in validReplies) reply.id: reply,
+        };
+        _loadedReplies[root.id] = repliesById.values.toList();
         _replyPagination[root.id] = page.pagination;
         _expandedRoots.add(root.id);
       });
@@ -141,6 +172,26 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
     }
   }
 
+  Future<void> _toggleReplies(CommentItem root) async {
+    if (_expandedRoots.contains(root.id)) {
+      setState(() {
+        _expandedRoots.remove(root.id);
+        if (_replyingTo?.rootCommentId == root.id) {
+          _replyingTo = null;
+          _composerController.clear();
+        }
+      });
+      return;
+    }
+
+    if (_loadedReplies.containsKey(root.id)) {
+      setState(() => _expandedRoots.add(root.id));
+      return;
+    }
+
+    await _loadReplies(root, reset: true);
+  }
+
   Future<void> _submitComposer() async {
     if (_submitting || !_ensureAuthenticated()) {
       return;
@@ -162,6 +213,7 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
 
     try {
       final api = ref.read(commentsApiProvider);
+      String? replyRootId;
 
       if (_editingCommentId != null) {
         await api.updateComment(
@@ -173,6 +225,7 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
       } else if (_replyingTo != null) {
         final replyTarget = _replyingTo!;
         final rootId = replyTarget.rootCommentId ?? replyTarget.id;
+        replyRootId = rootId;
         await api.createComment(
           type: widget.targetType,
           targetId: widget.targetId,
@@ -180,28 +233,17 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
           parentCommentId: rootId,
           replyToCommentId: replyTarget.id,
         );
-        await _refreshRoots();
-        await _loadReplies(
-          CommentItem(
-            id: rootId,
-            body: null,
-            status: 'VISIBLE',
-            isDeleted: false,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-            author: const CommentAuthor(id: '', displayName: ''),
-            canEdit: false,
-            canDelete: false,
-            repliesCount: 0,
-          ),
-          reset: true,
-        );
       } else {
         await api.createComment(
           type: widget.targetType,
           targetId: widget.targetId,
           body: body,
         );
+      }
+
+      await _refreshRoots();
+      if (replyRootId != null) {
+        await _loadReplies(_rootReference(replyRootId), reset: true);
       }
 
       if (!mounted) {
@@ -213,7 +255,6 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
         _replyingTo = null;
         _editingCommentId = null;
       });
-      await _refreshRoots();
     } on ApiException catch (error) {
       if (mounted) {
         showErrorSnackBar(context, error);
@@ -243,20 +284,7 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
       await _refreshRoots();
       final rootId = comment.rootCommentId ?? comment.id;
       if (_expandedRoots.contains(rootId)) {
-        await _loadReplies(
-          CommentItem(
-            id: rootId,
-            body: null,
-            status: 'VISIBLE',
-            isDeleted: false,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-            author: const CommentAuthor(id: '', displayName: ''),
-            canEdit: false,
-            canDelete: false,
-          ),
-          reset: true,
-        );
+        await _loadReplies(_rootReference(rootId), reset: true);
       }
     } on ApiException catch (error) {
       if (mounted) {
@@ -268,6 +296,9 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
   void _startReply(CommentItem comment) {
     if (!_ensureAuthenticated()) {
       return;
+    }
+    if (_replyingTo?.id != comment.id) {
+      _composerController.clear();
     }
     setState(() {
       _editingCommentId = null;
@@ -289,6 +320,128 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
       _editingCommentId = null;
       _composerController.clear();
     });
+  }
+
+  Widget _replyComposerFor(CommentItem comment) {
+    if (_replyingTo?.id != comment.id) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      key: ValueKey('comment-reply-composer-${comment.id}'),
+      padding: const EdgeInsetsDirectional.only(top: AppSpacing.sm),
+      child: _Composer(
+        controller: _composerController,
+        submitting: _submitting,
+        replyingTo: comment,
+        editing: false,
+        onCancel: _cancelComposerMode,
+        onSubmit: _submitComposer,
+      ),
+    );
+  }
+
+  Widget _rootThread(
+    CommentItem root,
+    CommentsL10n l10n,
+    AppThemeColors colors,
+  ) {
+    final expanded = _expandedRoots.contains(root.id);
+    final loading = _loadingReplies.contains(root.id);
+    final replies = (_loadedReplies[root.id] ?? const <CommentItem>[])
+        .where((comment) => _belongsToRoot(comment, root.id))
+        .toList();
+
+    return Column(
+      key: ValueKey('comment-thread-${root.id}'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _CommentTile(
+          comment: root,
+          isReply: false,
+          onReply: () => _startReply(root),
+          onEdit: root.canEdit ? () => _startEdit(root) : null,
+          onDelete: root.canDelete ? () => _deleteComment(root) : null,
+          threadAction: root.repliesCount > 0
+              ? Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    key: ValueKey('comment-replies-toggle-${root.id}'),
+                    onPressed: loading ? null : () => _toggleReplies(root),
+                    style: _commentActionStyle(context),
+                    icon: Icon(
+                      expanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      size: 18,
+                    ),
+                    label: Text(
+                      expanded
+                          ? l10n.hideReplies
+                          : l10n.viewReplies(root.repliesCount),
+                    ),
+                  ),
+                )
+              : null,
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.only(start: AppSpacing.lg),
+          child: _replyComposerFor(root),
+        ),
+        if (expanded || loading)
+          Container(
+            key: ValueKey('comment-replies-${root.id}'),
+            margin: const EdgeInsetsDirectional.only(
+              start: AppSpacing.lg,
+              top: AppSpacing.sm,
+            ),
+            padding: const EdgeInsetsDirectional.only(start: AppSpacing.md),
+            decoration: BoxDecoration(
+              border: BorderDirectional(
+                start: BorderSide(color: colors.borderSubtle),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final reply in replies) ...[
+                  _CommentTile(
+                    comment: reply,
+                    isReply: true,
+                    onReply: () => _startReply(reply),
+                    onEdit: reply.canEdit ? () => _startEdit(reply) : null,
+                    onDelete: reply.canDelete
+                        ? () => _deleteComment(reply)
+                        : null,
+                  ),
+                  _replyComposerFor(reply),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+                if (loading)
+                  const Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  ),
+                if ((_replyPagination[root.id]?.hasMore ?? false) && !loading)
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: TextButton(
+                      onPressed: () => _loadReplies(root),
+                      child: Text(l10n.loadMoreReplies),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
   }
 
   @override
@@ -330,15 +483,17 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          _Composer(
-            controller: _composerController,
-            submitting: _submitting,
-            replyingTo: _replyingTo,
-            editing: _editingCommentId != null,
-            onCancel: _cancelComposerMode,
-            onSubmit: _submitComposer,
-          ),
-          const SizedBox(height: AppSpacing.md),
+          if (_replyingTo == null) ...[
+            _Composer(
+              controller: _composerController,
+              submitting: _submitting,
+              replyingTo: null,
+              editing: _editingCommentId != null,
+              onCancel: _cancelComposerMode,
+              onSubmit: _submitComposer,
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
           rootsAsync.when(
             loading: () => const Padding(
               padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
@@ -353,7 +508,8 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
               ),
             ),
             data: (page) {
-              if (page.items.isEmpty) {
+              final roots = page.items.where(_isTopLevelComment).toList();
+              if (roots.isEmpty) {
                 return Text(
                   l10n.empty,
                   style: theme.textTheme.bodyMedium?.copyWith(
@@ -363,87 +519,10 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
               }
 
               return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (final root in page.items) ...[
-                    _CommentTile(
-                      comment: root,
-                      isReply: false,
-                      onReply: () => _startReply(root),
-                      onEdit: root.canEdit ? () => _startEdit(root) : null,
-                      onDelete: root.canDelete
-                          ? () => _deleteComment(root)
-                          : null,
-                    ),
-                    if ((root.repliesCount) > 0) ...[
-                      Container(
-                        margin: const EdgeInsetsDirectional.only(
-                          start: AppSpacing.lg,
-                          top: AppSpacing.sm,
-                        ),
-                        padding: const EdgeInsetsDirectional.only(
-                          start: AppSpacing.md,
-                        ),
-                        decoration: BoxDecoration(
-                          border: BorderDirectional(
-                            start: BorderSide(color: colors.borderSubtle),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (!_expandedRoots.contains(root.id))
-                              TextButton(
-                                onPressed: () =>
-                                    _loadReplies(root, reset: true),
-                                child: Text(
-                                  l10n.viewReplies(root.repliesCount),
-                                ),
-                              ),
-                            if (_expandedRoots.contains(root.id)) ...[
-                              for (final reply
-                                  in _loadedReplies[root.id] ??
-                                      const <CommentItem>[])
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                    bottom: AppSpacing.sm,
-                                  ),
-                                  child: _CommentTile(
-                                    comment: reply,
-                                    isReply: true,
-                                    onReply: () => _startReply(reply),
-                                    onEdit: reply.canEdit
-                                        ? () => _startEdit(reply)
-                                        : null,
-                                    onDelete: reply.canDelete
-                                        ? () => _deleteComment(reply)
-                                        : null,
-                                  ),
-                                ),
-                              if (_loadingReplies.contains(root.id))
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(
-                                    vertical: AppSpacing.sm,
-                                  ),
-                                  child: SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                ),
-                              if ((_replyPagination[root.id]?.hasMore ??
-                                      false) &&
-                                  !_loadingReplies.contains(root.id))
-                                TextButton(
-                                  onPressed: () => _loadReplies(root),
-                                  child: Text(l10n.loadMoreReplies),
-                                ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
+                  for (final root in roots) ...[
+                    _rootThread(root, l10n, colors),
                     const SizedBox(height: AppSpacing.md),
                   ],
                 ],
@@ -578,6 +657,7 @@ class _CommentTile extends StatelessWidget {
     required this.onReply,
     this.onEdit,
     this.onDelete,
+    this.threadAction,
   });
 
   final CommentItem comment;
@@ -585,6 +665,7 @@ class _CommentTile extends StatelessWidget {
   final VoidCallback onReply;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final Widget? threadAction;
 
   @override
   Widget build(BuildContext context) {
@@ -597,6 +678,7 @@ class _CommentTile extends StatelessWidget {
         comment.replyTo!.id != (comment.rootCommentId ?? '');
 
     return Container(
+      key: ValueKey('comment-${isReply ? 'reply' : 'root'}-${comment.id}'),
       padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
       decoration: BoxDecoration(
         color: isReply
@@ -692,6 +774,10 @@ class _CommentTile extends StatelessWidget {
                         ),
                     ],
                   ),
+                  if (threadAction != null) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    threadAction!,
+                  ],
                 ],
               ],
             ),

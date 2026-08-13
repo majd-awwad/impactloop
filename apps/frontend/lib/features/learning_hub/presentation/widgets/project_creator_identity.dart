@@ -41,10 +41,12 @@ class LearningProjectCreatorRow extends StatelessWidget {
     super.key,
     required this.creator,
     this.enableProfileNavigation = true,
+    this.action,
   });
 
   final LearningProjectCreator creator;
   final bool enableProfileNavigation;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -103,6 +105,7 @@ class LearningProjectCreatorRow extends StatelessWidget {
             child: Text(context.l10n.learningViewProfile),
           )
         : null;
+    final trailingAction = action ?? profileButton;
 
     return Container(
       key: const ValueKey('learning-project-creator-panel'),
@@ -115,13 +118,13 @@ class LearningProjectCreatorRow extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          if (constraints.maxWidth < 460 && profileButton != null) {
+          if (constraints.maxWidth < 460 && trailingAction != null) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 identity,
                 const SizedBox(height: AppSpacing.sm),
-                profileButton,
+                trailingAction,
               ],
             );
           }
@@ -129,9 +132,9 @@ class LearningProjectCreatorRow extends StatelessWidget {
           return Row(
             children: [
               Expanded(child: identity),
-              if (profileButton != null) ...[
+              if (trailingAction != null) ...[
                 const SizedBox(width: AppSpacing.md),
-                profileButton,
+                trailingAction,
               ],
             ],
           );

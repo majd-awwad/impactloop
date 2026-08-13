@@ -136,6 +136,17 @@ void main() {
       await _pumpDetails(tester, viewerId: _ownerId, repository: repository);
 
       expect(find.text('Manage project'), findsOneWidget);
+      expect(
+        find.ancestor(
+          of: find.byKey(
+            const ValueKey('learning-project-owner-manage-action'),
+          ),
+          matching: find.byKey(
+            const ValueKey('learning-project-creator-panel'),
+          ),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('View profile'), findsNothing);
       expect(find.text('Post review'), findsNothing);
       expect(find.text('Review this project'), findsNothing);
@@ -158,7 +169,7 @@ void main() {
       expect(find.text('Reply'), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Post'), findsOneWidget);
       expect(
-        find.byKey(const ValueKey('learning-project-details-back-row')),
+        find.byKey(const ValueKey('learning-project-details-hero-back')),
         findsOneWidget,
       );
       expect(find.byKey(const ValueKey('app-back-page-level')), findsOneWidget);

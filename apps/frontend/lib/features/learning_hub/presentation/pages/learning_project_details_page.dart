@@ -132,7 +132,6 @@ class _ProjectDetailsBody extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _DetailsBackRow(),
           _DetailsHero(project: project),
           Transform.translate(
             offset: const Offset(0, -34),
@@ -197,30 +196,6 @@ class _ProjectDetailsBody extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _DetailsBackRow extends StatelessWidget {
-  const _DetailsBackRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      key: const ValueKey('learning-project-details-back-row'),
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1400),
-          child: const Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: AppBackAction(fallbackLocation: '/learning'),
-          ),
-        ),
       ),
     );
   }
@@ -327,6 +302,27 @@ class _DetailsHero extends StatelessWidget {
               start: 24,
               child: _BlurOrb(size: 120, color: palette.textPrimary),
             ),
+            PositionedDirectional(
+              top: 16,
+              start: 16,
+              child: DecoratedBox(
+                key: const ValueKey('learning-project-details-hero-back'),
+                decoration: BoxDecoration(
+                  color: palette.cardSurface.withValues(
+                    alpha: isDark ? 0.82 : 0.92,
+                  ),
+                  borderRadius: AppRadius.mdAll,
+                  boxShadow: [
+                    BoxShadow(
+                      color: palette.cardShadow,
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const AppBackAction(fallbackLocation: '/learning'),
+              ),
+            ),
           ],
         ),
       ),
@@ -382,6 +378,23 @@ class _DetailsSummaryCard extends StatelessWidget {
                 LearningProjectCreatorRow(
                   creator: creator,
                   enableProfileNavigation: !isOwner,
+                  action: isOwner
+                      ? OutlinedButton.icon(
+                          key: const ValueKey(
+                            'learning-project-owner-manage-action',
+                          ),
+                          onPressed: () => context.push(
+                            '/learning/submissions/${project.id}',
+                          ),
+                          icon: const Icon(Icons.settings_outlined),
+                          label: Text(
+                            const LocalizedText(
+                              en: 'Manage project',
+                              ar: 'إدارة المشروع',
+                            ).resolve(context),
+                          ),
+                        )
+                      : null,
                 ),
               ],
               const SizedBox(height: AppSpacing.sm),
@@ -416,20 +429,7 @@ class _DetailsSummaryCard extends StatelessWidget {
                 dark: true,
               ),
               _DetailsChip(label: project.duration.resolve(context)),
-              if (isOwner)
-                OutlinedButton.icon(
-                  key: const ValueKey('learning-project-owner-manage-action'),
-                  onPressed: () =>
-                      context.push('/learning/submissions/${project.id}'),
-                  icon: const Icon(Icons.settings_outlined),
-                  label: Text(
-                    const LocalizedText(
-                      en: 'Manage project',
-                      ar: 'إدارة المشروع',
-                    ).resolve(context),
-                  ),
-                )
-              else ...[
+              if (!isOwner) ...[
                 _ProjectLikeButton(
                   project: project,
                   recommendationImpressionId: recommendationImpressionId,

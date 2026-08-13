@@ -28,6 +28,7 @@ class CommentsL10n {
   String viewReplies(int count) => isArabic
       ? 'عرض الردود ($count)'
       : 'View $count ${count == 1 ? 'reply' : 'replies'}';
+  String get hideReplies => t('Hide replies', 'إخفاء الردود');
   String get loadMoreReplies =>
       t('Load more replies', 'تحميل المزيد من الردود');
   String get editing => t('Editing your comment', 'تعديل تعليقك');
