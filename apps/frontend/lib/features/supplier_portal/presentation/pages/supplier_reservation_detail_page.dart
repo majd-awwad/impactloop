@@ -10,10 +10,12 @@ import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_section_card.dart';
 import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../controllers/supplier_requests_providers.dart';
 import '../supplier_reservation_history_notes.dart';
 import '../supplier_reservation_ui_helpers.dart';
+import '../supplier_driver_pickup_handover_qr_dialog.dart';
 import '../theme/supplier_theme_extension.dart';
 import '../widgets/accept_incoming_request_dialog.dart';
 import '../widgets/decline_incoming_request_dialog.dart';
@@ -1123,18 +1125,21 @@ class _TerminalScheduleCard extends StatelessWidget {
   }
 }
 
-class _FulfillmentCard extends StatelessWidget {
+class _FulfillmentCard extends ConsumerWidget {
   const _FulfillmentCard({required this.detail});
   final SupplierReservationDetail detail;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l10n;
     final reservation = detail.reservation;
     final delivery = detail.delivery ?? reservation.deliverySummary;
     final driver = delivery?.driver;
     final fulfillment =
         detail.request?.fulfillmentMethod ?? reservation.fulfillmentMethod;
+    final showHandover = reservation.shouldShowSupplierHandoverCode;
+    final materialTitle = _materialTitle(detail);
+
     return AppSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1156,10 +1161,57 @@ class _FulfillmentCard extends StatelessWidget {
               if (driver?.displayName != null) (l.driver, driver!.displayName!),
               if (detail.group?.groupId != null)
                 (l.supplierGroupLabel, _shortId(detail.group!.groupId!)),
-              if (reservation.supplierHandoverCode != null)
-                (l.supplierHandoverLabel, l.supplierHandoverCodeAvailable),
             ],
           ),
+          if (showHandover) ...[
+            const SizedBox(height: AppSpacing.md),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: context.supplierColors.accentSoft.withValues(alpha: 0.16),
+                borderRadius: AppRadius.mdAll,
+                border: Border.all(
+                  color: context.supplierColors.border.withValues(alpha: 0.24),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l.driverPickupVerification,
+                      style: context.supplierSectionTitle().copyWith(
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      l.driverPickupVerificationBody,
+                      style: context.supplierBody().copyWith(
+                        color: context.supplierColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    HandoverConfirmationCodePanel(
+                      code: reservation.supplierHandoverCode!,
+                      instructions: l.supplierDriverHandoverCodeInstructions,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    OutlinedButton.icon(
+                      onPressed: () => showSupplierDriverPickupHandoverQrDialog(
+                        context: context,
+                        ref: ref,
+                        reservationId: reservation.id,
+                        materialTitle: materialTitle,
+                      ),
+                      icon: const Icon(Icons.qr_code_2_outlined, size: 18),
+                      label: Text(l.showPickupQr),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           if (delivery?.failureReason != null) ...[
             const SizedBox(height: AppSpacing.md),
             _ContextBanner(

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/errors/api_exception.dart';
 import '../../../core/network/api_response.dart';
+import '../../reservations/data/models/handover_credential.dart';
 import 'models/handover_verify_preview.dart';
 import 'models/supplier_incoming_request.dart';
 
@@ -185,6 +186,17 @@ class SupplierRequestsApi {
     } on DioException catch (error) {
       throw mapDioException(error);
     }
+  }
+
+  Future<HandoverCredential> issueDriverPickupHandoverCredential(
+    String reservationId,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/supplier/reservations/$reservationId/driver-pickup-handover-credential',
+      ),
+      HandoverCredential.fromJson,
+    );
   }
 
   Future<SupplierIncomingRequest> confirmHandoverCredential(

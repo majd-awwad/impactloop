@@ -1,3 +1,4 @@
+import '../../reservations/data/models/handover_credential.dart';
 import '../../reservations/data/models/reservation_message.dart';
 import 'models/handover_verify_preview.dart';
 import 'models/supplier_incoming_request.dart';
@@ -122,6 +123,20 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
     );
     _requests[index] = updated;
     return updated;
+  }
+
+  @override
+  Future<HandoverCredential> issueDriverPickupHandoverCredential(
+    String reservationId,
+  ) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    return HandoverCredential(
+      reservationId: reservationId,
+      handoverToken: 'mock-supplier-pickup-token-aaaaaaaa',
+      qrPayload:
+          'impactloop://supplier-pickup-handover/mock-supplier-pickup-token-aaaaaaaa',
+      expiresAt: DateTime.now().add(const Duration(hours: 1)),
+    );
   }
 
   @override

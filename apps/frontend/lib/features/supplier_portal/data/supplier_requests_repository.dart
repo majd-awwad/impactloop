@@ -1,3 +1,4 @@
+import '../../reservations/data/models/handover_credential.dart';
 import '../../reservations/data/models/reservation_message.dart';
 import 'models/handover_verify_preview.dart';
 import 'models/supplier_incoming_request.dart';
@@ -32,6 +33,11 @@ abstract class SupplierRequestsRepository {
     String requestId, {
     required String confirmationCode,
   });
+
+  /// Issues a supplier→driver pickup handover QR credential.
+  Future<HandoverCredential> issueDriverPickupHandoverCredential(
+    String reservationId,
+  );
 
   /// Verifies a scanned pickup QR without completing the reservation.
   Future<HandoverVerifyPreview> verifyHandoverCredential(String handoverToken);
