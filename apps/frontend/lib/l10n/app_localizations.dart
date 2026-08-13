@@ -3092,6 +3092,42 @@ abstract class AppLocalizations {
   /// **'Payment method'**
   String get checkoutStepMethod;
 
+  /// No description provided for @reservationPaymentCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Card'**
+  String get reservationPaymentCard;
+
+  /// No description provided for @reservationPaymentCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay on receipt / Cash'**
+  String get reservationPaymentCash;
+
+  /// No description provided for @reservationPaymentCardBeforeFulfillment.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay electronically before fulfillment where required.'**
+  String get reservationPaymentCardBeforeFulfillment;
+
+  /// No description provided for @reservationPaymentCashAtHandover.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash will be collected at handover.'**
+  String get reservationPaymentCashAtHandover;
+
+  /// No description provided for @reservationPaymentCashInPerson.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash requires an in-person handover.'**
+  String get reservationPaymentCashInPerson;
+
+  /// No description provided for @reservationPaymentDueAtHandover.
+  ///
+  /// In en, this message translates to:
+  /// **'Due at handover'**
+  String get reservationPaymentDueAtHandover;
+
   /// No description provided for @checkoutStepConfirm.
   ///
   /// In en, this message translates to:

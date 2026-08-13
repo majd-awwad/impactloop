@@ -4,6 +4,8 @@ class ReservationPaymentRequirement {
     required this.reservationId,
     required this.reservationStatus,
     required this.paymentEnforcementEnabled,
+    this.paymentMethod = 'CARD',
+    this.dueAtHandover = false,
     required this.overallStatus,
     required this.fulfillmentMethod,
     required this.material,
@@ -18,6 +20,8 @@ class ReservationPaymentRequirement {
   final String reservationId;
   final String reservationStatus;
   final bool paymentEnforcementEnabled;
+  final String paymentMethod;
+  final bool dueAtHandover;
   final String overallStatus;
   final String fulfillmentMethod;
   final RequirementObligation material;
@@ -37,6 +41,8 @@ class ReservationPaymentRequirement {
       reservationId: json['reservationId'] as String? ?? '',
       reservationStatus: json['reservationStatus'] as String? ?? '',
       paymentEnforcementEnabled: json['paymentEnforcementEnabled'] == true,
+      paymentMethod: json['paymentMethod'] as String? ?? 'CARD',
+      dueAtHandover: json['dueAtHandover'] == true,
       overallStatus: json['overallStatus'] as String? ?? 'NOT_REQUIRED',
       fulfillmentMethod: json['fulfillmentMethod'] as String? ?? 'PICKUP',
       material: RequirementObligation.fromJson(
@@ -101,7 +107,8 @@ class RequirementObligation {
     required bool requiredByDefault,
   }) {
     return RequirementObligation(
-      required: json['required'] == true ||
+      required:
+          json['required'] == true ||
           (json['required'] == null && requiredByDefault),
       status: json['status'] as String? ?? 'NOT_REQUIRED',
       paymentOrderId: json['paymentOrderId'] as String?,
@@ -119,6 +126,7 @@ class RequirementOrderRow {
   const RequirementOrderRow({
     required this.id,
     required this.purpose,
+    this.paymentMethod = 'CARD',
     required this.amount,
     required this.currency,
     required this.status,
@@ -130,6 +138,7 @@ class RequirementOrderRow {
 
   final String id;
   final String purpose;
+  final String paymentMethod;
   final String amount;
   final String currency;
   final String status;
@@ -143,6 +152,7 @@ class RequirementOrderRow {
     return RequirementOrderRow(
       id: json['id'] as String? ?? '',
       purpose: json['purpose'] as String? ?? '',
+      paymentMethod: json['paymentMethod'] as String? ?? 'CARD',
       amount: json['amount']?.toString() ?? '0.00',
       currency: json['currency'] as String? ?? 'NIS',
       status: json['status'] as String? ?? '',

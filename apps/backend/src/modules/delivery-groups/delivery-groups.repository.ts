@@ -1,5 +1,6 @@
 import type {
   DeliveryStatus,
+  PaymentCollectionMethod,
   Prisma,
   ReservationStatus,
 } from '../../generated/prisma/client.js';
@@ -64,7 +65,11 @@ const groupBlocksNewJoin = async (
   tx: Prisma.TransactionClient,
   groupId: string,
 ): Promise<boolean> => {
-  if (isElectronicPaymentEnforced()) {
+  const group = await tx.deliveryGroup.findUnique({
+    where: { id: groupId },
+    select: { paymentMethod: true },
+  });
+  if (isElectronicPaymentEnforced() || group?.paymentMethod === 'CASH') {
     const count = await tx.delivery.count({
       where: {
         OR: [
@@ -95,6 +100,7 @@ export const findCompatibleDeliveryGroupCandidate = async (input: {
   dropoffArea?: string | null;
   preferredDeliveryWindows: { start: string; end: string }[];
   deliveryZone: string;
+  paymentMethod: PaymentCollectionMethod;
   tx?: Prisma.TransactionClient;
 }): Promise<DeliveryGroupCandidate | null> => {
   const client = input.tx ?? prisma;
@@ -112,6 +118,7 @@ export const findCompatibleDeliveryGroupCandidate = async (input: {
       status: 'OPEN',
       assignedDriverProfileId: null,
       deliveryZone: input.deliveryZone as Prisma.EnumDeliveryZoneFilter['equals'],
+      paymentMethod: input.paymentMethod,
       reservations: {
         some: {
           status: { notIn: [...TERMINAL_RESERVATION_STATUSES] },
@@ -183,6 +190,7 @@ export const validateDeliveryGroupForCombine = async (
     dropoffArea?: string | null;
     preferredDeliveryWindows: { start: string; end: string }[];
     deliveryZone: string;
+    paymentMethod: PaymentCollectionMethod;
   },
 ): Promise<
   | { ok: true; sharedWindow: TimeWindow; group: { id: string; deliveryFee: Prisma.Decimal } }
@@ -196,6 +204,7 @@ export const validateDeliveryGroupForCombine = async (
       status: 'OPEN',
       assignedDriverProfileId: null,
       deliveryZone: input.deliveryZone as Prisma.EnumDeliveryZoneFilter['equals'],
+      paymentMethod: input.paymentMethod,
     },
   });
 

@@ -1,5 +1,6 @@
 import type {
   PaymentOrderStatus,
+  PaymentCollectionMethod,
   PaymentPurpose,
   Prisma,
 } from '../../generated/prisma/client.js';
@@ -27,6 +28,7 @@ export type EnsurePaymentOrderResult =
         id: string;
         payerUserId: string;
         purpose: PaymentPurpose;
+        paymentMethod: PaymentCollectionMethod;
         cycleNumber: number;
         status: PaymentOrderStatus;
         currency: string;
@@ -42,6 +44,7 @@ const mapOrder = (order: {
   id: string;
   payerUserId: string;
   purpose: PaymentPurpose;
+  paymentMethod: PaymentCollectionMethod;
   cycleNumber: number;
   status: PaymentOrderStatus;
   currency: string;
@@ -52,6 +55,7 @@ const mapOrder = (order: {
   id: order.id,
   payerUserId: order.payerUserId,
   purpose: order.purpose,
+  paymentMethod: order.paymentMethod,
   cycleNumber: order.cycleNumber,
   status: order.status,
   currency: order.currency,
@@ -130,6 +134,7 @@ export const ensureMaterialPaymentOrder = async (
         materialSubtotal: true,
         pricingCurrency: true,
         status: true,
+        paymentMethod: true,
       },
     });
 
@@ -166,6 +171,7 @@ export const ensureMaterialPaymentOrder = async (
         data: {
           payerUserId: reservation.requesterId,
           purpose: 'MATERIAL_SUBTOTAL',
+          paymentMethod: reservation.paymentMethod,
           cycleNumber: nextCycle,
           status: 'REQUIRES_PAYMENT',
           currency,
@@ -215,6 +221,7 @@ export const ensureDeliveryFeePaymentOrder = async (
         learnerId: true,
         deliveryFee: true,
         currency: true,
+        paymentMethod: true,
         reservations: {
           select: {
             id: true,
@@ -276,6 +283,7 @@ export const ensureDeliveryFeePaymentOrder = async (
         data: {
           payerUserId: group.learnerId,
           purpose: 'DELIVERY_FEE',
+          paymentMethod: group.paymentMethod,
           cycleNumber: nextCycle,
           status: 'REQUIRES_PAYMENT',
           currency,

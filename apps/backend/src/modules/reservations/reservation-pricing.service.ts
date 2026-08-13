@@ -1,6 +1,7 @@
 import {
   Prisma,
   type MaterialStatus,
+  type PaymentCollectionMethod,
   type ReservationFulfillmentMethod,
 } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
@@ -36,6 +37,7 @@ export type ReservationQuoteInput = {
   materialId: string;
   quantity: number;
   fulfillmentMethod: ReservationFulfillmentMethod;
+  paymentMethod: PaymentCollectionMethod;
   dropoffCity?: string;
   dropoffArea?: string | null;
   learnerPreferredDeliveryWindows?: { start: string; end: string }[];
@@ -52,6 +54,7 @@ export type ReservationQuoteResult = {
   currency: string;
   deliveryZone: string | null;
   fulfillmentMethod: ReservationFulfillmentMethod;
+  paymentMethod: PaymentCollectionMethod;
   canDeliver: boolean;
   groupingAvailable: boolean;
   groupingApplied: boolean;
@@ -127,6 +130,7 @@ export const buildReservationQuote = async (
         currency,
         deliveryZone: null,
         fulfillmentMethod: 'PICKUP',
+        paymentMethod: input.paymentMethod,
         canDeliver: material.deliveryAllowed,
         groupingAvailable: false,
         groupingApplied: false,
@@ -188,6 +192,7 @@ export const buildReservationQuote = async (
       dropoffArea: input.dropoffArea,
       preferredDeliveryWindows: preferredWindows,
       deliveryZone: deliveryPricing.zone,
+      paymentMethod: input.paymentMethod,
     });
   }
 
@@ -200,6 +205,7 @@ export const buildReservationQuote = async (
       dropoffArea: input.dropoffArea,
       preferredDeliveryWindows: preferredWindows,
       deliveryZone: deliveryPricing.zone,
+      paymentMethod: input.paymentMethod,
     });
 
     if (!validation.ok) {
@@ -235,6 +241,7 @@ export const buildReservationQuote = async (
       currency,
       deliveryZone: deliveryPricing.zone,
       fulfillmentMethod: 'DELIVERY',
+      paymentMethod: input.paymentMethod,
       canDeliver: true,
       groupingAvailable: deliveryGroupCandidate != null,
       groupingApplied,
@@ -356,6 +363,7 @@ export const resolveReservationPricingForCreate = async (
       dropoffArea: input.dropoffArea,
       preferredDeliveryWindows: preferredWindows,
       deliveryZone: deliveryPricing.zone,
+      paymentMethod: input.paymentMethod,
     });
 
     if (!validation.ok) {

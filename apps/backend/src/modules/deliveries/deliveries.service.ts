@@ -462,6 +462,7 @@ export const requestDeliveryForReservation = async (
           id: true,
           status: true,
           fulfillmentMethod: true,
+          paymentMethod: true,
           materialId: true,
           deliveryGroupId: true,
           materialSubtotal: true,
@@ -585,6 +586,7 @@ export const requestDeliveryForReservation = async (
             status: 'OPEN',
             assignedDriverProfileId: null,
             delivery: null,
+            paymentMethod: reservation.paymentMethod,
             reservations: {
               some: {
                 status: 'ACCEPTED',
@@ -643,6 +645,7 @@ export const requestDeliveryForReservation = async (
               deliveryAddressText,
               deliveryFee: deliveryFeeDecimal,
               currency,
+              paymentMethod: reservation.paymentMethod,
               deliveryZone: pricing.zone,
               status: 'OPEN',
               windowStart: window.start,

@@ -218,11 +218,20 @@ export const resolvePayableOrdersForReservationCheckout = async (
       deliveryFee: true,
       pricingCurrency: true,
       materialSubtotal: true,
+      paymentMethod: true,
     },
   });
 
   if (!reservation || reservation.requesterId !== payerUserId) {
     throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  if (reservation.paymentMethod === 'CASH') {
+    throw new AppError(
+      'Cash obligations are collected at handover and cannot start checkout.',
+      409,
+      'CASH_PAYMENT_NOT_CHECKOUTABLE',
+    );
   }
 
   if (reservation.status !== 'ACCEPTED') {
@@ -1117,6 +1126,17 @@ export const startReservationCheckout = async (input: {
   payerUserId: string;
   idempotencyKey: string;
 }): Promise<ReservationCheckoutSessionDto> => {
+  const reservationMethod = await prisma.reservation.findFirst({
+    where: { id: input.reservationId, requesterId: input.payerUserId },
+    select: { paymentMethod: true },
+  });
+  if (reservationMethod?.paymentMethod === 'CASH') {
+    throw new AppError(
+      'Cash obligations are collected at handover and cannot start checkout.',
+      409,
+      'CASH_PAYMENT_NOT_CHECKOUTABLE',
+    );
+  }
   if (!isElectronicPaymentEnforced()) {
     throw new AppError(
       'Electronic payment is not enforced in this environment.',

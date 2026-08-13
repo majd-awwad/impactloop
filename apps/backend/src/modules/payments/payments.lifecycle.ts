@@ -306,6 +306,15 @@ export const prepareFullRefundForPaidOrderInTransaction = async (
     );
   }
 
+  if (order.paymentMethod === 'CASH') {
+    throw new AppError(
+      'Collected cash requires manual reversal; provider refund is unavailable.',
+      409,
+      'CASH_REVERSAL_REQUIRES_MANUAL_RESOLUTION',
+      { orderId: order.id },
+    );
+  }
+
   const succeededAttempt = order.attempts[0];
   if (!succeededAttempt) {
     throw new AppError(

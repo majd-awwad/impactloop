@@ -49,6 +49,7 @@ AppStatusTone paymentSummaryTone(ReservationPaymentSummary? summary) {
   if (summary == null || summary.isPaymentsDisabled) {
     return AppStatusTone.neutral;
   }
+  if (summary.dueAtHandover) return AppStatusTone.warning;
 
   switch (summary.overallStatus) {
     case 'PAID':
@@ -81,6 +82,9 @@ String? paymentStatusLabel(
 }) {
   if (summary == null) return null;
   if (summary.isPaymentsDisabled) return null;
+  if (summary.dueAtHandover) {
+    return l10n.reservationPaymentDueAtHandover;
+  }
 
   if (summary.isPartialPayment) {
     return l10n.paymentStatusPartial;
@@ -158,6 +162,9 @@ String reservationNextStepMessage(
   }
 
   if (summary != null && !summary.isPaymentsDisabled) {
+    if (summary.dueAtHandover) {
+      return l10n.reservationPaymentCashAtHandover;
+    }
     if (summary.isResolutionRequired) {
       return l10n.reservationNextStepUnderReview;
     }
@@ -298,7 +305,8 @@ LearnerReservationCardPresentation buildReservationCardPresentation(
     accent = AppStatusTone.info;
   }
 
-  final needsAction = !isHistorical &&
+  final needsAction =
+      !isHistorical &&
       ((summary != null &&
               !summary.isPaymentsDisabled &&
               (summary.isPaymentActionRequired || summary.canStartCheckout)) ||
@@ -434,8 +442,9 @@ LearnerReservationMoneyPresentation? buildReservationMoneyPresentation(
     final label = summary.isPartialPayment
         ? l10n.reservationMoneyRemaining
         : l10n.reservationMoneyAmountDue;
-    final amountLine =
-        l10n.reservationMoneyAmountWithCurrency(summary.outstandingAmount!);
+    final amountLine = l10n.reservationMoneyAmountWithCurrency(
+      summary.outstandingAmount!,
+    );
 
     String? supporting;
     if (summary.hasMaterialPaymentOutstanding &&
@@ -501,7 +510,11 @@ String reservationNextStepTitle(
     return l10n.reservationNextStepPayTitle;
   }
 
-  return reservationNextStepMessage(reservation, l10n: l10n, delivery: delivery);
+  return reservationNextStepMessage(
+    reservation,
+    l10n: l10n,
+    delivery: delivery,
+  );
 }
 
 String? reservationNextStepSupporting(

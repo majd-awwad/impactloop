@@ -226,6 +226,11 @@ enum PaymentPurpose {
   DELIVERY_FEE
 }
 
+enum PaymentCollectionMethod {
+  CARD
+  CASH
+}
+
 enum PaymentOrderStatus {
   REQUIRES_PAYMENT
   CHECKOUT_PENDING
@@ -1892,6 +1897,7 @@ model Reservation {
   quantityRequested                 Decimal                       @map("quantity_requested") @db.Decimal(12, 3)
   message                           String?
   fulfillmentMethod                 ReservationFulfillmentMethod  @default(PICKUP) @map("fulfillment_method")
+  paymentMethod                     PaymentCollectionMethod       @default(CARD) @map("payment_method")
   learnerPreferredPickupWindows     Json?                         @map("learner_preferred_pickup_windows")
   learnerPreferredDeliveryWindows   Json?                         @map("learner_preferred_delivery_windows")
   deliveryAddressText               String?                       @map("delivery_address_text")
@@ -1969,6 +1975,7 @@ model DeliveryGroup {
   deliveryAddressText      String?             @map("delivery_address_text")
   deliveryFee              Decimal             @map("delivery_fee") @db.Decimal(12, 2)
   currency                 String              @default("NIS")
+  paymentMethod            PaymentCollectionMethod @default(CARD) @map("payment_method")
   deliveryZone             DeliveryZone        @map("delivery_zone")
   status                   DeliveryGroupStatus @default(OPEN)
   windowStart              DateTime            @map("window_start")
@@ -2829,6 +2836,7 @@ model PaymentOrder {
   id              String             @id @default(cuid())
   payerUserId     String             @map("payer_user_id")
   purpose         PaymentPurpose
+  paymentMethod   PaymentCollectionMethod @default(CARD) @map("payment_method")
   cycleNumber     Int                @default(1) @map("cycle_number")
   status          PaymentOrderStatus @default(REQUIRES_PAYMENT)
   currency        String

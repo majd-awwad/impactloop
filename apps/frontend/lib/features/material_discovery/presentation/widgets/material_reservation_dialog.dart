@@ -62,6 +62,7 @@ ButtonStyle _reservationDialogSubmitButtonStyle(BuildContext context) {
 
 class MaterialReservationDialog extends ConsumerStatefulWidget {
   const MaterialReservationDialog({
+    super.key,
     required this.material,
     required this.onSubmit,
   });
@@ -83,9 +84,11 @@ class MaterialReservationDialogState
   final _dropoffCityController = TextEditingController();
   final _deliveryNoteController = TextEditingController();
   String? _fulfillmentMethod;
+  String _paymentMethod = 'CARD';
   final _pickupWindows = <PreferredWindowDraft>[PreferredWindowDraft()];
   final _deliveryWindows = <PreferredWindowDraft>[PreferredWindowDraft()];
   bool? _safeDropoffAllowed;
+  bool? _safeDropoffBeforeCash;
   var _isSubmitting = false;
   String? _errorMessage;
   ReservationQuote? _quote;
@@ -187,6 +190,7 @@ class MaterialReservationDialogState
         materialId: widget.material.id,
         quantity: quantity,
         fulfillmentMethod: _fulfillmentMethod!,
+        paymentMethod: _paymentMethod,
         dropoffCity: _isDelivery ? _dropoffCityController.text.trim() : null,
         learnerPreferredDeliveryWindows: _isDelivery
             ? _deliveryWindowsPayload()
@@ -203,6 +207,7 @@ class MaterialReservationDialogState
             materialId: widget.material.id,
             quantity: quantity,
             fulfillmentMethod: 'DELIVERY',
+            paymentMethod: _paymentMethod,
             dropoffCity: _dropoffCityController.text.trim(),
             learnerPreferredDeliveryWindows: _deliveryWindowsPayload(),
             combineWithDeliveryGroupId: quote.deliveryGroupCandidate!.id,
@@ -466,6 +471,7 @@ class MaterialReservationDialogState
             materialId: widget.material.id,
             quantityRequested: quantity,
             fulfillmentMethod: 'PICKUP',
+            paymentMethod: _quote?.totalAmount == 0 ? 'CARD' : _paymentMethod,
             message: message.isEmpty ? null : message,
             learnerPreferredPickupWindows: windows,
           ),
@@ -520,6 +526,13 @@ class MaterialReservationDialogState
         return;
       }
 
+      if (_paymentMethod == 'CASH' && _safeDropoffAllowed == true) {
+        setState(
+          () => _errorMessage = context.l10n.reservationPaymentCashInPerson,
+        );
+        return;
+      }
+
       final deliveryNote = _deliveryNoteController.text.trim();
 
       setState(() {
@@ -533,6 +546,7 @@ class MaterialReservationDialogState
             materialId: widget.material.id,
             quantityRequested: quantity,
             fulfillmentMethod: 'DELIVERY',
+            paymentMethod: _quote?.totalAmount == 0 ? 'CARD' : _paymentMethod,
             message: message.isEmpty ? null : message,
             learnerPreferredDeliveryWindows: windows,
             deliveryAddressText: deliveryAddress,
@@ -780,6 +794,83 @@ class MaterialReservationDialogState
                             ).copyWith(color: palette.textMuted),
                           ),
                         ],
+                        if ((_quote?.totalAmount ?? 0) > 0) ...[
+                          const SizedBox(height: reservationDialogSectionGap),
+                          Text(
+                            context.l10n.checkoutStepMethod,
+                            style: AppTextStyles.label(
+                              context,
+                            ).copyWith(color: palette.textSecondary),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          SegmentedButton<String>(
+                            segments: [
+                              ButtonSegment(
+                                value: 'CARD',
+                                label: Text(
+                                  context.l10n.reservationPaymentCard,
+                                ),
+                                icon: const Icon(
+                                  Icons.credit_card_outlined,
+                                  size: 18,
+                                ),
+                              ),
+                              ButtonSegment(
+                                value: 'CASH',
+                                label: Text(
+                                  context.l10n.reservationPaymentCash,
+                                ),
+                                icon: const Icon(
+                                  Icons.payments_outlined,
+                                  size: 18,
+                                ),
+                              ),
+                            ],
+                            selected: {_paymentMethod},
+                            onSelectionChanged: _isSubmitting
+                                ? null
+                                : (selection) {
+                                    if (selection.isEmpty) return;
+                                    setState(() {
+                                      final nextMethod = selection.first;
+                                      if (nextMethod == 'CASH' &&
+                                          _paymentMethod != 'CASH') {
+                                        _safeDropoffBeforeCash =
+                                            _safeDropoffAllowed;
+                                        _safeDropoffAllowed = false;
+                                      } else if (nextMethod == 'CARD' &&
+                                          _paymentMethod == 'CASH') {
+                                        _safeDropoffAllowed =
+                                            _safeDropoffBeforeCash;
+                                        _safeDropoffBeforeCash = null;
+                                      }
+                                      _paymentMethod = nextMethod;
+                                      _combineWithGroup = true;
+                                      _errorMessage = null;
+                                    });
+                                    _scheduleQuoteRefresh();
+                                  },
+                          ),
+                          if (_paymentMethod == 'CASH') ...[
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              context.l10n.reservationPaymentCashAtHandover,
+                              style: AppTextStyles.label(
+                                context,
+                              ).copyWith(color: palette.textMuted),
+                            ),
+                          ] else ...[
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              context
+                                  .l10n
+                                  .reservationPaymentCardBeforeFulfillment,
+                              style: AppTextStyles.label(
+                                context,
+                              ).copyWith(color: palette.textMuted),
+                            ),
+                          ],
+                        ],
                         const SizedBox(height: reservationDialogSectionGap),
                         if (_isPickup)
                           PreferredWindowInput(
@@ -893,9 +984,16 @@ class MaterialReservationDialogState
                           const SizedBox(height: AppSpacing.xs),
                           SegmentedButton<bool>(
                             emptySelectionAllowed: true,
-                            segments: const [
-                              ButtonSegment(value: true, label: Text('Yes')),
-                              ButtonSegment(value: false, label: Text('No')),
+                            segments: [
+                              ButtonSegment(
+                                value: true,
+                                enabled: _paymentMethod != 'CASH',
+                                label: const Text('Yes'),
+                              ),
+                              const ButtonSegment(
+                                value: false,
+                                label: Text('No'),
+                              ),
                             ],
                             selected: _safeDropoffAllowed == null
                                 ? const <bool>{}
@@ -910,6 +1008,15 @@ class MaterialReservationDialogState
                                     });
                                   },
                           ),
+                          if (_paymentMethod == 'CASH') ...[
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              context.l10n.reservationPaymentCashInPerson,
+                              style: AppTextStyles.label(
+                                context,
+                              ).copyWith(color: palette.textMuted),
+                            ),
+                          ],
                           const SizedBox(height: reservationDialogSectionGap),
                           Text(
                             'Delivery note',

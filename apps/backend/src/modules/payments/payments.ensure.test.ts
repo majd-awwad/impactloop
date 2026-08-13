@@ -105,6 +105,28 @@ describe('PAY-01 ensure payment orders', () => {
     assert.equal(result.order.reservationId, null);
   });
 
+  test('cash material order remains due without provider artifacts', async () => {
+    const reservation = await createPayReservationFixture(ids, {
+      learnerId,
+      supplierId,
+      materialSubtotal: 18,
+      paymentMethod: 'CASH',
+    });
+
+    const result = await ensureMaterialPaymentOrder(reservation.id);
+    if (result.outcome !== 'CREATED' && result.outcome !== 'EXISTING') {
+      assert.fail(`expected cash order, got ${result.outcome}`);
+    }
+    trackOrder(ids, result.order.id);
+
+    assert.equal(result.order.paymentMethod, 'CASH');
+    assert.equal(result.order.status, 'REQUIRES_PAYMENT');
+    assert.equal(
+      await prisma.paymentAttempt.count({ where: { paymentOrderId: result.order.id } }),
+      0,
+    );
+  });
+
   test('concurrent material ensures create one order', async () => {
     const reservation = await createPayReservationFixture(ids, {
       learnerId,

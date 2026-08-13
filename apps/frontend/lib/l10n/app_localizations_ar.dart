@@ -1797,6 +1797,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get checkoutStepMethod => 'طريقة الدفع';
 
   @override
+  String get reservationPaymentCard => 'بطاقة';
+
+  @override
+  String get reservationPaymentCash => 'الدفع عند الاستلام';
+
+  @override
+  String get reservationPaymentCardBeforeFulfillment =>
+      'ادفع إلكترونيًا قبل التنفيذ عند الحاجة.';
+
+  @override
+  String get reservationPaymentCashAtHandover =>
+      'سيتم تحصيل المبلغ نقدًا عند التسليم.';
+
+  @override
+  String get reservationPaymentCashInPerson =>
+      'الدفع النقدي يتطلب تسليمًا مباشرًا.';
+
+  @override
+  String get reservationPaymentDueAtHandover => 'مستحق عند التسليم';
+
+  @override
   String get checkoutStepConfirm => 'تأكيد الطلب';
 
   @override

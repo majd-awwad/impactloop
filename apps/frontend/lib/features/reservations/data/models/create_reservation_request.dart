@@ -5,6 +5,7 @@ class CreateReservationRequest {
     required this.materialId,
     required this.quantityRequested,
     required this.fulfillmentMethod,
+    this.paymentMethod = 'CARD',
     this.message,
     this.buildItemId,
     this.materialRequestMatchId,
@@ -21,6 +22,7 @@ class CreateReservationRequest {
   final String materialId;
   final double quantityRequested;
   final String fulfillmentMethod;
+  final String paymentMethod;
   final String? message;
   final String? buildItemId;
   final String? materialRequestMatchId;
@@ -38,6 +40,7 @@ class CreateReservationRequest {
       'materialId': materialId,
       'quantityRequested': quantityRequested,
       'fulfillmentMethod': fulfillmentMethod,
+      'paymentMethod': paymentMethod,
       if (buildItemId != null && buildItemId!.trim().isNotEmpty)
         'buildItemId': buildItemId!.trim(),
       if (materialRequestMatchId != null &&

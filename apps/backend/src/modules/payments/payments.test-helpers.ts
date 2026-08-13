@@ -246,6 +246,7 @@ export async function createPayReservationFixture(
     confirmedDeliveryWindowEnd?: Date;
     pickupWindowStart?: Date;
     pickupWindowEnd?: Date;
+    paymentMethod?: 'CARD' | 'CASH';
   },
 ) {
   const category = await prisma.category.create({
@@ -324,6 +325,7 @@ export async function createPayReservationFixture(
       ownerId: input.supplierId,
       quantityRequested: new Prisma.Decimal(1),
       fulfillmentMethod: method,
+      paymentMethod: input.paymentMethod ?? 'CARD',
       status: 'ACCEPTED',
       materialSubtotal: new Prisma.Decimal(input.materialSubtotal),
       deliveryFee: new Prisma.Decimal(deliveryFee),
@@ -357,6 +359,7 @@ export async function createPayDeliveryGroupFixture(
     supplierId: string;
     deliveryFee: number;
     currency?: string;
+    paymentMethod?: 'CARD' | 'CASH';
   },
 ) {
   const supplierProfile = await prisma.supplierProfile.findUniqueOrThrow({
@@ -374,6 +377,7 @@ export async function createPayDeliveryGroupFixture(
       dropoffCity: 'Ramallah',
       deliveryFee: new Prisma.Decimal(input.deliveryFee),
       currency: input.currency ?? 'NIS',
+      paymentMethod: input.paymentMethod ?? 'CARD',
       deliveryZone: 'SAME_CITY',
       status: 'OPEN',
       windowStart,

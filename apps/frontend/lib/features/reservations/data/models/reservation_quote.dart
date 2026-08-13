@@ -41,6 +41,7 @@ class ReservationQuote {
     required this.currency,
     this.deliveryZone,
     required this.fulfillmentMethod,
+    this.paymentMethod = 'CARD',
     required this.canDeliver,
     required this.groupingAvailable,
     required this.groupingApplied,
@@ -57,6 +58,7 @@ class ReservationQuote {
   final String currency;
   final String? deliveryZone;
   final String fulfillmentMethod;
+  final String paymentMethod;
   final bool canDeliver;
   final bool groupingAvailable;
   final bool groupingApplied;
@@ -77,6 +79,7 @@ class ReservationQuote {
       currency: json['currency'] as String? ?? 'NIS',
       deliveryZone: json['deliveryZone'] as String?,
       fulfillmentMethod: json['fulfillmentMethod'] as String? ?? 'PICKUP',
+      paymentMethod: json['paymentMethod'] as String? ?? 'CARD',
       canDeliver: json['canDeliver'] as bool? ?? false,
       groupingAvailable: json['groupingAvailable'] as bool? ?? false,
       groupingApplied: json['groupingApplied'] as bool? ?? false,
@@ -95,6 +98,7 @@ class ReservationQuoteRequest {
     required this.materialId,
     required this.quantity,
     required this.fulfillmentMethod,
+    this.paymentMethod = 'CARD',
     this.dropoffCity,
     this.dropoffArea,
     this.learnerPreferredDeliveryWindows = const [],
@@ -104,6 +108,7 @@ class ReservationQuoteRequest {
   final String materialId;
   final double quantity;
   final String fulfillmentMethod;
+  final String paymentMethod;
   final String? dropoffCity;
   final String? dropoffArea;
   final List<Map<String, String>> learnerPreferredDeliveryWindows;
@@ -114,6 +119,7 @@ class ReservationQuoteRequest {
       'materialId': materialId,
       'quantity': quantity,
       'fulfillmentMethod': fulfillmentMethod,
+      'paymentMethod': paymentMethod,
       if (dropoffCity != null && dropoffCity!.trim().isNotEmpty)
         'dropoffCity': dropoffCity!.trim(),
       if (dropoffArea != null && dropoffArea!.trim().isNotEmpty)

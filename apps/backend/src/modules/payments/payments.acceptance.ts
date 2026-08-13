@@ -49,6 +49,7 @@ export const ensureDeliveryGroupAttachedForAcceptedReservation = async (
       id: true,
       status: true,
       fulfillmentMethod: true,
+      paymentMethod: true,
       deliveryGroupId: true,
       requesterId: true,
       deliveryFee: true,
@@ -112,6 +113,7 @@ export const ensureDeliveryGroupAttachedForAcceptedReservation = async (
       deliveryAddressText: reservation.deliveryAddressText,
       deliveryFee: feeAmount,
       currency: reservation.pricingCurrency ?? 'NIS',
+      paymentMethod: reservation.paymentMethod,
       deliveryZone: reservation.deliveryZone,
       status: 'OPEN',
       windowStart,
@@ -135,17 +137,7 @@ export const ensurePaymentObligationsForAcceptedReservation = async (
   tx: Prisma.TransactionClient,
   reservationId: string,
 ): Promise<void> => {
-  if (!isElectronicPaymentEnforced()) {
-    return;
-  }
-
-  if (obligationCreationFailureForTests) {
-    throw obligationCreationFailureForTests;
-  }
-
-  await ensureDeliveryGroupAttachedForAcceptedReservation(tx, reservationId);
-
-  const reservation = await tx.reservation.findUnique({
+  let reservation = await tx.reservation.findUnique({
     where: { id: reservationId },
     select: {
       id: true,
@@ -154,6 +146,7 @@ export const ensurePaymentObligationsForAcceptedReservation = async (
       deliveryGroupId: true,
       deliveryFee: true,
       materialSubtotal: true,
+      paymentMethod: true,
     },
   });
 
@@ -164,6 +157,28 @@ export const ensurePaymentObligationsForAcceptedReservation = async (
   if (reservation.status !== 'ACCEPTED') {
     return;
   }
+
+  if (reservation.paymentMethod === 'CARD' && !isElectronicPaymentEnforced()) {
+    return;
+  }
+
+  if (obligationCreationFailureForTests) {
+    throw obligationCreationFailureForTests;
+  }
+
+  await ensureDeliveryGroupAttachedForAcceptedReservation(tx, reservationId);
+  reservation = await tx.reservation.findUniqueOrThrow({
+    where: { id: reservationId },
+    select: {
+      id: true,
+      status: true,
+      fulfillmentMethod: true,
+      deliveryGroupId: true,
+      deliveryFee: true,
+      materialSubtotal: true,
+      paymentMethod: true,
+    },
+  });
 
   const material = await ensureMaterialPaymentOrder(reservation.id, tx);
   if (material.outcome === 'NOT_FOUND') {
@@ -203,7 +218,15 @@ export const ensureDeliveryForAcceptedReservationIfPaymentReady = async (
   tx: Prisma.TransactionClient,
   input: DeliveryEnsureInput,
 ): Promise<{ createdOrExisting: boolean; deferred: boolean }> => {
-  if (!isElectronicPaymentEnforced()) {
+  const source = await tx.reservation.findUnique({
+    where: { id: input.reservation.id },
+    select: { paymentMethod: true },
+  });
+  if (!source) {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  if (source.paymentMethod === 'CARD' && !isElectronicPaymentEnforced()) {
     await ensureDeliveryForAcceptedReservation(tx, input);
     return { createdOrExisting: true, deferred: false };
   }
@@ -234,7 +257,7 @@ export const ensureDeliveryForAcceptedReservationIfPaymentReady = async (
       );
     }
 
-    if (!readiness.overallReady) {
+    if (!readiness.overallFulfillmentReady) {
       return { createdOrExisting: false, deferred: true };
     }
   } else {
@@ -242,7 +265,10 @@ export const ensureDeliveryForAcceptedReservationIfPaymentReady = async (
     // (free delivery / zero-fee). Material must still be paid.
     const material = await ensureMaterialPaymentOrder(input.reservation.id, tx);
     if (material.outcome === 'CREATED' || material.outcome === 'EXISTING') {
-      if (material.order.status !== 'PAID') {
+      if (
+        material.order.paymentMethod === 'CARD' &&
+        material.order.status !== 'PAID'
+      ) {
         return { createdOrExisting: false, deferred: true };
       }
     }

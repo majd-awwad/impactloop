@@ -1821,6 +1821,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get checkoutStepMethod => 'Payment method';
 
   @override
+  String get reservationPaymentCard => 'Card';
+
+  @override
+  String get reservationPaymentCash => 'Pay on receipt / Cash';
+
+  @override
+  String get reservationPaymentCardBeforeFulfillment =>
+      'Pay electronically before fulfillment where required.';
+
+  @override
+  String get reservationPaymentCashAtHandover =>
+      'Cash will be collected at handover.';
+
+  @override
+  String get reservationPaymentCashInPerson =>
+      'Cash requires an in-person handover.';
+
+  @override
+  String get reservationPaymentDueAtHandover => 'Due at handover';
+
+  @override
   String get checkoutStepConfirm => 'Confirm order';
 
   @override

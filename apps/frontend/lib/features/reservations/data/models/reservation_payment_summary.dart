@@ -3,6 +3,9 @@
 class ReservationPaymentSummary {
   const ReservationPaymentSummary({
     required this.enforcementEnabled,
+    this.paymentMethod = 'CARD',
+    this.paymentReady = false,
+    this.dueAtHandover = false,
     required this.overallStatus,
     required this.outstandingOrderCount,
     this.outstandingAmount,
@@ -16,6 +19,9 @@ class ReservationPaymentSummary {
   });
 
   final bool enforcementEnabled;
+  final String paymentMethod;
+  final bool paymentReady;
+  final bool dueAtHandover;
   final String overallStatus;
   final int outstandingOrderCount;
 
@@ -32,6 +38,7 @@ class ReservationPaymentSummary {
 
   bool get isPaymentActionRequired =>
       enforcementEnabled &&
+      !dueAtHandover &&
       (hasMaterialPaymentOutstanding || hasDeliveryFeeOutstanding);
 
   /// True when one obligation is settled and another remains (e.g. material
@@ -62,6 +69,9 @@ class ReservationPaymentSummary {
 
     return ReservationPaymentSummary(
       enforcementEnabled: json['enforcementEnabled'] == true,
+      paymentMethod: json['paymentMethod'] as String? ?? 'CARD',
+      paymentReady: json['paymentReady'] == true,
+      dueAtHandover: json['dueAtHandover'] == true,
       overallStatus: json['overallStatus'] as String? ?? 'NOT_REQUIRED',
       outstandingOrderCount:
           (json['outstandingOrderCount'] as num?)?.toInt() ?? 0,
