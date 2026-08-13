@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../app/theme/app_theme_colors.dart';
 import '../../../l10n/l10n.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../shared/widgets/app_feedback.dart';
@@ -293,6 +294,7 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = AppThemeColors.of(context);
     final l10n = CommentsL10n(context);
     final rootsAsync = ref.watch(rootCommentsProvider(_key));
 
@@ -300,11 +302,16 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: colors.cardSurface,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.55),
-        ),
+        border: Border.all(color: colors.borderSubtle),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,10 +375,18 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
                           : null,
                     ),
                     if ((root.repliesCount) > 0) ...[
-                      Padding(
-                        padding: const EdgeInsetsDirectional.only(
-                          start: 44,
+                      Container(
+                        margin: const EdgeInsetsDirectional.only(
+                          start: AppSpacing.lg,
                           top: AppSpacing.sm,
+                        ),
+                        padding: const EdgeInsetsDirectional.only(
+                          start: AppSpacing.md,
+                        ),
+                        decoration: BoxDecoration(
+                          border: BorderDirectional(
+                            start: BorderSide(color: colors.borderSubtle),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -461,6 +476,7 @@ class _Composer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = AppThemeColors.of(context);
     final l10n = CommentsL10n(context);
     final modeLabel = editing
         ? l10n.editing
@@ -468,54 +484,89 @@ class _Composer extends StatelessWidget {
         ? l10n.replyingTo(replyingTo!.author.displayName)
         : null;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (modeLabel != null) ...[
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  modeLabel,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: theme.colorScheme.primary,
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: colors.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (modeLabel != null) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    modeLabel,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: colors.primary,
+                    ),
                   ),
                 ),
+                TextButton(onPressed: onCancel, child: Text(l10n.cancel)),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          TextField(
+            controller: controller,
+            minLines: 2,
+            maxLines: 4,
+            maxLength: 1000,
+            decoration: InputDecoration(
+              hintText: editing
+                  ? l10n.updateComment
+                  : replyingTo != null
+                  ? l10n.writeReply
+                  : l10n.writeComment,
+              counterText: '',
+              filled: true,
+              fillColor: colors.cardSurface,
+              contentPadding: const EdgeInsetsDirectional.all(AppSpacing.md),
+              border: OutlineInputBorder(borderRadius: AppRadius.mdAll),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: AppRadius.mdAll,
+                borderSide: BorderSide(color: colors.borderSubtle),
               ),
-              TextButton(onPressed: onCancel, child: Text(l10n.cancel)),
-            ],
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) {
+              return Row(
+                children: [
+                  Text(
+                    '${value.text.runes.length}/1000',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colors.textMuted,
+                    ),
+                  ),
+                  const Spacer(),
+                  FilledButton(
+                    onPressed: submitting ? null : onSubmit,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 40),
+                      padding: const EdgeInsetsDirectional.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
+                    ),
+                    child: submitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(editing ? l10n.save : l10n.post),
+                  ),
+                ],
+              );
+            },
+          ),
         ],
-        TextField(
-          controller: controller,
-          minLines: 1,
-          maxLines: 4,
-          maxLength: 1000,
-          decoration: InputDecoration(
-            hintText: editing
-                ? l10n.updateComment
-                : replyingTo != null
-                ? l10n.writeReply
-                : l10n.writeComment,
-            border: OutlineInputBorder(borderRadius: AppRadius.mdAll),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Align(
-          alignment: AlignmentDirectional.centerEnd,
-          child: FilledButton(
-            onPressed: submitting ? null : onSubmit,
-            child: submitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(editing ? l10n.save : l10n.post),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -538,6 +589,7 @@ class _CommentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = AppThemeColors.of(context);
     final l10n = CommentsL10n(context);
     final showMention =
         isReply &&
@@ -548,12 +600,13 @@ class _CommentTile extends StatelessWidget {
       padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
       decoration: BoxDecoration(
         color: isReply
-            ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.42)
-            : theme.colorScheme.surfaceContainerLow,
+            ? Color.alphaBlend(
+                colors.primary.withValues(alpha: 0.03),
+                colors.cardSurface,
+              )
+            : colors.cardSurface,
         borderRadius: AppRadius.mdAll,
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
-        ),
+        border: Border.all(color: colors.borderSubtle),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -614,40 +667,26 @@ class _CommentTile extends StatelessWidget {
                 if (!comment.isDeleted) ...[
                   const SizedBox(height: AppSpacing.xs),
                   Wrap(
-                    spacing: AppSpacing.sm,
+                    spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xs,
                     children: [
                       TextButton.icon(
                         onPressed: onReply,
-                        style: TextButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: EdgeInsets.zero,
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
+                        style: _commentActionStyle(context),
                         icon: const Icon(Icons.reply_rounded, size: 16),
                         label: Text(l10n.reply),
                       ),
                       if (onEdit != null)
                         TextButton.icon(
                           onPressed: onEdit,
-                          style: TextButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
+                          style: _commentActionStyle(context),
                           icon: const Icon(Icons.edit_outlined, size: 16),
                           label: Text(l10n.edit),
                         ),
                       if (onDelete != null)
                         TextButton.icon(
                           onPressed: onDelete,
-                          style: TextButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
+                          style: _commentActionStyle(context, danger: true),
                           icon: const Icon(Icons.delete_outline, size: 16),
                           label: Text(l10n.delete),
                         ),
@@ -661,4 +700,18 @@ class _CommentTile extends StatelessWidget {
       ),
     );
   }
+}
+
+ButtonStyle _commentActionStyle(BuildContext context, {bool danger = false}) {
+  final colors = AppThemeColors.of(context);
+  return TextButton.styleFrom(
+    foregroundColor: danger ? colors.danger : colors.textSecondary,
+    visualDensity: VisualDensity.compact,
+    padding: const EdgeInsetsDirectional.symmetric(
+      horizontal: AppSpacing.sm,
+      vertical: AppSpacing.xs,
+    ),
+    minimumSize: const Size(0, 32),
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  );
 }

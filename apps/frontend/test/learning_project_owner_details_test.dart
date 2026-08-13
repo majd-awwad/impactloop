@@ -157,6 +157,11 @@ void main() {
       expect(find.text('Can you clarify step two?'), findsOneWidget);
       expect(find.text('Reply'), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Post'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('learning-project-details-back-row')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('app-back-page-level')), findsOneWidget);
 
       final availabilityY = tester
           .getTopLeft(find.text('Material availability'))
@@ -234,6 +239,22 @@ void main() {
       TextDirection.rtl,
     );
   });
+
+  testWidgets('mobile details expose the compact Back action', (tester) async {
+    final repository = _DetailsRepository(_project());
+    await _pumpDetails(
+      tester,
+      viewerId: _ownerId,
+      repository: repository,
+      surfaceSize: const Size(390, 844),
+    );
+
+    expect(find.byKey(const ValueKey('app-back-compact')), findsOneWidget);
+    expect(find.byKey(const ValueKey('app-back-page-level')), findsNothing);
+    expect(find.text('Manage project'), findsOneWidget);
+    expect(find.text('Post review'), findsNothing);
+    expect(find.text('Start build'), findsNothing);
+  });
 }
 
 Future<void> _pumpDetails(
@@ -241,8 +262,9 @@ Future<void> _pumpDetails(
   required String viewerId,
   required _DetailsRepository repository,
   Locale locale = const Locale('en'),
+  Size surfaceSize = const Size(1200, 1800),
 }) async {
-  await tester.binding.setSurfaceSize(const Size(1200, 1800));
+  await tester.binding.setSurfaceSize(surfaceSize);
   addTearDown(() => tester.binding.setSurfaceSize(null));
 
   final router = GoRouter(
@@ -276,6 +298,10 @@ Future<void> _pumpDetails(
       child: MaterialApp.router(
         locale: locale,
         routerConfig: router,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(size: surfaceSize),
+          child: child!,
+        ),
         localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,

@@ -107,7 +107,7 @@ class _LinkTile extends StatelessWidget {
               vertical: AppSpacing.sm,
             ),
             decoration: BoxDecoration(
-              color: palette.cardSurfaceAlt,
+              color: palette.cardSurface,
               borderRadius: AppRadius.lgAll,
               border: Border.all(color: palette.borderSubtle),
             ),
@@ -118,8 +118,9 @@ class _LinkTile extends StatelessWidget {
                   color: canOpen
                       ? palette.lime
                       : palette.textSecondary.withValues(alpha: 0.62),
+                  size: 18,
                 ),
-                const SizedBox(width: AppSpacing.md),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,9 +150,9 @@ class _LinkTile extends StatelessWidget {
                       ? Icons.open_in_new_rounded
                       : Icons.info_outline_rounded,
                   color: canOpen
-                      ? palette.textSecondary
+                      ? palette.textSecondary.withValues(alpha: 0.78)
                       : palette.textSecondary.withValues(alpha: 0.58),
-                  size: 20,
+                  size: 18,
                 ),
               ],
             ),

@@ -324,7 +324,7 @@ class _ReviewForm extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: palette.cardSurfaceAlt,
+        color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
         border: Border.all(color: palette.borderSubtle),
       ),
@@ -348,7 +348,15 @@ class _ReviewForm extends StatelessWidget {
               minLines: 2,
               maxLines: 4,
               maxLength: 1200,
-              decoration: InputDecoration(hintText: l10n.reviewHint),
+              decoration: InputDecoration(
+                hintText: l10n.reviewHint,
+                filled: true,
+                fillColor: palette.cardSurface,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: AppRadius.mdAll,
+                  borderSide: BorderSide(color: palette.borderSubtle),
+                ),
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
@@ -447,23 +455,35 @@ class _RecentReviews extends StatelessWidget {
     if (!hasReviews) {
       return DecoratedBox(
         decoration: BoxDecoration(
-          color: palette.cardSurfaceAlt,
+          color: palette.cardSurface,
           borderRadius: AppRadius.lgAll,
           border: Border.all(color: palette.borderSubtle),
         ),
         child: Padding(
-          padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-          child: Text(
-            canReview
-                ? l10n.firstReview
-                : const LocalizedText(
-                    en: 'No learner reviews yet.',
-                    ar: 'لا توجد مراجعات من المتعلمين بعد.',
-                  ).resolve(context),
-            style: textTheme.bodyMedium?.copyWith(
-              color: palette.textSecondary,
-              height: 1.45,
-            ),
+          padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
+          child: Row(
+            children: [
+              Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 18,
+                color: palette.textSecondary,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  canReview
+                      ? l10n.firstReview
+                      : const LocalizedText(
+                          en: 'No learner reviews yet.',
+                          ar: 'لا توجد مراجعات من المتعلمين بعد.',
+                        ).resolve(context),
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: palette.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -496,7 +516,7 @@ class _ReviewTile extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: palette.cardSurfaceAlt,
+        color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
         border: Border.all(
           color: review.isViewerReview

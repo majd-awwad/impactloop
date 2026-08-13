@@ -132,6 +132,7 @@ class _ProjectDetailsBody extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const _DetailsBackRow(),
           _DetailsHero(project: project),
           Transform.translate(
             offset: const Offset(0, -34),
@@ -196,6 +197,30 @@ class _ProjectDetailsBody extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DetailsBackRow extends StatelessWidget {
+  const _DetailsBackRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      key: const ValueKey('learning-project-details-back-row'),
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1400),
+          child: const Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: AppBackAction(fallbackLocation: '/learning'),
+          ),
+        ),
       ),
     );
   }
@@ -280,11 +305,6 @@ class _DetailsHero extends StatelessWidget {
                   ).copyWith(color: palette.textPrimary),
                 ),
               ),
-            ),
-            PositionedDirectional(
-              top: 30,
-              start: 24,
-              child: const AppBackAction(fallbackLocation: '/learning'),
             ),
             if (!hasImage)
               PositionedDirectional(

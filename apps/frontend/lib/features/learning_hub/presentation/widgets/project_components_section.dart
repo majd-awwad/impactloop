@@ -65,16 +65,18 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
             children: [
               Icon(Icons.inventory_2_outlined, color: palette.lime, size: 22),
               const SizedBox(width: AppSpacing.sm),
-              Text(
-                const LocalizedText(
-                  en: 'Required components',
-                  ar: 'المكونات المطلوبة',
-                ).resolve(context),
-                style: textTheme.titleLarge?.copyWith(
-                  color: palette.textPrimary,
-                  fontWeight: FontWeight.w700,
+              Expanded(
+                child: Text(
+                  const LocalizedText(
+                    en: 'Required components',
+                    ar: 'المكونات المطلوبة',
+                  ).resolve(context),
+                  style: textTheme.titleLarge?.copyWith(
+                    color: palette.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  textAlign: TextAlign.start,
                 ),
-                textAlign: TextAlign.start,
               ),
             ],
           ),
@@ -142,28 +144,29 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
-            decoration: BoxDecoration(
-              color: palette.cardSurfaceAlt,
-              borderRadius: AppRadius.lgAll,
-              border: Border.all(color: palette.borderSubtle),
-            ),
-            child: Text(
-              const LocalizedText(
-                en: 'Public availability shows whether ImpactLoop currently lists materials that can satisfy each required component.',
-                ar: 'يعرض التوفر العام ما إذا كانت المنصة تدرج حاليًا مواد يمكن أن تلبي كل مكوّن مطلوب.',
-              ).resolve(context),
-              style: textTheme.bodyMedium?.copyWith(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline_rounded,
+                size: 18,
                 color: palette.textSecondary,
-                height: 1.45,
               ),
-              textAlign: TextAlign.start,
-            ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  const LocalizedText(
+                    en: 'Public availability shows whether ImpactLoop currently lists materials that can satisfy each required component.',
+                    ar: 'يعرض التوفر العام ما إذا كانت المنصة تدرج حاليًا مواد يمكن أن تلبي كل مكوّن مطلوب.',
+                  ).resolve(context),
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: palette.textSecondary,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.start,
+                ),
+              ),
+            ],
           ),
         ],
       ),

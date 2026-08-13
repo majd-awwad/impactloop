@@ -49,16 +49,18 @@ class _ProjectStepsTimelineState extends State<ProjectStepsTimeline> {
             children: [
               Icon(Icons.check_circle_outline, color: palette.lime, size: 22),
               const SizedBox(width: AppSpacing.sm),
-              Text(
-                const LocalizedText(
-                  en: 'Implementation steps',
-                  ar: 'خطوات التنفيذ',
-                ).resolve(context),
-                style: textTheme.titleLarge?.copyWith(
-                  color: palette.textPrimary,
-                  fontWeight: FontWeight.w700,
+              Expanded(
+                child: Text(
+                  const LocalizedText(
+                    en: 'Implementation steps',
+                    ar: 'خطوات التنفيذ',
+                  ).resolve(context),
+                  style: textTheme.titleLarge?.copyWith(
+                    color: palette.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  textAlign: TextAlign.start,
                 ),
-                textAlign: TextAlign.start,
               ),
             ],
           ),
@@ -120,9 +122,12 @@ class _TimelineItem extends StatelessWidget {
     return Padding(
       padding: EdgeInsetsDirectional.only(bottom: isLast ? 0 : AppSpacing.sm),
       child: Container(
-        padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
         decoration: BoxDecoration(
-          color: palette.cardSurfaceAlt,
+          color: palette.cardSurface,
           borderRadius: AppRadius.mdAll,
           border: Border.all(color: palette.borderSubtle),
         ),
