@@ -7,6 +7,7 @@ import { asyncHandler } from '../../utils/async-handler.js';
 
 import {
   acceptDriverDeliveryHandler,
+  confirmDeliveryHandoverCredentialHandler,
   createDriverDeliveryLocationPingHandler,
   getDriverProfileHandler,
   getDriverDeliveryDetailHandler,
@@ -14,6 +15,9 @@ import {
   listActiveDriverDeliveriesHandler,
   listAvailableDriverDeliveriesHandler,
   updateDriverDeliveryStatusHandler,
+  verifyDeliveryHandoverCredentialHandler,
+  verifySupplierPickupHandoverCredentialHandler,
+  confirmSupplierPickupHandoverCredentialHandler,
   getDriverHistoricalDeliveryHandler,
   listDriverDeliveryHistoryHandler,
   listDriverIncidentsHandler,
@@ -39,6 +43,7 @@ import {
   markDriverIssueAfterPickupSchema,
   markDriverPickupFailedSchema,
 } from '../fulfillment-failures/fulfillment-failures.validation.js';
+import { handoverCredentialTokenBodySchema } from '../handover-credentials/handover-credentials.validation.js';
 
 export const driverRouter = Router();
 
@@ -110,6 +115,30 @@ driverRouter.patch(
   validate(deliveryIdParamsSchema, 'params'),
   validate(updateDriverDeliveryStatusSchema),
   asyncHandler(updateDriverDeliveryStatusHandler),
+);
+
+driverRouter.post(
+  '/deliveries/handover/verify',
+  validate(handoverCredentialTokenBodySchema),
+  asyncHandler(verifyDeliveryHandoverCredentialHandler),
+);
+
+driverRouter.post(
+  '/deliveries/handover/confirm',
+  validate(handoverCredentialTokenBodySchema),
+  asyncHandler(confirmDeliveryHandoverCredentialHandler),
+);
+
+driverRouter.post(
+  '/deliveries/pickup-handover/verify',
+  validate(handoverCredentialTokenBodySchema),
+  asyncHandler(verifySupplierPickupHandoverCredentialHandler),
+);
+
+driverRouter.post(
+  '/deliveries/pickup-handover/confirm',
+  validate(handoverCredentialTokenBodySchema),
+  asyncHandler(confirmSupplierPickupHandoverCredentialHandler),
 );
 
 driverRouter.post(

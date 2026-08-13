@@ -153,6 +153,16 @@ export const updateDriverDeliveryStatusHandler = async (
   res.json(successResponse('Delivery status updated.', delivery));
 };
 
+export {
+  verifyDeliveryHandoverCredentialHandler,
+  confirmDeliveryHandoverCredentialHandler,
+} from '../delivery-handover-credentials/delivery-handover-credentials.controller.js';
+
+export {
+  verifySupplierPickupHandoverCredentialHandler,
+  confirmSupplierPickupHandoverCredentialHandler,
+} from '../supplier-pickup-handover-credentials/supplier-pickup-handover-credentials.controller.js';
+
 export const createDriverDeliveryLocationPingHandler = async (
   req: Request,
   res: Response,
