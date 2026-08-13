@@ -5,6 +5,7 @@ import 'deliveries_api.dart';
 import 'models/learner_delivery.dart';
 import 'models/learner_delivery_tracking.dart';
 import 'models/request_delivery_request.dart';
+import 'models/delivery_handover_credential.dart';
 
 final deliveriesApiProvider = Provider<DeliveriesApi>((ref) {
   return DeliveriesApi(ref.watch(apiClientProvider));
@@ -36,5 +37,11 @@ class DeliveriesRepository {
 
   Future<LearnerDeliveryTracking> fetchDeliveryTracking(String deliveryId) {
     return _api.fetchDeliveryTracking(deliveryId);
+  }
+
+  Future<DeliveryHandoverCredential> issueDeliveryHandoverCredential(
+    String deliveryId,
+  ) {
+    return _api.issueDeliveryHandoverCredential(deliveryId);
   }
 }

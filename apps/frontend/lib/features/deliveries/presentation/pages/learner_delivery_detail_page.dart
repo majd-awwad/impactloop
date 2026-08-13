@@ -15,9 +15,11 @@ import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../application/delivery_handover_credential_controller.dart';
 import '../../application/learner_deliveries_provider.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../data/models/learner_delivery.dart';
+import '../delivery_handover_qr_dialog.dart';
 import '../delivery_status_presentation.dart';
 import '../pickup_window_presentation.dart';
 
@@ -202,7 +204,7 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _DeliverySummaryPanel extends StatelessWidget {
+class _DeliverySummaryPanel extends ConsumerWidget {
   const _DeliverySummaryPanel({
     required this.delivery,
     required this.onRefresh,
@@ -212,7 +214,11 @@ class _DeliverySummaryPanel extends StatelessWidget {
   final VoidCallback onRefresh;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (delivery.shouldShowLearnerDeliveryCode) {
+      ref.watch(deliveryHandoverCredentialControllerProvider(delivery.id));
+    }
+
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,6 +264,32 @@ class _DeliverySummaryPanel extends StatelessWidget {
               value: delivery.driverNote!,
             ),
           if (delivery.shouldShowLearnerDeliveryCode) ...[
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              height: 44,
+              child: OutlinedButton.icon(
+                key: const Key('learner-delivery-show-qr'),
+                onPressed:
+                    ref
+                        .read(
+                          deliveryHandoverCredentialControllerProvider(
+                            delivery.id,
+                          ),
+                        )
+                        .isLoading
+                    ? null
+                    : () {
+                        showDeliveryHandoverQrDialog(
+                          context: context,
+                          ref: ref,
+                          deliveryId: delivery.id,
+                          materialTitle: delivery.reservation.material.title,
+                        );
+                      },
+                icon: const Icon(Icons.qr_code_2_rounded, size: 18),
+                label: Text(context.l10n.showDeliveryQr),
+              ),
+            ),
             const SizedBox(height: AppSpacing.md),
             HandoverConfirmationCodePanel(
               code: delivery.learnerDeliveryCode!,
