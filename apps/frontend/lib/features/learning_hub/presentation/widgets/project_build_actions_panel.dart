@@ -51,7 +51,10 @@ class _ProjectBuildActionsPanelState
     }
 
     if (authState.user?.hasRole('LEARNER') != true) {
-      showInfoSnackBar(context, 'Use a learner account to start builds.');
+      showInfoSnackBar(
+        context,
+        LearningProjectBuildL10n.learnerAccountRequired.resolve(context),
+      );
       return;
     }
 
@@ -139,7 +142,7 @@ class _ProjectBuildActionsPanelState
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
@@ -166,7 +169,9 @@ class _ProjectBuildActionsPanelState
           componentCount: componentCount,
           isBusy: isBusy,
           hasBuild: false,
-          statusText: 'Checklist status is unavailable right now.',
+          statusText: LearningProjectBuildL10n.checklistUnavailable.resolve(
+            context,
+          ),
           onStartOrContinue: componentCount == 0
               ? null
               : () => _startOrContinueBuild(hasBuild: false),
@@ -184,7 +189,10 @@ class _ProjectBuildActionsPanelState
               ? l10n.personalReadinessSummary(personal)
               : totalRequired == null
               ? null
-              : '$readyCount of $totalRequired ready in your build';
+              : LearningProjectBuildL10n.readyCount(
+                  ready: readyCount ?? 0,
+                  total: totalRequired,
+                ).resolve(context);
 
           final primaryLabel = build == null
               ? LearningProjectBuildL10n.startBuild.resolve(context)
@@ -212,7 +220,8 @@ class _ProjectBuildActionsPanelState
                   };
           }
 
-          final showBuildAgain = build != null &&
+          final showBuildAgain =
+              build != null &&
               (build.status == ProjectBuildStatus.completed ||
                   build.status == ProjectBuildStatus.archived);
           final buildForAgain = build;
@@ -294,7 +303,7 @@ class _BuildPanelContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           copy,
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
           actions,
         ],
       );
@@ -304,7 +313,7 @@ class _BuildPanelContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(child: copy),
-        const SizedBox(width: AppSpacing.xl),
+        const SizedBox(width: AppSpacing.lg),
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 360),
           child: actions,
@@ -337,22 +346,30 @@ class _BuildPanelCopy extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.construction_rounded, color: palette.lime),
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          hasBuild
-              ? LearningProjectBuildL10n.buildChecklist.resolve(context)
-              : LearningProjectBuildL10n.planThisBuild.resolve(context),
-          style: textTheme.titleLarge?.copyWith(
-            color: palette.textPrimary,
-            fontWeight: FontWeight.w700,
-          ),
+        Row(
+          children: [
+            Icon(Icons.construction_rounded, color: palette.lime, size: 22),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                hasBuild
+                    ? LearningProjectBuildL10n.buildChecklist.resolve(context)
+                    : LearningProjectBuildL10n.planThisBuild.resolve(context),
+                style: textTheme.titleLarge?.copyWith(
+                  color: palette.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
           hasBuild
-              ? 'Continue your saved manual checklist for this project.'
-              : 'Start a saved checklist from the required components. You can mark items as available, missing, alternative, already owned, or reserved.',
+              ? LearningProjectBuildL10n.continueChecklistSummary.resolve(
+                  context,
+                )
+              : LearningProjectBuildL10n.startChecklistSummary.resolve(context),
           style: textTheme.bodyMedium?.copyWith(
             color: palette.textSecondary,
             height: 1.45,
@@ -365,11 +382,15 @@ class _BuildPanelCopy extends StatelessWidget {
           children: [
             _BuildMetricChip(
               icon: Icons.inventory_2_outlined,
-              label: '$componentCount components',
+              label: LearningProjectBuildL10n.componentCount(
+                componentCount,
+              ).resolve(context),
             ),
             _BuildMetricChip(
               icon: Icons.format_list_numbered_rounded,
-              label: '${project.steps.length} steps',
+              label: LearningProjectBuildL10n.stepCount(
+                project.steps.length,
+              ).resolve(context),
             ),
             if (statusText != null)
               _BuildMetricChip(
@@ -428,7 +449,9 @@ class _BuildPanelActions extends StatelessWidget {
         OutlinedButton.icon(
           onPressed: onBrowseMaterials,
           icon: const Icon(Icons.search_rounded),
-          label: Text(LearningProjectBuildL10n.browseMaterials.resolve(context)),
+          label: Text(
+            LearningProjectBuildL10n.browseMaterials.resolve(context),
+          ),
         ),
       ],
     );
@@ -453,8 +476,8 @@ class _BuildMetricChip extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
         color: accent ? palette.limeSoft : palette.cardSurfaceAlt,

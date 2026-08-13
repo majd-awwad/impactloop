@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_radius.dart';
+import '../../../../app/theme/app_spacing.dart';
 import '../../domain/models/learning_project.dart';
 import '../l10n/learning_hub_coverage_l10n.dart';
 import '../theme/learning_ui_palette.dart';
@@ -99,16 +101,20 @@ class ProjectMaterialCoveragePanel extends StatelessWidget {
   const ProjectMaterialCoveragePanel({
     super.key,
     required this.project,
+    this.showPersonalReadiness = true,
   });
 
   final LearningProject project;
+  final bool showPersonalReadiness;
 
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
     final l10n = LearningHubCoverageL10n.of(context);
     final coverage = project.materialCoverage;
-    final personal = project.personalBuildReadiness;
+    final personal = showPersonalReadiness
+        ? project.personalBuildReadiness
+        : null;
 
     if (coverage == null && personal == null) {
       return const SizedBox.shrink();
@@ -116,7 +122,7 @@ class ProjectMaterialCoveragePanel extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsetsDirectional.all(16),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: BorderRadius.circular(16),
@@ -136,9 +142,29 @@ class ProjectMaterialCoveragePanel extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               l10n.publicCoverageSummary(coverage),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: palette.textSecondary,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: palette.textSecondary),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.xs,
+              children: [
+                _CoverageMetric(
+                  label: l10n.totalMaterials(coverage.totalRequiredComponents),
+                  palette: palette,
+                ),
+                _CoverageMetric(
+                  label: l10n.availableMaterials(coverage.availableComponents),
+                  palette: palette,
+                  accent: true,
+                ),
+                _CoverageMetric(
+                  label: l10n.missingMaterials(coverage.missingComponents),
+                  palette: palette,
+                ),
+              ],
             ),
           ],
           if (personal != null && personal.isInProgress) ...[
@@ -153,21 +179,59 @@ class ProjectMaterialCoveragePanel extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               l10n.personalReadinessSummary(personal),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: palette.textSecondary,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: palette.textSecondary),
             ),
             if (personal.needsMaterialComponents > 0) ...[
               const SizedBox(height: 4),
               Text(
                 l10n.personalNeedsMaterials(personal),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: palette.textSecondary,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: palette.textSecondary),
               ),
             ],
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _CoverageMetric extends StatelessWidget {
+  const _CoverageMetric({
+    required this.label,
+    required this.palette,
+    this.accent = false,
+  });
+
+  final String label;
+  final LearningUiPalette palette;
+  final bool accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: accent ? palette.limeSoft : palette.cardSurfaceAlt,
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(
+          color: accent
+              ? palette.lime.withValues(alpha: 0.32)
+              : palette.borderSubtle,
+        ),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: accent ? palette.lime : palette.textSecondary,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

@@ -90,8 +90,18 @@ class LearningProjectDetailsPage extends ConsumerWidget {
                     );
                   }
 
+                  final currentUserId = ref
+                      .watch(authControllerProvider)
+                      .user
+                      ?.id;
+                  final isOwner =
+                      currentUserId != null &&
+                      currentUserId.isNotEmpty &&
+                      currentUserId == project.creator?.id;
+
                   return _ProjectDetailsBody(
                     project: project,
+                    isOwner: isOwner,
                     recommendationImpressionId: recommendationImpressionId,
                   );
                 },
@@ -107,10 +117,12 @@ class LearningProjectDetailsPage extends ConsumerWidget {
 class _ProjectDetailsBody extends StatelessWidget {
   const _ProjectDetailsBody({
     required this.project,
+    required this.isOwner,
     this.recommendationImpressionId,
   });
 
   final LearningProject project;
+  final bool isOwner;
   final String? recommendationImpressionId;
 
   @override
@@ -135,38 +147,48 @@ class _ProjectDetailsBody extends StatelessWidget {
                     children: [
                       _DetailsSummaryCard(
                         project: project,
+                        isOwner: isOwner,
                         recommendationImpressionId: recommendationImpressionId,
                       ),
-                      const SizedBox(height: AppSpacing.lg),
-                      ProjectReviewsSection(project: project),
-                      const SizedBox(height: AppSpacing.lg),
-                      CommentsSection(
-                        targetType: CommentTargetType.learningProject,
-                        targetId: project.id,
+                      const SizedBox(height: AppSpacing.md),
+                      ProjectMaterialCoveragePanel(
+                        project: project,
+                        showPersonalReadiness: !isOwner,
                       ),
-                      const SizedBox(height: AppSpacing.lg),
-                      ProjectMaterialCoveragePanel(project: project),
-                      const SizedBox(height: AppSpacing.lg),
                       if (project.components.isNotEmpty ||
                           project.requiredComponents.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.md),
                         ProjectComponentsSection(
                           components: project.components,
                           requiredComponents: project.requiredComponents,
                         ),
-                        const SizedBox(height: AppSpacing.lg),
                       ],
-                      ProjectBuildActionsPanel(
-                        project: project,
-                        recommendationImpressionId: recommendationImpressionId,
-                      ),
+                      if (!isOwner) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        ProjectBuildActionsPanel(
+                          project: project,
+                          recommendationImpressionId:
+                              recommendationImpressionId,
+                        ),
+                      ],
                       if (project.steps.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.lg),
+                        const SizedBox(height: AppSpacing.md),
                         ProjectStepsTimeline(steps: project.steps),
                       ],
                       if (project.links.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.lg),
+                        const SizedBox(height: AppSpacing.md),
                         ProjectLinkList(links: project.links),
                       ],
+                      const SizedBox(height: AppSpacing.md),
+                      ProjectReviewsSection(
+                        project: project,
+                        canReview: !isOwner,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      CommentsSection(
+                        targetType: CommentTargetType.learningProject,
+                        targetId: project.id,
+                      ),
                     ],
                   ),
                 ),
@@ -193,10 +215,10 @@ class _DetailsHero extends StatelessWidget {
     final fallbackGradient = projectGradient(project);
     final screenWidth = MediaQuery.sizeOf(context).width;
     final heroHeight = screenWidth >= 1100
-        ? 380.0
+        ? 288.0
         : screenWidth >= 700
-        ? 344.0
-        : 300.0;
+        ? 260.0
+        : 224.0;
 
     return SizedBox(
       height: heroHeight,
@@ -237,7 +259,7 @@ class _DetailsHero extends StatelessWidget {
               ),
             ),
             PositionedDirectional(
-              top: 40,
+              top: 24,
               end: 24,
               child: Container(
                 padding: const EdgeInsetsDirectional.symmetric(
@@ -260,13 +282,13 @@ class _DetailsHero extends StatelessWidget {
               ),
             ),
             PositionedDirectional(
-              top: 52,
-              start: 36,
+              top: 30,
+              start: 24,
               child: const AppBackAction(fallbackLocation: '/learning'),
             ),
             if (!hasImage)
               PositionedDirectional(
-                bottom: 34,
+                bottom: 24,
                 start: 0,
                 end: 0,
                 child: Icon(
@@ -276,13 +298,13 @@ class _DetailsHero extends StatelessWidget {
                 ),
               ),
             PositionedDirectional(
-              top: 40,
+              top: 24,
               end: 120,
               child: _BlurOrb(size: 160, color: palette.textPrimary),
             ),
             PositionedDirectional(
-              bottom: 18,
-              start: 36,
+              bottom: 12,
+              start: 24,
               child: _BlurOrb(size: 120, color: palette.textPrimary),
             ),
           ],
@@ -295,10 +317,12 @@ class _DetailsHero extends StatelessWidget {
 class _DetailsSummaryCard extends StatelessWidget {
   const _DetailsSummaryCard({
     required this.project,
+    required this.isOwner,
     this.recommendationImpressionId,
   });
 
   final LearningProject project;
+  final bool isOwner;
   final String? recommendationImpressionId;
 
   @override
@@ -307,7 +331,7 @@ class _DetailsSummaryCard extends StatelessWidget {
     final longDescription = project.longDescription;
 
     return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.cardPadding),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.xlAll,
@@ -335,7 +359,10 @@ class _DetailsSummaryCard extends StatelessWidget {
               ),
               if (project.creator case final creator?) ...[
                 const SizedBox(height: AppSpacing.sm),
-                LearningProjectCreatorRow(creator: creator),
+                LearningProjectCreatorRow(
+                  creator: creator,
+                  enableProfileNavigation: !isOwner,
+                ),
               ],
               const SizedBox(height: AppSpacing.sm),
               Text(
@@ -369,18 +396,33 @@ class _DetailsSummaryCard extends StatelessWidget {
                 dark: true,
               ),
               _DetailsChip(label: project.duration.resolve(context)),
-              _ProjectLikeButton(
-                project: project,
-                recommendationImpressionId: recommendationImpressionId,
-              ),
-              _ProjectFollowButton(
-                project: project,
-                recommendationImpressionId: recommendationImpressionId,
-              ),
-              _ProjectSaveButton(
-                project: project,
-                recommendationImpressionId: recommendationImpressionId,
-              ),
+              if (isOwner)
+                OutlinedButton.icon(
+                  key: const ValueKey('learning-project-owner-manage-action'),
+                  onPressed: () =>
+                      context.push('/learning/submissions/${project.id}'),
+                  icon: const Icon(Icons.settings_outlined),
+                  label: Text(
+                    const LocalizedText(
+                      en: 'Manage project',
+                      ar: 'إدارة المشروع',
+                    ).resolve(context),
+                  ),
+                )
+              else ...[
+                _ProjectLikeButton(
+                  project: project,
+                  recommendationImpressionId: recommendationImpressionId,
+                ),
+                _ProjectFollowButton(
+                  project: project,
+                  recommendationImpressionId: recommendationImpressionId,
+                ),
+                _ProjectSaveButton(
+                  project: project,
+                  recommendationImpressionId: recommendationImpressionId,
+                ),
+              ],
               if (project.componentCountLabel.en.trim().isNotEmpty)
                 _DetailsChip(
                   label: project.componentCountLabel.resolve(context),
@@ -512,7 +554,13 @@ class _ProjectLikeButtonState extends ConsumerState<_ProjectLikeButton> {
     }
 
     if (authState.user?.hasRole('LEARNER') != true) {
-      showInfoSnackBar(context, 'Use a learner account to like projects.');
+      showInfoSnackBar(
+        context,
+        const LocalizedText(
+          en: 'Use a learner account to like projects.',
+          ar: 'استخدم حساب متعلم للإعجاب بالمشاريع.',
+        ).resolve(context),
+      );
       return;
     }
 
@@ -580,7 +628,17 @@ class _ProjectLikeButtonState extends ConsumerState<_ProjectLikeButton> {
     final foreground = _isLiked ? palette.limeSoft : palette.textSecondary;
 
     return Tooltip(
-      message: _isLiked ? 'Unlike project' : 'Like project',
+      message:
+          (_isLiked
+                  ? const LocalizedText(
+                      en: 'Unlike project',
+                      ar: 'إلغاء الإعجاب بالمشروع',
+                    )
+                  : const LocalizedText(
+                      en: 'Like project',
+                      ar: 'الإعجاب بالمشروع',
+                    ))
+              .resolve(context),
       child: InkWell(
         borderRadius: AppRadius.pillAll,
         onTap: _isUpdating ? null : _toggleLike,
@@ -682,7 +740,13 @@ class _ProjectSaveButtonState extends ConsumerState<_ProjectSaveButton> {
     }
 
     if (authState.user?.hasRole('LEARNER') != true) {
-      showInfoSnackBar(context, 'Use a learner account to save projects.');
+      showInfoSnackBar(
+        context,
+        const LocalizedText(
+          en: 'Use a learner account to save projects.',
+          ar: 'استخدم حساب متعلم لحفظ المشاريع.',
+        ).resolve(context),
+      );
       return;
     }
 
@@ -744,7 +808,14 @@ class _ProjectSaveButtonState extends ConsumerState<_ProjectSaveButton> {
     final foreground = _isSaved ? palette.limeSoft : palette.textSecondary;
 
     return Tooltip(
-      message: _isSaved ? 'Remove saved project' : 'Save project',
+      message:
+          (_isSaved
+                  ? const LocalizedText(
+                      en: 'Remove saved project',
+                      ar: 'إزالة المشروع من المحفوظات',
+                    )
+                  : const LocalizedText(en: 'Save project', ar: 'حفظ المشروع'))
+              .resolve(context),
       child: InkWell(
         borderRadius: AppRadius.pillAll,
         onTap: _isUpdating ? null : _toggleSave,
@@ -850,7 +921,13 @@ class _ProjectFollowButtonState extends ConsumerState<_ProjectFollowButton> {
     }
 
     if (authState.user?.hasRole('LEARNER') != true) {
-      showInfoSnackBar(context, 'Use a learner account to follow projects.');
+      showInfoSnackBar(
+        context,
+        const LocalizedText(
+          en: 'Use a learner account to follow projects.',
+          ar: 'استخدم حساب متعلم لمتابعة المشاريع.',
+        ).resolve(context),
+      );
       return;
     }
 
@@ -918,7 +995,17 @@ class _ProjectFollowButtonState extends ConsumerState<_ProjectFollowButton> {
     final foreground = _isFollowing ? palette.limeSoft : palette.textSecondary;
 
     return Tooltip(
-      message: _isFollowing ? 'Unfollow project' : 'Follow project',
+      message:
+          (_isFollowing
+                  ? const LocalizedText(
+                      en: 'Unfollow project',
+                      ar: 'إلغاء متابعة المشروع',
+                    )
+                  : const LocalizedText(
+                      en: 'Follow project',
+                      ar: 'متابعة المشروع',
+                    ))
+              .resolve(context),
       child: InkWell(
         borderRadius: AppRadius.pillAll,
         onTap: _isUpdating ? null : _toggleFollow,
