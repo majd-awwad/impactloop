@@ -240,6 +240,20 @@ export const issueDeliveryHandoverCredential = async (
     );
   }
 
+  // A failed first attempt has no current handover appointment until the
+  // assigned driver schedules the retry. Do not mint a credential against the
+  // superseded window while coordination is still pending.
+  if (delivery.status === 'REDELIVERY_PENDING') {
+    throw invalidHandoverCredentialError();
+  }
+
+  if (
+    !delivery.reservation.confirmedDeliveryWindowStart ||
+    !delivery.reservation.confirmedDeliveryWindowEnd
+  ) {
+    throw invalidHandoverCredentialError();
+  }
+
   await assertDeliveryHandoverEligibleOrThrow({
     delivery,
     learnerId,

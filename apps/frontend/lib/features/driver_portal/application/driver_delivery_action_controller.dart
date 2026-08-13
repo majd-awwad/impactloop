@@ -101,7 +101,11 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
           .read(driverDeliveriesRepositoryProvider)
           .reportPickupFailed(
             deliveryId,
-            DriverDeliveryFailureRequest(reason: reason, note: note),
+            DriverDeliveryFailureRequest(
+              reason: reason,
+              learnerContactAttempted: false,
+              note: note,
+            ),
           );
       state = const AsyncData(null);
       return delivery;
@@ -114,7 +118,10 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
   Future<DriverDelivery> reportDeliveryFailed({
     required String deliveryId,
     required String reason,
+    required bool learnerContactAttempted,
     String? note,
+    DateTime? retryWindowStart,
+    DateTime? retryWindowEnd,
   }) async {
     state = const AsyncLoading();
 
@@ -123,9 +130,38 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
           .read(driverDeliveriesRepositoryProvider)
           .reportDeliveryFailed(
             deliveryId,
-            DriverDeliveryFailureRequest(reason: reason, note: note),
+            DriverDeliveryFailureRequest(
+              reason: reason,
+              learnerContactAttempted: learnerContactAttempted,
+              note: note,
+              retryWindowStart: retryWindowStart,
+              retryWindowEnd: retryWindowEnd,
+            ),
           );
       state = const AsyncData(null);
+      return delivery;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<DriverDelivery> setDeliveryWindow({
+    required String deliveryId,
+    required DateTime start,
+    required DateTime end,
+    String? note,
+  }) async {
+    state = const AsyncLoading();
+    try {
+      final delivery = await ref
+          .read(driverDeliveriesRepositoryProvider)
+          .setDeliveryWindow(
+            deliveryId,
+            DriverDeliveryWindowRequest(start: start, end: end, note: note),
+          );
+      state = const AsyncData(null);
+      refreshActiveDelivery(delivery.id);
       return delivery;
     } catch (error, stackTrace) {
       state = AsyncError(error, stackTrace);

@@ -20,6 +20,7 @@ import {
   listAvailableDeliveries,
   updateDriverDeliveryStatus,
 } from '../driver/driver.service.js';
+import { setDriverDeliveryWindow } from '../driver/driver-delivery-scheduling.service.js';
 import {
   createReservation,
 } from '../reservations/reservations.service.js';
@@ -1148,6 +1149,46 @@ describe('operational delivery groups', () => {
     assert.ok(heldAfter);
     assert.equal(Number(heldAfter.heldQuantity), 1);
 
+    const operationalStart = new Date(Date.now() - 10 * 60_000);
+    const operationalEnd = new Date(Date.now() + 90 * 60_000);
+    await setDriverDeliveryWindow(ctx.driverUserId, delivery.id, {
+      start: operationalStart.toISOString(),
+      end: operationalEnd.toISOString(),
+    });
+
+    const scheduledReservations = await prisma.reservation.findMany({
+      where: { id: { in: [first.id, second.id, third.id] } },
+      select: {
+        id: true,
+        confirmedDeliveryWindowStart: true,
+        confirmedDeliveryWindowEnd: true,
+      },
+    });
+    for (const carriedReservationId of [first.id, second.id]) {
+      const scheduled = scheduledReservations.find(
+        (reservation) => reservation.id === carriedReservationId,
+      );
+      assert.equal(
+        scheduled?.confirmedDeliveryWindowStart?.getTime(),
+        operationalStart.getTime(),
+      );
+      assert.equal(
+        scheduled?.confirmedDeliveryWindowEnd?.getTime(),
+        operationalEnd.getTime(),
+      );
+    }
+    const unscheduledDetached = scheduledReservations.find(
+      (reservation) => reservation.id === third.id,
+    );
+    assert.equal(
+      unscheduledDetached?.confirmedDeliveryWindowStart?.getTime(),
+      detached.confirmedDeliveryWindowStart?.getTime(),
+    );
+    assert.equal(
+      unscheduledDetached?.confirmedDeliveryWindowEnd?.getTime(),
+      detached.confirmedDeliveryWindowEnd?.getTime(),
+    );
+
     const replacementStart = new Date(Date.now() + 48 * 60 * 60_000);
     const replacementEnd = new Date(
       replacementStart.getTime() + 2 * 60 * 60_000,
@@ -2067,6 +2108,12 @@ describe('operational delivery groups', () => {
       status: 'PICKED_UP',
       confirmationCode: deriveHandoverCode('supplier-handover', delivery.id),
     });
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'ON_THE_WAY',
+    });
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'ARRIVED_DROPOFF',
+    });
     await prisma.reservation.update({
       where: { id: second.id },
       data: { status: 'AWAITING_RESOLUTION' },
@@ -2097,7 +2144,7 @@ describe('operational delivery groups', () => {
     const after = await prisma.delivery.findUniqueOrThrow({
       where: { id: delivery.id },
     });
-    assert.equal(after.status, 'PICKED_UP');
+    assert.equal(after.status, 'ARRIVED_DROPOFF');
     assert.equal(after.assignedDriverProfileId, ctx.driverProfileId);
     assert.equal(
       await prisma.deliveryStatusHistory.count({ where: { deliveryId: delivery.id } }),

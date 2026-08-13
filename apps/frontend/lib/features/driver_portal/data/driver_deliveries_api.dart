@@ -139,6 +139,19 @@ class DriverDeliveriesApi {
     );
   }
 
+  Future<DriverDelivery> setDeliveryWindow(
+    String deliveryId,
+    DriverDeliveryWindowRequest request,
+  ) {
+    return unwrapApiResponse(
+      _client.patch<Map<String, dynamic>>(
+        '/api/driver/deliveries/$deliveryId/window',
+        data: request.toJson(),
+      ),
+      DriverDelivery.fromJson,
+    );
+  }
+
   Future<void> createLocationPing(
     String deliveryId,
     DriverLocationPingRequest request,

@@ -15,6 +15,8 @@ export const DRIVER_IN_PROGRESS_ASSIGNED_STATUSES = [
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
+  'REDELIVERY_PENDING',
+  'REDELIVERY_SCHEDULED',
 ] as const satisfies readonly DeliveryStatus[];
 
 export const countActiveDriverDeliveries = async (

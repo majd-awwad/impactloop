@@ -18,6 +18,7 @@ import {
   updateDriverDeliveryStatus,
   updateDriverProfile,
 } from './driver.service.js';
+import { setDriverDeliveryWindow } from './driver-delivery-scheduling.service.js';
 import {
   getDriverHistoricalDelivery,
   listDriverDeliveryHistory,
@@ -31,6 +32,7 @@ import type {
   UpdateDriverDeliveryStatusInput,
   UpdateDriverProfileInput,
   ListDriverArchiveQuery,
+  SetDriverDeliveryWindowInput,
 } from './driver.validation.js';
 
 export const getDriverProfileHandler = async (
@@ -151,6 +153,19 @@ export const updateDriverDeliveryStatusHandler = async (
   );
 
   res.json(successResponse('Delivery status updated.', delivery));
+};
+
+export const setDriverDeliveryWindowHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<DeliveryIdParams>(req);
+  const delivery = await setDriverDeliveryWindow(
+    req.auth!.sub,
+    id,
+    req.body as SetDriverDeliveryWindowInput,
+  );
+  res.json(successResponse('Delivery window updated.', delivery));
 };
 
 export {

@@ -920,39 +920,12 @@ export const acceptSupplierReservation = async (
 
       pickupWindowStart = selectedWindow.start;
       pickupWindowEnd = selectedWindow.end;
-    } else if (existing.fulfillmentMethod === 'DELIVERY') {
-      const selectedWindow = resolvePreferredWindowByIndex(
-        existing.learnerPreferredDeliveryWindows,
-        input.selectedPreferredWindowIndex,
-      );
-
-      if (!selectedWindow) {
-        throw new AppError(
-          'Selected preferred delivery window is invalid.',
-          400,
-          'VALIDATION_ERROR',
-        );
-      }
-    } else {
-      throw new AppError(
-        'Preferred window index is only supported for pickup or delivery reservations.',
-        400,
-        'VALIDATION_ERROR',
-      );
     }
   }
 
-  let proposedDeliveryWindow: { start: Date; end: Date } | undefined;
-  if (
-    input.proposedDeliveryWindowStart &&
-    input.proposedDeliveryWindowEnd &&
-    existing.fulfillmentMethod === 'DELIVERY'
-  ) {
-    proposedDeliveryWindow = {
-      start: new Date(input.proposedDeliveryWindowStart),
-      end: new Date(input.proposedDeliveryWindowEnd),
-    };
-  }
+  // Legacy DELIVERY proposal fields remain accepted by the transport contract,
+  // but new initial DELIVERY acceptance intentionally ignores them. The driver
+  // establishes operational timing only after physical pickup.
 
   const now = Date.now();
   const isSelectedLearnerPickupWindow =
@@ -966,17 +939,6 @@ export const acceptSupplierReservation = async (
       : 'supplier_custom_proposal',
     now,
   );
-
-  if (
-    proposedDeliveryWindow &&
-    proposedDeliveryWindow.start.getTime() <= now
-  ) {
-    throw new AppError(
-      'Proposed delivery window start must be in the future.',
-      400,
-      'VALIDATION_ERROR',
-    );
-  }
 
   if (existing.fulfillmentMethod === 'DELIVERY') {
     if (!existing.material.deliveryAllowed) {
@@ -995,16 +957,6 @@ export const acceptSupplierReservation = async (
       );
     }
 
-    const learnerDeliveryWindows = parsePreferredWindowsJson(
-      existing.learnerPreferredDeliveryWindows,
-    );
-    if (learnerDeliveryWindows.length === 0 && !proposedDeliveryWindow) {
-      throw new AppError(
-        'Learner left delivery timing flexible. Propose a delivery window when accepting.',
-        400,
-        'DELIVERY_WINDOW_REQUIRED',
-      );
-    }
   }
 
   const result = await supplierReservationsRepository.acceptSupplierReservation({
@@ -1014,7 +966,7 @@ export const acceptSupplierReservation = async (
     pickupWindowEnd,
     supplierNote: input.supplierNote,
     selectedPreferredWindowIndex: input.selectedPreferredWindowIndex,
-    proposedDeliveryWindow,
+    proposedDeliveryWindow: undefined,
   });
 
   if (!result) {

@@ -124,6 +124,8 @@ class LearnerDeliveryReservation {
     this.pickupWindowEnd,
     this.supplierPickupWindowStart,
     this.supplierPickupWindowEnd,
+    this.confirmedDeliveryWindowStart,
+    this.confirmedDeliveryWindowEnd,
     this.completedAt,
   });
 
@@ -135,6 +137,8 @@ class LearnerDeliveryReservation {
   final DateTime? pickupWindowEnd;
   final DateTime? supplierPickupWindowStart;
   final DateTime? supplierPickupWindowEnd;
+  final DateTime? confirmedDeliveryWindowStart;
+  final DateTime? confirmedDeliveryWindowEnd;
   final DateTime? completedAt;
 
   factory LearnerDeliveryReservation.fromJson(Map<String, dynamic> json) {
@@ -155,6 +159,12 @@ class LearnerDeliveryReservation {
       ),
       supplierPickupWindowEnd: DateTime.tryParse(
         json['supplierPickupWindowEnd'] as String? ?? '',
+      ),
+      confirmedDeliveryWindowStart: DateTime.tryParse(
+        json['confirmedDeliveryWindowStart'] as String? ?? '',
+      ),
+      confirmedDeliveryWindowEnd: DateTime.tryParse(
+        json['confirmedDeliveryWindowEnd'] as String? ?? '',
       ),
       completedAt: DateTime.tryParse(json['completedAt'] as String? ?? ''),
       material: LearnerDeliveryMaterial.fromJson(
@@ -358,6 +368,7 @@ class LearnerDelivery {
 
   bool get shouldShowLearnerDeliveryCode =>
       isActive &&
+      normalizeDeliveryStatus(status) != 'REDELIVERY_PENDING' &&
       learnerDeliveryCode != null &&
       learnerDeliveryCode!.trim().isNotEmpty;
 

@@ -23,15 +23,33 @@ export const markDriverPickupFailedSchema = z.object({
   note: z.string().trim().min(1, 'Note is required.').max(1000),
 });
 
-export const markDriverDeliveryFailedSchema = z.object({
-  reason: z.enum([
-    'LEARNER_UNAVAILABLE',
-    'ADDRESS_ISSUE',
-    'ACCESS_ISSUE',
-    'OTHER',
-  ]),
-  note: z.string().trim().min(1, 'Note is required.').max(1000),
-});
+export const markDriverDeliveryFailedSchema = z
+  .object({
+    reason: z.enum([
+      'LEARNER_UNREACHABLE',
+      'LEARNER_REQUESTED_RESCHEDULE',
+      'ADDRESS_OR_ACCESS_ISSUE',
+      'OTHER_RETRYABLE',
+      // Backward-compatible transport values from the pre-Slice 3 client.
+      'LEARNER_UNAVAILABLE',
+      'ADDRESS_ISSUE',
+      'ACCESS_ISSUE',
+      'OTHER',
+    ]),
+    learnerContactAttempted: z.boolean().default(false),
+    note: z.string().trim().max(1000).optional().nullable(),
+    retryWindowStart: z.iso.datetime().optional(),
+    retryWindowEnd: z.iso.datetime().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if ((value.retryWindowStart == null) !== (value.retryWindowEnd == null)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Retry window start and end are required together.',
+        path: ['retryWindowEnd'],
+      });
+    }
+  });
 
 export const markDriverNoShowSchema = z.object({
   note: z.string().trim().min(1, 'Note is required.').max(1000),

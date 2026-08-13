@@ -28,6 +28,8 @@ const BLOCKING_DELIVERY_STATUSES = [
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
+  'REDELIVERY_PENDING',
+  'REDELIVERY_SCHEDULED',
   'DELIVERED',
   'FAILED_PICKUP',
   'FAILED_DELIVERY',
@@ -119,6 +121,8 @@ export const findCompatibleDeliveryGroupCandidate = async (input: {
       assignedDriverProfileId: null,
       deliveryZone: input.deliveryZone as Prisma.EnumDeliveryZoneFilter['equals'],
       paymentMethod: input.paymentMethod,
+      windowStart: { not: null },
+      windowEnd: { not: null },
       reservations: {
         some: {
           status: { notIn: [...TERMINAL_RESERVATION_STATUSES] },
@@ -156,8 +160,8 @@ export const findCompatibleDeliveryGroupCandidate = async (input: {
     }
 
     const groupWindow: TimeWindow = {
-      start: group.windowStart,
-      end: group.windowEnd,
+      start: group.windowStart!,
+      end: group.windowEnd!,
     };
 
     const overlap = findBestOverlappingWindow(candidateWindows, groupWindow);
@@ -210,6 +214,10 @@ export const validateDeliveryGroupForCombine = async (
 
   if (!group) {
     return { ok: false, code: 'GROUP_NOT_FOUND' };
+  }
+
+  if (!group.windowStart || !group.windowEnd) {
+    return { ok: false, code: 'GROUP_NOT_AVAILABLE' };
   }
 
   const dropoffKey = normalizeDropoffKey(input.dropoffCity, input.dropoffArea);

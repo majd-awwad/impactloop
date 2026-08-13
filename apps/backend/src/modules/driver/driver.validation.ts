@@ -132,6 +132,18 @@ export type UpdateDriverDeliveryStatusInput = z.infer<
   typeof updateDriverDeliveryStatusSchema
 >;
 
+export const setDriverDeliveryWindowSchema = z
+  .object({
+    start: z.iso.datetime(),
+    end: z.iso.datetime(),
+    note: z.string().trim().max(1000).optional().nullable(),
+  })
+  .strict();
+
+export type SetDriverDeliveryWindowInput = z.infer<
+  typeof setDriverDeliveryWindowSchema
+>;
+
 export const createDeliveryLocationPingSchema = z.object({
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),

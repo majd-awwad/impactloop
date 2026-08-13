@@ -308,6 +308,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get statusArrivedDropoff => 'وصل إلى موقع التسليم';
 
   @override
+  String get statusRedeliveryPending => 'جارٍ ترتيب محاولة توصيل أخرى';
+
+  @override
+  String get statusRedeliveryScheduled => 'تمت جدولة إعادة التوصيل';
+
+  @override
   String get statusDelivered => 'تم التوصيل';
 
   @override
@@ -5072,7 +5078,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get supplierByAcceptingYouAgreeToHand =>
-      'بالقبول، توافق على تسليم المادة للسائق خلال نافذة الاستلام هذه. سنتحقق من ذلك مقابل نوافذ التوصيل المفضلة للمتعلم.';
+      'بالقبول، توافق على تسليم المادة للسائق خلال نافذة الاستلام هذه. سيحدّد السائق المعيّن موعد التوصيل مع المتعلّم لاحقًا.';
 
   @override
   String get supplierWeWillCheckThisAgainstThe =>
@@ -7824,6 +7830,59 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverDeliveryWindow => 'موعد التوصيل';
 
   @override
+  String get driverLearnerPreferredDeliveryTimes =>
+      'وقت التوصيل المفضّل للمتعلّم';
+
+  @override
+  String get driverNoPreferredDeliveryTime =>
+      'لم يحدّد المتعلّم وقتًا مفضّلًا للتوصيل.';
+
+  @override
+  String get supplierNoPreferredDeliveryTime =>
+      'لم يحدّد المتعلّم وقتًا مفضّلًا للتوصيل.';
+
+  @override
+  String get driverSetDeliveryWindow => 'تحديد موعد التوصيل';
+
+  @override
+  String get driverScheduleRedelivery => 'جدولة إعادة التوصيل';
+
+  @override
+  String get driverStartRedelivery => 'بدء إعادة التوصيل';
+
+  @override
+  String get driverCouldntDeliver => 'تعذّر التوصيل';
+
+  @override
+  String get driverMaterialRemainsInCustody =>
+      'تبقى المادة في عهدتك حتى المحاولة التالية.';
+
+  @override
+  String get driverRetryDeadline => 'الموعد النهائي لإعادة المحاولة';
+
+  @override
+  String get driverFirstAttemptSummary => 'المحاولة الأولى المتعذّرة';
+
+  @override
+  String get driverContactAttempted => 'حاولت التواصل مع المتعلّم';
+
+  @override
+  String get driverScheduleRetryNow => 'جدولة إعادة المحاولة الآن';
+
+  @override
+  String get driverSelectWindowStart => 'اختيار بداية الموعد';
+
+  @override
+  String get driverSelectWindowEnd => 'اختيار نهاية الموعد';
+
+  @override
+  String get driverInvalidWindow =>
+      'اختر موعدًا صالحًا تكون نهايته بعد بدايته.';
+
+  @override
+  String get driverWindowSaved => 'تم حفظ موعد التوصيل.';
+
+  @override
   String get driverLearnerNote => 'ملاحظة المتعلّم';
 
   @override
@@ -7894,6 +7953,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get driverStatusArrivedDropoffSuccess => 'تم الوصول إلى موقع التسليم.';
+
+  @override
+  String get driverStatusRedeliveryPending => 'إعادة التوصيل قيد الترتيب';
+
+  @override
+  String get driverStatusRedeliveryScheduled => 'تمت جدولة إعادة التوصيل';
 
   @override
   String get driverStatusChangedRefresh =>

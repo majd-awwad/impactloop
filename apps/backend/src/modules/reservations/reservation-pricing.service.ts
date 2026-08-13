@@ -271,7 +271,12 @@ export const resolveReservationPricingForCreate = async (
       snapshot: ReservationPricingSnapshot;
       groupAction:
         | { type: 'JOIN'; groupId: string; sharedWindow: { start: Date; end: Date } }
-        | { type: 'CREATE'; window: { start: Date; end: Date }; deliveryFee: number; zone: string }
+        | {
+            type: 'CREATE';
+            window: { start: Date; end: Date } | null;
+            deliveryFee: number;
+            zone: string;
+          }
         | { type: 'NONE' };
     }
   | { ok: false; code: string; message: string; details?: Record<string, unknown> }
@@ -349,7 +354,12 @@ export const resolveReservationPricingForCreate = async (
   let groupedDelivery = false;
   let groupAction:
     | { type: 'JOIN'; groupId: string; sharedWindow: { start: Date; end: Date } }
-    | { type: 'CREATE'; window: { start: Date; end: Date }; deliveryFee: number; zone: string }
+    | {
+        type: 'CREATE';
+        window: { start: Date; end: Date } | null;
+        deliveryFee: number;
+        zone: string;
+      }
     | { type: 'NONE' } = {
     type: 'NONE',
   };
@@ -382,14 +392,14 @@ export const resolveReservationPricingForCreate = async (
       groupId: validation.group.id,
       sharedWindow: validation.sharedWindow,
     };
-  } else if (initialWindow) {
+  } else if (!input.combineWithDeliveryGroupId) {
     groupAction = {
       type: 'CREATE',
       window: initialWindow,
       deliveryFee: deliveryPricing.deliveryFee,
       zone: deliveryPricing.zone,
     };
-  } else if (input.combineWithDeliveryGroupId) {
+  } else {
     return {
       ok: false,
       code: 'GROUP_NOT_AVAILABLE',

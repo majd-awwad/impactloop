@@ -314,6 +314,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusArrivedDropoff => 'Arrived at drop-off';
 
   @override
+  String get statusRedeliveryPending => 'Redelivery is being arranged';
+
+  @override
+  String get statusRedeliveryScheduled => 'Redelivery scheduled';
+
+  @override
   String get statusDelivered => 'Delivered';
 
   @override
@@ -5135,7 +5141,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supplierByAcceptingYouAgreeToHand =>
-      'By accepting, you agree to hand the material to the driver during this pickup window. We will check this against the learner’s preferred delivery windows.';
+      'By accepting, you agree to hand the material to the driver during this pickup window. The assigned driver will schedule delivery with the learner later.';
 
   @override
   String get supplierWeWillCheckThisAgainstThe =>
@@ -7913,6 +7919,59 @@ class AppLocalizationsEn extends AppLocalizations {
   String get driverDeliveryWindow => 'Delivery window';
 
   @override
+  String get driverLearnerPreferredDeliveryTimes =>
+      'Learner preferred delivery time';
+
+  @override
+  String get driverNoPreferredDeliveryTime =>
+      'The learner did not specify a preferred delivery time.';
+
+  @override
+  String get supplierNoPreferredDeliveryTime =>
+      'The learner did not specify a preferred delivery time.';
+
+  @override
+  String get driverSetDeliveryWindow => 'Set delivery window';
+
+  @override
+  String get driverScheduleRedelivery => 'Schedule redelivery';
+
+  @override
+  String get driverStartRedelivery => 'Start redelivery';
+
+  @override
+  String get driverCouldntDeliver => 'Could not deliver';
+
+  @override
+  String get driverMaterialRemainsInCustody =>
+      'The material remains in your custody until the next attempt.';
+
+  @override
+  String get driverRetryDeadline => 'Retry deadline';
+
+  @override
+  String get driverFirstAttemptSummary => 'First failed attempt';
+
+  @override
+  String get driverContactAttempted => 'I attempted to contact the learner';
+
+  @override
+  String get driverScheduleRetryNow => 'Schedule the retry now';
+
+  @override
+  String get driverSelectWindowStart => 'Select window start';
+
+  @override
+  String get driverSelectWindowEnd => 'Select window end';
+
+  @override
+  String get driverInvalidWindow =>
+      'Choose a valid window whose end is after its start.';
+
+  @override
+  String get driverWindowSaved => 'Delivery window saved.';
+
+  @override
   String get driverLearnerNote => 'Learner note';
 
   @override
@@ -7985,6 +8044,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get driverStatusArrivedDropoffSuccess => 'Arrived at drop-off.';
+
+  @override
+  String get driverStatusRedeliveryPending => 'Redelivery pending';
+
+  @override
+  String get driverStatusRedeliveryScheduled => 'Redelivery scheduled';
 
   @override
   String get driverStatusChangedRefresh =>

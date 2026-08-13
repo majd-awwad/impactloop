@@ -8,6 +8,12 @@ import { deriveHandoverCode } from '../../utils/handover-codes.js';
 import { HANDOVER_GRACE_MINUTES } from '../../utils/handover-timing.js';
 import { hashPassword } from '../../utils/password.js';
 import { acceptDelivery, updateDriverDeliveryStatus } from '../driver/driver.service.js';
+import { setDriverDeliveryWindow } from '../driver/driver-delivery-scheduling.service.js';
+import {
+  confirmDeliveryHandoverCredential,
+  issueDeliveryHandoverCredential,
+  verifyDeliveryHandoverCredential,
+} from '../delivery-handover-credentials/delivery-handover-credentials.service.js';
 import type { UpdateDriverDeliveryStatusInput } from '../driver/driver.validation.js';
 import {
   markDriverDeliveryFailed,
@@ -23,7 +29,10 @@ import {
   acceptSupplierReservation,
   completeSupplierReservation,
 } from '../supplier-reservations/supplier-reservations.service.js';
-import { activePickupWindowReservationUpdate } from '../../test-utils/handover-test-windows.js';
+import {
+  activeConfirmedDeliveryWindowUpdate,
+  activePickupWindowReservationUpdate,
+} from '../../test-utils/handover-test-windows.js';
 
 const TEST_MARKER = '[test-phase5-failures]';
 
@@ -199,6 +208,8 @@ async function resetDriverState(ctx: TestContext) {
           'PICKED_UP',
           'ON_THE_WAY',
           'ARRIVED_DROPOFF',
+          'REDELIVERY_PENDING',
+          'REDELIVERY_SCHEDULED',
         ],
       },
     },
@@ -307,6 +318,18 @@ async function progressDeliveryTo(
 
     if (status === 'PICKED_UP') {
       input.confirmationCode = deriveHandoverCode('supplier-handover', deliveryId);
+    }
+
+    if (status === 'ON_THE_WAY') {
+      const start = new Date(Date.now() + 15 * 60_000);
+      const end = new Date(Date.now() + 75 * 60_000);
+      await prisma.reservation.update({
+        where: { id: delivery.reservationId },
+        data: {
+          confirmedDeliveryWindowStart: start,
+          confirmedDeliveryWindowEnd: end,
+        },
+      });
     }
 
     if (status === 'DELIVERED') {
@@ -627,7 +650,7 @@ describe('fulfillment failures phase 5', () => {
     assert.equal(updatedDelivery.status, 'DRIVER_NO_SHOW');
   });
 
-  test('driver cannot mark delivery failed before confirmed delivery window expires', async () => {
+  test('driver cannot mark delivery failed before arriving at dropoff', async () => {
     const { reservation, delivery } = await acceptDeliveryReservation(ctx);
     await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'PICKED_UP');
 
@@ -639,30 +662,36 @@ describe('fulfillment failures phase 5', () => {
         }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
-        assert.match(error.message, /not expired/i);
+        assert.equal(error.code, 'DRIVER_DELIVERY_FAILURE_NOT_ALLOWED');
         return true;
       },
     );
   });
 
-  test('driver can mark delivery failed after confirmed delivery window + grace', async () => {
-    const { reservation, delivery } = await acceptDeliveryReservation(ctx);
-    await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'PICKED_UP');
-    await setDeliveryWindowExpired(reservation.id);
+  test('first failed dropoff creates a non-terminal retry attempt', async () => {
+    const { delivery } = await acceptDeliveryReservation(ctx);
+    await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'ARRIVED_DROPOFF');
 
     const mapped = await markDriverDeliveryFailed(ctx.driverId, delivery.id, {
       reason: 'LEARNER_UNAVAILABLE',
       note: 'Learner was unavailable at drop-off.',
     });
 
-    assert.equal(mapped.status, 'LEARNER_NO_SHOW');
+    assert.equal(mapped.status, 'REDELIVERY_PENDING');
+    assert.equal(
+      await prisma.deliveryAttempt.count({ where: { deliveryId: delivery.id } }),
+      1,
+    );
+    assert.equal(
+      await prisma.noShowReport.count({ where: { deliveryId: delivery.id } }),
+      0,
+    );
   });
 
   test('delivery failed after driver picked up does not release stock or consume stock', async () => {
-    const { material, reservation, delivery } =
+    const { material, delivery } =
       await acceptDeliveryReservation(ctx);
-    await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'PICKED_UP');
-    await setDeliveryWindowExpired(reservation.id);
+    await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'ARRIVED_DROPOFF');
 
     const heldBefore = await getMaterialQuantityState(prisma, material.id);
     assert.equal(decimalToNumber(heldBefore!.heldQuantity), 1);
@@ -679,6 +708,266 @@ describe('fulfillment failures phase 5', () => {
 
     assert.equal(Number(materialRow.quantity), 5);
     assert.equal(decimalToNumber(heldAfter!.heldQuantity), 1);
+  });
+
+  test('same assigned driver schedules retry and old QR is revoked', async () => {
+    const { reservation, delivery } = await acceptDeliveryReservation(ctx);
+    await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'ARRIVED_DROPOFF');
+    await prisma.delivery.update({
+      where: { id: delivery.id },
+      data: {
+        learnerDeliveryHandoverTokenHash: 'old-window-token',
+        learnerDeliveryHandoverTokenIssuedAt: new Date(),
+        learnerDeliveryHandoverTokenExpiresAt: new Date(Date.now() + 60 * 60_000),
+      },
+    });
+
+    await markDriverDeliveryFailed(ctx.driverId, delivery.id, {
+      reason: 'LEARNER_UNAVAILABLE',
+      learnerContactAttempted: true,
+      note: 'Called twice; arranging another attempt.',
+    });
+
+    const start = new Date(Date.now() + 60 * 60_000);
+    const end = new Date(start.getTime() + 60 * 60_000);
+    await assert.rejects(
+      () =>
+        setDriverDeliveryWindow(ctx.otherDriverId, delivery.id, {
+          start: start.toISOString(),
+          end: end.toISOString(),
+        }),
+      (error: unknown) => error instanceof AppError && error.code === 'NOT_FOUND',
+    );
+
+    const scheduled = await setDriverDeliveryWindow(ctx.driverId, delivery.id, {
+      start: start.toISOString(),
+      end: end.toISOString(),
+    });
+    assert.equal(scheduled.status, 'REDELIVERY_SCHEDULED');
+
+    const stored = await prisma.delivery.findUniqueOrThrow({
+      where: { id: delivery.id },
+      include: { attempts: true, assignments: true },
+    });
+    assert.equal(stored.learnerDeliveryHandoverTokenHash, null);
+    assert.equal(stored.scheduleOccurrence, 1);
+    assert.equal(stored.assignments.filter((row) => row.status === 'ACTIVE').length, 1);
+    assert.equal(stored.attempts[0]?.retryWindowStart?.toISOString(), start.toISOString());
+
+    const represented = await prisma.reservation.findUniqueOrThrow({
+      where: { id: reservation.id },
+    });
+    assert.equal(represented.status, 'ACCEPTED');
+    assert.equal(represented.confirmedDeliveryWindowStart?.toISOString(), start.toISOString());
+  });
+
+  test('second learner-unreachable failure records attempt two then uses final no-show path', async () => {
+    const { delivery } = await acceptDeliveryReservation(ctx);
+    await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'ARRIVED_DROPOFF');
+    const retryStart = new Date(Date.now() + 60 * 60_000);
+    const retryEnd = new Date(retryStart.getTime() + 60 * 60_000);
+    await markDriverDeliveryFailed(ctx.driverId, delivery.id, {
+      reason: 'LEARNER_UNAVAILABLE',
+      learnerContactAttempted: true,
+      retryWindowStart: retryStart.toISOString(),
+      retryWindowEnd: retryEnd.toISOString(),
+    });
+    await updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+      status: 'ON_THE_WAY',
+    });
+    await updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+      status: 'ARRIVED_DROPOFF',
+    });
+
+    const result = await markDriverDeliveryFailed(ctx.driverId, delivery.id, {
+      reason: 'LEARNER_UNAVAILABLE',
+      learnerContactAttempted: true,
+      note: 'Final attempt also unreachable.',
+    });
+    assert.equal(result.status, 'LEARNER_NO_SHOW');
+    assert.equal(
+      await prisma.deliveryAttempt.count({ where: { deliveryId: delivery.id } }),
+      2,
+    );
+    assert.equal(
+      await prisma.noShowReport.count({ where: { deliveryId: delivery.id } }),
+      1,
+    );
+  });
+
+  test('assigned driver sets the initial operational window before ON_THE_WAY', async () => {
+    const { reservation, delivery } = await acceptDeliveryReservation(ctx);
+    await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'PICKED_UP');
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: {
+        confirmedDeliveryWindowStart: null,
+        confirmedDeliveryWindowEnd: null,
+      },
+    });
+    await assert.rejects(
+      () =>
+        updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+          status: 'ON_THE_WAY',
+        }),
+      (error: unknown) =>
+        error instanceof AppError && error.code === 'DELIVERY_WINDOW_REQUIRED',
+    );
+
+    const start = new Date(Date.now() + 30 * 60_000);
+    const end = new Date(start.getTime() + 60 * 60_000);
+    await assert.rejects(
+      () =>
+        setDriverDeliveryWindow(ctx.otherDriverId, delivery.id, {
+          start: start.toISOString(),
+          end: end.toISOString(),
+        }),
+      (error: unknown) => error instanceof AppError && error.code === 'NOT_FOUND',
+    );
+    const scheduled = await setDriverDeliveryWindow(ctx.driverId, delivery.id, {
+      start: start.toISOString(),
+      end: end.toISOString(),
+    });
+    assert.equal(scheduled.status, 'PICKED_UP');
+    assert.equal(scheduled.scheduleOccurrence, 1);
+    const stored = await prisma.reservation.findUniqueOrThrow({
+      where: { id: reservation.id },
+    });
+    assert.equal(stored.confirmedDeliveryWindowStart?.toISOString(), start.toISOString());
+    assert.equal(stored.confirmedDeliveryWindowEnd?.toISOString(), end.toISOString());
+
+    const onTheWay = await updateDriverDeliveryStatus(
+      ctx.driverId,
+      delivery.id,
+      { status: 'ON_THE_WAY' },
+    );
+    assert.equal(onTheWay.status, 'ON_THE_WAY');
+  });
+
+  test('concurrent first-failure requests create exactly one attempt', async () => {
+    const { delivery } = await acceptDeliveryReservation(ctx);
+    await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'ARRIVED_DROPOFF');
+    const results = await Promise.allSettled([
+      markDriverDeliveryFailed(ctx.driverId, delivery.id, {
+        reason: 'LEARNER_UNAVAILABLE',
+        learnerContactAttempted: true,
+      }),
+      markDriverDeliveryFailed(ctx.driverId, delivery.id, {
+        reason: 'LEARNER_UNAVAILABLE',
+        learnerContactAttempted: true,
+      }),
+    ]);
+
+    assert.equal(results.filter((result) => result.status === 'fulfilled').length, 1);
+    assert.equal(
+      await prisma.deliveryAttempt.count({ where: { deliveryId: delivery.id } }),
+      1,
+    );
+    assert.equal(
+      (await prisma.delivery.findUniqueOrThrow({ where: { id: delivery.id } }))
+        .status,
+      'REDELIVERY_PENDING',
+    );
+  });
+
+  test('the same numeric code is governed by the replacement current window', async () => {
+    const { reservation, delivery } = await acceptDeliveryReservation(ctx);
+    await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'ARRIVED_DROPOFF');
+    const retryStart = new Date(Date.now() + 60 * 60_000);
+    const retryEnd = new Date(retryStart.getTime() + 60 * 60_000);
+    await markDriverDeliveryFailed(ctx.driverId, delivery.id, {
+      reason: 'LEARNER_REQUESTED_RESCHEDULE',
+      learnerContactAttempted: true,
+      retryWindowStart: retryStart.toISOString(),
+      retryWindowEnd: retryEnd.toISOString(),
+    });
+    await updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+      status: 'ON_THE_WAY',
+    });
+    await updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+      status: 'ARRIVED_DROPOFF',
+    });
+    const code = deriveHandoverCode('learner-delivery', delivery.id);
+    await assert.rejects(
+      () =>
+        updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+          status: 'DELIVERED',
+          confirmationCode: code,
+        }),
+      (error: unknown) =>
+        error instanceof AppError && error.code === 'HANDOVER_WINDOW_NOT_STARTED',
+    );
+
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: activeConfirmedDeliveryWindowUpdate(),
+    });
+    const completed = await updateDriverDeliveryStatus(
+      ctx.driverId,
+      delivery.id,
+      { status: 'DELIVERED', confirmationCode: code },
+    );
+    assert.equal(completed.status, 'DELIVERED');
+    assert.equal(
+      (await prisma.reservation.findUniqueOrThrow({ where: { id: reservation.id } }))
+        .status,
+      'COMPLETED',
+    );
+  });
+
+  test('retry scheduling revokes old QR and a new QR completes only in the new window', async () => {
+    const { reservation, delivery } = await acceptDeliveryReservation(ctx);
+    await progressDeliveryTo(ctx, delivery.id, ctx.driverId, 'ARRIVED_DROPOFF');
+    const oldCredential = await issueDeliveryHandoverCredential(
+      ctx.learnerId,
+      delivery.id,
+    );
+    await markDriverDeliveryFailed(ctx.driverId, delivery.id, {
+      reason: 'LEARNER_UNAVAILABLE',
+      learnerContactAttempted: true,
+    });
+    const retryStart = new Date(Date.now() + 60 * 60_000);
+    const retryEnd = new Date(retryStart.getTime() + 60 * 60_000);
+    await setDriverDeliveryWindow(ctx.driverId, delivery.id, {
+      start: retryStart.toISOString(),
+      end: retryEnd.toISOString(),
+    });
+    await assert.rejects(
+      () => verifyDeliveryHandoverCredential(ctx.driverId, oldCredential.handoverToken),
+      (error: unknown) =>
+        error instanceof AppError && error.code === 'HANDOVER_CREDENTIAL_INVALID',
+    );
+
+    const newCredential = await issueDeliveryHandoverCredential(
+      ctx.learnerId,
+      delivery.id,
+    );
+    await updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+      status: 'ON_THE_WAY',
+    });
+    await updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+      status: 'ARRIVED_DROPOFF',
+    });
+    await assert.rejects(
+      () => verifyDeliveryHandoverCredential(ctx.driverId, newCredential.handoverToken),
+      (error: unknown) =>
+        error instanceof AppError && error.code === 'VALIDATION_ERROR',
+    );
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: activeConfirmedDeliveryWindowUpdate(),
+    });
+    await verifyDeliveryHandoverCredential(ctx.driverId, newCredential.handoverToken);
+    const completed = await confirmDeliveryHandoverCredential(
+      ctx.driverId,
+      newCredential.handoverToken,
+    );
+    assert.equal(completed.status, 'DELIVERED');
+    const replayed = await confirmDeliveryHandoverCredential(
+      ctx.driverId,
+      newCredential.handoverToken,
+    );
+    assert.equal(replayed.status, 'DELIVERED');
   });
 
   test('unauthorized users cannot mark no-show/failure', async () => {

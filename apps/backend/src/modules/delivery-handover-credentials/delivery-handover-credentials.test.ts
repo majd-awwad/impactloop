@@ -20,6 +20,8 @@ import {
   acceptDelivery,
   updateDriverDeliveryStatus,
 } from '../driver/driver.service.js';
+import { setDriverDeliveryWindow } from '../driver/driver-delivery-scheduling.service.js';
+import { markDriverDeliveryFailed } from '../fulfillment-failures/fulfillment-failures.service.js';
 import { requestDeliveryForReservation } from '../deliveries/deliveries.service.js';
 import {
   issueHandoverCredential,
@@ -1115,6 +1117,72 @@ describe('delivery handover payment gate', () => {
       settled
         .sort((a, b) => a.id.localeCompare(b.id))
         .map((order) => order.paidAt?.toISOString()),
+    );
+  });
+
+  test('cash remains due after attempt one and retry QR settles it exactly once', async () => {
+    const { delivery, reservation, orders } =
+      await createCashDeliveryAtArrivedDropoff();
+    await markDriverDeliveryFailed(driverId, delivery.id, {
+      reason: 'LEARNER_UNREACHABLE',
+      learnerContactAttempted: true,
+      note: 'Learner could not be reached.',
+    });
+    assert.ok(
+      (
+        await prisma.paymentOrder.findMany({
+          where: { id: { in: orders.map((order) => order.id) } },
+        })
+      ).every((order) => order.status === 'REQUIRES_PAYMENT'),
+    );
+
+    const retryStart = new Date(Date.now() + 60 * 60_000);
+    const retryEnd = new Date(retryStart.getTime() + 60 * 60_000);
+    await setDriverDeliveryWindow(driverId, delivery.id, {
+      start: retryStart.toISOString(),
+      end: retryEnd.toISOString(),
+    });
+    const issued = await issueDeliveryHandoverCredential(
+      learnerId,
+      delivery.id,
+    );
+    await updateDriverDeliveryStatus(driverId, delivery.id, {
+      status: 'ON_THE_WAY',
+    });
+    await updateDriverDeliveryStatus(driverId, delivery.id, {
+      status: 'ARRIVED_DROPOFF',
+    });
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: activeConfirmedDeliveryWindowUpdate(),
+    });
+
+    const completed = await confirmDeliveryHandoverCredential(
+      driverId,
+      issued.handoverToken,
+      true,
+    );
+    assert.equal(completed.status, 'DELIVERED');
+    const settled = await prisma.paymentOrder.findMany({
+      where: { id: { in: orders.map((order) => order.id) } },
+      orderBy: { id: 'asc' },
+    });
+    assert.ok(settled.every((order) => order.status === 'PAID'));
+
+    const replayed = await confirmDeliveryHandoverCredential(
+      driverId,
+      issued.handoverToken,
+      true,
+    );
+    assert.equal(replayed.status, 'DELIVERED');
+    assert.deepEqual(
+      (
+        await prisma.paymentOrder.findMany({
+          where: { id: { in: orders.map((order) => order.id) } },
+          orderBy: { id: 'asc' },
+        })
+      ).map((order) => order.paidAt?.toISOString()),
+      settled.map((order) => order.paidAt?.toISOString()),
     );
   });
 });

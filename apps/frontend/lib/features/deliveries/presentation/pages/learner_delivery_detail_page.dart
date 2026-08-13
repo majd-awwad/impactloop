@@ -240,6 +240,15 @@ class _DeliverySummaryPanel extends ConsumerWidget {
               context.l10n,
             ),
           ),
+          if (delivery.reservation.confirmedDeliveryWindowStart != null &&
+              delivery.reservation.confirmedDeliveryWindowEnd != null)
+            _InfoRow(
+              label: context.l10n.driverDeliveryWindow,
+              value: LocalizedFormatters(context.l10n).dateTimeRange(
+                delivery.reservation.confirmedDeliveryWindowStart!,
+                delivery.reservation.confirmedDeliveryWindowEnd!,
+              ),
+            ),
           _InfoRow(
             label: context.l10n.pickupArea,
             value: delivery.pickupLocation.summary,

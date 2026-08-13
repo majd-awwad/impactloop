@@ -13,6 +13,8 @@ String driverDeliveryStatusLabel(String status, AppLocalizations l10n) {
     'PICKED_UP' => l10n.driverStatusPickedUp,
     'ON_THE_WAY' => l10n.driverStatusOnTheWay,
     'ARRIVED_DROPOFF' => l10n.driverStatusAtDropoff,
+    'REDELIVERY_PENDING' => l10n.driverStatusRedeliveryPending,
+    'REDELIVERY_SCHEDULED' => l10n.driverStatusRedeliveryScheduled,
     'DELIVERED' => l10n.driverStatusDelivered,
     'CANCELLED' => l10n.driverStatusCancelled,
     'FAILED_PICKUP' => l10n.driverStatusPickupFailed,

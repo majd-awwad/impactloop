@@ -13,7 +13,11 @@ import {
   invalidateLearnerHomeCache,
   invalidateLearnerHomeForReservationTransition,
 } from '../learner-home/learner-home.service.js';
-import { notifyDriverDeliveryMovedToAdminReview } from '../notifications/driver-notification-events.service.js';
+import {
+  notifyDriverDeliveryMovedToAdminReview,
+  notifyDriverDropoffTime,
+} from '../notifications/driver-notification-events.service.js';
+import { createNotificationIfMissing } from '../notifications/notifications.repository.js';
 
 import * as fulfillmentFailuresRepository from './fulfillment-failures.repository.js';
 import type {
@@ -307,8 +311,32 @@ export const markDriverDeliveryFailed = async (
     driverUserId,
     deliveryId,
     reason: input.reason,
-    note: input.note,
+    learnerContactAttempted: input.learnerContactAttempted,
+    note: input.note ?? undefined,
+    retryWindowStart: input.retryWindowStart,
+    retryWindowEnd: input.retryWindowEnd,
   });
+
+  if (result.outcome === 'RETRY_CREATED') {
+    await createNotificationIfMissing({
+      userId: result.reservation.requesterId,
+      notificationType: result.retryScheduled
+        ? 'DELIVERY_WINDOW_RESCHEDULED'
+        : 'DELIVERY_RETRY_PENDING',
+      title: result.retryScheduled
+        ? 'Delivery rescheduled'
+        : 'Another delivery attempt is being arranged',
+      body: result.retryScheduled
+        ? `Your delivery has been rescheduled to ${input.retryWindowStart}–${input.retryWindowEnd}.`
+        : 'Delivery could not be completed. The driver is arranging another attempt.',
+      relatedEntityType: 'DELIVERY',
+      relatedEntityId: deliveryId,
+      eventKey: `delivery-retry:first-failure:${deliveryId}:${result.reservation.requesterId}`,
+    });
+    if (result.retryScheduled) await notifyDriverDropoffTime(deliveryId);
+    invalidateLearnerHomeCache(result.reservation.requesterId);
+    return loadDriverDelivery(deliveryId);
+  }
 
   if (result.outcome === 'UPDATED') {
     await notifyDriverDeliveryMovedToAdminReview({
@@ -346,8 +374,12 @@ export const markDriverDeliveryFailed = async (
         409,
         'DRIVER_DELIVERY_FAILURE_NOT_ALLOWED',
       );
-    case 'WINDOW_NOT_EXPIRED':
-      throwWindowNotExpired(deliveryWindowNotExpiredMessage());
+    case 'RETRY_LIMIT_REACHED':
+      throw new AppError(
+        'The normal redelivery cycle is already exhausted.',
+        409,
+        'REDELIVERY_RETRY_LIMIT_REACHED',
+      );
     default:
       throw new AppError(
         'Unexpected delivery failed result.',

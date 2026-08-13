@@ -37,6 +37,10 @@ String deliveryStatusLabel(String status, {AppLocalizations? l10n}) {
       return 'On the way';
     case 'ARRIVED_DROPOFF':
       return 'Arrived at dropoff';
+    case 'REDELIVERY_PENDING':
+      return 'Redelivery is being arranged';
+    case 'REDELIVERY_SCHEDULED':
+      return 'Redelivery scheduled';
     case 'DELIVERED':
       return 'Delivered';
     case 'CANCELLED':
@@ -66,6 +70,8 @@ AppStatusTone deliveryStatusAppTone(String status) {
     case 'PICKED_UP':
     case 'ON_THE_WAY':
     case 'ARRIVED_DROPOFF':
+    case 'REDELIVERY_PENDING':
+    case 'REDELIVERY_SCHEDULED':
       return AppStatusTone.info;
     case 'DELIVERED':
       return AppStatusTone.success;

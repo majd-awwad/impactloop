@@ -451,7 +451,7 @@ describe('supplier accept fulfillment', () => {
     assert.equal(Number(state.availableQuantity), 1);
   });
 
-  test('supplier accepts DELIVERY with feasible learner delivery window -> ACCEPTED + confirmed delivery window', async () => {
+  test('supplier accepts DELIVERY with learner preference -> ACCEPTED without confirming delivery window', async () => {
     const material = await createMaterial(ctx, { deliveryAllowed: true });
     const supplierPickupStart = new Date(Date.now() + 24 * 3_600_000);
     const supplierPickupEnd = new Date(supplierPickupStart.getTime() + 2 * 3_600_000);
@@ -479,8 +479,8 @@ describe('supplier accept fulfillment', () => {
 
     assert.equal(accepted.status, 'ACCEPTED');
     assert.equal(accepted.supplierPickupWindowStart, supplierPickupStart.toISOString());
-    assert.equal(accepted.confirmedDeliveryWindowStart, earliestDelivery.toISOString());
-    assert.equal(accepted.confirmedDeliveryWindowEnd, learnerDeliveryEnd.toISOString());
+    assert.equal(accepted.confirmedDeliveryWindowStart, null);
+    assert.equal(accepted.confirmedDeliveryWindowEnd, null);
     assert.ok(accepted.activeDelivery);
     assert.equal(accepted.activeDelivery?.status, 'WAITING_FOR_DRIVER');
 
@@ -490,7 +490,7 @@ describe('supplier accept fulfillment', () => {
     assert.equal(deliveryCount, 1);
   });
 
-  test('supplier accepts DELIVERY with partial overlap -> trimmed confirmed delivery window', async () => {
+  test('supplier DELIVERY acceptance does not trim preference using +60', async () => {
     const material = await createMaterial(ctx, { deliveryAllowed: true });
     const supplierPickupStart = new Date(Date.now() + 24 * 3_600_000);
     const supplierPickupEnd = new Date(supplierPickupStart.getTime() + 2 * 3_600_000);
@@ -517,11 +517,11 @@ describe('supplier accept fulfillment', () => {
     });
 
     assert.equal(accepted.status, 'ACCEPTED');
-    assert.equal(accepted.confirmedDeliveryWindowStart, earliestDelivery.toISOString());
-    assert.equal(accepted.confirmedDeliveryWindowEnd, learnerDeliveryEnd.toISOString());
+    assert.equal(accepted.confirmedDeliveryWindowStart, null);
+    assert.equal(accepted.confirmedDeliveryWindowEnd, null);
   });
 
-  test('supplier accepts DELIVERY with no feasible delivery window -> AWAITING_LEARNER_CONFIRMATION', async () => {
+  test('supplier accepts DELIVERY despite preference conflict', async () => {
     const material = await createMaterial(ctx, { deliveryAllowed: true });
     const supplierPickupStart = new Date(Date.now() + 24 * 3_600_000);
     const supplierPickupEnd = new Date(supplierPickupStart.getTime() + 2 * 3_600_000);
@@ -547,17 +547,17 @@ describe('supplier accept fulfillment', () => {
       pickupWindowEnd: supplierPickupEnd.toISOString(),
     });
 
-    assert.equal(accepted.status, 'AWAITING_LEARNER_CONFIRMATION');
-    assert.ok(accepted.schedulingConflictReason);
+    assert.equal(accepted.status, 'ACCEPTED');
+    assert.equal(accepted.schedulingConflictReason, null);
     assert.equal(accepted.confirmedDeliveryWindowStart, null);
 
     const deliveryCount = await prisma.delivery.count({
       where: { reservationId: reservation.id },
     });
-    assert.equal(deliveryCount, 0);
+    assert.equal(deliveryCount, 1);
   });
 
-  test('flexible DELIVERY (no preferred windows) + feasible proposal -> ACCEPTED', async () => {
+  test('flexible DELIVERY ignores legacy proposed learner window and remains unscheduled', async () => {
     const material = await createMaterial(ctx, { deliveryAllowed: true });
     const supplierPickupStart = new Date(Date.now() + 24 * 3_600_000);
     const supplierPickupEnd = new Date(supplierPickupStart.getTime() + 2 * 3_600_000);
@@ -581,15 +581,37 @@ describe('supplier accept fulfillment', () => {
     });
 
     assert.equal(accepted.status, 'ACCEPTED');
-    assert.equal(accepted.confirmedDeliveryWindowStart, proposedStart.toISOString());
-    assert.equal(accepted.confirmedDeliveryWindowEnd, proposedEnd.toISOString());
+    assert.equal(accepted.confirmedDeliveryWindowStart, null);
+    assert.equal(accepted.confirmedDeliveryWindowEnd, null);
     assert.equal(
       await prisma.delivery.count({ where: { reservationId: reservation.id } }),
       1,
     );
+    const firstStored = await prisma.reservation.findUniqueOrThrow({
+      where: { id: reservation.id },
+      include: { deliveryGroup: true },
+    });
+    assert.ok(firstStored.deliveryGroupId);
+    assert.equal(firstStored.deliveryGroup?.windowStart, null);
+    assert.equal(firstStored.deliveryGroup?.windowEnd, null);
+
+    const secondMaterial = await createMaterial(ctx, { deliveryAllowed: true });
+    const second = await createReservation(
+      ctx.learnerId,
+      deliveryReservationPayload(secondMaterial.id, {
+        learnerPreferredDeliveryWindows: [],
+      }),
+    );
+    ctx.createdReservationIds.push(second.id);
+    const secondStored = await prisma.reservation.findUniqueOrThrow({
+      where: { id: second.id },
+      select: { deliveryGroupId: true },
+    });
+    assert.ok(secondStored.deliveryGroupId);
+    assert.notEqual(secondStored.deliveryGroupId, firstStored.deliveryGroupId);
   });
 
-  test('flexible DELIVERY requires proposed delivery window', async () => {
+  test('flexible DELIVERY accepts without proposed delivery window', async () => {
     const material = await createMaterial(ctx, { deliveryAllowed: true });
     const supplierPickupStart = new Date(Date.now() + 24 * 3_600_000);
     const supplierPickupEnd = new Date(supplierPickupStart.getTime() + 2 * 3_600_000);
@@ -602,18 +624,15 @@ describe('supplier accept fulfillment', () => {
     );
     ctx.createdReservationIds.push(reservation.id);
 
-    await assert.rejects(
-      () =>
-        acceptSupplierReservation(ctx.supplierId, reservation.id, {
-          pickupWindowStart: supplierPickupStart.toISOString(),
-          pickupWindowEnd: supplierPickupEnd.toISOString(),
-        }),
-      (error: unknown) => {
-        assert.ok(error instanceof AppError);
-        assert.equal(error.statusCode, 400);
-        assert.equal(error.code, 'DELIVERY_WINDOW_REQUIRED');
-        return true;
-      },
+    const accepted = await acceptSupplierReservation(ctx.supplierId, reservation.id, {
+      pickupWindowStart: supplierPickupStart.toISOString(),
+      pickupWindowEnd: supplierPickupEnd.toISOString(),
+    });
+    assert.equal(accepted.status, 'ACCEPTED');
+    assert.equal(accepted.confirmedDeliveryWindowStart, null);
+    assert.equal(
+      await prisma.delivery.count({ where: { reservationId: reservation.id } }),
+      1,
     );
   });
 

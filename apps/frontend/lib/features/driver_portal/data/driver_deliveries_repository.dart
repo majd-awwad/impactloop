@@ -78,6 +78,13 @@ class DriverDeliveriesRepository {
     return _api.updateDeliveryStatus(deliveryId, request);
   }
 
+  Future<DriverDelivery> setDeliveryWindow(
+    String deliveryId,
+    DriverDeliveryWindowRequest request,
+  ) {
+    return _api.setDeliveryWindow(deliveryId, request);
+  }
+
   Future<void> createLocationPing(
     String deliveryId,
     DriverLocationPingRequest request,

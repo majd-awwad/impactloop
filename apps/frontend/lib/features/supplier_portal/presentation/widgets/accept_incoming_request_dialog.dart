@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../../l10n/l10n.dart';
-import '../../../../core/format/localized_formatters.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/widgets/app_close_button.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
-import '../../application/supplier_delivery_scheduling_preview.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../../../reservations/application/reservation_timing_policy.dart';
-import '../../../reservations/data/models/reservation_preferred_window.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 import '../supplier_reservation_ui_helpers.dart';
 import 'supplier_dark_form_field.dart';
@@ -55,84 +52,13 @@ class _AcceptIncomingRequestDialogState
   TimeOfDay? _startTime;
   TimeOfDay? _endTime;
   int? _selectedPreferredIndex;
-  bool _useCustomDeliveryWindow = false;
-  DateTime? _customDeliveryDate;
-  TimeOfDay? _customDeliveryStartTime;
-  TimeOfDay? _customDeliveryEndTime;
 
   bool get _isDelivery => widget.request.isDeliveryFulfillment;
-
-  bool get _learnerLeftDeliveryFlexible =>
-      _isDelivery && widget.request.learnerPreferredDeliveryWindows.isEmpty;
-
-  @override
-  void initState() {
-    super.initState();
-    if (_learnerLeftDeliveryFlexible) {
-      _useCustomDeliveryWindow = true;
-    }
-  }
 
   @override
   void dispose() {
     _noteController.dispose();
     super.dispose();
-  }
-
-  DateTime? get _supplierPickupWindowStart {
-    if (_pickupDate == null || _startTime == null) {
-      return null;
-    }
-
-    return DateTime(
-      _pickupDate!.year,
-      _pickupDate!.month,
-      _pickupDate!.day,
-      _startTime!.hour,
-      _startTime!.minute,
-    );
-  }
-
-  DateTime? get _supplierPickupWindowEnd {
-    if (_pickupDate == null || _endTime == null) {
-      return null;
-    }
-
-    return DateTime(
-      _pickupDate!.year,
-      _pickupDate!.month,
-      _pickupDate!.day,
-      _endTime!.hour,
-      _endTime!.minute,
-    );
-  }
-
-  SupplierDeliverySchedulingPreview? get _deliveryPreview {
-    if (!_isDelivery) {
-      return null;
-    }
-
-    final supplierPickupWindowStart = _supplierPickupWindowStart;
-    if (supplierPickupWindowStart == null) {
-      return null;
-    }
-
-    List<ReservationPreferredWindow> learnerDeliveryWindows;
-    final selectedIndex = _selectedPreferredIndex;
-    if (selectedIndex != null &&
-        !_useCustomDeliveryWindow &&
-        selectedIndex < widget.request.learnerPreferredDeliveryWindows.length) {
-      learnerDeliveryWindows = [
-        widget.request.learnerPreferredDeliveryWindows[selectedIndex],
-      ];
-    } else {
-      learnerDeliveryWindows = widget.request.learnerPreferredDeliveryWindows;
-    }
-
-    return previewSupplierDeliveryScheduling(
-      supplierPickupWindowStart: supplierPickupWindowStart,
-      learnerDeliveryWindows: learnerDeliveryWindows,
-    );
   }
 
   @override
@@ -144,8 +70,6 @@ class _AcceptIncomingRequestDialogState
     final preferredWindows = _isDelivery
         ? widget.request.learnerPreferredDeliveryWindows
         : widget.request.learnerPreferredPickupWindows;
-    final deliveryPreview = _deliveryPreview;
-    final formatters = LocalizedFormatters(context.l10n);
 
     return Dialog(
       backgroundColor: colors.surfaceSolid,
@@ -228,12 +152,48 @@ class _AcceptIncomingRequestDialogState
                       style: context.supplierBody().copyWith(fontSize: 13),
                     ),
                   ],
-                  if (preferredWindows.isNotEmpty) ...[
+                  if (_isDelivery) ...[
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      _isDelivery
-                          ? context.s.learnerPreferredDeliveryWindows
-                          : context.s.learnerPreferredPickupWindows,
+                      context.s.learnerPreferredDeliveryWindows,
+                      style: context.supplierLabel(),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    if (preferredWindows.isEmpty)
+                      Text(
+                        context.l10n.supplierNoPreferredDeliveryTime,
+                        style: context.supplierBody().copyWith(
+                          fontSize: 13,
+                          color: colors.textSecondary,
+                        ),
+                      )
+                    else
+                      Wrap(
+                        spacing: AppSpacing.xs,
+                        runSpacing: AppSpacing.xs,
+                        children: [
+                          for (final window in preferredWindows)
+                            Chip(
+                              label: Text(
+                                SupplierReservationUiHelpers.of(
+                                  context,
+                                ).formatPickupWindow(
+                                  SupplierPickupWindow(
+                                    start: window.start,
+                                    end: window.end,
+                                  ),
+                                ),
+                                style: context.supplierBody().copyWith(
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                  ] else if (preferredWindows.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      context.s.learnerPreferredPickupWindows,
                       style: context.supplierLabel(),
                     ),
                     const SizedBox(height: AppSpacing.xs),
@@ -252,116 +212,17 @@ class _AcceptIncomingRequestDialogState
                                   end: preferredWindows[i].end,
                                 ),
                               ),
-                              style: context.supplierBody().copyWith(
-                                fontSize: 12,
-                              ),
                             ),
                             selected: _selectedPreferredIndex == i,
-                            onSelected: (selected) {
-                              setState(() {
-                                if (selected) {
-                                  _selectedPreferredIndex = i;
-                                  _useCustomDeliveryWindow = false;
-                                  if (!_isDelivery) {
-                                    _applyPreferredWindow(preferredWindows[i]);
-                                  }
-                                } else {
-                                  _selectedPreferredIndex = null;
-                                }
-                              });
-                            },
+                            onSelected: (selected) => setState(() {
+                              _selectedPreferredIndex = selected ? i : null;
+                              if (selected) {
+                                _applyPreferredWindow(preferredWindows[i]);
+                              }
+                            }),
                           ),
                       ],
                     ),
-                    if (_selectedPreferredIndex != null) ...[
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        _isDelivery
-                            ? context.s.deliveryPreferredWindowSelectedHint
-                            : context.s.pickupPreferredWindowSelectedHint,
-                        style: context.supplierBody().copyWith(
-                          fontSize: 12,
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ],
-                  if (_isDelivery) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    if (_learnerLeftDeliveryFlexible) ...[
-                      Text(
-                        context.s.flexibleLearnerNeedsDeliveryProposal,
-                        style: context.supplierBody().copyWith(
-                          fontSize: 13,
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                    ] else
-                      CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        title: Text(
-                          context.s.proposeCustomDeliveryWindow,
-                          style: context.supplierBody().copyWith(fontSize: 13),
-                        ),
-                        value: _useCustomDeliveryWindow,
-                        onChanged: (value) {
-                          setState(() {
-                            _useCustomDeliveryWindow = value ?? false;
-                            if (_useCustomDeliveryWindow) {
-                              _selectedPreferredIndex = null;
-                            }
-                          });
-                        },
-                      ),
-                    if (_useCustomDeliveryWindow) ...[
-                      Text(
-                        context.s.customDeliveryWindowLabel,
-                        style: context.supplierLabel(),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      _PickerField(
-                        label: context.s.pickupDate,
-                        value: _formatDate(_customDeliveryDate),
-                        onTap: _pickCustomDeliveryDate,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      if (compact) ...[
-                        _PickerField(
-                          label: context.s.startTime,
-                          value: _formatTime(_customDeliveryStartTime),
-                          onTap: () => _pickCustomDeliveryTime(isStart: true),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        _PickerField(
-                          label: context.s.endTime,
-                          value: _formatTime(_customDeliveryEndTime),
-                          onTap: () => _pickCustomDeliveryTime(isStart: false),
-                        ),
-                      ] else
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _PickerField(
-                                label: context.s.startTime,
-                                value: _formatTime(_customDeliveryStartTime),
-                                onTap: () =>
-                                    _pickCustomDeliveryTime(isStart: true),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: _PickerField(
-                                label: context.s.endTime,
-                                value: _formatTime(_customDeliveryEndTime),
-                                onTap: () =>
-                                    _pickCustomDeliveryTime(isStart: false),
-                              ),
-                            ),
-                          ],
-                        ),
-                    ],
                   ],
                   const SizedBox(height: AppSpacing.lg),
                   Text(
@@ -370,16 +231,6 @@ class _AcceptIncomingRequestDialogState
                         : context.s.confirmPickupWindowLabel,
                     style: context.supplierLabel(),
                   ),
-                  if (_isDelivery) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      context.s.deliverySchedulingPreviewIntro,
-                      style: context.supplierBody().copyWith(
-                        fontSize: 12,
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                  ],
                   const SizedBox(height: AppSpacing.sm),
                   _PickerField(
                     label: context.s.pickupDate,
@@ -419,64 +270,6 @@ class _AcceptIncomingRequestDialogState
                         ),
                       ],
                     ),
-                  if (_isDelivery && deliveryPreview != null) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: colors.chipUnselected.withValues(alpha: 0.45),
-                        borderRadius: AppRadius.mdAll,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            context.s.deliveryEarliestAfterPickupLabel(
-                              formatters.dateTime(
-                                deliveryPreview.earliestDeliveryStart.toLocal(),
-                              ),
-                            ),
-                            style: context.supplierBody().copyWith(
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            deliveryPreview.isFeasible
-                                ? context.s.deliveryConfirmedWindowLabel(
-                                    _formatPreviewWindow(
-                                      deliveryPreview.confirmedStart!,
-                                      deliveryPreview.confirmedEnd!,
-                                    ),
-                                  )
-                                : context.s.deliveryNoFeasibleWindowPreview,
-                            style: context.supplierBody().copyWith(
-                              fontSize: 12,
-                              color: deliveryPreview.isFeasible
-                                  ? colors.textPrimary
-                                  : colors.textSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            deliveryPreview.isFeasible
-                                ? context.s.deliveryScheduleCanAcceptDirectly
-                                : context
-                                      .s
-                                      .deliveryScheduleNeedsLearnerConfirmation,
-                            style: context.supplierBody().copyWith(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: deliveryPreview.isFeasible
-                                  ? colors.accentMuted
-                                  : colors.amberAccent,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                   if (!_isDelivery &&
                       _selectedPreferredIndex == null &&
                       _pickupDate != null &&
@@ -521,9 +314,6 @@ class _AcceptIncomingRequestDialogState
     );
   }
 
-  String _formatPreviewWindow(DateTime start, DateTime end) =>
-      SupplierReservationUiHelpers.of(context).formatPickupWindowShort(start, end);
-
   void _applyPreferredWindow(dynamic window) {
     final start = (window.start as DateTime).toLocal();
     final end = (window.end as DateTime).toLocal();
@@ -532,37 +322,6 @@ class _AcceptIncomingRequestDialogState
       _startTime = TimeOfDay(hour: start.hour, minute: start.minute);
       _endTime = TimeOfDay(hour: end.hour, minute: end.minute);
     });
-  }
-
-  Future<void> _pickCustomDeliveryDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _customDeliveryDate ?? now,
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 60)),
-    );
-    if (picked != null) {
-      setState(() => _customDeliveryDate = picked);
-    }
-  }
-
-  Future<void> _pickCustomDeliveryTime({required bool isStart}) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime:
-          (isStart ? _customDeliveryStartTime : _customDeliveryEndTime) ??
-          TimeOfDay.now(),
-    );
-    if (picked != null) {
-      setState(() {
-        if (isStart) {
-          _customDeliveryStartTime = picked;
-        } else {
-          _customDeliveryEndTime = picked;
-        }
-      });
-    }
   }
 
   Future<void> _pickDate() async {
@@ -642,73 +401,6 @@ class _AcceptIncomingRequestDialogState
       if (supplierStart.isBefore(now.add(minPickupLeadTime))) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text(proposedPickupStartTooSoonMessage)),
-        );
-        return;
-      }
-
-      if (_useCustomDeliveryWindow || _learnerLeftDeliveryFlexible) {
-        if (_customDeliveryDate == null ||
-            _customDeliveryStartTime == null ||
-            _customDeliveryEndTime == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.s.chooseCustomDeliveryWindow)),
-          );
-          return;
-        }
-
-        final proposedStart = DateTime(
-          _customDeliveryDate!.year,
-          _customDeliveryDate!.month,
-          _customDeliveryDate!.day,
-          _customDeliveryStartTime!.hour,
-          _customDeliveryStartTime!.minute,
-        );
-        final proposedEnd = DateTime(
-          _customDeliveryDate!.year,
-          _customDeliveryDate!.month,
-          _customDeliveryDate!.day,
-          _customDeliveryEndTime!.hour,
-          _customDeliveryEndTime!.minute,
-        );
-
-        if (!proposedEnd.isAfter(proposedStart)) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.s.endTimeMustBeAfterStart)),
-          );
-          return;
-        }
-
-        if (!proposedStart.isAfter(now)) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(context.l10n.supplierDeliveryWindowMustStartFuture),
-            ),
-          );
-          return;
-        }
-
-        Navigator.of(context).pop(
-          SupplierPickupWindow(
-            start: supplierStart,
-            end: supplierEnd,
-            note: note,
-            proposedDeliveryWindowStart: proposedStart,
-            proposedDeliveryWindowEnd: proposedEnd,
-          ),
-        );
-        return;
-      }
-
-      if (_selectedPreferredIndex != null &&
-          _selectedPreferredIndex! <
-              widget.request.learnerPreferredDeliveryWindows.length) {
-        Navigator.of(context).pop(
-          SupplierPickupWindow(
-            start: supplierStart,
-            end: supplierEnd,
-            selectedPreferredWindowIndex: _selectedPreferredIndex,
-            note: note,
-          ),
         );
         return;
       }

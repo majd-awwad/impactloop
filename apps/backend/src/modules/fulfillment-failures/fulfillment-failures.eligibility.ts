@@ -15,6 +15,8 @@ const postPickupDeliveryStatuses = [
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
+  'REDELIVERY_PENDING',
+  'REDELIVERY_SCHEDULED',
 ] as const satisfies readonly DeliveryStatus[];
 
 export const canSupplierMarkLearnerPickupNoShow = (input: {
@@ -132,17 +134,9 @@ export const canDriverMarkDeliveryFailed = (input: {
     return false;
   }
 
-  if (
-    !(postPickupDeliveryStatuses as readonly DeliveryStatus[]).includes(
-      input.deliveryStatus,
-    )
-  ) {
-    return false;
-  }
-
-  return isAfterWindowWithGrace(
-    input.now ?? new Date(),
-    input.confirmedDeliveryWindowEnd,
+  return (
+    input.deliveryStatus === 'ARRIVED_DROPOFF' &&
+    input.confirmedDeliveryWindowEnd != null
   );
 };
 

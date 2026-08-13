@@ -84,6 +84,8 @@ class LearnerUiLabels {
     'PICKED_UP' => l10n.statusPickedUp,
     'ON_THE_WAY' => l10n.statusOnTheWay,
     'ARRIVED_DROPOFF' => l10n.statusArrivedDropoff,
+    'REDELIVERY_PENDING' => l10n.statusRedeliveryPending,
+    'REDELIVERY_SCHEDULED' => l10n.statusRedeliveryScheduled,
     'DELIVERED' => l10n.statusDelivered,
     'CANCELLED' => l10n.statusDeliveryCancelled,
     'FAILED_PICKUP' => l10n.statusPickupFailed,

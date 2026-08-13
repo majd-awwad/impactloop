@@ -194,6 +194,8 @@ enum DeliveryStatus {
   PICKED_UP
   ON_THE_WAY
   ARRIVED_DROPOFF
+  REDELIVERY_PENDING
+  REDELIVERY_SCHEDULED
   DELIVERED
   CANCELLED
   FAILED_PICKUP
@@ -201,6 +203,19 @@ enum DeliveryStatus {
   DRIVER_NO_SHOW
   LEARNER_NO_SHOW
   AWAITING_RESOLUTION
+}
+
+enum DeliveryAttemptFailureReason {
+  LEARNER_UNREACHABLE
+  LEARNER_REQUESTED_RESCHEDULE
+  ADDRESS_OR_ACCESS_ISSUE
+  OTHER_RETRYABLE
+  OTHER_FINAL
+}
+
+enum DeliveryAttemptOutcome {
+  FAILED_RETRYABLE
+  FAILED_FINAL
 }
 
 enum DriverProfileStatus {
@@ -869,6 +884,7 @@ model DriverProfile {
   assignedDeliveryGroups DeliveryGroup[]          @relation("AssignedDriverDeliveryGroups")
   assignments            DeliveryAssignment[]
   locationPings          DeliveryLocationPing[]
+  deliveryAttempts       DeliveryAttempt[]
 
   @@index([status, availability])
   @@index([status, acceptingNewJobs])
@@ -1979,8 +1995,8 @@ model DeliveryGroup {
   paymentMethod            PaymentCollectionMethod @default(CARD) @map("payment_method")
   deliveryZone             DeliveryZone        @map("delivery_zone")
   status                   DeliveryGroupStatus @default(OPEN)
-  windowStart              DateTime            @map("window_start")
-  windowEnd                DateTime            @map("window_end")
+  windowStart              DateTime?           @map("window_start")
+  windowEnd                DateTime?           @map("window_end")
   assignedDriverProfileId  String?             @map("assigned_driver_profile_id")
   createdAt                DateTime            @default(now()) @map("created_at")
   updatedAt                DateTime            @updatedAt @map("updated_at")
@@ -2016,6 +2032,7 @@ model Delivery {
   deliveredAt                     DateTime?               @map("delivered_at")
   cancelledAt                     DateTime?               @map("cancelled_at")
   failedAt                        DateTime?               @map("failed_at")
+  scheduleOccurrence              Int                     @default(0) @map("schedule_occurrence")
   learnerNote                     String?                 @map("learner_note")
   driverNote                      String?                 @map("driver_note")
   failureReason                   String?                 @map("failure_reason")
@@ -2044,6 +2061,7 @@ model Delivery {
   locationPings                   DeliveryLocationPing[]
   incidentReports                 NoShowReport[]
   pickupItems                     DeliveryPickupItem[]
+  attempts                        DeliveryAttempt[]
 
   @@index([reservationId])
   @@index([status])
@@ -2053,6 +2071,30 @@ model Delivery {
   @@index([dropoffLocationId])
   @@index([updatedAt(sort: Desc), id(sort: Desc)])
   @@map("deliveries")
+}
+
+model DeliveryAttempt {
+  id                       String                       @id @default(cuid())
+  deliveryId               String                       @map("delivery_id")
+  driverProfileId          String                       @map("driver_profile_id")
+  attemptNumber            Int                          @map("attempt_number")
+  attemptedAt              DateTime                     @default(now()) @map("attempted_at")
+  failureReason            DeliveryAttemptFailureReason @map("failure_reason")
+  learnerContactAttempted  Boolean                      @default(false) @map("learner_contact_attempted")
+  note                     String?
+  outcome                  DeliveryAttemptOutcome
+  retryWindowStart         DateTime?                    @map("retry_window_start")
+  retryWindowEnd           DateTime?                    @map("retry_window_end")
+  retryDeadline            DateTime?                    @map("retry_deadline")
+  createdAt                DateTime                     @default(now()) @map("created_at")
+  updatedAt                DateTime                     @updatedAt @map("updated_at")
+  delivery                 Delivery                     @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  driverProfile            DriverProfile                @relation(fields: [driverProfileId], references: [id], onDelete: Restrict)
+
+  @@unique([deliveryId, attemptNumber])
+  @@index([driverProfileId, attemptedAt(sort: Desc)])
+  @@index([deliveryId, attemptedAt(sort: Desc)])
+  @@map("delivery_attempts")
 }
 
 model HandoverCodeAttempt {

@@ -504,8 +504,8 @@ export const createLearnerReservation = async (input: {
           paymentMethod: input.paymentMethod,
           deliveryZone: groupAction.zone as 'SAME_CITY' | 'WEST_BANK' | 'JERUSALEM' | 'INSIDE_48',
           status: 'OPEN',
-          windowStart: groupAction.window.start,
-          windowEnd: groupAction.window.end,
+          windowStart: groupAction.window?.start ?? null,
+          windowEnd: groupAction.window?.end ?? null,
         },
       });
 

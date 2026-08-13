@@ -135,6 +135,7 @@ const allowedTransitions: Partial<Record<DeliveryStatus, DeliveryStatus>> = {
   PICKED_UP: 'ON_THE_WAY',
   ON_THE_WAY: 'ARRIVED_DROPOFF',
   ARRIVED_DROPOFF: 'DELIVERED',
+  REDELIVERY_SCHEDULED: 'ON_THE_WAY',
 };
 
 export const driverDeliveryInclude = {
@@ -190,6 +191,7 @@ export const driverDeliveryInclude = {
       supplierPickupWindowEnd: true,
       confirmedDeliveryWindowStart: true,
       confirmedDeliveryWindowEnd: true,
+      learnerPreferredDeliveryWindows: true,
       quantityRequested: true,
       paymentMethod: true,
       materialPaymentOrders: {
@@ -232,6 +234,20 @@ export const driverDeliveryInclude = {
   pickupLocation: true,
   dropoffLocation: true,
   assignedDriverProfile: true,
+  attempts: {
+    select: {
+      attemptNumber: true,
+      attemptedAt: true,
+      failureReason: true,
+      learnerContactAttempted: true,
+      note: true,
+      outcome: true,
+      retryWindowStart: true,
+      retryWindowEnd: true,
+      retryDeadline: true,
+    },
+    orderBy: { attemptNumber: 'asc' as const },
+  },
 } satisfies Prisma.DeliveryInclude;
 
 type DriverDeliveryRecord = Prisma.DeliveryGetPayload<{
@@ -367,6 +383,23 @@ const mapAssignedDelivery = (delivery: DriverDeliveryRecord) => ({
     delivery.reservation.confirmedDeliveryWindowStart?.toISOString() ?? null,
   confirmedDeliveryWindowEnd:
     delivery.reservation.confirmedDeliveryWindowEnd?.toISOString() ?? null,
+  learnerPreferredDeliveryWindows:
+    delivery.reservation.learnerPreferredDeliveryWindows,
+  scheduleOccurrence: delivery.scheduleOccurrence,
+  deliveryAttempts: delivery.attempts.map((attempt) => ({
+    attemptNumber: attempt.attemptNumber,
+    attemptedAt: attempt.attemptedAt.toISOString(),
+    failureReason: attempt.failureReason,
+    learnerContactAttempted: attempt.learnerContactAttempted,
+    note: attempt.note,
+    outcome: attempt.outcome,
+    retryWindowStart: attempt.retryWindowStart?.toISOString() ?? null,
+    retryWindowEnd: attempt.retryWindowEnd?.toISOString() ?? null,
+    retryDeadline: attempt.retryDeadline?.toISOString() ?? null,
+  })),
+  retryDeadline:
+    delivery.attempts.find((attempt) => attempt.attemptNumber === 1)
+      ?.retryDeadline?.toISOString() ?? null,
   canDriverReportPickupFailed: canDriverMarkPickupFailed({
     reservationStatus: delivery.reservation.status,
     deliveryStatus: delivery.status,
@@ -1078,6 +1111,11 @@ export const updateDriverDeliveryStatus = async (
           where: { status: 'ACTIVE' },
           select: { driverProfileId: true },
         },
+        attempts: {
+          where: { attemptNumber: 1 },
+          select: { retryDeadline: true },
+          take: 1,
+        },
       },
     });
 
@@ -1094,7 +1132,22 @@ export const updateDriverDeliveryStatus = async (
       return { outcome: 'INVALID_TRANSITION' as const };
     }
 
+    if (
+      input.status === 'ON_THE_WAY' &&
+      (!delivery.reservation.confirmedDeliveryWindowStart ||
+        !delivery.reservation.confirmedDeliveryWindowEnd)
+    ) {
+      return { outcome: 'DELIVERY_WINDOW_REQUIRED' as const };
+    }
+
     const now = new Date();
+    if (
+      delivery.status === 'REDELIVERY_SCHEDULED' &&
+      (!delivery.attempts[0]?.retryDeadline ||
+        delivery.attempts[0].retryDeadline.getTime() <= now.getTime())
+    ) {
+      return { outcome: 'REDELIVERY_DEADLINE_EXCEEDED' as const };
+    }
     const isGroupedPickup =
       input.status === 'PICKED_UP' && delivery.deliveryGroupId != null;
 
@@ -1462,6 +1515,18 @@ export const updateDriverDeliveryStatus = async (
         'Invalid delivery status transition.',
         409,
         'INVALID_DELIVERY_TRANSITION',
+      );
+    case 'DELIVERY_WINDOW_REQUIRED':
+      throw new AppError(
+        'Set the operational delivery window before starting delivery.',
+        409,
+        'DELIVERY_WINDOW_REQUIRED',
+      );
+    case 'REDELIVERY_DEADLINE_EXCEEDED':
+      throw new AppError(
+        'The 48-hour redelivery deadline has passed.',
+        409,
+        'REDELIVERY_DEADLINE_EXCEEDED',
       );
     case 'INVALID_CODE':
       throw new AppError(

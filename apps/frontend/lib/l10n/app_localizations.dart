@@ -650,6 +650,18 @@ abstract class AppLocalizations {
   /// **'Arrived at drop-off'**
   String get statusArrivedDropoff;
 
+  /// No description provided for @statusRedeliveryPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Redelivery is being arranged'**
+  String get statusRedeliveryPending;
+
+  /// No description provided for @statusRedeliveryScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Redelivery scheduled'**
+  String get statusRedeliveryScheduled;
+
   /// No description provided for @statusDelivered.
   ///
   /// In en, this message translates to:
@@ -8876,7 +8888,7 @@ abstract class AppLocalizations {
   /// No description provided for @supplierByAcceptingYouAgreeToHand.
   ///
   /// In en, this message translates to:
-  /// **'By accepting, you agree to hand the material to the driver during this pickup window. We will check this against the learner’s preferred delivery windows.'**
+  /// **'By accepting, you agree to hand the material to the driver during this pickup window. The assigned driver will schedule delivery with the learner later.'**
   String get supplierByAcceptingYouAgreeToHand;
 
   /// No description provided for @supplierWeWillCheckThisAgainstThe.
@@ -13479,6 +13491,102 @@ abstract class AppLocalizations {
   /// **'Delivery window'**
   String get driverDeliveryWindow;
 
+  /// No description provided for @driverLearnerPreferredDeliveryTimes.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner preferred delivery time'**
+  String get driverLearnerPreferredDeliveryTimes;
+
+  /// No description provided for @driverNoPreferredDeliveryTime.
+  ///
+  /// In en, this message translates to:
+  /// **'The learner did not specify a preferred delivery time.'**
+  String get driverNoPreferredDeliveryTime;
+
+  /// No description provided for @supplierNoPreferredDeliveryTime.
+  ///
+  /// In en, this message translates to:
+  /// **'The learner did not specify a preferred delivery time.'**
+  String get supplierNoPreferredDeliveryTime;
+
+  /// No description provided for @driverSetDeliveryWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Set delivery window'**
+  String get driverSetDeliveryWindow;
+
+  /// No description provided for @driverScheduleRedelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule redelivery'**
+  String get driverScheduleRedelivery;
+
+  /// No description provided for @driverStartRedelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Start redelivery'**
+  String get driverStartRedelivery;
+
+  /// No description provided for @driverCouldntDeliver.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not deliver'**
+  String get driverCouldntDeliver;
+
+  /// No description provided for @driverMaterialRemainsInCustody.
+  ///
+  /// In en, this message translates to:
+  /// **'The material remains in your custody until the next attempt.'**
+  String get driverMaterialRemainsInCustody;
+
+  /// No description provided for @driverRetryDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry deadline'**
+  String get driverRetryDeadline;
+
+  /// No description provided for @driverFirstAttemptSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'First failed attempt'**
+  String get driverFirstAttemptSummary;
+
+  /// No description provided for @driverContactAttempted.
+  ///
+  /// In en, this message translates to:
+  /// **'I attempted to contact the learner'**
+  String get driverContactAttempted;
+
+  /// No description provided for @driverScheduleRetryNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule the retry now'**
+  String get driverScheduleRetryNow;
+
+  /// No description provided for @driverSelectWindowStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Select window start'**
+  String get driverSelectWindowStart;
+
+  /// No description provided for @driverSelectWindowEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Select window end'**
+  String get driverSelectWindowEnd;
+
+  /// No description provided for @driverInvalidWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a valid window whose end is after its start.'**
+  String get driverInvalidWindow;
+
+  /// No description provided for @driverWindowSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery window saved.'**
+  String get driverWindowSaved;
+
   /// No description provided for @driverLearnerNote.
   ///
   /// In en, this message translates to:
@@ -13616,6 +13724,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Arrived at drop-off.'**
   String get driverStatusArrivedDropoffSuccess;
+
+  /// No description provided for @driverStatusRedeliveryPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Redelivery pending'**
+  String get driverStatusRedeliveryPending;
+
+  /// No description provided for @driverStatusRedeliveryScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Redelivery scheduled'**
+  String get driverStatusRedeliveryScheduled;
 
   /// No description provided for @driverStatusChangedRefresh.
   ///
