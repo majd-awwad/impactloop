@@ -7,7 +7,6 @@ import '../../domain/models/learning_project.dart';
 import '../../domain/models/project_material_coverage.dart';
 import '../l10n/learning_hub_coverage_l10n.dart';
 import '../../presentation/theme/learning_ui_palette.dart';
-import 'learning_hub_text.dart';
 
 class ProjectComponentsSection extends StatefulWidget {
   const ProjectComponentsSection({
@@ -46,7 +45,7 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
         : widget.components.take(_collapsedVisibleCount).toList();
 
     return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
@@ -79,7 +78,7 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
           Wrap(
             alignment: WrapAlignment.start,
             spacing: AppSpacing.sm,
@@ -142,12 +141,12 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
               ),
             ),
           ],
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
           Container(
             width: double.infinity,
             padding: const EdgeInsetsDirectional.symmetric(
               horizontal: AppSpacing.md,
-              vertical: AppSpacing.md,
+              vertical: AppSpacing.sm,
             ),
             decoration: BoxDecoration(
               color: palette.cardSurfaceAlt,

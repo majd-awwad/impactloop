@@ -29,7 +29,7 @@ class _ProjectStepsTimelineState extends State<ProjectStepsTimeline> {
         : widget.steps.take(_collapsedVisibleCount).toList();
 
     return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
@@ -47,19 +47,8 @@ class _ProjectStepsTimelineState extends State<ProjectStepsTimeline> {
         children: [
           Row(
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: palette.limeSoft,
-                  borderRadius: AppRadius.pillAll,
-                  border: Border.all(
-                    color: palette.lime.withValues(alpha: 0.28),
-                  ),
-                ),
-                child: Icon(Icons.check_circle_outline, color: palette.lime),
-              ),
-              const Spacer(),
+              Icon(Icons.check_circle_outline, color: palette.lime, size: 22),
+              const SizedBox(width: AppSpacing.sm),
               Text(
                 const LocalizedText(
                   en: 'Implementation steps',
@@ -73,7 +62,7 @@ class _ProjectStepsTimelineState extends State<ProjectStepsTimeline> {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
           for (var index = 0; index < visibleSteps.length; index++)
             _TimelineItem(
               index: index + 1,
@@ -128,19 +117,40 @@ class _TimelineItem extends StatelessWidget {
     final palette = LearningUiPalette.of(context);
     final textTheme = Theme.of(context).textTheme;
 
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsetsDirectional.only(
-                top: AppSpacing.sm,
-                bottom: AppSpacing.lg,
+    return Padding(
+      padding: EdgeInsetsDirectional.only(bottom: isLast ? 0 : AppSpacing.sm),
+      child: Container(
+        padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: palette.cardSurfaceAlt,
+          borderRadius: AppRadius.mdAll,
+          border: Border.all(color: palette.borderSubtle),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: palette.limeSoft,
+                borderRadius: AppRadius.pillAll,
+                border: Border.all(color: palette.lime.withValues(alpha: 0.28)),
               ),
               child: Text(
+                '$index',
+                style: textTheme.labelMedium?.copyWith(
+                  color: palette.lime,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
                 title,
-                style: textTheme.titleMedium?.copyWith(
+                style: textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: palette.textPrimary,
                   height: 1.3,
@@ -148,32 +158,8 @@ class _TimelineItem extends StatelessWidget {
                 textAlign: TextAlign.start,
               ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Column(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: palette.cardSurfaceAlt,
-                  borderRadius: AppRadius.pillAll,
-                  border: Border.all(color: palette.borderSubtle),
-                ),
-                child: Text(
-                  '$index',
-                  style: textTheme.labelMedium?.copyWith(
-                    color: palette.textSecondary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              if (!isLast)
-                Container(width: 2, height: 48, color: palette.timelineLine),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

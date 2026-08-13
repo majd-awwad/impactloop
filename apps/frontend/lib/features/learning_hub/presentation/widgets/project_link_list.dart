@@ -19,7 +19,7 @@ class ProjectLinkList extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
@@ -37,19 +37,8 @@ class ProjectLinkList extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: palette.limeSoft,
-                  borderRadius: AppRadius.pillAll,
-                  border: Border.all(
-                    color: palette.lime.withValues(alpha: 0.28),
-                  ),
-                ),
-                child: Icon(Icons.open_in_new, color: palette.lime),
-              ),
-              const Spacer(),
+              Icon(Icons.open_in_new, color: palette.lime, size: 22),
+              const SizedBox(width: AppSpacing.sm),
               Text(
                 const LocalizedText(
                   en: 'Helpful links',
@@ -63,11 +52,11 @@ class ProjectLinkList extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
           for (var index = 0; index < links.length; index++) ...[
             _LinkTile(item: links[index]),
             if (index != links.length - 1)
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.sm),
           ],
         ],
       ),
@@ -86,6 +75,9 @@ class _LinkTile extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final uri = _safeExternalUri(item.url);
     final canOpen = uri != null;
+    final secondaryLabel = uri?.host.trim().isNotEmpty == true
+        ? uri!.host
+        : item.urlLabel.resolve(context);
     final titleColor = canOpen
         ? palette.textPrimary
         : palette.textSecondary.withValues(alpha: 0.66);
@@ -110,7 +102,10 @@ class _LinkTile extends StatelessWidget {
           onTap: canOpen ? () => _openLink(context, uri) : null,
           borderRadius: AppRadius.lgAll,
           child: Container(
-            padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
             decoration: BoxDecoration(
               color: palette.cardSurfaceAlt,
               borderRadius: AppRadius.lgAll,
@@ -139,8 +134,8 @@ class _LinkTile extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
-                        item.urlLabel.resolve(context),
-                        style: textTheme.bodyMedium?.copyWith(
+                        secondaryLabel,
+                        style: textTheme.bodySmall?.copyWith(
                           color: subtitleColor,
                         ),
                         textAlign: TextAlign.start,
