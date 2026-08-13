@@ -59,8 +59,9 @@ class DriverDeliveryQrState {
   }) {
     return DriverDeliveryQrState(
       phase: phase ?? this.phase,
-      scannedPayload:
-          clearPayload ? null : (scannedPayload ?? this.scannedPayload),
+      scannedPayload: clearPayload
+          ? null
+          : (scannedPayload ?? this.scannedPayload),
       preview: clearPreview ? null : (preview ?? this.preview),
       completedDelivery: clearCompleted
           ? null
@@ -123,7 +124,7 @@ class DriverDeliveryQrController extends Notifier<DriverDeliveryQrState> {
     }
   }
 
-  Future<void> confirmHandover() async {
+  Future<void> confirmHandover({bool cashReceivedConfirmed = false}) async {
     if (_confirmInFlight) return;
     if (state.phase != DriverDeliveryQrPhase.verified) return;
 
@@ -139,7 +140,10 @@ class DriverDeliveryQrController extends Notifier<DriverDeliveryQrState> {
     try {
       final completed = await ref
           .read(driverDeliveriesRepositoryProvider)
-          .confirmDeliveryHandoverCredential(payload);
+          .confirmDeliveryHandoverCredential(
+            payload,
+            cashReceivedConfirmed: cashReceivedConfirmed,
+          );
       if (!ref.mounted) return;
       state = state.copyWith(
         phase: DriverDeliveryQrPhase.completed,
@@ -183,6 +187,7 @@ class DriverDeliveryQrController extends Notifier<DriverDeliveryQrState> {
 }
 
 final driverDeliveryQrControllerProvider =
-    NotifierProvider.autoDispose<DriverDeliveryQrController, DriverDeliveryQrState>(
-      DriverDeliveryQrController.new,
-    );
+    NotifierProvider.autoDispose<
+      DriverDeliveryQrController,
+      DriverDeliveryQrState
+    >(DriverDeliveryQrController.new);

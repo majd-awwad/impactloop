@@ -265,6 +265,7 @@ class _SupplierReservationDetailPageState
             context,
             ref,
             reservationId: reservation.id,
+            payment: reservation.handoverPayment,
           );
           if (!completed) break;
         case SupplierReservationAction.acceptLearnerReschedule:

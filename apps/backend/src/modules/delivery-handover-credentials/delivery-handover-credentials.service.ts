@@ -8,7 +8,7 @@ import {
 } from '../../utils/handover-timing.js';
 import { ACTIVE_DELIVERY_STATUSES } from '../deliveries/deliveries.service.js';
 import { isTerminalDeliveryStatus } from '../deliveries/delivery-status.policy.js';
-import { assertDeliveryGroupPaymentReadyOrThrow } from '../payments/payments.readiness.js';
+import { resolveDeliveryHandoverPayment } from '../payments/payments.handover.js';
 import { invalidHandoverCredentialError } from '../handover-credentials/handover-credentials.service.js';
 import {
   createHandoverCredentialToken,
@@ -156,6 +156,7 @@ const mapDeliveryHandoverPreview = (
       >
     >
   >,
+  payment: Awaited<ReturnType<typeof resolveDeliveryHandoverPayment>>,
 ) => {
   const items =
     delivery.deliveryGroup?.reservations.length &&
@@ -194,6 +195,12 @@ const mapDeliveryHandoverPreview = (
     items,
     expiresAt:
       delivery.learnerDeliveryHandoverTokenExpiresAt?.toISOString() ?? null,
+    payment: {
+      paymentMethod: payment.paymentMethod,
+      cashDueAtHandover: payment.cashDueAtHandover,
+      totalAmount: payment.totalAmount,
+      currency: payment.currency,
+    },
   };
 };
 
@@ -320,18 +327,11 @@ export const verifyDeliveryHandoverCredential = async (
     requireArrivedDropoff: true,
   });
 
-  if (delivery.deliveryGroupId) {
-    try {
-      await assertDeliveryGroupPaymentReadyOrThrow(delivery.deliveryGroupId);
-    } catch (error) {
-      if (error instanceof AppError && error.code === 'DELIVERY_PAYMENT_NOT_READY') {
-        throw invalidHandoverCredentialError();
-      }
-      throw error;
-    }
-  }
-
-  return mapDeliveryHandoverPreview(delivery);
+  const payment = await resolveDeliveryHandoverPayment(
+    delivery.id,
+    driverUserId,
+  );
+  return mapDeliveryHandoverPreview(delivery, payment);
 };
 
 export const resolveDeliveryHandoverTokenHashOrThrow = (
@@ -348,9 +348,22 @@ export const resolveDeliveryHandoverTokenHashOrThrow = (
 export const confirmDeliveryHandoverCredential = async (
   driverUserId: string,
   handoverToken: string,
+  cashReceivedConfirmed?: boolean,
 ) => {
   const tokenHash = resolveDeliveryHandoverTokenHashOrThrow(handoverToken);
-  const result = await completeDeliveryByHandoverToken(driverUserId, tokenHash);
+  let result: Awaited<ReturnType<typeof completeDeliveryByHandoverToken>>;
+  try {
+    result = await completeDeliveryByHandoverToken(
+      driverUserId,
+      tokenHash,
+      cashReceivedConfirmed,
+    );
+  } catch (error) {
+    if (error instanceof AppError && error.code === 'PAYMENT_REQUIRED') {
+      throw invalidHandoverCredentialError();
+    }
+    throw error;
+  }
 
   if ('invalidCredential' in result && result.invalidCredential) {
     throw invalidHandoverCredentialError();

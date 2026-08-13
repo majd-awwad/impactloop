@@ -210,20 +210,23 @@ class DriverDeliveriesApi {
   }
 
   Future<DriverDelivery> confirmDeliveryHandoverCredential(
-    String handoverToken,
-  ) {
+    String handoverToken, {
+    bool cashReceivedConfirmed = false,
+  }) {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '/api/driver/deliveries/handover/confirm',
-        data: {'handoverToken': handoverToken},
+        data: {
+          'handoverToken': handoverToken,
+          'cashReceivedConfirmed': cashReceivedConfirmed,
+        },
       ),
       DriverDelivery.fromJson,
     );
   }
 
-  Future<SupplierPickupHandoverVerifyPreview> verifySupplierPickupHandoverCredential(
-    String handoverToken,
-  ) {
+  Future<SupplierPickupHandoverVerifyPreview>
+  verifySupplierPickupHandoverCredential(String handoverToken) {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '/api/driver/deliveries/pickup-handover/verify',

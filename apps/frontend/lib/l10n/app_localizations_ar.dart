@@ -1622,6 +1622,25 @@ class AppLocalizationsAr extends AppLocalizations {
   String get completeDeliveryDialogTitle => 'إكمال التسليم';
 
   @override
+  String get cashToCollect => 'المبلغ المطلوب تحصيله نقدًا';
+
+  @override
+  String get cashReceivedConfirmation => 'أؤكد استلام المبلغ نقدًا';
+
+  @override
+  String get cashCollectionRequiredError =>
+      'أكّد استلام المبلغ النقدي قبل إكمال التسليم.';
+
+  @override
+  String get learnerContact => 'بيانات تواصل المتعلّم';
+
+  @override
+  String get call => 'اتصال';
+
+  @override
+  String get noPhoneAvailable => 'لا يوجد رقم هاتف متاح';
+
+  @override
   String get completeDeliveryScanQr => 'مسح رمز QR للتسليم';
 
   @override

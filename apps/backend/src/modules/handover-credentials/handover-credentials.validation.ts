@@ -14,6 +14,7 @@ export const handoverCredentialTokenBodySchema = z.object({
     .trim()
     .min(1, 'Handover token is required.')
     .max(320),
+  cashReceivedConfirmed: z.boolean().optional(),
 });
 
 export type HandoverCredentialTokenBody = z.infer<

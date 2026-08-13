@@ -25,7 +25,7 @@ import {
   handleReservationPaymentLifecycleTransition,
   type PostCommitRefundTask,
 } from '../payments/payments.lifecycle.js';
-import { assertPickupPaymentSatisfiedOrThrow } from '../payments/payments.readiness.js';
+import { collectPickupCashForHandover } from '../payments/payments.handover.js';
 import {
   computeEarliestDeliveryStart,
   findFeasibleDeliveryWindow,
@@ -146,6 +146,17 @@ export const reservationInclude = {
       reviewNote: true,
     },
   },
+  materialPaymentOrders: {
+    where: { purpose: 'MATERIAL_SUBTOTAL' as const },
+    select: {
+      paymentMethod: true,
+      status: true,
+      amount: true,
+      currency: true,
+    },
+    orderBy: { cycleNumber: 'desc' as const },
+    take: 1,
+  },
 } satisfies Prisma.ReservationInclude;
 
 const supplierReservationListScalarSelect = {
@@ -183,6 +194,7 @@ const supplierReservationListScalarSelect = {
   supplierNote: true,
   rejectionReason: true,
   completedAt: true,
+  paymentMethod: true,
 } satisfies Prisma.ReservationSelect;
 
 const supplierReservationListSelect = {
@@ -279,6 +291,17 @@ const supplierReservationListSelect = {
       reviewedAt: true,
       reviewNote: true,
     },
+  },
+  materialPaymentOrders: {
+    where: { purpose: 'MATERIAL_SUBTOTAL' as const },
+    select: {
+      paymentMethod: true,
+      status: true,
+      amount: true,
+      currency: true,
+    },
+    orderBy: { cycleNumber: 'desc' as const },
+    take: 1,
   },
 } satisfies Prisma.ReservationSelect;
 
@@ -1102,6 +1125,7 @@ export const completeSupplierReservation = async (input: {
   reservationId: string;
   ownerId: string;
   confirmationCode: string;
+  cashReceivedConfirmed?: boolean;
 }) => {
   const outcome = await runSerializableTransaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
@@ -1131,8 +1155,6 @@ export const completeSupplierReservation = async (input: {
       return { conflict: true as const, reservation: existing };
     }
 
-    await assertPickupPaymentSatisfiedOrThrow(existing.id, tx);
-
     await ensureSelfPickupCodeStored(tx, existing.id);
 
     const reservationWithCode = await tx.reservation.findUniqueOrThrow({
@@ -1160,6 +1182,14 @@ export const completeSupplierReservation = async (input: {
       return { invalidCode: true as const, reservation: existing };
     }
 
+    const now = new Date();
+    await collectPickupCashForHandover(tx, {
+      reservationId: existing.id,
+      collectorUserId: input.ownerId,
+      cashReceivedConfirmed: input.cashReceivedConfirmed,
+      now,
+    });
+
     const finalized = await finalizeAcceptedSelfPickupCompletion(tx, {
       reservation: {
         id: existing.id,
@@ -1170,6 +1200,7 @@ export const completeSupplierReservation = async (input: {
         handoverTokenHash: reservationWithCode.handoverTokenHash,
       },
       ownerId: input.ownerId,
+      now,
     });
 
     if ('windowNotStarted' in finalized) {
@@ -1221,6 +1252,7 @@ export const completeSupplierReservation = async (input: {
 export const completeSupplierReservationByHandoverToken = async (input: {
   ownerId: string;
   tokenHash: string;
+  cashReceivedConfirmed?: boolean;
 }) => {
   const outcome = await runSerializableTransaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
@@ -1266,7 +1298,12 @@ export const completeSupplierReservationByHandoverToken = async (input: {
       return { conflict: true as const, reservation: existing };
     }
 
-    await assertPickupPaymentSatisfiedOrThrow(existing.id, tx);
+    await collectPickupCashForHandover(tx, {
+      reservationId: existing.id,
+      collectorUserId: input.ownerId,
+      cashReceivedConfirmed: input.cashReceivedConfirmed,
+      now,
+    });
 
     const finalized = await finalizeAcceptedSelfPickupCompletion(tx, {
       reservation: {

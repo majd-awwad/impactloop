@@ -284,6 +284,7 @@ class _SupplierPickupSchedulePageState
             context,
             ref,
             reservationId: reservationId,
+            payment: entry.reservation.handoverPayment,
             showSuccessSnackBar: false,
           );
           if (!completed && context.mounted) return;

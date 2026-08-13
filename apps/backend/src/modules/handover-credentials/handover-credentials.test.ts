@@ -938,4 +938,57 @@ describe('QR-01 payment gate', () => {
     });
     assert.equal(status.status, 'ACCEPTED');
   });
+
+  test('cash QR pickup previews authoritative amount and settles with supplier evidence', async () => {
+    const reservation = await createPayReservationFixture(ids, {
+      learnerId,
+      supplierId,
+      materialSubtotal: 45,
+      paymentMethod: 'CASH',
+    });
+    const ensured = await ensureMaterialPaymentOrder(reservation.id);
+    assert.ok(ensured.outcome === 'CREATED' || ensured.outcome === 'EXISTING');
+    trackOrder(ids, ensured.order.id);
+    assert.equal(ensured.order.status, 'REQUIRES_PAYMENT');
+
+    const issued = await issueHandoverCredential(learnerId, reservation.id);
+    const preview = await verifyHandoverCredential(
+      supplierId,
+      issued.handoverToken,
+    );
+    assert.deepEqual(preview.payment, {
+      paymentMethod: 'CASH',
+      cashDueAtHandover: true,
+      totalAmount: Number(ensured.order.amount).toFixed(2),
+      currency: ensured.order.currency,
+    });
+
+    await assert.rejects(
+      () => confirmHandoverCredential(supplierId, issued.handoverToken),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'CASH_COLLECTION_CONFIRMATION_REQUIRED',
+    );
+    assert.equal(
+      (
+        await prisma.paymentOrder.findUniqueOrThrow({
+          where: { id: ensured.order.id },
+        })
+      ).status,
+      'REQUIRES_PAYMENT',
+    );
+
+    const completed = await confirmHandoverCredential(
+      supplierId,
+      issued.handoverToken,
+      true,
+    );
+    assert.equal(completed.status, 'COMPLETED');
+    const settled = await prisma.paymentOrder.findUniqueOrThrow({
+      where: { id: ensured.order.id },
+    });
+    assert.equal(settled.status, 'PAID');
+    assert.equal(settled.cashCollectedByUserId, supplierId);
+    assert.ok(settled.paidAt);
+  });
 });

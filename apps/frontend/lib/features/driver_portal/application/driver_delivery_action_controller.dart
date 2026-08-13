@@ -60,6 +60,7 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
     String? confirmationCode,
     List<String>? pickedReservationIds,
     List<UpdateDriverDeliveryUnpickedItem>? unpicked,
+    bool cashReceivedConfirmed = false,
   }) async {
     state = const AsyncLoading();
 
@@ -74,6 +75,7 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
               confirmationCode: confirmationCode,
               pickedReservationIds: pickedReservationIds,
               unpicked: unpicked,
+              cashReceivedConfirmed: cashReceivedConfirmed,
             ),
           );
       state = const AsyncData(null);

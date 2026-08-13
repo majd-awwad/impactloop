@@ -2750,6 +2750,42 @@ abstract class AppLocalizations {
   /// **'Complete delivery'**
   String get completeDeliveryDialogTitle;
 
+  /// No description provided for @cashToCollect.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash to collect'**
+  String get cashToCollect;
+
+  /// No description provided for @cashReceivedConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'I confirm the cash was received'**
+  String get cashReceivedConfirmation;
+
+  /// No description provided for @cashCollectionRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm cash receipt before completing handover.'**
+  String get cashCollectionRequiredError;
+
+  /// No description provided for @learnerContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner contact'**
+  String get learnerContact;
+
+  /// No description provided for @call.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get call;
+
+  /// No description provided for @noPhoneAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No phone number available'**
+  String get noPhoneAvailable;
+
   /// No description provided for @completeDeliveryScanQr.
   ///
   /// In en, this message translates to:

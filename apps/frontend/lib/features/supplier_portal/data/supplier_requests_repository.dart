@@ -32,6 +32,7 @@ abstract class SupplierRequestsRepository {
   Future<SupplierIncomingRequest> completeRequest(
     String requestId, {
     required String confirmationCode,
+    bool cashReceivedConfirmed = false,
   });
 
   /// Issues a supplier→driver pickup handover QR credential.
@@ -44,8 +45,9 @@ abstract class SupplierRequestsRepository {
 
   /// Explicitly confirms handover after a successful verify preview.
   Future<SupplierIncomingRequest> confirmHandoverCredential(
-    String handoverToken,
-  );
+    String handoverToken, {
+    bool cashReceivedConfirmed = false,
+  });
 
   Future<SupplierIncomingRequest> rescheduleRequest(
     String requestId,

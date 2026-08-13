@@ -32,6 +32,7 @@ import '../driver_delivery_timing_presentation.dart';
 import '../widgets/driver_delivery_completion_flow.dart';
 import '../widgets/driver_supplier_pickup_completion_flow.dart';
 import '../widgets/driver_route_block.dart';
+import '../widgets/driver_learner_contact_card.dart';
 import '../widgets/partial_pickup_selection_dialog.dart';
 import 'driver_history_detail_page.dart';
 
@@ -289,6 +290,8 @@ class _SummaryPanel extends StatelessWidget {
               label: l10n.driverLearnerNote,
               value: delivery.learnerNote!,
             ),
+          const Divider(height: AppSpacing.xl),
+          DriverLearnerContactCard(learner: delivery.learner),
           if (delivery.driverNote?.trim().isNotEmpty == true)
             _InfoRow(label: l10n.driverNote, value: delivery.driverNote!),
         ],
@@ -519,6 +522,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
         deliveryId: widget.delivery.id,
         reservationId: widget.delivery.reservationId,
         note: _noteController.text,
+        payment: widget.delivery.handoverPayment,
         showSuccessSnackBar: false,
       );
       if (!completed || !mounted) return;

@@ -96,6 +96,9 @@ async function createDelivery(
 
 async function cleanup(ctx: TestContext) {
   if (ctx.createdReservationIds.length) {
+    await prisma.paymentOrder.deleteMany({
+      where: { reservationId: { in: ctx.createdReservationIds } },
+    });
     await prisma.deliveryLocationPing.deleteMany({
       where: { delivery: { reservationId: { in: ctx.createdReservationIds } } },
     });
@@ -237,6 +240,64 @@ describe('completeSupplierReservation', () => {
     });
     assert.ok(history);
     assert.equal(history?.changedBy, ctx.supplierId);
+  });
+
+  test('cash pickup requires acknowledgement and settles atomically with collector evidence', async () => {
+    const { reservation } = await createReservation(ctx, 'ACCEPTED');
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: {
+        paymentMethod: 'CASH',
+        materialSubtotal: 35,
+        pricingCurrency: 'NIS',
+      },
+    });
+    const order = await prisma.paymentOrder.create({
+      data: {
+        payerUserId: ctx.learnerId,
+        purpose: 'MATERIAL_SUBTOTAL',
+        paymentMethod: 'CASH',
+        status: 'REQUIRES_PAYMENT',
+        currency: 'NIS',
+        amount: 35,
+        reservationId: reservation.id,
+      },
+    });
+    const confirmationCode = deriveHandoverCode('self-pickup', reservation.id);
+
+    await assert.rejects(
+      completeSupplierReservation(ctx.supplierId, reservation.id, {
+        confirmationCode,
+      }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'CASH_COLLECTION_CONFIRMATION_REQUIRED',
+    );
+    assert.equal(
+      (await prisma.paymentOrder.findUnique({ where: { id: order.id } }))?.status,
+      'REQUIRES_PAYMENT',
+    );
+    assert.equal(
+      (await prisma.reservation.findUnique({ where: { id: reservation.id } }))
+        ?.status,
+      'ACCEPTED',
+    );
+
+    const completed = await completeSupplierReservation(
+      ctx.supplierId,
+      reservation.id,
+      { confirmationCode, cashReceivedConfirmed: true },
+    );
+    assert.equal(completed.status, 'COMPLETED');
+    const settled = await prisma.paymentOrder.findUnique({
+      where: { id: order.id },
+    });
+    assert.equal(settled?.status, 'PAID');
+    assert.ok(settled?.paidAt);
+    assert.equal(settled?.cashCollectedByUserId, ctx.supplierId);
+    assert.equal(settled?.paymentMethod, 'CASH');
+    assert.equal(settled?.amount.toFixed(2), '35.00');
+    assert.equal(settled?.currency, 'NIS');
   });
 
   test('supplier reservation list marks accepted self-pickup as completable', async () => {

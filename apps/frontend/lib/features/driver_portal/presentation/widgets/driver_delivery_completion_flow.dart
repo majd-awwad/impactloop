@@ -7,6 +7,7 @@ import '../../../../shared/widgets/app_feedback.dart';
 import '../../application/driver_delivery_action_controller.dart';
 import 'complete_delivery_dialog.dart';
 import 'driver_delivery_qr_scanner_page.dart';
+import '../../../../shared/models/handover_payment_summary.dart';
 
 /// Runs the driver delivery verification funnel (QR scan or manual code).
 ///
@@ -18,6 +19,7 @@ Future<bool> runDriverDeliveryCompletionFlow(
   String? reservationId,
   String? note,
   bool showSuccessSnackBar = true,
+  HandoverPaymentSummary? payment,
 }) async {
   var allowScan = true;
 
@@ -25,6 +27,7 @@ Future<bool> runDriverDeliveryCompletionFlow(
     final choice = await CompleteDeliveryDialog.show(
       context,
       allowScan: allowScan,
+      payment: payment,
     );
     if (!context.mounted || choice == null) return false;
 
@@ -57,6 +60,7 @@ Future<bool> runDriverDeliveryCompletionFlow(
               status: 'DELIVERED',
               note: note,
               confirmationCode: choice.code.trim(),
+              cashReceivedConfirmed: choice.cashReceivedConfirmed,
             );
         invalidateDriverDeliverySyncProviders(
           ref,
@@ -69,7 +73,10 @@ Future<bool> runDriverDeliveryCompletionFlow(
         return true;
       } on ApiException catch (error) {
         if (!context.mounted) return false;
-        showErrorSnackBar(context, localizedApiErrorMessage(error, context.l10n));
+        showErrorSnackBar(
+          context,
+          localizedApiErrorMessage(error, context.l10n),
+        );
         return false;
       } catch (error) {
         if (!context.mounted) return false;

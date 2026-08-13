@@ -105,6 +105,7 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
   Future<SupplierIncomingRequest> completeRequest(
     String requestId, {
     required String confirmationCode,
+    bool cashReceivedConfirmed = false,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 250));
     final index = _requests.indexWhere((request) => request.id == requestId);
@@ -167,8 +168,9 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
 
   @override
   Future<SupplierIncomingRequest> confirmHandoverCredential(
-    String handoverToken,
-  ) async {
+    String handoverToken, {
+    bool cashReceivedConfirmed = false,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     SupplierIncomingRequest? accepted;
     for (final request in _requests) {

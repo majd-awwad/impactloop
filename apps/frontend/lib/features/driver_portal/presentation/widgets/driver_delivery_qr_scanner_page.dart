@@ -87,8 +87,7 @@ class _DriverDeliveryQrScannerPageState
     if (_handledCompletion) return;
     _handledCompletion = true;
 
-    final deliveryId =
-        state.completedDelivery?.id ?? state.preview?.deliveryId;
+    final deliveryId = state.completedDelivery?.id ?? state.preview?.deliveryId;
     final reservationId = state.preview?.items.isNotEmpty == true
         ? state.preview!.items.first.reservationId
         : null;
@@ -196,7 +195,10 @@ class _DriverDeliveryQrScannerPageState
                       child: Text(
                         context.l10n.driverDeliveryQrPointCamera,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white, fontSize: 15),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                        ),
                       ),
                     ),
                   if (state.phase == DriverDeliveryQrPhase.verifying) ...[
@@ -263,7 +265,9 @@ class _DriverDeliveryQrScannerPageState
                       onPressed: () => Navigator.of(
                         context,
                       ).pop(DeliveryQrScanResult.useManualCode),
-                      style: TextButton.styleFrom(foregroundColor: Colors.white),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                      ),
                       child: Text(context.l10n.supplierPickupQrUseCodeInstead),
                     ),
                   ],
@@ -277,7 +281,7 @@ class _DriverDeliveryQrScannerPageState
   }
 }
 
-class _HandoverVerifyPreviewCard extends StatelessWidget {
+class _HandoverVerifyPreviewCard extends StatefulWidget {
   const _HandoverVerifyPreviewCard({
     required this.preview,
     required this.confirming,
@@ -287,12 +291,22 @@ class _HandoverVerifyPreviewCard extends StatelessWidget {
 
   final DeliveryHandoverVerifyPreview preview;
   final bool confirming;
-  final VoidCallback onConfirm;
+  final void Function({bool cashReceivedConfirmed}) onConfirm;
   final VoidCallback onCancel;
+
+  @override
+  State<_HandoverVerifyPreviewCard> createState() =>
+      _HandoverVerifyPreviewCardState();
+}
+
+class _HandoverVerifyPreviewCardState
+    extends State<_HandoverVerifyPreviewCard> {
+  var _cashConfirmed = false;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final preview = widget.preview;
     final destination = [
       preview.destinationArea,
       preview.destinationCity,
@@ -308,10 +322,9 @@ class _HandoverVerifyPreviewCard extends StatelessWidget {
           children: [
             Text(
               context.l10n.driverDeliveryQrVerifiedTitle,
-              style: AppTextStyles.title(context).copyWith(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
+              style: AppTextStyles.title(
+                context,
+              ).copyWith(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: AppSpacing.md),
             _PreviewRow(
@@ -319,10 +332,7 @@ class _HandoverVerifyPreviewCard extends StatelessWidget {
               value: preview.learnerDisplayName,
             ),
             if (destination.isNotEmpty)
-              _PreviewRow(
-                label: context.l10n.dropoff,
-                value: destination,
-              ),
+              _PreviewRow(label: context.l10n.dropoff, value: destination),
             for (final item in preview.items)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.sm),
@@ -331,9 +341,9 @@ class _HandoverVerifyPreviewCard extends StatelessWidget {
                   children: [
                     Text(
                       item.materialTitle,
-                      style: AppTextStyles.label(context).copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: AppTextStyles.label(
+                        context,
+                      ).copyWith(fontWeight: FontWeight.w600),
                     ),
                     _PreviewRow(
                       label: context.l10n.supplierPickupQrQuantityLabel,
@@ -342,10 +352,38 @@ class _HandoverVerifyPreviewCard extends StatelessWidget {
                   ],
                 ),
               ),
+            if (preview.payment.requiresCashConfirmation) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                context.l10n.cashToCollect,
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textSecondary),
+              ),
+              Text(
+                '${preview.payment.totalAmount} ${preview.payment.currency}',
+                style: AppTextStyles.title(context).copyWith(fontSize: 20),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _cashConfirmed,
+                title: Text(context.l10n.cashReceivedConfirmation),
+                onChanged: widget.confirming
+                    ? null
+                    : (value) => setState(() => _cashConfirmed = value == true),
+              ),
+            ],
             const SizedBox(height: AppSpacing.lg),
             FilledButton(
-              onPressed: confirming ? null : onConfirm,
-              child: confirming
+              onPressed: widget.confirming ||
+                      (preview.payment.requiresCashConfirmation &&
+                          !_cashConfirmed)
+                  ? null
+                  : () => widget.onConfirm(
+                        cashReceivedConfirmed: _cashConfirmed,
+                      ),
+              child: widget.confirming
                   ? const SizedBox(
                       width: 20,
                       height: 20,
@@ -354,7 +392,7 @@ class _HandoverVerifyPreviewCard extends StatelessWidget {
                   : Text(context.l10n.driverDeliveryQrConfirmHandover),
             ),
             TextButton(
-              onPressed: confirming ? null : onCancel,
+              onPressed: widget.confirming ? null : widget.onCancel,
               child: Text(context.l10n.driverCancelAction),
             ),
           ],
@@ -389,14 +427,12 @@ class _PreviewRow extends StatelessWidget {
             width: 88,
             child: Text(
               label,
-              style: AppTextStyles.body(context).copyWith(
-                color: palette.textSecondary,
-              ),
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textSecondary),
             ),
           ),
-          Expanded(
-            child: Text(value, style: AppTextStyles.body(context)),
-          ),
+          Expanded(child: Text(value, style: AppTextStyles.body(context))),
         ],
       ),
     );

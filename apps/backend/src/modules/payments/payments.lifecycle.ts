@@ -311,7 +311,6 @@ export const prepareFullRefundForPaidOrderInTransaction = async (
       'Collected cash requires manual reversal; provider refund is unavailable.',
       409,
       'CASH_REVERSAL_REQUIRES_MANUAL_RESOLUTION',
-      { orderId: order.id },
     );
   }
 

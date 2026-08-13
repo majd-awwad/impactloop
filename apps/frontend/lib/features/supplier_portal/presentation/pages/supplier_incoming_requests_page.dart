@@ -423,6 +423,7 @@ class _SupplierIncomingRequestsPageState
         context,
         ref,
         reservationId: request.id,
+        payment: request.handoverPayment,
       );
     } catch (error) {
       if (context.mounted) {
@@ -1358,10 +1359,7 @@ class _InboxError extends StatelessWidget {
             style: context.supplierBody(),
           ),
         ),
-        OutlinedButton(
-          onPressed: onRetry,
-          child: Text(context.s.tryAgain),
-        ),
+        OutlinedButton(onPressed: onRetry, child: Text(context.s.tryAgain)),
       ],
     ),
   );

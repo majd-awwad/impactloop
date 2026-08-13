@@ -253,6 +253,7 @@ export const mapSupplierReservation = (
   reservation: supplierReservationsRepository.SupplierReservationListRecord,
   latestMessage?: ReturnType<typeof mapReservationMessage> | null,
 ) => {
+  const currentMaterialOrder = reservation.materialPaymentOrders[0] ?? null;
   const directDelivery = reservation.deliveries[0] ?? null;
   const groupDelivery = reservation.deliveryGroup?.delivery ?? null;
   const latestDelivery = directDelivery ?? groupDelivery;
@@ -503,6 +504,23 @@ export const mapSupplierReservation = (
     unit: reservation.material.unit,
     message: reservation.message,
     fulfillmentMethod: reservation.fulfillmentMethod,
+    handoverPayment: {
+      paymentMethod: reservation.paymentMethod,
+      cashDueAtHandover:
+        reservation.paymentMethod === 'CASH' &&
+        currentMaterialOrder?.paymentMethod === 'CASH' &&
+        currentMaterialOrder.status === 'REQUIRES_PAYMENT',
+      totalAmount:
+        reservation.paymentMethod === 'CASH' &&
+        currentMaterialOrder?.status === 'REQUIRES_PAYMENT'
+          ? currentMaterialOrder.amount.toFixed(2)
+          : null,
+      currency:
+        reservation.paymentMethod === 'CASH' &&
+        currentMaterialOrder?.status === 'REQUIRES_PAYMENT'
+          ? currentMaterialOrder.currency
+          : null,
+    },
     fulfillmentLabel: mapFulfillmentLabel(
       reservation.fulfillmentMethod,
       deliveryCount,
@@ -1088,6 +1106,7 @@ export const completeSupplierReservation = async (
       reservationId,
       ownerId,
       confirmationCode: input.confirmationCode,
+      cashReceivedConfirmed: input.cashReceivedConfirmed,
     },
   );
 
@@ -1157,6 +1176,7 @@ export const completeSupplierReservation = async (
 export const confirmHandoverCredential = async (
   ownerId: string,
   handoverToken: string,
+  cashReceivedConfirmed?: boolean,
 ) => {
   const {
     invalidHandoverCredentialError,
@@ -1179,6 +1199,7 @@ export const confirmHandoverCredential = async (
       {
         ownerId,
         tokenHash,
+        cashReceivedConfirmed,
       },
     );
 

@@ -78,6 +78,7 @@ export const updateDriverDeliveryStatusSchema = z
     ]),
     note: z.string().trim().max(1000).optional().nullable(),
     confirmationCode: z.string().trim().optional(),
+    cashReceivedConfirmed: z.boolean().optional(),
     pickedReservationIds: z.array(z.string().trim().min(1)).optional(),
     unpicked: z.array(partialPickupUnpickedSchema).optional(),
   })

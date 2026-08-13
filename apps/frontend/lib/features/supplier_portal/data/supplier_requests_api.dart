@@ -143,11 +143,15 @@ class SupplierRequestsApi {
   Future<SupplierIncomingRequest> completeRequest(
     String requestId, {
     required String confirmationCode,
+    bool cashReceivedConfirmed = false,
   }) async {
     try {
       final response = await _client.patch<Map<String, dynamic>>(
         '/api/supplier/reservations/$requestId/complete',
-        data: {'confirmationCode': confirmationCode},
+        data: {
+          'confirmationCode': confirmationCode,
+          'cashReceivedConfirmed': cashReceivedConfirmed,
+        },
       );
 
       return _parseReservationResponse(response);
@@ -177,7 +181,9 @@ class SupplierRequestsApi {
 
       final data = body['data'];
       if (data is! Map) {
-        throw const ApiException(message: 'Unexpected handover verify response');
+        throw const ApiException(
+          message: 'Unexpected handover verify response',
+        );
       }
 
       return HandoverVerifyPreview.fromJson(Map<String, dynamic>.from(data));
@@ -200,12 +206,16 @@ class SupplierRequestsApi {
   }
 
   Future<SupplierIncomingRequest> confirmHandoverCredential(
-    String handoverToken,
-  ) async {
+    String handoverToken, {
+    bool cashReceivedConfirmed = false,
+  }) async {
     try {
       final response = await _client.post<Map<String, dynamic>>(
         '/api/supplier/reservations/handover/confirm',
-        data: {'handoverToken': handoverToken},
+        data: {
+          'handoverToken': handoverToken,
+          'cashReceivedConfirmed': cashReceivedConfirmed,
+        },
       );
 
       return _parseReservationResponse(response);

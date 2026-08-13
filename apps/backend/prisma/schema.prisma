@@ -693,6 +693,7 @@ model User {
   learnerMaterialRequestMatches          LearnerMaterialRequestMatch[]          @relation("LearnerMaterialRequestMatchSupplier")
   learningQuestionFeedback               ProjectBuildLearningQuestionFeedback[] @relation("ProjectBuildLearningQuestionFeedbackLearner")
   paymentOrdersAsPayer                   PaymentOrder[]                         @relation("PaymentOrderPayer")
+  cashPaymentOrdersCollected             PaymentOrder[]                         @relation("PaymentOrderCashCollector")
   paymentCheckoutSessionsAsPayer         PaymentCheckoutSession[]               @relation("PaymentCheckoutSessionPayer")
   helpSessionOfferingsAuthored           ProjectHelpSessionOffering[]           @relation("ProjectHelpSessionOfferingAuthor")
   helpSessionsAsLearner                  ProjectHelpSession[]                   @relation("ProjectHelpSessionLearner")
@@ -2844,11 +2845,13 @@ model PaymentOrder {
   reservationId   String?            @map("reservation_id")
   deliveryGroupId String?            @map("delivery_group_id")
   paidAt          DateTime?          @map("paid_at")
+  cashCollectedByUserId String?      @map("cash_collected_by_user_id")
   cancelledAt     DateTime?          @map("cancelled_at")
   refundedAt      DateTime?          @map("refunded_at")
   createdAt       DateTime           @default(now()) @map("created_at")
   updatedAt       DateTime           @updatedAt @map("updated_at")
   payer           User               @relation("PaymentOrderPayer", fields: [payerUserId], references: [id], onDelete: Restrict)
+  cashCollectedBy User?              @relation("PaymentOrderCashCollector", fields: [cashCollectedByUserId], references: [id], onDelete: Restrict)
   reservation     Reservation?       @relation("PaymentOrderReservation", fields: [reservationId], references: [id], onDelete: Restrict)
   deliveryGroup   DeliveryGroup?     @relation("PaymentOrderDeliveryGroup", fields: [deliveryGroupId], references: [id], onDelete: Restrict)
   attempts        PaymentAttempt[]
@@ -2859,6 +2862,7 @@ model PaymentOrder {
   @@index([status, createdAt(sort: Desc)])
   @@index([reservationId])
   @@index([deliveryGroupId])
+  @@index([cashCollectedByUserId])
   @@map("payment_orders")
 }
 

@@ -716,6 +716,7 @@ export const requestDeliveryForReservation = async (
           if (
             (ensured.outcome === 'CREATED' ||
               ensured.outcome === 'EXISTING') &&
+            ensured.order.paymentMethod === 'CARD' &&
             ensured.order.status !== 'PAID'
           ) {
             return {

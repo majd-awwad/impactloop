@@ -25,6 +25,7 @@ class UpdateDriverDeliveryStatusRequest {
     this.confirmationCode,
     this.pickedReservationIds,
     this.unpicked,
+    this.cashReceivedConfirmed = false,
   });
 
   final String status;
@@ -32,6 +33,7 @@ class UpdateDriverDeliveryStatusRequest {
   final String? confirmationCode;
   final List<String>? pickedReservationIds;
   final List<UpdateDriverDeliveryUnpickedItem>? unpicked;
+  final bool cashReceivedConfirmed;
 
   Map<String, dynamic> toJson() {
     return {
@@ -43,6 +45,7 @@ class UpdateDriverDeliveryStatusRequest {
         'pickedReservationIds': pickedReservationIds,
       if (unpicked != null)
         'unpicked': unpicked!.map((item) => item.toJson()).toList(),
+      'cashReceivedConfirmed': cashReceivedConfirmed,
     };
   }
 }

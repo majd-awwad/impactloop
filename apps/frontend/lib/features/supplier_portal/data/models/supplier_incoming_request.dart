@@ -1,5 +1,6 @@
 import '../../../reservations/data/models/reservation_message.dart';
 import '../../../reservations/data/models/reservation_preferred_window.dart';
+import '../../../../shared/models/handover_payment_summary.dart';
 
 Map<String, dynamic>? _jsonMap(Object? value) =>
     value is Map ? Map<String, dynamic>.from(value) : null;
@@ -931,6 +932,7 @@ class SupplierIncomingRequest {
     this.incidentSummary,
     this.groupSummary,
     this.messageSummary,
+    this.handoverPayment,
   });
 
   final String id;
@@ -999,6 +1001,7 @@ class SupplierIncomingRequest {
   final SupplierIncidentSummary? incidentSummary;
   final SupplierGroupSummary? groupSummary;
   final SupplierMessageSummary? messageSummary;
+  final HandoverPaymentSummary? handoverPayment;
 
   bool get hasDelivery => isDeliveryFulfillment || activeDelivery != null;
 
@@ -1159,6 +1162,7 @@ class SupplierIncomingRequest {
       incidentSummary: incidentSummary,
       groupSummary: groupSummary,
       messageSummary: messageSummary,
+      handoverPayment: handoverPayment,
     );
   }
 
@@ -1410,6 +1414,9 @@ class SupplierIncomingRequest {
       ),
       groupSummary: groupSummaryJson?.let(SupplierGroupSummary.fromJson),
       messageSummary: messageSummaryJson?.let(SupplierMessageSummary.fromJson),
+      handoverPayment: _jsonMap(
+        json['handoverPayment'],
+      )?.let(HandoverPaymentSummary.fromJson),
     );
   }
 }

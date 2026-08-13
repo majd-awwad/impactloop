@@ -170,10 +170,15 @@ Future<SupplierIncomingRequest> completeIncomingRequest(
   WidgetRef ref, {
   required String requestId,
   required String confirmationCode,
+  bool cashReceivedConfirmed = false,
 }) async {
   final result = await ref
       .read(supplierRequestsRepositoryProvider)
-      .completeRequest(requestId, confirmationCode: confirmationCode);
+      .completeRequest(
+        requestId,
+        confirmationCode: confirmationCode,
+        cashReceivedConfirmed: cashReceivedConfirmed,
+      );
   invalidateReservationSyncProviders(ref, reservationId: requestId);
   return result;
 }

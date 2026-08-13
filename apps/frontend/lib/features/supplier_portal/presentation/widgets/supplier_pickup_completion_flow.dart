@@ -8,6 +8,7 @@ import '../theme/supplier_theme_extension.dart';
 import 'complete_pickup_dialog.dart';
 import 'supplier_feedback.dart';
 import 'supplier_pickup_qr_scanner_page.dart';
+import '../../../../shared/models/handover_payment_summary.dart';
 
 /// Runs the supplier pickup verification funnel (QR scan or manual code).
 ///
@@ -17,6 +18,7 @@ Future<bool> runSupplierPickupCompletionFlow(
   WidgetRef ref, {
   required String reservationId,
   bool showSuccessSnackBar = true,
+  HandoverPaymentSummary? payment,
 }) async {
   var allowScan = true;
 
@@ -24,6 +26,7 @@ Future<bool> runSupplierPickupCompletionFlow(
     final choice = await CompletePickupDialog.show(
       context,
       allowScan: allowScan,
+      payment: payment,
     );
     if (!context.mounted || choice == null) return false;
 
@@ -52,6 +55,7 @@ Future<bool> runSupplierPickupCompletionFlow(
         ref,
         requestId: reservationId,
         confirmationCode: choice.code.trim(),
+        cashReceivedConfirmed: choice.cashReceivedConfirmed,
       );
       if (showSuccessSnackBar && context.mounted) {
         showSupplierInfoSnackBar(context, context.s.pickupCompleted);

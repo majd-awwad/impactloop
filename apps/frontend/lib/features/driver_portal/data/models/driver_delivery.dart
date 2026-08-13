@@ -1,3 +1,5 @@
+import '../../../../shared/models/handover_payment_summary.dart';
+
 class DriverDeliveryItem {
   const DriverDeliveryItem({
     required this.reservationId,
@@ -177,6 +179,7 @@ class DriverDelivery {
     this.dropoffArea,
     this.distanceKm,
     this.distanceLabel,
+    this.handoverPayment,
   });
 
   final String id;
@@ -218,6 +221,7 @@ class DriverDelivery {
   final String? dropoffArea;
   final double? distanceKm;
   final String? distanceLabel;
+  final HandoverPaymentSummary? handoverPayment;
 
   factory DriverDelivery.fromJson(Map<String, dynamic> json) {
     final itemsJson = json['items'];
@@ -293,6 +297,11 @@ class DriverDelivery {
       dropoffArea: json['dropoffArea'] as String?,
       distanceKm: _doubleFromJson(json['distanceKm']),
       distanceLabel: json['distanceLabel'] as String?,
+      handoverPayment: json['handoverPayment'] is Map
+          ? HandoverPaymentSummary.fromJson(
+              Map<String, dynamic>.from(json['handoverPayment'] as Map),
+            )
+          : null,
     );
   }
 

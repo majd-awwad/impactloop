@@ -59,7 +59,9 @@ class SupplierPickupQrState {
   }) {
     return SupplierPickupQrState(
       phase: phase ?? this.phase,
-      scannedPayload: clearPayload ? null : (scannedPayload ?? this.scannedPayload),
+      scannedPayload: clearPayload
+          ? null
+          : (scannedPayload ?? this.scannedPayload),
       preview: clearPreview ? null : (preview ?? this.preview),
       completedReservation: clearCompleted
           ? null
@@ -122,7 +124,7 @@ class SupplierPickupQrController extends Notifier<SupplierPickupQrState> {
     }
   }
 
-  Future<void> confirmHandover() async {
+  Future<void> confirmHandover({bool cashReceivedConfirmed = false}) async {
     if (_confirmInFlight) return;
     if (state.phase != SupplierPickupQrPhase.verified) return;
 
@@ -138,7 +140,10 @@ class SupplierPickupQrController extends Notifier<SupplierPickupQrState> {
     try {
       final completed = await ref
           .read(supplierRequestsRepositoryProvider)
-          .confirmHandoverCredential(payload);
+          .confirmHandoverCredential(
+            payload,
+            cashReceivedConfirmed: cashReceivedConfirmed,
+          );
       if (!ref.mounted) return;
       state = state.copyWith(
         phase: SupplierPickupQrPhase.completed,
@@ -182,6 +187,7 @@ class SupplierPickupQrController extends Notifier<SupplierPickupQrState> {
 }
 
 final supplierPickupQrControllerProvider =
-    NotifierProvider.autoDispose<SupplierPickupQrController, SupplierPickupQrState>(
-      SupplierPickupQrController.new,
-    );
+    NotifierProvider.autoDispose<
+      SupplierPickupQrController,
+      SupplierPickupQrState
+    >(SupplierPickupQrController.new);

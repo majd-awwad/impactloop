@@ -187,7 +187,10 @@ class _SupplierPickupQrScannerPageState
                       child: Text(
                         context.l10n.supplierPickupQrPointCamera,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white, fontSize: 15),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                        ),
                       ),
                     ),
                   if (state.phase == SupplierPickupQrPhase.verifying) ...[
@@ -254,7 +257,9 @@ class _SupplierPickupQrScannerPageState
                       onPressed: () => Navigator.of(
                         context,
                       ).pop(PickupQrScanResult.useManualCode),
-                      style: TextButton.styleFrom(foregroundColor: Colors.white),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                      ),
                       child: Text(context.l10n.supplierPickupQrUseCodeInstead),
                     ),
                   ],
@@ -268,7 +273,7 @@ class _SupplierPickupQrScannerPageState
   }
 }
 
-class _HandoverVerifyPreviewCard extends StatelessWidget {
+class _HandoverVerifyPreviewCard extends StatefulWidget {
   const _HandoverVerifyPreviewCard({
     required this.preview,
     required this.confirming,
@@ -278,12 +283,22 @@ class _HandoverVerifyPreviewCard extends StatelessWidget {
 
   final HandoverVerifyPreview preview;
   final bool confirming;
-  final VoidCallback onConfirm;
+  final void Function({bool cashReceivedConfirmed}) onConfirm;
   final VoidCallback onCancel;
+
+  @override
+  State<_HandoverVerifyPreviewCard> createState() =>
+      _HandoverVerifyPreviewCardState();
+}
+
+class _HandoverVerifyPreviewCardState
+    extends State<_HandoverVerifyPreviewCard> {
+  var _cashConfirmed = false;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
+    final preview = widget.preview;
     final quantityLabel = preview.quantity == preview.quantity.roundToDouble()
         ? preview.quantity.toInt().toString()
         : preview.quantity.toString();
@@ -313,14 +328,42 @@ class _HandoverVerifyPreviewCard extends StatelessWidget {
               label: context.l10n.supplierPickupQrLearnerLabel,
               value: preview.learnerDisplayName,
             ),
+            if (preview.payment.requiresCashConfirmation) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                context.l10n.cashToCollect,
+                style: context.supplierBody().copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+              Text(
+                '${preview.payment.totalAmount} ${preview.payment.currency}',
+                style: context.supplierTitle().copyWith(fontSize: 20),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _cashConfirmed,
+                title: Text(context.l10n.cashReceivedConfirmation),
+                onChanged: widget.confirming
+                    ? null
+                    : (value) => setState(() => _cashConfirmed = value == true),
+              ),
+            ],
             _PreviewRow(
               label: context.l10n.supplierPickupQrQuantityLabel,
               value: '$quantityLabel ${preview.unit}'.trim(),
             ),
             const SizedBox(height: AppSpacing.lg),
             FilledButton(
-              onPressed: confirming ? null : onConfirm,
-              child: confirming
+              onPressed: widget.confirming ||
+                      (preview.payment.requiresCashConfirmation &&
+                          !_cashConfirmed)
+                  ? null
+                  : () => widget.onConfirm(
+                        cashReceivedConfirmed: _cashConfirmed,
+                      ),
+              child: widget.confirming
                   ? const SizedBox(
                       width: 20,
                       height: 20,
@@ -329,7 +372,7 @@ class _HandoverVerifyPreviewCard extends StatelessWidget {
                   : Text(context.l10n.supplierPickupQrConfirmHandover),
             ),
             TextButton(
-              onPressed: confirming ? null : onCancel,
+              onPressed: widget.confirming ? null : widget.onCancel,
               child: Text(context.s.cancel),
             ),
           ],

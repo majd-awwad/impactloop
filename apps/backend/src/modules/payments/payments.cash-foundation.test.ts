@@ -9,7 +9,10 @@ import { createReservationSchema } from '../reservations/reservations.validation
 
 import { ensureMaterialPaymentOrder } from './payments.ensure.js';
 import { afterFinalAcceptanceInTransaction } from './payments.acceptance.js';
-import { cancelUnpaidPaymentOrder } from './payments.lifecycle.js';
+import {
+  cancelUnpaidPaymentOrder,
+  prepareFullRefundForPaidOrderInTransaction,
+} from './payments.lifecycle.js';
 import { evaluatePickupPaymentReadiness } from './payments.readiness.js';
 import { getReservationPaymentRequirement } from './payments.requirement.js';
 import { startPaymentCheckout } from './payments.service.js';
@@ -162,6 +165,48 @@ describe('cash payment foundation', () => {
       }),
     );
     assert.equal(action.kind, 'CANCELLED_UNPAID');
+    assert.equal(
+      await prisma.paymentRefund.count({ where: { paymentOrderId: ensured.order.id } }),
+      0,
+    );
+    assert.equal(
+      await prisma.paymentAttempt.count({ where: { paymentOrderId: ensured.order.id } }),
+      0,
+    );
+  });
+
+  test('collected cash fails into manual resolution and never creates provider refund work', async () => {
+    const reservation = await createPayReservationFixture(ids, {
+      learnerId,
+      supplierId,
+      materialSubtotal: 11,
+      paymentMethod: 'CASH',
+    });
+    const ensured = await ensureMaterialPaymentOrder(reservation.id);
+    if (ensured.outcome !== 'CREATED' && ensured.outcome !== 'EXISTING') {
+      assert.fail(`expected payment order, got ${ensured.outcome}`);
+    }
+    trackOrder(ids, ensured.order.id);
+    await prisma.paymentOrder.update({
+      where: { id: ensured.order.id },
+      data: {
+        status: 'PAID',
+        paidAt: new Date(),
+        cashCollectedByUserId: supplierId,
+      },
+    });
+
+    await assert.rejects(
+      prisma.$transaction((tx) =>
+        prepareFullRefundForPaidOrderInTransaction(tx, {
+          orderId: ensured.order.id,
+          reason: 'cash reversal requested',
+        }),
+      ),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'CASH_REVERSAL_REQUIRES_MANUAL_RESOLUTION',
+    );
     assert.equal(
       await prisma.paymentRefund.count({ where: { paymentOrderId: ensured.order.id } }),
       0,

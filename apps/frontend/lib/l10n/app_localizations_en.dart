@@ -1639,6 +1639,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get completeDeliveryDialogTitle => 'Complete delivery';
 
   @override
+  String get cashToCollect => 'Cash to collect';
+
+  @override
+  String get cashReceivedConfirmation => 'I confirm the cash was received';
+
+  @override
+  String get cashCollectionRequiredError =>
+      'Confirm cash receipt before completing handover.';
+
+  @override
+  String get learnerContact => 'Learner contact';
+
+  @override
+  String get call => 'Call';
+
+  @override
+  String get noPhoneAvailable => 'No phone number available';
+
+  @override
   String get completeDeliveryScanQr => 'Scan Delivery QR';
 
   @override

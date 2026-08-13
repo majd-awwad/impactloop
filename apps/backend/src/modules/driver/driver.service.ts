@@ -77,7 +77,7 @@ import {
   validatePartialPickupSelection,
   type PartialPickupUnpickedItem,
 } from './driver-partial-pickup.js';
-import { assertDeliveryGroupPaymentReadyOrThrow } from '../payments/payments.readiness.js';
+import { collectDeliveryCashForHandover } from '../payments/payments.handover.js';
 
 const fulfillMaterialRequestsForReservations = async (
   reservationIds: string[],
@@ -143,6 +143,13 @@ export const driverDeliveryInclude = {
       id: true,
       deliveryFee: true,
       currency: true,
+      paymentMethod: true,
+      deliveryFeePaymentOrders: {
+        where: { purpose: 'DELIVERY_FEE' as const },
+        select: { paymentMethod: true, status: true, amount: true, currency: true },
+        orderBy: { cycleNumber: 'desc' as const },
+        take: 1,
+      },
       reservations: {
         where: {
           status: 'ACCEPTED',
@@ -152,6 +159,13 @@ export const driverDeliveryInclude = {
           id: true,
           quantityRequested: true,
           materialSubtotal: true,
+          paymentMethod: true,
+          materialPaymentOrders: {
+            where: { purpose: 'MATERIAL_SUBTOTAL' as const },
+            select: { paymentMethod: true, status: true, amount: true, currency: true },
+            orderBy: { cycleNumber: 'desc' as const },
+            take: 1,
+          },
           material: {
             select: {
               id: true,
@@ -177,6 +191,13 @@ export const driverDeliveryInclude = {
       confirmedDeliveryWindowStart: true,
       confirmedDeliveryWindowEnd: true,
       quantityRequested: true,
+      paymentMethod: true,
+      materialPaymentOrders: {
+        where: { purpose: 'MATERIAL_SUBTOTAL' as const },
+        select: { paymentMethod: true, status: true, amount: true, currency: true },
+        orderBy: { cycleNumber: 'desc' as const },
+        take: 1,
+      },
       material: {
         select: {
           id: true,
@@ -380,8 +401,41 @@ const mapAssignedDelivery = (delivery: DriverDeliveryRecord) => ({
   learner: {
     id: delivery.reservation.requester.id,
     displayName: delivery.reservation.requester.displayName,
-    phone: delivery.reservation.requester.phone,
+    ...(!isTerminalDeliveryStatus(delivery.status)
+      ? { phone: delivery.reservation.requester.phone }
+      : {}),
   },
+  handoverPayment: (() => {
+    const orders = delivery.deliveryGroup
+      ? [
+          delivery.deliveryGroup.deliveryFeePaymentOrders[0] ?? null,
+          ...delivery.deliveryGroup.reservations.map(
+            (reservation) => reservation.materialPaymentOrders[0] ?? null,
+          ),
+        ]
+      : [delivery.reservation.materialPaymentOrders[0] ?? null];
+    const outstanding = orders.filter(
+      (order): order is NonNullable<typeof order> =>
+        order?.paymentMethod === 'CASH' &&
+        order.status === 'REQUIRES_PAYMENT',
+    );
+    const paymentMethod =
+      delivery.deliveryGroup?.paymentMethod ?? delivery.reservation.paymentMethod;
+    const currencies = new Set(outstanding.map((order) => order.currency));
+    const total = outstanding.reduce(
+      (sum, order) => sum + Number(order.amount),
+      0,
+    );
+    return {
+      paymentMethod,
+      cashDueAtHandover: paymentMethod === 'CASH' && outstanding.length > 0,
+      totalAmount:
+        paymentMethod === 'CASH' && outstanding.length > 0
+          ? total.toFixed(2)
+          : null,
+      currency: currencies.size === 1 ? [...currencies][0] : null,
+    };
+  })(),
   supplier: {
     id: delivery.reservation.owner.id,
     displayName: resolveSupplierDisplayName(delivery.reservation.owner),
@@ -1142,6 +1196,13 @@ export const updateDriverDeliveryStatus = async (
 
           return { outcome: 'WINDOW_EXPIRED' as const };
         }
+
+        await collectDeliveryCashForHandover(tx, {
+          deliveryId: delivery.id,
+          collectorUserId: driverUserId,
+          cashReceivedConfirmed: input.cashReceivedConfirmed,
+          now,
+        });
       }
     }
 
@@ -1459,6 +1520,7 @@ export const updateDriverDeliveryStatus = async (
 export const completeDeliveryByHandoverToken = async (
   driverUserId: string,
   tokenHash: string,
+  cashReceivedConfirmed?: boolean,
 ) => {
   const result = await runSerializableTransaction(async (tx) => {
     const profile = await findActiveDriverProfile(driverUserId, tx);
@@ -1546,23 +1608,12 @@ export const completeDeliveryByHandoverToken = async (
       return { windowExpired: true as const };
     }
 
-    if (delivery.deliveryGroupId) {
-      try {
-        await assertDeliveryGroupPaymentReadyOrThrow(
-          delivery.deliveryGroupId,
-          tx,
-        );
-      } catch (error) {
-        if (
-          error instanceof AppError &&
-          error.code === 'DELIVERY_PAYMENT_NOT_READY'
-        ) {
-          return { paymentNotReady: true as const };
-        }
-
-        throw error;
-      }
-    }
+    await collectDeliveryCashForHandover(tx, {
+      deliveryId: delivery.id,
+      collectorUserId: driverUserId,
+      cashReceivedConfirmed,
+      now,
+    });
 
     const updateCount = await tx.delivery.updateMany({
       where: {

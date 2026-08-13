@@ -113,14 +113,17 @@ class DriverDeliveriesRepository {
   }
 
   Future<DriverDelivery> confirmDeliveryHandoverCredential(
-    String handoverToken,
-  ) {
-    return _api.confirmDeliveryHandoverCredential(handoverToken);
+    String handoverToken, {
+    bool cashReceivedConfirmed = false,
+  }) {
+    return _api.confirmDeliveryHandoverCredential(
+      handoverToken,
+      cashReceivedConfirmed: cashReceivedConfirmed,
+    );
   }
 
-  Future<SupplierPickupHandoverVerifyPreview> verifySupplierPickupHandoverCredential(
-    String handoverToken,
-  ) {
+  Future<SupplierPickupHandoverVerifyPreview>
+  verifySupplierPickupHandoverCredential(String handoverToken) {
     return _api.verifySupplierPickupHandoverCredential(handoverToken);
   }
 

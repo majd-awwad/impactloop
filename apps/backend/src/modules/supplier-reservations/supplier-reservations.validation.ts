@@ -265,6 +265,7 @@ export const completeSupplierReservationSchema = z.object({
     .string()
     .trim()
     .regex(/^\d{6}$/, 'Confirmation code must be a 6-digit number.'),
+  cashReceivedConfirmed: z.boolean().optional(),
 });
 
 export type CompleteSupplierReservationInput = z.infer<
