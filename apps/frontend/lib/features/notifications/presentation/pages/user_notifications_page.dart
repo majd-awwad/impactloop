@@ -1061,9 +1061,6 @@ class _NotificationTile extends StatelessWidget {
     final amount = isPayment
         ? formatPaymentNotificationAmount(notification, l10n)
         : null;
-    final reservationLabel = isPayment
-        ? paymentNotificationReservationLabel(notification)
-        : '';
     final materialTitle = isPayment
         ? paymentNotificationMaterialTitle(notification)
         : null;
@@ -1139,14 +1136,6 @@ class _NotificationTile extends StatelessWidget {
       runSpacing: AppSpacing.xs,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        if (reservationLabel.isNotEmpty)
-          Text(
-            reservationLabel,
-            style: AppTextStyles.label(context).copyWith(
-              color: palette.textMuted,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
         if (amount != null)
           Text(
             amount,

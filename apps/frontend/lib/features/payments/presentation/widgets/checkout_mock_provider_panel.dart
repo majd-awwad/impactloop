@@ -264,10 +264,7 @@ class _ReviewLineItem extends StatelessWidget {
     final title = (item.materialTitle != null && item.materialTitle!.isNotEmpty)
         ? item.materialTitle!
         : item.purpose;
-    final reservationRef = item.reservationId;
-    final subtitle = reservationRef == null || reservationRef.isEmpty
-        ? item.purpose
-        : '${item.purpose} · ${reservationRef.length > 8 ? reservationRef.substring(0, 8) : reservationRef}';
+    final subtitle = item.purpose;
 
     return KeyedSubtree(
       key: Key('checkout_review_line_${item.paymentOrderId}'),

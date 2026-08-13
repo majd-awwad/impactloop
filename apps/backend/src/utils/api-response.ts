@@ -1,5 +1,3 @@
-import { getRequestId } from '../observability/request-context.js';
-
 export type ApiSuccessResponse<TData> = {
   success: true;
   message: string;
@@ -8,7 +6,6 @@ export type ApiSuccessResponse<TData> = {
 
 export type ApiErrorBody = {
   code: string;
-  requestId: string;
   details?: unknown;
 };
 
@@ -31,13 +28,11 @@ export const errorResponse = (
   message: string,
   code: string,
   details?: unknown,
-  requestId?: string,
 ): ApiErrorResponse => ({
   success: false,
   message,
   error: {
     code,
-    requestId: requestId ?? getRequestId() ?? 'unknown',
     ...(details === undefined ? {} : { details }),
   },
 });

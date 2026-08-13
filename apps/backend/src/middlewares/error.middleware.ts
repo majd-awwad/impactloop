@@ -7,7 +7,6 @@ import { COMMON_ERROR_CODES } from '../contracts/errors/common-error-codes.js';
 import type { LogContext } from '../observability/log-types.js';
 import { logger } from '../observability/logger.js';
 import { mapUnhandledPrismaError } from '../observability/prisma-error-mapper.js';
-import { getRequestId } from '../observability/request-context.js';
 import {
   INVALID_JSON_ERROR_CODE,
   isInvalidJsonBodyError,
@@ -58,8 +57,6 @@ const logServerError = (
 };
 
 export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) => {
-  const requestId = getRequestId() ?? resolveRequestIdFromResponse(res);
-
   if (error instanceof AppError) {
     if (shouldLogAppError(error)) {
       logServerError(res, {
@@ -70,11 +67,14 @@ export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) =>
       });
     }
 
-    res
-      .status(error.statusCode)
-      .json(
-        errorResponse(error.message, error.code, error.details, requestId),
-      );
+    const isInternalError = error.statusCode >= 500;
+    res.status(error.statusCode).json(
+      errorResponse(
+        isInternalError ? INTERNAL_ERROR_MESSAGE : error.message,
+        error.code,
+        isInternalError ? undefined : error.details,
+      ),
+    );
     return;
   }
 
@@ -83,8 +83,6 @@ export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) =>
       errorResponse(
         'Invalid JSON request body',
         INVALID_JSON_ERROR_CODE,
-        undefined,
-        requestId,
       ),
     );
     return;
@@ -101,7 +99,6 @@ export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) =>
             message: issue.message,
           })),
         },
-        requestId,
       ),
     );
     return;
@@ -117,7 +114,6 @@ export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) =>
           mappedPrismaError.message,
           mappedPrismaError.code,
           mappedPrismaError.details,
-          requestId,
         ),
       );
     return;
@@ -135,14 +131,6 @@ export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) =>
       errorResponse(
         INTERNAL_ERROR_MESSAGE,
         COMMON_ERROR_CODES.internalError,
-        undefined,
-        requestId,
       ),
     );
-};
-
-const resolveRequestIdFromResponse = (res: Response): string => {
-  const header = res.getHeader('X-Request-Id');
-
-  return typeof header === 'string' ? header : 'unknown';
 };

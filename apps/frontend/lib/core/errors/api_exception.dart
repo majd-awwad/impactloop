@@ -14,14 +14,12 @@ class ApiException implements Exception {
     this.code,
     this.statusCode,
     this.details,
-    this.requestId,
   });
 
   final String message;
   final String? code;
   final int? statusCode;
   final Map<String, dynamic>? details;
-  final String? requestId;
 
   bool get isCancellation => code == 'CANCELLED';
 
@@ -52,23 +50,27 @@ class ApiException implements Exception {
       case 'TIMEOUT':
         return 'The server took too long to respond. Please try again.';
       case CommonApiErrorCodes.conflict:
-        return message.isNotEmpty
+        return message.isNotEmpty && !containsInternalIdentifier(message)
             ? message
             : 'This request conflicts with the current state. Please refresh and try again.';
       case CommonApiErrorCodes.validationError:
         final firstIssue = fieldIssues.isNotEmpty
             ? fieldIssues.first.message
             : null;
-        if (firstIssue != null && firstIssue.isNotEmpty) {
+        if (firstIssue != null &&
+            firstIssue.isNotEmpty &&
+            !containsInternalIdentifier(firstIssue)) {
           return firstIssue;
         }
-        return message;
+        return message.isNotEmpty && !containsInternalIdentifier(message)
+            ? message
+            : 'Check the highlighted information and try again.';
       case 'PROJECT_SUBMISSION_INCOMPLETE':
         return formatProjectSubmissionIncompleteMessage(this);
       case CommonApiErrorCodes.unauthenticated:
         return 'Your session has expired. Please sign in again.';
       case CommonApiErrorCodes.forbidden:
-        return message.isNotEmpty
+        return message.isNotEmpty && !containsInternalIdentifier(message)
             ? message
             : 'You do not have permission to complete this action.';
       case 'ACCOUNT_SUSPENDED':
@@ -78,7 +80,7 @@ class ApiException implements Exception {
       default:
         final errorCode = code;
         if (errorCode != null && errorCode.startsWith('PICKUP_')) {
-          return message.isNotEmpty
+          return message.isNotEmpty && !containsInternalIdentifier(message)
               ? message
               : 'The pickup window is not valid. Choose a different time.';
         }
@@ -86,7 +88,7 @@ class ApiException implements Exception {
           return 'The server hit a problem. Please try again in a moment.';
         }
 
-        return message.isNotEmpty
+        return message.isNotEmpty && !containsInternalIdentifier(message)
             ? message
             : 'Something went wrong. Please try again.';
     }
@@ -176,20 +178,33 @@ String localizedApiErrorMessage(
         return l10n.invalidPickupWindow;
       }
       if (error.statusCode != null && error.statusCode! >= 500) {
-        return _withRequestId(l10n.serverError, error.requestId);
+        return l10n.serverError;
       }
-      if (error.message.trim().isNotEmpty) {
-        return _withRequestId(error.message, error.requestId);
+      if (error.message.trim().isNotEmpty &&
+          !containsInternalIdentifier(error.message)) {
+        return error.message;
       }
-      return _withRequestId(l10n.somethingWentWrong, error.requestId);
+      return l10n.somethingWentWrong;
   }
 }
 
-String _withRequestId(String message, String? requestId) {
-  final normalized = requestId?.trim();
-  return normalized == null || normalized.isEmpty
-      ? message
-      : '$message [$normalized]';
+bool containsInternalIdentifier(String message) {
+  final value = message.trim();
+  if (value.isEmpty) return false;
+
+  final uuid = RegExp(
+    r'\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b',
+    caseSensitive: false,
+  );
+  final cuid = RegExp(r'\bc[a-z0-9]{20,31}\b', caseSensitive: false);
+  final labeledInternalId = RegExp(
+    r'\b(?:reservation|delivery|payment|session|order|request)[ _-]?id\s*[:=]\s*[a-z0-9_-]{8,}\b',
+    caseSensitive: false,
+  );
+
+  return uuid.hasMatch(value) ||
+      cuid.hasMatch(value) ||
+      labeledInternalId.hasMatch(value);
 }
 
 ApiException normalizeApiException(Object error) {
@@ -207,9 +222,12 @@ String? firstFieldError(
 }) {
   for (final issue in error.fieldIssues) {
     if (fieldPaths.contains(issue.path)) {
-      return l10n == null
-          ? issue.message
-          : localizedFieldIssueMessage(issue, l10n);
+      if (l10n != null) {
+        return localizedFieldIssueMessage(issue, l10n);
+      }
+      return containsInternalIdentifier(issue.message)
+          ? 'Invalid value'
+          : issue.message;
     }
   }
 

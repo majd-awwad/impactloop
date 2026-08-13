@@ -71,7 +71,7 @@ const assertMatchingRequestIds = (
   assert.ok(headerId);
 
   if (body?.error) {
-    assert.equal((body.error as { requestId?: string }).requestId, headerId);
+    assert.equal((body.error as { requestId?: string }).requestId, undefined);
   }
 
   return headerId!;
@@ -393,7 +393,7 @@ describe('observability foundation', () => {
     assert.notEqual(resolved.trim(), '');
   });
 
-  test('request ID: echoes ID in response header and error body', async () => {
+  test('request ID: keeps correlation ID in the response header only', async () => {
     const app = createObservabilityTestApp((instance) => {
       instance.get('/fail', () => {
         throw new AppError('Nope', 400, 'VALIDATION_ERROR');
@@ -409,7 +409,7 @@ describe('observability foundation', () => {
 
       assert.equal(response.status, 400);
       assert.equal(response.headers.get('x-request-id'), incoming);
-      assert.equal((body?.error as { requestId?: string })?.requestId, incoming);
+      assert.equal((body?.error as { requestId?: string })?.requestId, undefined);
     });
   });
 
@@ -479,13 +479,20 @@ describe('observability foundation', () => {
     });
   });
 
-  test('error middleware: does not return AppError internal context/cause', async () => {
+  test('error middleware: sanitizes internal AppError message, details, context, and cause', async () => {
+    const internalId = '550e8400-e29b-41d4-a716-446655440000';
     const app = createObservabilityTestApp((instance) => {
       instance.get('/internal', () => {
-        throw new AppError('Broken', 500, 'INTERNAL_ERROR', undefined, {
-          cause: new Error('secret root cause'),
-          context: { operation: 'test-op', password: 'hidden' },
-        });
+        throw new AppError(
+          `Payment session ${internalId} failed with SQLSTATE 23505`,
+          500,
+          'INTERNAL_ERROR',
+          { sessionId: internalId },
+          {
+            cause: new Error(`secret root cause for ${internalId}`),
+            context: { operation: 'test-op', password: 'hidden' },
+          },
+        );
       });
     });
 
@@ -493,7 +500,11 @@ describe('observability foundation', () => {
       const { body } = await request(server, { path: '/internal' });
       const serialized = JSON.stringify(body);
 
-      assert.equal(body?.message, 'Broken');
+      assert.equal(body?.message, 'Internal server error');
+      assert.equal((body?.error as { code?: string })?.code, 'INTERNAL_ERROR');
+      assert.equal((body?.error as { details?: unknown })?.details, undefined);
+      assert.doesNotMatch(serialized, /550e8400/);
+      assert.doesNotMatch(serialized, /SQLSTATE/);
       assert.doesNotMatch(serialized, /secret root cause/);
       assert.doesNotMatch(serialized, /hidden/);
       assert.doesNotMatch(serialized, /test-op/);
@@ -977,7 +988,7 @@ describe('observability foundation', () => {
       assert.equal(response.headers.get('x-request-id'), incoming);
       assert.equal(body?.message, 'Invalid JSON request body');
       assert.equal((body?.error as { code?: string })?.code, INVALID_JSON_ERROR_CODE);
-      assert.equal((body?.error as { requestId?: string })?.requestId, incoming);
+      assert.equal((body?.error as { requestId?: string })?.requestId, undefined);
       assert.equal((body?.error as { details?: unknown })?.details, undefined);
 
       const serialized = JSON.stringify(body);
@@ -1019,7 +1030,7 @@ describe('observability foundation', () => {
     });
   });
 
-  test('request context: middleware error after context but before routes keeps request ID in header, body, and logs', async () => {
+  test('request context: middleware error keeps request ID in header and logs, not body', async () => {
     const logs = createLogCapture();
     const app = express();
 

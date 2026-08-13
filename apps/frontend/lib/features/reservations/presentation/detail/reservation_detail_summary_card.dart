@@ -36,10 +36,6 @@ class ReservationDetailSummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _SummaryRow(
-            label: l10n.reservationReference,
-            value: reservation.id,
-          ),
-          _SummaryRow(
             label: l10n.reservationDateLabel,
             value: formatReservationDate(reservation.createdAt, l10n: l10n),
           ),

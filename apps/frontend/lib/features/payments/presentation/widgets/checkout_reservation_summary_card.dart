@@ -84,13 +84,11 @@ class CheckoutReservationSummaryCard extends StatelessWidget {
     super.key,
     this.order,
     this.reservation,
-    this.reservationId,
     this.onViewDetails,
   });
 
   final PaymentOrder? order;
   final LearnerReservation? reservation;
-  final String? reservationId;
   final VoidCallback? onViewDetails;
 
   @override
@@ -180,18 +178,7 @@ class CheckoutReservationSummaryCard extends StatelessWidget {
             Divider(color: colors.borderSubtle),
             const SizedBox(height: AppSpacing.md),
           ],
-          _InfoRow(
-            label: l10n.checkoutOrderIdLabel,
-            value: _shortId(
-              reservation?.id ??
-                  reservationId ??
-                  order?.reservationId ??
-                  order?.id ??
-                  '',
-            ),
-          ),
           if (reservation != null) ...[
-            const SizedBox(height: AppSpacing.sm),
             _InfoRow(
               label: l10n.checkoutReservationDateLabel,
               value: LocalizedFormatters(l10n).date(reservation!.createdAt),
@@ -243,10 +230,6 @@ class CheckoutReservationSummaryCard extends StatelessWidget {
     );
   }
 
-  String _shortId(String id) {
-    if (id.length <= 12) return id;
-    return '${id.substring(0, 8)}…';
-  }
 }
 
 class _MaterialThumb extends StatelessWidget {

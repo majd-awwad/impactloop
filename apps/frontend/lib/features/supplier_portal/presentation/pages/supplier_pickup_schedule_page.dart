@@ -997,7 +997,6 @@ class _MaterialCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final group = entry.group;
     final quantity = _quantityLabel(entry.quantity);
-    final reservationId = _shortId(entry.representativeReservationId);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1027,7 +1026,7 @@ class _MaterialCell extends StatelessWidget {
               Text(
                 group?.grouped == true
                     ? context.s.groupReservationsQuantity(group!.itemCount, quantity)
-                    : '$reservationId · $quantity',
+                    : quantity,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context.supplierBody().copyWith(
@@ -1896,9 +1895,6 @@ String _quantityLabel(SupplierScheduleQuantity quantity) {
       : quantity.value.toString();
   return '$value ${quantity.unit}';
 }
-
-String _shortId(String value) =>
-    value.length <= 14 ? value : '${value.substring(0, 12)}…';
 
 DateTime _dateOnly(DateTime value) =>
     DateTime(value.year, value.month, value.day);

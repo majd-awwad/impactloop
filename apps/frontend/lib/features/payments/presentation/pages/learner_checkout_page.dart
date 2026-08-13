@@ -212,10 +212,6 @@ class _LearnerCheckoutPageState extends ConsumerState<LearnerCheckoutPage>
           const SizedBox(height: AppSpacing.xl),
           CheckoutResultView(
             phase: state.phase,
-            reservationId: state.reservationId,
-            sessionId: state.session?.checkoutSessionId,
-            failureMessage: state.errorMessage ??
-                state.order?.latestTerminalAttempt?.failureMessage,
             onBackToReservation: () => _goToReservation(context, state),
             onViewReservations: () => context.go(learnerReservationsRoute),
             onRetry: controller.retryFromFailure,
@@ -233,7 +229,6 @@ class _LearnerCheckoutPageState extends ConsumerState<LearnerCheckoutPage>
     if (reservation == null && state.requirement == null) {
       return CheckoutResultView(
         phase: CheckoutPhase.missing,
-        reservationId: state.reservationId,
         onViewReservations: () => context.go(learnerReservationsRoute),
       );
     }
@@ -427,7 +422,6 @@ class _DesktopCheckoutColumns extends StatelessWidget {
           child: CheckoutReservationSummaryCard(
             reservation: state.reservation,
             order: state.order,
-            reservationId: state.reservationId,
             onViewDetails: onViewDetails,
           ),
         ),
@@ -499,7 +493,6 @@ class _MobileCheckoutColumns extends StatelessWidget {
         CheckoutReservationSummaryCard(
           reservation: state.reservation,
           order: state.order,
-          reservationId: state.reservationId,
           onViewDetails: onViewDetails,
         ),
         const SizedBox(height: AppSpacing.md),
