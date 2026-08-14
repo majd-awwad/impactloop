@@ -21,19 +21,64 @@ String buildChecklistMaterialDetailUri({
   required String projectId,
   required String buildItemId,
   String? componentName,
+  String? returnTo,
 }) {
-  final returnTo = Uri.encodeComponent('/learning/$projectId/build');
+  final resolvedReturnTo = Uri.encodeComponent(
+    returnTo ?? '/learning/$projectId/build',
+  );
 
   return Uri(
     path: '/materials/$materialId',
     queryParameters: {
       'projectId': projectId,
       'buildItemId': buildItemId,
-      'returnTo': returnTo,
+      'returnTo': resolvedReturnTo,
       if (componentName != null && componentName.trim().isNotEmpty)
         'componentName': componentName.trim(),
     },
   ).toString();
+}
+
+String smartBuildPlanBrowseMaterialUri({
+  required String materialId,
+  required String projectId,
+}) {
+  return Uri(
+    path: '/materials/$materialId',
+    queryParameters: {
+      'returnTo': Uri.encodeComponent('/learning/$projectId/build/smart-plan'),
+    },
+  ).toString();
+}
+
+String smartBuildPlanReserveMaterialUri({
+  required String materialId,
+  required String projectId,
+  required String buildItemId,
+  String? componentName,
+}) {
+  return buildChecklistMaterialDetailUri(
+    materialId: materialId,
+    projectId: projectId,
+    buildItemId: buildItemId,
+    componentName: componentName,
+    returnTo: '/learning/$projectId/build/smart-plan',
+  );
+}
+
+@Deprecated('Use smartBuildPlanBrowseMaterialUri or smartBuildPlanReserveMaterialUri')
+String smartBuildPlanMaterialDetailUri({
+  required String materialId,
+  required String projectId,
+  required String buildItemId,
+  String? componentName,
+}) {
+  return smartBuildPlanReserveMaterialUri(
+    materialId: materialId,
+    projectId: projectId,
+    buildItemId: buildItemId,
+    componentName: componentName,
+  );
 }
 
 class ProjectBuildMaterialCandidatesSheet extends StatefulWidget {
