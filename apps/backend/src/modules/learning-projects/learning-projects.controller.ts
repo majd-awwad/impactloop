@@ -11,6 +11,7 @@ import {
   deleteLearningProjectReviewById,
   followLearningProjectById,
   getBuildItemMaterialCandidatesById,
+  optimizeMyProjectBuildPlanById,
   getFollowedLearningProjects,
   getLearningProjectById,
   getLearningProjects,
@@ -271,6 +272,16 @@ export const getBuildItemMaterialCandidates = async (
   res.json(
     successResponse('Material candidates fetched successfully', result),
   );
+};
+
+export const optimizeMyProjectBuildPlan = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const result = await optimizeMyProjectBuildPlanById(id, req.auth!.sub);
+
+  res.json(successResponse('Build optimization plan generated successfully', result));
 };
 
 export const linkBuildItemMaterial = async (

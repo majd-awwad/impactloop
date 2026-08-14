@@ -17,6 +17,7 @@ import {
   getLearningProject,
   getMyLearningProjectSubmission,
   getMyProjectBuild,
+  optimizeMyProjectBuildPlan,
   getOrCreateAuthoringConversation,
   getOrCreateBuildGuideConversation,
   likeLearningProject,
@@ -195,6 +196,14 @@ learningProjectsRouter.get(
   requireRoles('LEARNER'),
   validate(learningProjectIdParamSchema, 'params'),
   asyncHandler(getMyProjectBuild),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/optimize-plan',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  asyncHandler(optimizeMyProjectBuildPlan),
 );
 
 learningProjectsRouter.post(
