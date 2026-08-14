@@ -3,6 +3,7 @@ import 'package:frontend/features/learning_hub/domain/learning_projects_result.d
 import 'package:frontend/features/learning_hub/domain/models/learning_project.dart';
 import 'package:frontend/features/learning_hub/domain/models/learning_project_submission.dart';
 import 'package:frontend/features/learning_hub/domain/models/project_build.dart';
+import 'package:frontend/features/learning_hub/domain/models/smart_build_plan.dart';
 import 'package:frontend/features/learning_hub/domain/models/learning_session.dart';
 import 'package:frontend/features/learning_hub/domain/project_engagement.dart';
 import 'package:frontend/features/learning_hub/domain/project_follow_status.dart';
@@ -14,6 +15,23 @@ import 'package:frontend/features/materials/data/models/category.dart';
 /// Returns empty published-project lists so Home spotlight and Learning Hub
 /// pages render without hitting the unconfigured provider stub.
 const emptyLearningHubRepository = _EmptyLearningHubRepository();
+
+SmartBuildPlanResult emptySmartBuildPlanResult(String projectId) {
+  return SmartBuildPlanResult(
+    buildId: 'test-build',
+    projectId: projectId,
+    generatedAt: DateTime.utc(2026, 1, 1),
+    advisory: true,
+    summary: const SmartBuildPlanBuildSummary(
+      requiredComponents: 0,
+      alreadySatisfied: 0,
+      inProgress: 0,
+      attention: 0,
+      optimizable: 0,
+    ),
+    plans: const [],
+  );
+}
 
 class _EmptyLearningHubRepository implements LearningProjectRepository {
   const _EmptyLearningHubRepository();
@@ -211,6 +229,11 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
         ),
       ),
     );
+  }
+
+  @override
+  Future<SmartBuildPlanResult> optimizeBuildPlan(String projectId) async {
+    return emptySmartBuildPlanResult(projectId);
   }
 
   @override

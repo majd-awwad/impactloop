@@ -576,6 +576,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
     unawaited(_loadViewerStateIfAuthenticated());
 
     ref.refreshLinkedProjectBuild(widget.projectId);
+    ref.refreshSmartBuildPlan(widget.projectId);
 
     if (hasMaterialRequestMatchId) {
       invalidateLearnerMaterialRequests(ref);

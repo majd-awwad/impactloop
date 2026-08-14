@@ -10,6 +10,7 @@ import '../domain/learning_projects_result.dart';
 import '../domain/models/learning_project.dart';
 import '../domain/models/learning_project_submission.dart';
 import '../domain/models/project_build.dart';
+import '../domain/models/smart_build_plan.dart';
 import '../domain/project_engagement.dart';
 import '../domain/project_follow_status.dart';
 import '../domain/project_save_status.dart';
@@ -300,6 +301,17 @@ class ApiLearningHubRepository implements LearningProjectRepository {
         data: const {},
       ),
       (json) => LearningHubApiMapper.fromBuildGuideConversationJson(json),
+    );
+  }
+
+  @override
+  Future<SmartBuildPlanResult> optimizeBuildPlan(String projectId) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/optimize-plan',
+        data: const {},
+      ),
+      LearningHubApiMapper.fromSmartBuildPlanJson,
     );
   }
 

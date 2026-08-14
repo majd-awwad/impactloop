@@ -28,6 +28,7 @@ import '../../../../core/errors/api_exception.dart';
 import '../../domain/models/project_material_coverage.dart';
 import '../theme/learning_ui_palette.dart';
 import '../l10n/learning_hub_coverage_l10n.dart';
+import '../l10n/smart_build_plan_l10n.dart';
 import '../l10n/learning_project_build_l10n.dart';
 import '../l10n/project_build_page_l10n.dart';
 import '../widgets/project_build_acquisition_state.dart';
@@ -1748,6 +1749,7 @@ class _BuildHeader extends StatelessWidget {
                 hasExistingConversation: buildRecord.guideConversationId != null,
                 onOpenBuildGuide: onOpenBuildGuide,
               );
+              final smartPlanAction = _SmartBuildPlanAction(projectId: projectId);
               final notebookAction = OutlinedButton.icon(
                 onPressed: () => context.push(
                   learnerBuildNotebookRoute(buildRecord.id),
@@ -1803,6 +1805,11 @@ class _BuildHeader extends StatelessWidget {
                     ],
                     const SizedBox(height: AppSpacing.sm),
                     guideAction,
+                    if (buildRecord.status == ProjectBuildStatus.inProgress ||
+                        buildRecord.status == ProjectBuildStatus.paused) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      smartPlanAction,
+                    ],
                     const SizedBox(height: AppSpacing.sm),
                     notebookAction,
                   ],
@@ -1822,6 +1829,11 @@ class _BuildHeader extends StatelessWidget {
                       notebookAction,
                       const SizedBox(width: AppSpacing.sm),
                       guideAction,
+                      if (buildRecord.status == ProjectBuildStatus.inProgress ||
+                          buildRecord.status == ProjectBuildStatus.paused) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        smartPlanAction,
+                      ],
                     ],
                   ),
                   if (buildRecord.status == ProjectBuildStatus.paused) ...[
@@ -1890,6 +1902,28 @@ class _BuildGuideCompactAction extends StatelessWidget {
             )
           : const Icon(Icons.smart_toy_outlined, size: 18),
       label: Text(label),
+      style: OutlinedButton.styleFrom(
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+      ),
+    );
+  }
+}
+
+class _SmartBuildPlanAction extends StatelessWidget {
+  const _SmartBuildPlanAction({required this.projectId});
+
+  final String projectId;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: () => context.push('/learning/$projectId/build/smart-plan'),
+      icon: const Icon(Icons.auto_awesome_outlined, size: 18),
+      label: Text(SmartBuildPlanL10n.openFromBuild.resolve(context)),
       style: OutlinedButton.styleFrom(
         visualDensity: VisualDensity.compact,
         padding: const EdgeInsetsDirectional.symmetric(
