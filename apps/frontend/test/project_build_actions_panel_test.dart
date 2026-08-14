@@ -12,6 +12,7 @@ import 'package:frontend/features/learning_hub/domain/learning_projects_result.d
 import 'package:frontend/features/learning_hub/domain/models/learning_project.dart';
 import 'package:frontend/features/learning_hub/domain/models/learning_project_submission.dart';
 import 'package:frontend/features/learning_hub/domain/models/project_build.dart';
+import 'package:frontend/features/learning_hub/domain/models/smart_build_plan.dart';
 import 'package:frontend/features/learning_hub/domain/project_engagement.dart';
 import 'package:frontend/features/learning_hub/domain/project_follow_status.dart';
 import 'package:frontend/features/learning_hub/domain/project_save_status.dart';
@@ -233,6 +234,11 @@ class _BuildPanelRepository implements LearningProjectRepository {
   Future<BuildGuideConversationResult> getOrCreateBuildGuideConversation(
     String projectId,
   ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<SmartBuildPlanResult> optimizeBuildPlan(String projectId) {
     throw UnimplementedError();
   }
 
