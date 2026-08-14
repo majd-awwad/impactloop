@@ -7,6 +7,7 @@ import 'models/learning_project_submission.dart'
         LearningProjectSubmissionsQuery,
         LearningProjectSubmissionsResult;
 import 'models/project_build.dart';
+import 'models/smart_build_plan.dart';
 import 'project_engagement.dart';
 import 'project_follow_status.dart';
 import 'project_save_status.dart';
@@ -87,6 +88,8 @@ abstract class LearningProjectRepository {
   Future<BuildGuideConversationResult> getOrCreateBuildGuideConversation(
     String projectId,
   );
+
+  Future<SmartBuildPlanResult> optimizeBuildPlan(String projectId);
 
   Future<LearningSessionBundle> fetchLearningSession(String projectId);
 

@@ -173,4 +173,13 @@ extension ProjectBuildRefreshWidgetRefX on WidgetRef {
   void refreshLinkedProjectBuild(String? projectId) {
     refreshProjectBuildWith(invalidate, projectId);
   }
+
+  void refreshSmartBuildPlan(String? projectId) {
+    final targetId = projectBuildRefreshTargetId(projectId);
+    if (targetId == null) {
+      return;
+    }
+
+    invalidate(smartBuildPlanProvider(targetId));
+  }
 }

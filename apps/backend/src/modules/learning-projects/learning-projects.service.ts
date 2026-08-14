@@ -43,6 +43,7 @@ import {
   mapBuildItemQuantityAllocationDto,
   resolveBuildItemAllocationContext,
 } from './learning-projects.build-material-allocation.js';
+import { optimizeProjectBuildPlan } from './learning-projects.build-optimizer.js';
 import { prisma } from '../../database/prisma.js';
 import {
   attachLearningSetupToBuild,
@@ -1648,6 +1649,16 @@ export const getBuildItemMaterialCandidatesById = async (
     projectId,
     learnerId: userId,
     itemId,
+  });
+};
+
+export const optimizeMyProjectBuildPlanById = async (
+  projectId: string,
+  userId: string,
+) => {
+  return optimizeProjectBuildPlan({
+    projectId,
+    learnerId: userId,
   });
 };
 
