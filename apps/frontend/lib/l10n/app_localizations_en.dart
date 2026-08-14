@@ -150,7 +150,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reservation => 'Reservation';
 
   @override
-  String get reservationRequest => 'Reservation request';
+  String get reservationRequest => 'Material reservation request';
+
+  @override
+  String get reservationRequestSubtitle =>
+      'Enter the required details to send your request to the supplier.';
 
   @override
   String get pickup => 'Pickup from supplier';
@@ -559,6 +563,34 @@ class AppLocalizationsEn extends AppLocalizations {
     String materialTitle,
   ) {
     return 'Pay $amount for $materialTitle to continue.';
+  }
+
+  @override
+  String get notificationPaymentAcceptedReadyTitle => 'Reservation accepted';
+
+  @override
+  String notificationPaymentAcceptedReadyBodyMaterialsAndDelivery(
+    String amount,
+  ) {
+    return 'Your reservation is ready for payment. Total: $amount including materials and delivery.';
+  }
+
+  @override
+  String notificationPaymentAcceptedReadyBodyMaterialsOnly(String amount) {
+    return 'Your reservation is ready for payment. Total: $amount including materials.';
+  }
+
+  @override
+  String notificationPaymentAcceptedReadyBodyDeliveryOnly(String amount) {
+    return 'Your reservation is ready for payment. Total: $amount including delivery.';
+  }
+
+  @override
+  String notificationPaymentAcceptedReadyBodyPickup(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'Your reservation is ready for payment. Total: $amount for $materialTitle before pickup. Your pickup code stays hidden until payment is complete.';
   }
 
   @override
@@ -1875,6 +1907,190 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reservationPaymentDueAtHandover => 'Due at handover';
 
   @override
+  String get reservationOrderSummary => 'Order summary';
+
+  @override
+  String reservationAvailableQuantity(String quantity) {
+    return 'Available: $quantity';
+  }
+
+  @override
+  String get reservationDeliveryDetails => 'Delivery details';
+
+  @override
+  String get reservationDeliveryAddressLabel => 'Detailed delivery address';
+
+  @override
+  String get reservationDeliveryAddressHint =>
+      'Street, building number, area, nearest landmark';
+
+  @override
+  String get reservationDeliveryAddressRequired =>
+      'Enter a detailed delivery address.';
+
+  @override
+  String get reservationChooseCityHint => 'Choose city';
+
+  @override
+  String get reservationSafeDropoffLabel => 'Safe drop-off';
+
+  @override
+  String get reservationSafeDropoffHint =>
+      'Leave the order in a safe place if no one is there to receive it.';
+
+  @override
+  String get reservationDeliveryNoteLabel => 'Delivery note';
+
+  @override
+  String get reservationDeliveryNoteHint =>
+      'Add any notes or special delivery instructions.';
+
+  @override
+  String get reservationPreferredDeliveryTimeOptional =>
+      'Preferred delivery time';
+
+  @override
+  String get reservationPreferredPickupTimeOptional => 'Preferred pickup time';
+
+  @override
+  String get reservationMessageToSupplierLabel => 'Message to supplier';
+
+  @override
+  String get reservationMessageToSupplierHint =>
+      'Write your message or questions to the supplier here…';
+
+  @override
+  String get reservationMessageToSupplierPickupHint =>
+      'Add pickup notes or questions…';
+
+  @override
+  String get reservationFulfillmentPickupHint =>
+      'Collect from the supplier location.';
+
+  @override
+  String get reservationFulfillmentDeliveryHint => 'Deliver to your address.';
+
+  @override
+  String get reservationPaymentCardFasterHint =>
+      'Card payment is faster and safer.';
+
+  @override
+  String get reservationMaterialSubtotalLabel => 'Material subtotal';
+
+  @override
+  String get reservationUnitPriceLabel => 'Unit price';
+
+  @override
+  String get reservationDeliveryFeeLabel => 'Delivery fee';
+
+  @override
+  String get reservationEstimatedTotalLabel => 'Estimated total';
+
+  @override
+  String get reservationEstimatedTotalPending => 'Estimated total pending';
+
+  @override
+  String get reservationTotalToPayLabel => 'Total to pay';
+
+  @override
+  String get reservationCalculatingTotal => 'Calculating estimated total…';
+
+  @override
+  String get reservationChooseFulfillmentHint =>
+      'Choose how you want to receive this material to continue.';
+
+  @override
+  String get reservationPickupOnlyHint => 'This material is pickup only.';
+
+  @override
+  String get reservationDeliveryOnlyHint => 'This material is delivery only.';
+
+  @override
+  String get reservationEnterCityForQuote =>
+      'Enter city to calculate delivery fee.';
+
+  @override
+  String get reservationQuoteWaitingHint =>
+      'Estimated total will appear after required details are entered.';
+
+  @override
+  String get reservationAddAnotherWindow => 'Add another window';
+
+  @override
+  String get preferredWindowDateLabel => 'Start date';
+
+  @override
+  String get preferredWindowStartTimeLabel => 'Start time';
+
+  @override
+  String get preferredWindowEndTimeLabel => 'End time';
+
+  @override
+  String get preferredWindowChooseDate => 'Choose date';
+
+  @override
+  String get preferredWindowChooseTime => 'Choose time';
+
+  @override
+  String preferredWindowNumberLabel(int number) {
+    return 'Preferred window $number';
+  }
+
+  @override
+  String get preferredWindowRemoveTooltip => 'Remove window';
+
+  @override
+  String get preferredWindowIncompleteError =>
+      'Choose a date, start time, and end time.';
+
+  @override
+  String reservationSubmitTotalLabel(String amount) {
+    return 'Total: $amount';
+  }
+
+  @override
+  String get reservationSubmitMissingFulfillment =>
+      'Choose pickup or delivery before reserving.';
+
+  @override
+  String get reservationSubmitMissingPayment => 'Choose a payment method.';
+
+  @override
+  String get reservationSubmitMissingQuote =>
+      'Complete required details to see the estimated total.';
+
+  @override
+  String get reservationSubmitMissingCity => 'Enter a drop-off city.';
+
+  @override
+  String get reservationSubmitMissingAddress => 'Enter a delivery address.';
+
+  @override
+  String get fieldOptional => 'Optional';
+
+  @override
+  String get fieldRequired => 'Required';
+
+  @override
+  String get reservationTrustBadge => 'Your order is safe and protected';
+
+  @override
+  String get reservationTrustBadgeDetail =>
+      'We protect your data and only share contact details when operationally required.';
+
+  @override
+  String get reservationCombineDeliveryGroup =>
+      'Combine with existing delivery';
+
+  @override
+  String get reservationCombineDeliveryGroupHint =>
+      'You already have another delivery from this supplier that can be combined. Pay one delivery fee.';
+
+  @override
+  String get reservationCombinedDeliveryFeeNote =>
+      'Combined delivery fee charged once for this group.';
+
+  @override
   String get checkoutStepConfirm => 'Confirm order';
 
   @override
@@ -3060,6 +3276,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chooseSavedDropoffAddress => 'Choose a saved drop-off address.';
+
+  @override
+  String get savedAddressDefaultBadge => 'Default';
 
   @override
   String get country => 'Country';

@@ -62,7 +62,8 @@
   "learningProject": "Learning project",
   "requiredComponent": "Required component",
   "reservation": "Reservation",
-  "reservationRequest": "Reservation request",
+  "reservationRequest": "Material reservation request",
+  "reservationRequestSubtitle": "Enter the required details to send your request to the supplier.",
   "pickup": "Pickup from supplier",
   "delivery": "Delivery",
   "driver": "Driver",
@@ -240,6 +241,32 @@
   },
   "notificationPaymentRequiredBodyWithAmount": "Pay {amount} for {materialTitle} to continue.",
   "@notificationPaymentRequiredBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentAcceptedReadyTitle": "Reservation accepted",
+  "notificationPaymentAcceptedReadyBodyMaterialsAndDelivery": "Your reservation is ready for payment. Total: {amount} including materials and delivery.",
+  "@notificationPaymentAcceptedReadyBodyMaterialsAndDelivery": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "notificationPaymentAcceptedReadyBodyMaterialsOnly": "Your reservation is ready for payment. Total: {amount} including materials.",
+  "@notificationPaymentAcceptedReadyBodyMaterialsOnly": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "notificationPaymentAcceptedReadyBodyDeliveryOnly": "Your reservation is ready for payment. Total: {amount} including delivery.",
+  "@notificationPaymentAcceptedReadyBodyDeliveryOnly": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "notificationPaymentAcceptedReadyBodyPickup": "Your reservation is ready for payment. Total: {amount} for {materialTitle} before pickup. Your pickup code stays hidden until payment is complete.",
+  "@notificationPaymentAcceptedReadyBodyPickup": {
     "placeholders": {
       "amount": { "type": "String" },
       "materialTitle": { "type": "String" }
@@ -932,6 +959,74 @@
   "reservationPaymentCashAtHandover": "Cash will be collected at handover.",
   "reservationPaymentCashInPerson": "Cash requires an in-person handover.",
   "reservationPaymentDueAtHandover": "Due at handover",
+  "reservationOrderSummary": "Order summary",
+  "reservationAvailableQuantity": "Available: {quantity}",
+  "@reservationAvailableQuantity": {
+    "placeholders": {
+      "quantity": { "type": "String" }
+    }
+  },
+  "reservationDeliveryDetails": "Delivery details",
+  "reservationDeliveryAddressLabel": "Detailed delivery address",
+  "reservationDeliveryAddressHint": "Street, building number, area, nearest landmark",
+  "reservationDeliveryAddressRequired": "Enter a detailed delivery address.",
+  "reservationChooseCityHint": "Choose city",
+  "reservationSafeDropoffLabel": "Safe drop-off",
+  "reservationSafeDropoffHint": "Leave the order in a safe place if no one is there to receive it.",
+  "reservationDeliveryNoteLabel": "Delivery note",
+  "reservationDeliveryNoteHint": "Add any notes or special delivery instructions.",
+  "reservationPreferredDeliveryTimeOptional": "Preferred delivery time",
+  "reservationPreferredPickupTimeOptional": "Preferred pickup time",
+  "reservationMessageToSupplierLabel": "Message to supplier",
+  "reservationMessageToSupplierHint": "Write your message or questions to the supplier here…",
+  "reservationMessageToSupplierPickupHint": "Add pickup notes or questions…",
+  "reservationFulfillmentPickupHint": "Collect from the supplier location.",
+  "reservationFulfillmentDeliveryHint": "Deliver to your address.",
+  "reservationPaymentCardFasterHint": "Card payment is faster and safer.",
+  "reservationMaterialSubtotalLabel": "Material subtotal",
+  "reservationUnitPriceLabel": "Unit price",
+  "reservationDeliveryFeeLabel": "Delivery fee",
+  "reservationEstimatedTotalLabel": "Estimated total",
+  "reservationEstimatedTotalPending": "Estimated total pending",
+  "reservationTotalToPayLabel": "Total to pay",
+  "reservationCalculatingTotal": "Calculating estimated total…",
+  "reservationChooseFulfillmentHint": "Choose how you want to receive this material to continue.",
+  "reservationPickupOnlyHint": "This material is pickup only.",
+  "reservationDeliveryOnlyHint": "This material is delivery only.",
+  "reservationEnterCityForQuote": "Enter city to calculate delivery fee.",
+  "reservationQuoteWaitingHint": "Estimated total will appear after required details are entered.",
+  "reservationAddAnotherWindow": "Add another window",
+  "preferredWindowDateLabel": "Start date",
+  "preferredWindowStartTimeLabel": "Start time",
+  "preferredWindowEndTimeLabel": "End time",
+  "preferredWindowChooseDate": "Choose date",
+  "preferredWindowChooseTime": "Choose time",
+  "preferredWindowNumberLabel": "Preferred window {number}",
+  "@preferredWindowNumberLabel": {
+    "placeholders": {
+      "number": { "type": "int" }
+    }
+  },
+  "preferredWindowRemoveTooltip": "Remove window",
+  "preferredWindowIncompleteError": "Choose a date, start time, and end time.",
+  "reservationSubmitTotalLabel": "Total: {amount}",
+  "@reservationSubmitTotalLabel": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "reservationSubmitMissingFulfillment": "Choose pickup or delivery before reserving.",
+  "reservationSubmitMissingPayment": "Choose a payment method.",
+  "reservationSubmitMissingQuote": "Complete required details to see the estimated total.",
+  "reservationSubmitMissingCity": "Enter a drop-off city.",
+  "reservationSubmitMissingAddress": "Enter a delivery address.",
+  "fieldOptional": "Optional",
+  "fieldRequired": "Required",
+  "reservationTrustBadge": "Your order is safe and protected",
+  "reservationTrustBadgeDetail": "We protect your data and only share contact details when operationally required.",
+  "reservationCombineDeliveryGroup": "Combine with existing delivery",
+  "reservationCombineDeliveryGroupHint": "You already have another delivery from this supplier that can be combined. Pay one delivery fee.",
+  "reservationCombinedDeliveryFeeNote": "Combined delivery fee charged once for this group.",
   "checkoutStepConfirm": "Confirm order",
   "checkoutStepResult": "Result",
   "checkoutReservationInfo": "Reservation information",
@@ -1404,6 +1499,7 @@
   "newAddress": "New address",
   "savedDropoffAddress": "Saved drop-off address",
   "chooseSavedDropoffAddress": "Choose a saved drop-off address.",
+  "savedAddressDefaultBadge": "Default",
   "country": "Country",
   "city": "City",
   "area": "Area",

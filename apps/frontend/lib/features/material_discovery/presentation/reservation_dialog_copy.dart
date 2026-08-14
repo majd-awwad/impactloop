@@ -1,9 +1,15 @@
+import 'package:frontend/l10n/app_localizations.dart';
+
 String formatReservationAvailableQuantityLabel({
   required double availableQuantity,
   required String unit,
+  AppLocalizations? l10n,
 }) {
   final formatted = formatReservationQuantity(availableQuantity);
   final unitLabel = formatReservationUnitForQuantity(unit, availableQuantity);
+  if (l10n != null) {
+    return l10n.reservationAvailableQuantity('$formatted $unitLabel');
+  }
   return 'Available: $formatted $unitLabel';
 }
 

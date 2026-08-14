@@ -329,8 +329,14 @@ abstract class AppLocalizations {
   /// No description provided for @reservationRequest.
   ///
   /// In en, this message translates to:
-  /// **'Reservation request'**
+  /// **'Material reservation request'**
   String get reservationRequest;
+
+  /// No description provided for @reservationRequestSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the required details to send your request to the supplier.'**
+  String get reservationRequestSubtitle;
 
   /// No description provided for @pickup.
   ///
@@ -1045,6 +1051,41 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pay {amount} for {materialTitle} to continue.'**
   String notificationPaymentRequiredBodyWithAmount(
+    String amount,
+    String materialTitle,
+  );
+
+  /// No description provided for @notificationPaymentAcceptedReadyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation accepted'**
+  String get notificationPaymentAcceptedReadyTitle;
+
+  /// No description provided for @notificationPaymentAcceptedReadyBodyMaterialsAndDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Your reservation is ready for payment. Total: {amount} including materials and delivery.'**
+  String notificationPaymentAcceptedReadyBodyMaterialsAndDelivery(
+    String amount,
+  );
+
+  /// No description provided for @notificationPaymentAcceptedReadyBodyMaterialsOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Your reservation is ready for payment. Total: {amount} including materials.'**
+  String notificationPaymentAcceptedReadyBodyMaterialsOnly(String amount);
+
+  /// No description provided for @notificationPaymentAcceptedReadyBodyDeliveryOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Your reservation is ready for payment. Total: {amount} including delivery.'**
+  String notificationPaymentAcceptedReadyBodyDeliveryOnly(String amount);
+
+  /// No description provided for @notificationPaymentAcceptedReadyBodyPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'Your reservation is ready for payment. Total: {amount} for {materialTitle} before pickup. Your pickup code stays hidden until payment is complete.'**
+  String notificationPaymentAcceptedReadyBodyPickup(
     String amount,
     String materialTitle,
   );
@@ -3188,6 +3229,324 @@ abstract class AppLocalizations {
   /// **'Due at handover'**
   String get reservationPaymentDueAtHandover;
 
+  /// No description provided for @reservationOrderSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Order summary'**
+  String get reservationOrderSummary;
+
+  /// No description provided for @reservationAvailableQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Available: {quantity}'**
+  String reservationAvailableQuantity(String quantity);
+
+  /// No description provided for @reservationDeliveryDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery details'**
+  String get reservationDeliveryDetails;
+
+  /// No description provided for @reservationDeliveryAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed delivery address'**
+  String get reservationDeliveryAddressLabel;
+
+  /// No description provided for @reservationDeliveryAddressHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Street, building number, area, nearest landmark'**
+  String get reservationDeliveryAddressHint;
+
+  /// No description provided for @reservationDeliveryAddressRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a detailed delivery address.'**
+  String get reservationDeliveryAddressRequired;
+
+  /// No description provided for @reservationChooseCityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose city'**
+  String get reservationChooseCityHint;
+
+  /// No description provided for @reservationSafeDropoffLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Safe drop-off'**
+  String get reservationSafeDropoffLabel;
+
+  /// No description provided for @reservationSafeDropoffHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave the order in a safe place if no one is there to receive it.'**
+  String get reservationSafeDropoffHint;
+
+  /// No description provided for @reservationDeliveryNoteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery note'**
+  String get reservationDeliveryNoteLabel;
+
+  /// No description provided for @reservationDeliveryNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add any notes or special delivery instructions.'**
+  String get reservationDeliveryNoteHint;
+
+  /// No description provided for @reservationPreferredDeliveryTimeOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred delivery time'**
+  String get reservationPreferredDeliveryTimeOptional;
+
+  /// No description provided for @reservationPreferredPickupTimeOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred pickup time'**
+  String get reservationPreferredPickupTimeOptional;
+
+  /// No description provided for @reservationMessageToSupplierLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Message to supplier'**
+  String get reservationMessageToSupplierLabel;
+
+  /// No description provided for @reservationMessageToSupplierHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write your message or questions to the supplier here…'**
+  String get reservationMessageToSupplierHint;
+
+  /// No description provided for @reservationMessageToSupplierPickupHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add pickup notes or questions…'**
+  String get reservationMessageToSupplierPickupHint;
+
+  /// No description provided for @reservationFulfillmentPickupHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Collect from the supplier location.'**
+  String get reservationFulfillmentPickupHint;
+
+  /// No description provided for @reservationFulfillmentDeliveryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Deliver to your address.'**
+  String get reservationFulfillmentDeliveryHint;
+
+  /// No description provided for @reservationPaymentCardFasterHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Card payment is faster and safer.'**
+  String get reservationPaymentCardFasterHint;
+
+  /// No description provided for @reservationMaterialSubtotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Material subtotal'**
+  String get reservationMaterialSubtotalLabel;
+
+  /// No description provided for @reservationUnitPriceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit price'**
+  String get reservationUnitPriceLabel;
+
+  /// No description provided for @reservationDeliveryFeeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery fee'**
+  String get reservationDeliveryFeeLabel;
+
+  /// No description provided for @reservationEstimatedTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated total'**
+  String get reservationEstimatedTotalLabel;
+
+  /// No description provided for @reservationEstimatedTotalPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated total pending'**
+  String get reservationEstimatedTotalPending;
+
+  /// No description provided for @reservationTotalToPayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total to pay'**
+  String get reservationTotalToPayLabel;
+
+  /// No description provided for @reservationCalculatingTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculating estimated total…'**
+  String get reservationCalculatingTotal;
+
+  /// No description provided for @reservationChooseFulfillmentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how you want to receive this material to continue.'**
+  String get reservationChooseFulfillmentHint;
+
+  /// No description provided for @reservationPickupOnlyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This material is pickup only.'**
+  String get reservationPickupOnlyHint;
+
+  /// No description provided for @reservationDeliveryOnlyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This material is delivery only.'**
+  String get reservationDeliveryOnlyHint;
+
+  /// No description provided for @reservationEnterCityForQuote.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter city to calculate delivery fee.'**
+  String get reservationEnterCityForQuote;
+
+  /// No description provided for @reservationQuoteWaitingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated total will appear after required details are entered.'**
+  String get reservationQuoteWaitingHint;
+
+  /// No description provided for @reservationAddAnotherWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Add another window'**
+  String get reservationAddAnotherWindow;
+
+  /// No description provided for @preferredWindowDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Start date'**
+  String get preferredWindowDateLabel;
+
+  /// No description provided for @preferredWindowStartTimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Start time'**
+  String get preferredWindowStartTimeLabel;
+
+  /// No description provided for @preferredWindowEndTimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'End time'**
+  String get preferredWindowEndTimeLabel;
+
+  /// No description provided for @preferredWindowChooseDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose date'**
+  String get preferredWindowChooseDate;
+
+  /// No description provided for @preferredWindowChooseTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose time'**
+  String get preferredWindowChooseTime;
+
+  /// No description provided for @preferredWindowNumberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred window {number}'**
+  String preferredWindowNumberLabel(int number);
+
+  /// No description provided for @preferredWindowRemoveTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove window'**
+  String get preferredWindowRemoveTooltip;
+
+  /// No description provided for @preferredWindowIncompleteError.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a date, start time, and end time.'**
+  String get preferredWindowIncompleteError;
+
+  /// No description provided for @reservationSubmitTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total: {amount}'**
+  String reservationSubmitTotalLabel(String amount);
+
+  /// No description provided for @reservationSubmitMissingFulfillment.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose pickup or delivery before reserving.'**
+  String get reservationSubmitMissingFulfillment;
+
+  /// No description provided for @reservationSubmitMissingPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a payment method.'**
+  String get reservationSubmitMissingPayment;
+
+  /// No description provided for @reservationSubmitMissingQuote.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete required details to see the estimated total.'**
+  String get reservationSubmitMissingQuote;
+
+  /// No description provided for @reservationSubmitMissingCity.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a drop-off city.'**
+  String get reservationSubmitMissingCity;
+
+  /// No description provided for @reservationSubmitMissingAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a delivery address.'**
+  String get reservationSubmitMissingAddress;
+
+  /// No description provided for @fieldOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get fieldOptional;
+
+  /// No description provided for @fieldRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get fieldRequired;
+
+  /// No description provided for @reservationTrustBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Your order is safe and protected'**
+  String get reservationTrustBadge;
+
+  /// No description provided for @reservationTrustBadgeDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'We protect your data and only share contact details when operationally required.'**
+  String get reservationTrustBadgeDetail;
+
+  /// No description provided for @reservationCombineDeliveryGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Combine with existing delivery'**
+  String get reservationCombineDeliveryGroup;
+
+  /// No description provided for @reservationCombineDeliveryGroupHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You already have another delivery from this supplier that can be combined. Pay one delivery fee.'**
+  String get reservationCombineDeliveryGroupHint;
+
+  /// No description provided for @reservationCombinedDeliveryFeeNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Combined delivery fee charged once for this group.'**
+  String get reservationCombinedDeliveryFeeNote;
+
   /// No description provided for @checkoutStepConfirm.
   ///
   /// In en, this message translates to:
@@ -5290,6 +5649,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Choose a saved drop-off address.'**
   String get chooseSavedDropoffAddress;
+
+  /// No description provided for @savedAddressDefaultBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get savedAddressDefaultBadge;
 
   /// No description provided for @country.
   ///

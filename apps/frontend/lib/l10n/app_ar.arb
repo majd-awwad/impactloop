@@ -61,7 +61,8 @@
   "learningProject": "مشروع تعليمي",
   "requiredComponent": "مكوّن مطلوب",
   "reservation": "حجز",
-  "reservationRequest": "طلب حجز",
+  "reservationRequest": "طلب حجز المادة",
+  "reservationRequestSubtitle": "أدخل التفاصيل المطلوبة لإرسال الطلب إلى المورد",
   "pickup": "الاستلام من المورّد",
   "delivery": "التوصيل",
   "driver": "السائق",
@@ -239,6 +240,32 @@
   },
   "notificationPaymentRequiredBodyWithAmount": "ادفع {amount} مقابل {materialTitle} للمتابعة.",
   "@notificationPaymentRequiredBodyWithAmount": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "materialTitle": { "type": "String" }
+    }
+  },
+  "notificationPaymentAcceptedReadyTitle": "تم قبول طلب الحجز",
+  "notificationPaymentAcceptedReadyBodyMaterialsAndDelivery": "أصبح طلبك جاهزًا للدفع. الإجمالي: {amount} شامل المواد والتوصيل.",
+  "@notificationPaymentAcceptedReadyBodyMaterialsAndDelivery": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "notificationPaymentAcceptedReadyBodyMaterialsOnly": "أصبح طلبك جاهزًا للدفع. الإجمالي: {amount} شامل المواد.",
+  "@notificationPaymentAcceptedReadyBodyMaterialsOnly": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "notificationPaymentAcceptedReadyBodyDeliveryOnly": "أصبح طلبك جاهزًا للدفع. الإجمالي: {amount} شامل التوصيل.",
+  "@notificationPaymentAcceptedReadyBodyDeliveryOnly": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "notificationPaymentAcceptedReadyBodyPickup": "أصبح طلبك جاهزًا للدفع. الإجمالي: {amount} مقابل {materialTitle} قبل الاستلام. يبقى رمز الاستلام مخفيًا حتى إتمام الدفع.",
+  "@notificationPaymentAcceptedReadyBodyPickup": {
     "placeholders": {
       "amount": { "type": "String" },
       "materialTitle": { "type": "String" }
@@ -931,6 +958,74 @@
   "reservationPaymentCashAtHandover": "سيتم تحصيل المبلغ نقدًا عند التسليم.",
   "reservationPaymentCashInPerson": "الدفع النقدي يتطلب تسليمًا مباشرًا.",
   "reservationPaymentDueAtHandover": "مستحق عند التسليم",
+  "reservationOrderSummary": "ملخص الطلب",
+  "reservationAvailableQuantity": "المتوفر {quantity}",
+  "@reservationAvailableQuantity": {
+    "placeholders": {
+      "quantity": { "type": "String" }
+    }
+  },
+  "reservationDeliveryDetails": "تفاصيل التوصيل",
+  "reservationDeliveryAddressLabel": "العنوان بالتفصيل",
+  "reservationDeliveryAddressHint": "الشارع، رقم المبنى، المنطقة، أقرب معلم",
+  "reservationDeliveryAddressRequired": "أدخل عنوان التوصيل بالتفصيل.",
+  "reservationChooseCityHint": "اختر المدينة",
+  "reservationSafeDropoffLabel": "التوصيل في مكان آمن",
+  "reservationSafeDropoffHint": "اترك الطلب في مكان آمن إذا لم يكن أحد متاحًا لاستلامه.",
+  "reservationDeliveryNoteLabel": "ملاحظة للتوصيل",
+  "reservationDeliveryNoteHint": "أضف أي ملاحظات أو تعليمات خاصة بالتوصيل.",
+  "reservationPreferredDeliveryTimeOptional": "وقت التوصيل المفضل",
+  "reservationPreferredPickupTimeOptional": "وقت الاستلام المفضل",
+  "reservationMessageToSupplierLabel": "رسالة للمورد",
+  "reservationMessageToSupplierHint": "اكتب رسالتك أو أسئلتك للمورد هنا…",
+  "reservationMessageToSupplierPickupHint": "أضف ملاحظات أو أسئلة عن الاستلام…",
+  "reservationFulfillmentPickupHint": "استلم من موقع المورّد.",
+  "reservationFulfillmentDeliveryHint": "التوصيل إلى عنوانك.",
+  "reservationPaymentCardFasterHint": "ملاحظة: الدفع بالبطاقة أسرع وأكثر أمانًا.",
+  "reservationMaterialSubtotalLabel": "إجمالي المواد",
+  "reservationUnitPriceLabel": "سعر الوحدة",
+  "reservationDeliveryFeeLabel": "رسوم التوصيل",
+  "reservationEstimatedTotalLabel": "الإجمالي التقديري",
+  "reservationEstimatedTotalPending": "الإجمالي التقديري قيد الحساب",
+  "reservationTotalToPayLabel": "الإجمالي المطلوب",
+  "reservationCalculatingTotal": "جارٍ حساب الإجمالي التقديري…",
+  "reservationChooseFulfillmentHint": "اختر طريقة الاستلام للمتابعة.",
+  "reservationPickupOnlyHint": "هذه المادة متاحة للاستلام الذاتي فقط.",
+  "reservationDeliveryOnlyHint": "هذه المادة متاحة للتوصيل فقط.",
+  "reservationEnterCityForQuote": "أدخل المدينة لحساب رسوم التوصيل.",
+  "reservationQuoteWaitingHint": "سيظهر الإجمالي التقديري بعد إدخال التفاصيل المطلوبة.",
+  "reservationAddAnotherWindow": "إضافة وقت آخر",
+  "preferredWindowDateLabel": "تاريخ البداية",
+  "preferredWindowStartTimeLabel": "وقت البداية",
+  "preferredWindowEndTimeLabel": "وقت النهاية",
+  "preferredWindowChooseDate": "اختر التاريخ",
+  "preferredWindowChooseTime": "اختر الوقت",
+  "preferredWindowNumberLabel": "النافذة المفضلة {number}",
+  "@preferredWindowNumberLabel": {
+    "placeholders": {
+      "number": { "type": "int" }
+    }
+  },
+  "preferredWindowRemoveTooltip": "إزالة النافذة",
+  "preferredWindowIncompleteError": "اختر التاريخ ووقت البداية ووقت النهاية.",
+  "reservationSubmitTotalLabel": "الإجمالي: {amount}",
+  "@reservationSubmitTotalLabel": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "reservationSubmitMissingFulfillment": "اختر الاستلام أو التوصيل قبل الحجز.",
+  "reservationSubmitMissingPayment": "اختر طريقة الدفع.",
+  "reservationSubmitMissingQuote": "أكمل التفاصيل المطلوبة لعرض الإجمالي التقديري.",
+  "reservationSubmitMissingCity": "أدخل مدينة التوصيل.",
+  "reservationSubmitMissingAddress": "أدخل عنوان التوصيل.",
+  "fieldOptional": "اختياري",
+  "fieldRequired": "مطلوب",
+  "reservationTrustBadge": "طلبك آمن ومضمون",
+  "reservationTrustBadgeDetail": "نحمي بياناتك ولا نشارك معلومات التواصل إلا عند الحاجة التشغيلية.",
+  "reservationCombineDeliveryGroup": "الدمج مع توصيل قائم",
+  "reservationCombineDeliveryGroupHint": "لديك توصيل آخر من هذا المورّد يمكن دمجه. ادفع رسوم توصيل واحدة.",
+  "reservationCombinedDeliveryFeeNote": "تُحسب رسوم التوصيل المدمج مرة واحدة لهذه المجموعة.",
   "checkoutStepConfirm": "تأكيد الطلب",
   "checkoutStepResult": "النتيجة",
   "checkoutReservationInfo": "معلومات الحجز",
@@ -1403,6 +1498,7 @@
   "newAddress": "عنوان جديد",
   "savedDropoffAddress": "عنوان التوصيل المحفوظ",
   "chooseSavedDropoffAddress": "اختر عنوان توصيل محفوظًا.",
+  "savedAddressDefaultBadge": "الافتراضي",
   "country": "الدولة",
   "city": "المدينة",
   "area": "المنطقة",

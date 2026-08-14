@@ -144,7 +144,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservation => 'حجز';
 
   @override
-  String get reservationRequest => 'طلب حجز';
+  String get reservationRequest => 'طلب حجز المادة';
+
+  @override
+  String get reservationRequestSubtitle =>
+      'أدخل التفاصيل المطلوبة لإرسال الطلب إلى المورد';
 
   @override
   String get pickup => 'الاستلام من المورّد';
@@ -563,6 +567,34 @@ class AppLocalizationsAr extends AppLocalizations {
     String materialTitle,
   ) {
     return 'ادفع $amount مقابل $materialTitle للمتابعة.';
+  }
+
+  @override
+  String get notificationPaymentAcceptedReadyTitle => 'تم قبول طلب الحجز';
+
+  @override
+  String notificationPaymentAcceptedReadyBodyMaterialsAndDelivery(
+    String amount,
+  ) {
+    return 'أصبح طلبك جاهزًا للدفع. الإجمالي: $amount شامل المواد والتوصيل.';
+  }
+
+  @override
+  String notificationPaymentAcceptedReadyBodyMaterialsOnly(String amount) {
+    return 'أصبح طلبك جاهزًا للدفع. الإجمالي: $amount شامل المواد.';
+  }
+
+  @override
+  String notificationPaymentAcceptedReadyBodyDeliveryOnly(String amount) {
+    return 'أصبح طلبك جاهزًا للدفع. الإجمالي: $amount شامل التوصيل.';
+  }
+
+  @override
+  String notificationPaymentAcceptedReadyBodyPickup(
+    String amount,
+    String materialTitle,
+  ) {
+    return 'أصبح طلبك جاهزًا للدفع. الإجمالي: $amount مقابل $materialTitle قبل الاستلام. يبقى رمز الاستلام مخفيًا حتى إتمام الدفع.';
   }
 
   @override
@@ -1851,6 +1883,187 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservationPaymentDueAtHandover => 'مستحق عند التسليم';
 
   @override
+  String get reservationOrderSummary => 'ملخص الطلب';
+
+  @override
+  String reservationAvailableQuantity(String quantity) {
+    return 'المتوفر $quantity';
+  }
+
+  @override
+  String get reservationDeliveryDetails => 'تفاصيل التوصيل';
+
+  @override
+  String get reservationDeliveryAddressLabel => 'العنوان بالتفصيل';
+
+  @override
+  String get reservationDeliveryAddressHint =>
+      'الشارع، رقم المبنى، المنطقة، أقرب معلم';
+
+  @override
+  String get reservationDeliveryAddressRequired =>
+      'أدخل عنوان التوصيل بالتفصيل.';
+
+  @override
+  String get reservationChooseCityHint => 'اختر المدينة';
+
+  @override
+  String get reservationSafeDropoffLabel => 'التوصيل في مكان آمن';
+
+  @override
+  String get reservationSafeDropoffHint =>
+      'اترك الطلب في مكان آمن إذا لم يكن أحد متاحًا لاستلامه.';
+
+  @override
+  String get reservationDeliveryNoteLabel => 'ملاحظة للتوصيل';
+
+  @override
+  String get reservationDeliveryNoteHint =>
+      'أضف أي ملاحظات أو تعليمات خاصة بالتوصيل.';
+
+  @override
+  String get reservationPreferredDeliveryTimeOptional => 'وقت التوصيل المفضل';
+
+  @override
+  String get reservationPreferredPickupTimeOptional => 'وقت الاستلام المفضل';
+
+  @override
+  String get reservationMessageToSupplierLabel => 'رسالة للمورد';
+
+  @override
+  String get reservationMessageToSupplierHint =>
+      'اكتب رسالتك أو أسئلتك للمورد هنا…';
+
+  @override
+  String get reservationMessageToSupplierPickupHint =>
+      'أضف ملاحظات أو أسئلة عن الاستلام…';
+
+  @override
+  String get reservationFulfillmentPickupHint => 'استلم من موقع المورّد.';
+
+  @override
+  String get reservationFulfillmentDeliveryHint => 'التوصيل إلى عنوانك.';
+
+  @override
+  String get reservationPaymentCardFasterHint =>
+      'ملاحظة: الدفع بالبطاقة أسرع وأكثر أمانًا.';
+
+  @override
+  String get reservationMaterialSubtotalLabel => 'إجمالي المواد';
+
+  @override
+  String get reservationUnitPriceLabel => 'سعر الوحدة';
+
+  @override
+  String get reservationDeliveryFeeLabel => 'رسوم التوصيل';
+
+  @override
+  String get reservationEstimatedTotalLabel => 'الإجمالي التقديري';
+
+  @override
+  String get reservationEstimatedTotalPending => 'الإجمالي التقديري قيد الحساب';
+
+  @override
+  String get reservationTotalToPayLabel => 'الإجمالي المطلوب';
+
+  @override
+  String get reservationCalculatingTotal => 'جارٍ حساب الإجمالي التقديري…';
+
+  @override
+  String get reservationChooseFulfillmentHint =>
+      'اختر طريقة الاستلام للمتابعة.';
+
+  @override
+  String get reservationPickupOnlyHint =>
+      'هذه المادة متاحة للاستلام الذاتي فقط.';
+
+  @override
+  String get reservationDeliveryOnlyHint => 'هذه المادة متاحة للتوصيل فقط.';
+
+  @override
+  String get reservationEnterCityForQuote => 'أدخل المدينة لحساب رسوم التوصيل.';
+
+  @override
+  String get reservationQuoteWaitingHint =>
+      'سيظهر الإجمالي التقديري بعد إدخال التفاصيل المطلوبة.';
+
+  @override
+  String get reservationAddAnotherWindow => 'إضافة وقت آخر';
+
+  @override
+  String get preferredWindowDateLabel => 'تاريخ البداية';
+
+  @override
+  String get preferredWindowStartTimeLabel => 'وقت البداية';
+
+  @override
+  String get preferredWindowEndTimeLabel => 'وقت النهاية';
+
+  @override
+  String get preferredWindowChooseDate => 'اختر التاريخ';
+
+  @override
+  String get preferredWindowChooseTime => 'اختر الوقت';
+
+  @override
+  String preferredWindowNumberLabel(int number) {
+    return 'النافذة المفضلة $number';
+  }
+
+  @override
+  String get preferredWindowRemoveTooltip => 'إزالة النافذة';
+
+  @override
+  String get preferredWindowIncompleteError =>
+      'اختر التاريخ ووقت البداية ووقت النهاية.';
+
+  @override
+  String reservationSubmitTotalLabel(String amount) {
+    return 'الإجمالي: $amount';
+  }
+
+  @override
+  String get reservationSubmitMissingFulfillment =>
+      'اختر الاستلام أو التوصيل قبل الحجز.';
+
+  @override
+  String get reservationSubmitMissingPayment => 'اختر طريقة الدفع.';
+
+  @override
+  String get reservationSubmitMissingQuote =>
+      'أكمل التفاصيل المطلوبة لعرض الإجمالي التقديري.';
+
+  @override
+  String get reservationSubmitMissingCity => 'أدخل مدينة التوصيل.';
+
+  @override
+  String get reservationSubmitMissingAddress => 'أدخل عنوان التوصيل.';
+
+  @override
+  String get fieldOptional => 'اختياري';
+
+  @override
+  String get fieldRequired => 'مطلوب';
+
+  @override
+  String get reservationTrustBadge => 'طلبك آمن ومضمون';
+
+  @override
+  String get reservationTrustBadgeDetail =>
+      'نحمي بياناتك ولا نشارك معلومات التواصل إلا عند الحاجة التشغيلية.';
+
+  @override
+  String get reservationCombineDeliveryGroup => 'الدمج مع توصيل قائم';
+
+  @override
+  String get reservationCombineDeliveryGroupHint =>
+      'لديك توصيل آخر من هذا المورّد يمكن دمجه. ادفع رسوم توصيل واحدة.';
+
+  @override
+  String get reservationCombinedDeliveryFeeNote =>
+      'تُحسب رسوم التوصيل المدمج مرة واحدة لهذه المجموعة.';
+
+  @override
   String get checkoutStepConfirm => 'تأكيد الطلب';
 
   @override
@@ -3019,6 +3232,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get chooseSavedDropoffAddress => 'اختر عنوان توصيل محفوظًا.';
+
+  @override
+  String get savedAddressDefaultBadge => 'الافتراضي';
 
   @override
   String get country => 'الدولة';

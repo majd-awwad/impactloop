@@ -418,6 +418,7 @@ class _LearningProjectBuildPageState
         projectId: widget.projectId,
         buildItemId: item.id,
         componentName: item.component.name.en,
+        requestedQuantity: _buildItemRequestedQuantity(item),
       ),
     );
   }
@@ -434,8 +435,15 @@ class _LearningProjectBuildPageState
         projectId: widget.projectId,
         buildItemId: item.id,
         componentName: item.component.name.en,
+        requestedQuantity: _buildItemRequestedQuantity(item),
       ),
     );
+  }
+
+  double? _buildItemRequestedQuantity(ProjectBuildItem item) {
+    final required =
+        item.quantityAllocation?.requiredQuantity ?? item.component.quantity;
+    return required > 0 ? required : null;
   }
 
   Future<void> _completeCurrentStep(ProjectBuild build) async {
