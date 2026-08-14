@@ -32,3 +32,15 @@ export const buildDeliveryDispatchReadyEventKey = (input: {
   const fingerprint = buildDeliveryDispatchReadyFingerprint(input.parts);
   return `delivery-group:${input.deliveryGroupId}:dispatch-ready:${fingerprint}`;
 };
+
+export const buildActionablePaymentFingerprint = (
+  parts: DeliveryObligationFingerprintPart[],
+): string => buildDeliveryDispatchReadyFingerprint(parts);
+
+export const buildActionablePaymentEventKey = (input: {
+  reservationId: string;
+  parts: DeliveryObligationFingerprintPart[];
+}): string => {
+  const fingerprint = buildActionablePaymentFingerprint(input.parts);
+  return `reservation:${input.reservationId}:actionable-payment:${fingerprint}`;
+};

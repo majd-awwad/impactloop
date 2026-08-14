@@ -4,6 +4,10 @@ import { logger } from '../../observability/logger.js';
 import { createNotification } from '../notifications/notifications.repository.js';
 
 import { buildDeliveryDispatchReadyEventKey } from './payments.notification-fingerprint.js';
+import {
+  buildActionablePaymentNotificationSnapshot,
+  buildAggregatedPaymentRequiredBody,
+} from './payments.notification-actionable.js';
 import { moneyDecimalToString, toMoneyDecimal } from './payments.money.js';
 import { isElectronicPaymentEnforced } from './payments.policy.js';
 import {
@@ -146,24 +150,11 @@ const baseMetadata = async (order: NonNullable<
   deliveryGroupId: order.deliveryGroupId,
 });
 
-const countOutstandingMaterialOrders = async (deliveryGroupId: string) =>
-  prisma.paymentOrder.count({
-    where: {
-      purpose: 'MATERIAL_SUBTOTAL',
-      reservation: {
-        deliveryGroupId,
-        status: 'ACCEPTED',
-        fulfillmentMethod: 'DELIVERY',
-      },
-      status: { in: [...PAYABLE_PAYMENT_ORDER_STATUSES] },
-    },
-  });
-
 /**
  * After final ACCEPTED + obligations ensured (post-commit).
- * One notification per material order cycle and one per fee order cycle
- * (strict eventKey: payment:<orderId>:required). Never bundles a shared fee
- * into a reservation-specific key.
+ * Emits one learner-facing actionable-payment notification per checkout
+ * obligation fingerprint (material + delivery fee aggregated when both
+ * are payable in the same reservation-scoped checkout flow).
  */
 export const notifyPaymentRequiredAfterAcceptance = async (
   reservationId: string,
@@ -171,123 +162,46 @@ export const notifyPaymentRequiredAfterAcceptance = async (
   notifySafely(
     'payment_notify_required_after_acceptance',
     async () => {
-      if (!isElectronicPaymentEnforced()) {
+      const snapshot =
+        await buildActionablePaymentNotificationSnapshot(reservationId);
+      if (!snapshot) {
         return;
       }
 
-      const reservation = await prisma.reservation.findUnique({
-        where: { id: reservationId },
-        select: {
-          id: true,
-          status: true,
-          requesterId: true,
-          fulfillmentMethod: true,
-          deliveryGroupId: true,
-          material: { select: { title: true } },
+      await createNotification({
+        userId: snapshot.requesterId,
+        notificationType: PAYMENT_NOTIFICATION_TYPES.PAYMENT_REQUIRED,
+        title: 'Reservation accepted',
+        body: buildAggregatedPaymentRequiredBody(snapshot),
+        relatedEntityType: 'RESERVATION',
+        relatedEntityId: snapshot.reservationId,
+        entityType: 'RESERVATION',
+        entityId: snapshot.reservationId,
+        eventKey: snapshot.eventKey,
+        actionType: 'OPEN_RESERVATION',
+        metadata: {
+          aggregatedCheckout: true,
+          includesAcceptance: true,
+          paymentPurpose:
+            snapshot.materialOutstanding && snapshot.deliveryFeeOutstanding
+              ? 'CHECKOUT_TOTAL'
+              : snapshot.deliveryFeeOutstanding
+                ? 'DELIVERY_FEE'
+                : 'MATERIAL_SUBTOTAL',
+          paymentStatus: 'REQUIRES_PAYMENT',
+          amount: snapshot.totalAmount,
+          totalAmount: snapshot.totalAmount,
+          currency: snapshot.currency,
+          materialAmount: snapshot.materialAmount,
+          deliveryFeeAmount: snapshot.deliveryFeeAmount,
+          reservationId: snapshot.reservationId,
+          materialTitle: snapshot.materialTitle,
+          fulfillmentMethod: snapshot.fulfillmentMethod,
+          fulfillmentBlocked: true,
+          materialOutstanding: snapshot.materialOutstanding,
+          deliveryFeeOutstanding: snapshot.deliveryFeeOutstanding,
         },
       });
-
-      if (!reservation || reservation.status !== 'ACCEPTED') {
-        return;
-      }
-
-      const materialOrder = await prisma.paymentOrder.findFirst({
-        where: {
-          purpose: 'MATERIAL_SUBTOTAL',
-          reservationId: reservation.id,
-          status: { in: [...PAYABLE_PAYMENT_ORDER_STATUSES] },
-        },
-        orderBy: { cycleNumber: 'desc' },
-      });
-
-      const feeOrder =
-        reservation.fulfillmentMethod === 'DELIVERY' &&
-        reservation.deliveryGroupId
-          ? await prisma.paymentOrder.findFirst({
-              where: {
-                purpose: 'DELIVERY_FEE',
-                deliveryGroupId: reservation.deliveryGroupId,
-                status: { in: [...PAYABLE_PAYMENT_ORDER_STATUSES] },
-              },
-              orderBy: { cycleNumber: 'desc' },
-            })
-          : null;
-
-      if (!materialOrder && !feeOrder) {
-        return;
-      }
-
-      const title = materialTitle(reservation.material.title);
-
-      if (materialOrder) {
-        await createNotification({
-          userId: reservation.requesterId,
-          notificationType: PAYMENT_NOTIFICATION_TYPES.PAYMENT_REQUIRED,
-          title: 'Payment required',
-          body:
-            reservation.fulfillmentMethod === 'PICKUP'
-              ? `Pay ${moneyDecimalToString(toMoneyDecimal(materialOrder.amount))} ${materialOrder.currency} for ${title} before pickup. Your pickup code stays hidden until payment is complete.`
-              : `Pay ${moneyDecimalToString(toMoneyDecimal(materialOrder.amount))} ${materialOrder.currency} for ${title} before delivery can proceed.`,
-          relatedEntityType: 'RESERVATION',
-          relatedEntityId: reservation.id,
-          entityType: 'RESERVATION',
-          entityId: reservation.id,
-          eventKey: `payment:${materialOrder.id}:required`,
-          actionType: 'OPEN_RESERVATION',
-          metadata: {
-            paymentOrderId: materialOrder.id,
-            paymentPurpose: 'MATERIAL_SUBTOTAL',
-            paymentStatus: materialOrder.status,
-            amount: moneyDecimalToString(toMoneyDecimal(materialOrder.amount)),
-            currency: materialOrder.currency,
-            cycleNumber: materialOrder.cycleNumber,
-            reservationId: reservation.id,
-            deliveryGroupId: reservation.deliveryGroupId,
-            materialTitle: title,
-            fulfillmentBlocked: true,
-            materialOutstanding: true,
-            deliveryFeeOutstanding: Boolean(feeOrder),
-          },
-        });
-      }
-
-      if (feeOrder && reservation.deliveryGroupId) {
-        const outstandingMaterials = await countOutstandingMaterialOrders(
-          reservation.deliveryGroupId,
-        );
-        const feeLinkReservationId =
-          (await selectActiveDeliveryLinkReservation({
-            deliveryGroupId: reservation.deliveryGroupId,
-            payerUserId: reservation.requesterId,
-          })) ?? reservation.id;
-        await createNotification({
-          userId: reservation.requesterId,
-          notificationType: PAYMENT_NOTIFICATION_TYPES.PAYMENT_REQUIRED,
-          title: 'Delivery fee required',
-          body: `A delivery fee of ${moneyDecimalToString(toMoneyDecimal(feeOrder.amount))} ${feeOrder.currency} is required before your delivery request can be processed.`,
-          relatedEntityType: 'RESERVATION',
-          relatedEntityId: feeLinkReservationId,
-          entityType: 'RESERVATION',
-          entityId: feeLinkReservationId,
-          eventKey: `payment:${feeOrder.id}:required`,
-          actionType: 'OPEN_RESERVATION',
-          metadata: {
-            paymentOrderId: feeOrder.id,
-            paymentPurpose: 'DELIVERY_FEE',
-            paymentStatus: feeOrder.status,
-            amount: moneyDecimalToString(toMoneyDecimal(feeOrder.amount)),
-            currency: feeOrder.currency,
-            cycleNumber: feeOrder.cycleNumber,
-            reservationId: feeLinkReservationId,
-            deliveryGroupId: reservation.deliveryGroupId,
-            materialTitle: title,
-            fulfillmentBlocked: true,
-            materialOutstanding: outstandingMaterials > 0,
-            outstandingMaterialCount: outstandingMaterials,
-            deliveryFeeOutstanding: true,
-          },
-        });
-      }
     },
     { reservationId },
   );

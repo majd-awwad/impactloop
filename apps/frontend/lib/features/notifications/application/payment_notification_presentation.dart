@@ -130,6 +130,10 @@ String? paymentNotificationOrderId(AppNotification notification) {
 }
 
 String? paymentNotificationAmountRaw(AppNotification notification) {
+  if (paymentNotificationIsAggregatedCheckout(notification)) {
+    return paymentNotificationMetadataString(notification, 'totalAmount') ??
+        paymentNotificationMetadataString(notification, 'amount');
+  }
   return paymentNotificationMetadataString(notification, 'amount');
 }
 
@@ -164,6 +168,15 @@ String? paymentNotificationPurpose(AppNotification notification) {
 
 bool paymentNotificationIsDeliveryFee(AppNotification notification) =>
     paymentNotificationPurpose(notification) == 'DELIVERY_FEE';
+
+bool paymentNotificationIsAggregatedCheckout(AppNotification notification) =>
+    notification.metadata['aggregatedCheckout'] == true;
+
+bool paymentNotificationMaterialOutstanding(AppNotification notification) =>
+    notification.metadata['materialOutstanding'] == true;
+
+bool paymentNotificationDeliveryFeeOutstanding(AppNotification notification) =>
+    notification.metadata['deliveryFeeOutstanding'] == true;
 
 bool paymentNotificationMorePaymentRequired(AppNotification notification) =>
     notification.metadata['morePaymentRequired'] == true;
@@ -327,6 +340,44 @@ Color paymentNotificationAccent(AppNotification notification) =>
 
   switch (kind) {
     case PaymentNotificationKind.required:
+      if (paymentNotificationIsAggregatedCheckout(notification)) {
+        final amount = formatPaymentNotificationAmount(notification, l10n);
+        if (amount == null) {
+          return (
+            title: l10n.notificationPaymentAcceptedReadyTitle,
+            body: l10n.notificationPaymentRequiredBody(material),
+          );
+        }
+        if (paymentNotificationMaterialOutstanding(notification) &&
+            paymentNotificationDeliveryFeeOutstanding(notification)) {
+          return (
+            title: l10n.notificationPaymentAcceptedReadyTitle,
+            body: l10n.notificationPaymentAcceptedReadyBodyMaterialsAndDelivery(
+              amount,
+            ),
+          );
+        }
+        if (paymentNotificationDeliveryFeeOutstanding(notification) &&
+            !paymentNotificationMaterialOutstanding(notification)) {
+          return (
+            title: l10n.notificationPaymentAcceptedReadyTitle,
+            body: l10n.notificationPaymentAcceptedReadyBodyDeliveryOnly(amount),
+          );
+        }
+        if (paymentNotificationFulfillmentMethod(notification) == 'PICKUP') {
+          return (
+            title: l10n.notificationPaymentAcceptedReadyTitle,
+            body: l10n.notificationPaymentAcceptedReadyBodyPickup(
+              amount,
+              material,
+            ),
+          );
+        }
+        return (
+          title: l10n.notificationPaymentAcceptedReadyTitle,
+          body: l10n.notificationPaymentAcceptedReadyBodyMaterialsOnly(amount),
+        );
+      }
       if (paymentNotificationIsDeliveryFee(notification)) {
         return (
           title: l10n.notificationPaymentDeliveryFeeRequiredTitle,
@@ -442,6 +493,9 @@ String paymentNotificationActionLabel(
   final kind = paymentNotificationKind(notification);
   // Soft CTA: do not hard-claim "Pay now" from frozen notification metadata.
   if (kind == PaymentNotificationKind.required) {
+    if (paymentNotificationIsAggregatedCheckout(notification)) {
+      return l10n.completePayment;
+    }
     return l10n.notificationPaymentOpenCheckout;
   }
   if (paymentNotificationShouldOpenCheckout(notification)) {
