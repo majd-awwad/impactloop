@@ -12,11 +12,13 @@ import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
 import '../controllers/supplier_pickup_schedule_providers.dart';
+import '../controllers/supplier_requests_providers.dart';
 import '../theme/supplier_theme_extension.dart';
 import '../widgets/reservation_follow_up_flow.dart';
 import '../widgets/supplier_delivery_incident_flow.dart';
 import '../widgets/supplier_pickup_completion_flow.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../shared/models/handover_payment_summary.dart';
 
 const _contentMaxWidth = 1440.0;
 const _defaultPageSize = 5;
@@ -280,11 +282,22 @@ class _SupplierPickupSchedulePageState
     switch (action.value) {
       case SupplierReservationAction.completeSelfPickup:
         try {
+          // Schedule list entries omit handoverPayment; load detail for cash UI.
+          HandoverPaymentSummary? payment;
+          try {
+            final detail = await ref.read(
+              supplierReservationDetailProvider(reservationId).future,
+            );
+            payment = detail.reservation.handoverPayment;
+          } catch (_) {
+            payment = null;
+          }
+          if (!context.mounted) return;
           final completed = await runSupplierPickupCompletionFlow(
             context,
             ref,
             reservationId: reservationId,
-            payment: entry.reservation.handoverPayment,
+            payment: payment,
             showSuccessSnackBar: false,
           );
           if (!completed && context.mounted) return;
