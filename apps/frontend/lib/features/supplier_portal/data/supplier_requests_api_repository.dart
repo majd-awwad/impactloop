@@ -56,6 +56,11 @@ class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
   }
 
   @override
+  Future<void> confirmDeliveryReturn(String deliveryId) {
+    return _api.confirmDeliveryReturn(deliveryId);
+  }
+
+  @override
   Future<SupplierIncomingRequest> acceptRequest(
     String requestId,
     SupplierPickupWindow pickupWindow,
@@ -75,8 +80,13 @@ class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
   Future<SupplierIncomingRequest> completeRequest(
     String requestId, {
     required String confirmationCode,
+    bool cashReceivedConfirmed = false,
   }) {
-    return _api.completeRequest(requestId, confirmationCode: confirmationCode);
+    return _api.completeRequest(
+      requestId,
+      confirmationCode: confirmationCode,
+      cashReceivedConfirmed: cashReceivedConfirmed,
+    );
   }
 
   @override
@@ -93,9 +103,13 @@ class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
 
   @override
   Future<SupplierIncomingRequest> confirmHandoverCredential(
-    String handoverToken,
-  ) {
-    return _api.confirmHandoverCredential(handoverToken);
+    String handoverToken, {
+    bool cashReceivedConfirmed = false,
+  }) {
+    return _api.confirmHandoverCredential(
+      handoverToken,
+      cashReceivedConfirmed: cashReceivedConfirmed,
+    );
   }
 
   @override

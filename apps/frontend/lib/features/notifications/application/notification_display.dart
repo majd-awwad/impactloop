@@ -320,6 +320,14 @@ LocalizedNotificationCopy _localizedDriverNotificationTemplates(
       title: l10n.notificationDriverMovedToAdminTitle,
       body: l10n.notificationDriverMovedToAdminBody,
     ),
+    'DRIVER_DELIVERY_RETURN_REQUIRED' => (
+      title: l10n.driverReturnToSupplierTitle,
+      body: l10n.driverReturnToSupplierBody,
+    ),
+    'DRIVER_DELIVERY_RETURN_CONFIRMED' => (
+      title: l10n.statusReturnedToSupplier,
+      body: l10n.statusReturnedToSupplier,
+    ),
     'DELIVERY_DRIVER_ASSIGNED' => (
       title: l10n.notificationDeliveryDriverAssignedTitle,
       body: l10n.notificationDeliveryDriverAssignedBody(materialTitle),
@@ -381,6 +389,10 @@ LocalizedNotificationCopy _localizedSupplierNotificationTemplates(
     'SUPPLIER_VERIFICATION_UPDATE' => (
       title: l10n.notificationSupplierVerificationUpdateTitle,
       body: l10n.notificationSupplierVerificationUpdateBody,
+    ),
+    'DELIVERY_RETURN_INCOMING' => (
+      title: l10n.supplierReturnRequiredTitle,
+      body: l10n.supplierReturnRequiredBody,
     ),
     _ => (
       title: l10n.notificationFallbackTitle,
@@ -462,6 +474,15 @@ LocalizedNotificationCopy localizedNotificationCopy(
     'PRICE_REQUEST_UPDATE' ||
     'MATERIAL_MODERATION_UPDATE' ||
     'SUPPLIER_VERIFICATION_UPDATE' => supplierTemplate,
+    'DELIVERY_RETURN_INCOMING' => supplierTemplate,
+    'DELIVERY_RETURN_REQUIRED' => (
+      title: l10n.statusReturnToSupplierRequired,
+      body: l10n.statusReturnToSupplierRequired,
+    ),
+    'DELIVERY_RETURN_CONFIRMED' => (
+      title: l10n.statusReturnedToSupplier,
+      body: l10n.statusReturnedToSupplier,
+    ),
     'LEARNING_PROJECT_MODERATION' => switch (moderationEvent) {
       'APPROVED' => (
         title: l10n.projectApprovedTitle,
@@ -508,6 +529,8 @@ LocalizedNotificationCopy localizedNotificationCopy(
     'DRIVER_DELIVERY_NEXT_STEP' ||
     'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN' ||
     'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW' ||
+    'DRIVER_DELIVERY_RETURN_REQUIRED' ||
+    'DRIVER_DELIVERY_RETURN_CONFIRMED' ||
     'DELIVERY_DRIVER_ASSIGNED' => driverTemplate,
     'PROJECT_HELP_SESSION_REQUESTED' ||
     'PROJECT_HELP_SESSION_ALTERNATIVE_PROPOSED' ||

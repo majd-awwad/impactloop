@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:frontend/features/deliveries/presentation/delivery_status_presentation.dart';
 import 'package:frontend/features/deliveries/domain/delivery_status_contract.dart';
+import 'package:frontend/features/deliveries/data/models/learner_delivery.dart';
 import 'package:frontend/l10n/app_localizations_ar.dart';
 import 'package:frontend/l10n/app_localizations_en.dart';
 import 'package:frontend/shared/l10n/learner_ui_labels.dart';
@@ -27,7 +28,7 @@ void main() {
     final ar = AppLocalizationsAr();
     final labels = LearnerUiLabels(ar);
 
-    expect(learnerDeliveryStatuses, hasLength(13));
+    expect(learnerDeliveryStatuses, hasLength(17));
     for (final status in learnerDeliveryStatuses) {
       expect(labels.deliveryStatus(status), isNot(ar.unknownStatus));
       expect(deliveryStatusAppTone(status).name, isNot('neutral'));
@@ -38,6 +39,65 @@ void main() {
     expect(isTerminalLearnerDeliveryStatus('DELIVERED'), isTrue);
     expect(isSuccessfulLearnerDeliveryStatus('COMPLETED'), isFalse);
   });
+
+  test('return recovery statuses are localized and have custody semantics', () {
+    final en = LearnerUiLabels(AppLocalizationsEn());
+    final ar = LearnerUiLabels(AppLocalizationsAr());
+
+    expect(isActiveLearnerDeliveryStatus('RETURN_TO_SUPPLIER_REQUIRED'), isTrue);
+    expect(isTerminalLearnerDeliveryStatus('RETURN_TO_SUPPLIER_REQUIRED'), isFalse);
+    expect(isTerminalLearnerDeliveryStatus('RETURNED_TO_SUPPLIER'), isTrue);
+    for (final status in const [
+      'RETURN_TO_SUPPLIER_REQUIRED',
+      'RETURNED_TO_SUPPLIER',
+    ]) {
+      expect(en.deliveryStatus(status), isNot(AppLocalizationsEn().unknownStatus));
+      expect(ar.deliveryStatus(status), isNot(AppLocalizationsAr().unknownStatus));
+      expect(en.deliveryStatus(status).toLowerCase(), isNot(contains('strike')));
+    }
+  });
+
+  test('retry statuses are active and localized in English and Arabic', () {
+    final en = LearnerUiLabels(AppLocalizationsEn());
+    final ar = LearnerUiLabels(AppLocalizationsAr());
+
+    for (final status in const ['REDELIVERY_PENDING', 'REDELIVERY_SCHEDULED']) {
+      expect(isActiveLearnerDeliveryStatus(status), isTrue);
+      expect(isTerminalLearnerDeliveryStatus(status), isFalse);
+      expect(
+        en.deliveryStatus(status),
+        isNot(AppLocalizationsEn().unknownStatus),
+      );
+      expect(
+        ar.deliveryStatus(status),
+        isNot(AppLocalizationsAr().unknownStatus),
+      );
+      expect(deliveryStatusAppTone(status).name, 'info');
+    }
+  });
+
+  test(
+    'learner retry projection keeps the replacement window and hides pending handover',
+    () {
+      final delivery = LearnerDelivery.fromJson({
+        'id': 'delivery-1',
+        'reservationId': 'reservation-1',
+        'status': 'REDELIVERY_PENDING',
+        'learnerDeliveryCode': '123456',
+        'reservation': {
+          'id': 'reservation-1',
+          'status': 'ACCEPTED',
+          'confirmedDeliveryWindowStart': '2026-08-14T10:00:00.000Z',
+          'confirmedDeliveryWindowEnd': '2026-08-14T11:00:00.000Z',
+        },
+      });
+
+      expect(delivery.isActive, isTrue);
+      expect(delivery.shouldShowLearnerDeliveryCode, isFalse);
+      expect(delivery.reservation.confirmedDeliveryWindowStart, isNotNull);
+      expect(delivery.reservation.confirmedDeliveryWindowEnd, isNotNull);
+    },
+  );
 
   test('unknown future delivery status stays neutral and never leaks code', () {
     final ar = AppLocalizationsAr();

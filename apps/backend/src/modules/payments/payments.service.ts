@@ -194,6 +194,14 @@ const reserveCheckoutAttempt = async (input: {
         throw new AppError('Payment order not found.', 404, 'NOT_FOUND');
       }
 
+      if (order.paymentMethod === 'CASH') {
+        throw new AppError(
+          'Cash obligations are collected at handover and cannot start checkout.',
+          409,
+          'CASH_PAYMENT_NOT_CHECKOUTABLE',
+        );
+      }
+
       if (!isPayablePaymentOrderStatus(order.status)) {
         rejectCheckoutStatus(order.status);
       }
@@ -516,6 +524,17 @@ export const startPaymentCheckout = async (input: {
   payerUserId: string;
   idempotencyKey: string;
 }): Promise<CheckoutResponseDto> => {
+  const checkoutOrder = await prisma.paymentOrder.findFirst({
+    where: { id: input.orderId, payerUserId: input.payerUserId },
+    select: { paymentMethod: true },
+  });
+  if (checkoutOrder?.paymentMethod === 'CASH') {
+    throw new AppError(
+      'Cash obligations are collected at handover and cannot start checkout.',
+      409,
+      'CASH_PAYMENT_NOT_CHECKOUTABLE',
+    );
+  }
   const key = validateIdempotencyKey(input.idempotencyKey);
   const requestHash = computeIdempotencyRequestHash({
     orderId: input.orderId,

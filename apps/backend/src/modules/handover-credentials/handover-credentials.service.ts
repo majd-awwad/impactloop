@@ -9,6 +9,7 @@ import {
   assertPickupPaymentSatisfiedOrThrow,
   evaluatePickupPaymentReadiness,
 } from '../payments/payments.readiness.js';
+import { resolvePickupHandoverPayment } from '../payments/payments.handover.js';
 import { isElectronicPaymentEnforced } from '../payments/payments.policy.js';
 import { expireStaleMissedPickupsByIds } from '../reservations/reservations.missed-pickup-expiry.repository.js';
 import { supplierCanCompleteReservation } from '../supplier-reservations/supplier-reservations.repository.js';
@@ -150,7 +151,7 @@ export const issueHandoverCredential = async (
 
   if (isElectronicPaymentEnforced()) {
     const readiness = await evaluatePickupPaymentReadiness(reservation.id);
-    if (!readiness.ready) {
+    if (!readiness.fulfillmentReady) {
       throw new AppError(
         'Payment is required before a handover credential can be issued.',
         409,
@@ -253,6 +254,7 @@ export const verifyHandoverCredential = async (
     throw error;
   }
 
+  const payment = await resolvePickupHandoverPayment(fresh.id, ownerId);
   return {
     reservationId: fresh.id,
     material: {
@@ -265,6 +267,12 @@ export const verifyHandoverCredential = async (
       displayName: fresh.requester.displayName,
     },
     expiresAt: fresh.handoverTokenExpiresAt?.toISOString() ?? null,
+    payment: {
+      paymentMethod: payment.paymentMethod,
+      cashDueAtHandover: payment.cashDueAtHandover,
+      totalAmount: payment.totalAmount,
+      currency: payment.currency,
+    },
   };
 };
 

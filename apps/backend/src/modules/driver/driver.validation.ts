@@ -78,6 +78,7 @@ export const updateDriverDeliveryStatusSchema = z
     ]),
     note: z.string().trim().max(1000).optional().nullable(),
     confirmationCode: z.string().trim().optional(),
+    cashReceivedConfirmed: z.boolean().optional(),
     pickedReservationIds: z.array(z.string().trim().min(1)).optional(),
     unpicked: z.array(partialPickupUnpickedSchema).optional(),
   })
@@ -129,6 +130,18 @@ export const updateDriverDeliveryStatusSchema = z
 
 export type UpdateDriverDeliveryStatusInput = z.infer<
   typeof updateDriverDeliveryStatusSchema
+>;
+
+export const setDriverDeliveryWindowSchema = z
+  .object({
+    start: z.iso.datetime(),
+    end: z.iso.datetime(),
+    note: z.string().trim().max(1000).optional().nullable(),
+  })
+  .strict();
+
+export type SetDriverDeliveryWindowInput = z.infer<
+  typeof setDriverDeliveryWindowSchema
 >;
 
 export const createDeliveryLocationPingSchema = z.object({

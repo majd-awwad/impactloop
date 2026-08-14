@@ -7,6 +7,7 @@ import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_close_button.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
+import '../../../../shared/models/handover_payment_summary.dart';
 
 /// Result of the supplier pickup verification dialog.
 sealed class CompletePickupChoice {
@@ -14,8 +15,12 @@ sealed class CompletePickupChoice {
 }
 
 class CompletePickupManualCode extends CompletePickupChoice {
-  const CompletePickupManualCode(this.code);
+  const CompletePickupManualCode(
+    this.code, {
+    required this.cashReceivedConfirmed,
+  });
   final String code;
+  final bool cashReceivedConfirmed;
 }
 
 class CompletePickupScanQr extends CompletePickupChoice {
@@ -23,21 +28,21 @@ class CompletePickupScanQr extends CompletePickupChoice {
 }
 
 class CompletePickupDialog extends StatefulWidget {
-  const CompletePickupDialog({
-    super.key,
-    this.allowScan = true,
-  });
+  const CompletePickupDialog({super.key, this.allowScan = true, this.payment});
 
   /// When false, only the manual confirmation-code path is shown.
   final bool allowScan;
+  final HandoverPaymentSummary? payment;
 
   static Future<CompletePickupChoice?> show(
     BuildContext context, {
     bool allowScan = true,
+    HandoverPaymentSummary? payment,
   }) {
     return showDialog<CompletePickupChoice>(
       context: context,
-      builder: (context) => CompletePickupDialog(allowScan: allowScan),
+      builder: (context) =>
+          CompletePickupDialog(allowScan: allowScan, payment: payment),
     );
   }
 
@@ -48,6 +53,7 @@ class CompletePickupDialog extends StatefulWidget {
 class _CompletePickupDialogState extends State<CompletePickupDialog> {
   final _codeController = TextEditingController();
   String? _errorText;
+  var _cashConfirmed = false;
 
   @override
   void dispose() {
@@ -63,8 +69,14 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
       });
       return;
     }
+    if (widget.payment?.requiresCashConfirmation == true && !_cashConfirmed) {
+      setState(() => _errorText = context.l10n.cashCollectionRequiredError);
+      return;
+    }
 
-    Navigator.of(context).pop(CompletePickupManualCode(code));
+    Navigator.of(context).pop(
+      CompletePickupManualCode(code, cashReceivedConfirmed: _cashConfirmed),
+    );
   }
 
   @override
@@ -93,10 +105,11 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
             AppSpacing.lg,
             AppSpacing.md,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               Row(
                 children: [
                   Expanded(
@@ -177,6 +190,28 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
                 },
                 onSubmitted: (_) => _submit(),
               ),
+              if (widget.payment?.requiresCashConfirmation == true) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  context.l10n.cashToCollect,
+                  style: context.supplierBody().copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+                Text(
+                  '${widget.payment!.totalAmount} ${widget.payment!.currency}',
+                  style: context.supplierTitle().copyWith(fontSize: 20),
+                ),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _cashConfirmed,
+                  title: Text(context.l10n.cashReceivedConfirmation),
+                  onChanged: (value) => setState(() {
+                    _cashConfirmed = value == true;
+                    _errorText = null;
+                  }),
+                ),
+              ],
               const SizedBox(height: AppSpacing.lg),
               SizedBox(
                 width: double.infinity,
@@ -190,7 +225,8 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
                   child: Text(context.s.markCompleted),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

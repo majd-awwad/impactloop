@@ -186,6 +186,11 @@ export const verifyAdminNoShowReport = async (
     return throwActionUnavailable();
   }
 
+  const { flushPostCommitPaymentRefunds } = await import(
+    '../payments/payments.lifecycle.js'
+  );
+  await flushPostCommitPaymentRefunds(result.postCommitRefunds);
+
   return {
     report: mapReport(result.report),
     targetVerifiedNoShowCount: result.verifiedCount,
@@ -221,6 +226,11 @@ export const resolveAdminNoShowReport = async (
   if (!('report' in result)) {
     return throwActionUnavailable();
   }
+
+  const { flushPostCommitPaymentRefunds } = await import(
+    '../payments/payments.lifecycle.js'
+  );
+  await flushPostCommitPaymentRefunds(result.postCommitRefunds);
 
   return mapReport(result.report);
 };
@@ -333,6 +343,11 @@ export const rejectAdminNoShowReport = async (
   if (!('report' in result)) {
     return throwActionUnavailable();
   }
+
+  const { flushPostCommitPaymentRefunds } = await import(
+    '../payments/payments.lifecycle.js'
+  );
+  await flushPostCommitPaymentRefunds(result.postCommitRefunds);
 
   return mapReport(result.report);
 };

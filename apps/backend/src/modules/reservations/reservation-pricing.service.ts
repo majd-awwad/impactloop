@@ -1,6 +1,7 @@
 import {
   Prisma,
   type MaterialStatus,
+  type PaymentCollectionMethod,
   type ReservationFulfillmentMethod,
 } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
@@ -36,6 +37,7 @@ export type ReservationQuoteInput = {
   materialId: string;
   quantity: number;
   fulfillmentMethod: ReservationFulfillmentMethod;
+  paymentMethod: PaymentCollectionMethod;
   dropoffCity?: string;
   dropoffArea?: string | null;
   learnerPreferredDeliveryWindows?: { start: string; end: string }[];
@@ -52,6 +54,7 @@ export type ReservationQuoteResult = {
   currency: string;
   deliveryZone: string | null;
   fulfillmentMethod: ReservationFulfillmentMethod;
+  paymentMethod: PaymentCollectionMethod;
   canDeliver: boolean;
   groupingAvailable: boolean;
   groupingApplied: boolean;
@@ -127,6 +130,7 @@ export const buildReservationQuote = async (
         currency,
         deliveryZone: null,
         fulfillmentMethod: 'PICKUP',
+        paymentMethod: input.paymentMethod,
         canDeliver: material.deliveryAllowed,
         groupingAvailable: false,
         groupingApplied: false,
@@ -188,6 +192,7 @@ export const buildReservationQuote = async (
       dropoffArea: input.dropoffArea,
       preferredDeliveryWindows: preferredWindows,
       deliveryZone: deliveryPricing.zone,
+      paymentMethod: input.paymentMethod,
     });
   }
 
@@ -200,6 +205,7 @@ export const buildReservationQuote = async (
       dropoffArea: input.dropoffArea,
       preferredDeliveryWindows: preferredWindows,
       deliveryZone: deliveryPricing.zone,
+      paymentMethod: input.paymentMethod,
     });
 
     if (!validation.ok) {
@@ -235,6 +241,7 @@ export const buildReservationQuote = async (
       currency,
       deliveryZone: deliveryPricing.zone,
       fulfillmentMethod: 'DELIVERY',
+      paymentMethod: input.paymentMethod,
       canDeliver: true,
       groupingAvailable: deliveryGroupCandidate != null,
       groupingApplied,
@@ -264,7 +271,12 @@ export const resolveReservationPricingForCreate = async (
       snapshot: ReservationPricingSnapshot;
       groupAction:
         | { type: 'JOIN'; groupId: string; sharedWindow: { start: Date; end: Date } }
-        | { type: 'CREATE'; window: { start: Date; end: Date }; deliveryFee: number; zone: string }
+        | {
+            type: 'CREATE';
+            window: { start: Date; end: Date } | null;
+            deliveryFee: number;
+            zone: string;
+          }
         | { type: 'NONE' };
     }
   | { ok: false; code: string; message: string; details?: Record<string, unknown> }
@@ -342,7 +354,12 @@ export const resolveReservationPricingForCreate = async (
   let groupedDelivery = false;
   let groupAction:
     | { type: 'JOIN'; groupId: string; sharedWindow: { start: Date; end: Date } }
-    | { type: 'CREATE'; window: { start: Date; end: Date }; deliveryFee: number; zone: string }
+    | {
+        type: 'CREATE';
+        window: { start: Date; end: Date } | null;
+        deliveryFee: number;
+        zone: string;
+      }
     | { type: 'NONE' } = {
     type: 'NONE',
   };
@@ -356,6 +373,7 @@ export const resolveReservationPricingForCreate = async (
       dropoffArea: input.dropoffArea,
       preferredDeliveryWindows: preferredWindows,
       deliveryZone: deliveryPricing.zone,
+      paymentMethod: input.paymentMethod,
     });
 
     if (!validation.ok) {
@@ -374,14 +392,14 @@ export const resolveReservationPricingForCreate = async (
       groupId: validation.group.id,
       sharedWindow: validation.sharedWindow,
     };
-  } else if (initialWindow) {
+  } else if (!input.combineWithDeliveryGroupId) {
     groupAction = {
       type: 'CREATE',
       window: initialWindow,
       deliveryFee: deliveryPricing.deliveryFee,
       zone: deliveryPricing.zone,
     };
-  } else if (input.combineWithDeliveryGroupId) {
+  } else {
     return {
       ok: false,
       code: 'GROUP_NOT_AVAILABLE',

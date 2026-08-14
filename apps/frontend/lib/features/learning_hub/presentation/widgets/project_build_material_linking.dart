@@ -8,6 +8,7 @@ import '../../../../shared/widgets/app_close_button.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../material_discovery/presentation/reservation_dialog_copy.dart';
 import '../../domain/models/project_build.dart';
 import '../../domain/models/project_build_material_link.dart';
 import '../../../../shared/models/localized_text.dart';
@@ -35,6 +36,8 @@ String buildChecklistMaterialDetailUri({
       'returnTo': resolvedReturnTo,
       if (componentName != null && componentName.trim().isNotEmpty)
         'componentName': componentName.trim(),
+      if (requestedQuantity != null && requestedQuantity > 0)
+        'requestedQuantity': formatReservationQuantity(requestedQuantity),
     },
   ).toString();
 }
@@ -304,6 +307,10 @@ class _ProjectBuildMaterialCandidatesSheetState
                                         projectId: widget.projectId,
                                         buildItemId: widget.item.id,
                                         componentName: componentName,
+                                        requestedQuantity:
+                                            widget.item.quantityAllocation
+                                                ?.requiredQuantity ??
+                                            widget.item.component.quantity,
                                       ),
                                     );
                                   },

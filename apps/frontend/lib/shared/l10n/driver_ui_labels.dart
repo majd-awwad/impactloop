@@ -32,8 +32,12 @@ class DriverUiLabels {
   String failureDeliveryReason(String code) =>
       switch (code.trim().toUpperCase()) {
         'LEARNER_UNAVAILABLE' => l10n.driverFailureLearnerUnavailable,
+        'LEARNER_UNREACHABLE' => l10n.driverFailureLearnerUnavailable,
+        'LEARNER_REQUESTED_RESCHEDULE' => l10n.driverStatusRedeliveryScheduled,
         'ADDRESS_ISSUE' => l10n.driverFailureAddressIssue,
+        'ADDRESS_OR_ACCESS_ISSUE' => l10n.driverFailureAddressIssue,
         'ACCESS_ISSUE' => l10n.driverFailureAccessIssue,
+        'OTHER_RETRYABLE' => l10n.other,
         'OTHER' => l10n.other,
         _ => l10n.unknownStatus,
       };

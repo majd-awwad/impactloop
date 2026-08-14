@@ -20,6 +20,8 @@ import {
   acceptDelivery,
   updateDriverDeliveryStatus,
 } from '../driver/driver.service.js';
+import { setDriverDeliveryWindow } from '../driver/driver-delivery-scheduling.service.js';
+import { markDriverDeliveryFailed } from '../fulfillment-failures/fulfillment-failures.service.js';
 import { requestDeliveryForReservation } from '../deliveries/deliveries.service.js';
 import {
   issueHandoverCredential,
@@ -33,13 +35,17 @@ import {
   normalizeDeliveryHandoverCredentialToken,
 } from '../handover-credentials/handover-credentials.token.js';
 import { setElectronicPaymentEnforcementForTests } from '../payments/payments.policy.js';
-import { ensureMaterialPaymentOrder } from '../payments/payments.ensure.js';
+import {
+  ensureDeliveryFeePaymentOrder,
+  ensureMaterialPaymentOrder,
+} from '../payments/payments.ensure.js';
 import {
   actOnMockCheckout,
   startPaymentCheckout,
 } from '../payments/payments.service.js';
 import {
   cleanupPayTest,
+  createPayDeliveryGroupFixture,
   createPayReservationFixture,
   createPayTestIds,
   createPayUser,
@@ -779,6 +785,89 @@ describe('delivery handover payment gate', () => {
     setElectronicPaymentEnforcementForTests(undefined);
   });
 
+  async function createCashDeliveryAtArrivedDropoff() {
+    const activePickup = activePickupWindowReservationUpdate();
+    const activeDelivery = activeConfirmedDeliveryWindowUpdate();
+    const group = await createPayDeliveryGroupFixture(payIds, {
+      learnerId,
+      supplierId,
+      deliveryFee: 5,
+      paymentMethod: 'CASH',
+    });
+    const reservation = await createPayReservationFixture(payIds, {
+      learnerId,
+      supplierId,
+      materialSubtotal: 12,
+      fulfillmentMethod: 'DELIVERY',
+      paymentMethod: 'CASH',
+      deliveryGroupId: group.id,
+      ...activePickup,
+      ...activeDelivery,
+    });
+    const materialId = (
+      await prisma.reservation.findUniqueOrThrow({
+        where: { id: reservation.id },
+        select: { materialId: true },
+      })
+    ).materialId;
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: { ...activePickup, ...activeDelivery, status: 'ACCEPTED' },
+    });
+    await prisma.material.update({
+      where: { id: materialId },
+      data: { deliveryAllowed: true },
+    });
+    const materialOrder = await ensureMaterialPaymentOrder(reservation.id);
+    const feeOrder = await ensureDeliveryFeePaymentOrder(group.id);
+    assert.ok(
+      materialOrder.outcome === 'CREATED' ||
+        materialOrder.outcome === 'EXISTING',
+    );
+    assert.ok(
+      feeOrder.outcome === 'CREATED' || feeOrder.outcome === 'EXISTING',
+    );
+    const materialLocation = await prisma.material.findUniqueOrThrow({
+      where: { id: materialId },
+      select: { locationId: true },
+    });
+    const dropoff = await prisma.location.create({
+      data: {
+        country: 'Palestine',
+        city: 'Ramallah',
+        area: TEST_MARKER,
+        addressLine: 'Cash delivery dropoff',
+        visibility: 'PRIVATE',
+        isApproximate: false,
+        locationType: 'DELIVERY_DROPOFF',
+      },
+    });
+    payIds.locations.push(dropoff.id);
+    const delivery = await prisma.delivery.create({
+      data: {
+        reservationId: reservation.id,
+        deliveryGroupId: group.id,
+        pickupLocationId: materialLocation.locationId,
+        dropoffLocationId: dropoff.id,
+        requestedByUserId: learnerId,
+        status: 'WAITING_FOR_DRIVER',
+      },
+    });
+    const orders = await prisma.paymentOrder.findMany({
+      where: {
+        OR: [{ reservationId: reservation.id }, { deliveryGroupId: group.id }],
+      },
+    });
+    orders.forEach((order) => trackOrder(payIds, order.id));
+    assert.equal(orders.length, 2);
+    assert.ok(orders.every((order) => order.status === 'REQUIRES_PAYMENT'));
+
+    await acceptDelivery(driverId, delivery.id);
+    await progressToArrivedDropoff(driverId, delivery.id);
+
+    return { delivery, reservation, orders };
+  }
+
   test('unpaid delivery group fee blocks confirm', async () => {
     const reservation = await createPayReservationFixture(payIds, {
       learnerId,
@@ -911,5 +1000,189 @@ describe('delivery handover payment gate', () => {
       select: { status: true },
     });
     assert.equal(storedReservation.status, 'ACCEPTED');
+  });
+
+  test('cash numeric delivery requires acknowledgement and settles atomically', async () => {
+    const { delivery, reservation, orders } =
+      await createCashDeliveryAtArrivedDropoff();
+    const confirmationCode = deriveHandoverCode(
+      'learner-delivery',
+      delivery.id,
+    );
+
+    await assert.rejects(
+      () =>
+        updateDriverDeliveryStatus(driverId, delivery.id, {
+          status: 'DELIVERED',
+          confirmationCode,
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'CASH_COLLECTION_CONFIRMATION_REQUIRED',
+    );
+    assert.ok(
+      (
+        await prisma.paymentOrder.findMany({
+          where: { id: { in: orders.map((order) => order.id) } },
+        })
+      ).every((order) => order.status === 'REQUIRES_PAYMENT'),
+    );
+
+    const completed = await updateDriverDeliveryStatus(driverId, delivery.id, {
+      status: 'DELIVERED',
+      confirmationCode,
+      cashReceivedConfirmed: true,
+    });
+    assert.equal(completed.status, 'DELIVERED');
+    const settled = await prisma.paymentOrder.findMany({
+      where: { id: { in: orders.map((order) => order.id) } },
+    });
+    assert.ok(settled.every((order) => order.status === 'PAID'));
+    assert.ok(
+      settled.every((order) => order.cashCollectedByUserId === driverId),
+    );
+    assert.ok(settled.every((order) => order.paidAt != null));
+    assert.equal(
+      (
+        await prisma.reservation.findUniqueOrThrow({
+          where: { id: reservation.id },
+        })
+      ).status,
+      'COMPLETED',
+    );
+  });
+
+  test('cash QR delivery previews authoritative total and settles all carried orders once', async () => {
+    const { delivery, orders } = await createCashDeliveryAtArrivedDropoff();
+    const issued = await issueDeliveryHandoverCredential(
+      learnerId,
+      delivery.id,
+    );
+    const preview = await verifyDeliveryHandoverCredential(
+      driverId,
+      issued.handoverToken,
+    );
+    const expectedTotal = orders
+      .reduce((sum, order) => sum + Number(order.amount), 0)
+      .toFixed(2);
+    assert.deepEqual(preview.payment, {
+      paymentMethod: 'CASH',
+      cashDueAtHandover: true,
+      totalAmount: expectedTotal,
+      currency: 'NIS',
+    });
+
+    await assert.rejects(
+      confirmDeliveryHandoverCredential(driverId, issued.handoverToken),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'CASH_COLLECTION_CONFIRMATION_REQUIRED',
+    );
+    assert.ok(
+      (
+        await prisma.paymentOrder.findMany({
+          where: { id: { in: orders.map((order) => order.id) } },
+        })
+      ).every((order) => order.status === 'REQUIRES_PAYMENT'),
+    );
+
+    const completed = await confirmDeliveryHandoverCredential(
+      driverId,
+      issued.handoverToken,
+      true,
+    );
+    assert.equal(completed.status, 'DELIVERED');
+    const settled = await prisma.paymentOrder.findMany({
+      where: { id: { in: orders.map((order) => order.id) } },
+    });
+    assert.ok(settled.every((order) => order.status === 'PAID'));
+    assert.ok(
+      settled.every((order) => order.cashCollectedByUserId === driverId),
+    );
+    assert.ok(settled.every((order) => order.paidAt != null));
+
+    const replayed = await confirmDeliveryHandoverCredential(
+      driverId,
+      issued.handoverToken,
+      true,
+    );
+    assert.equal(replayed.status, 'DELIVERED');
+    assert.deepEqual(
+      (
+        await prisma.paymentOrder.findMany({
+          where: { id: { in: orders.map((order) => order.id) } },
+          orderBy: { id: 'asc' },
+        })
+      ).map((order) => order.paidAt?.toISOString()),
+      settled
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .map((order) => order.paidAt?.toISOString()),
+    );
+  });
+
+  test('cash remains due after attempt one and retry QR settles it exactly once', async () => {
+    const { delivery, reservation, orders } =
+      await createCashDeliveryAtArrivedDropoff();
+    await markDriverDeliveryFailed(driverId, delivery.id, {
+      reason: 'LEARNER_UNREACHABLE',
+      learnerContactAttempted: true,
+      note: 'Learner could not be reached.',
+    });
+    assert.ok(
+      (
+        await prisma.paymentOrder.findMany({
+          where: { id: { in: orders.map((order) => order.id) } },
+        })
+      ).every((order) => order.status === 'REQUIRES_PAYMENT'),
+    );
+
+    const retryStart = new Date(Date.now() + 60 * 60_000);
+    const retryEnd = new Date(retryStart.getTime() + 60 * 60_000);
+    await setDriverDeliveryWindow(driverId, delivery.id, {
+      start: retryStart.toISOString(),
+      end: retryEnd.toISOString(),
+    });
+    const issued = await issueDeliveryHandoverCredential(
+      learnerId,
+      delivery.id,
+    );
+    await updateDriverDeliveryStatus(driverId, delivery.id, {
+      status: 'ON_THE_WAY',
+    });
+    await updateDriverDeliveryStatus(driverId, delivery.id, {
+      status: 'ARRIVED_DROPOFF',
+    });
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: activeConfirmedDeliveryWindowUpdate(),
+    });
+
+    const completed = await confirmDeliveryHandoverCredential(
+      driverId,
+      issued.handoverToken,
+      true,
+    );
+    assert.equal(completed.status, 'DELIVERED');
+    const settled = await prisma.paymentOrder.findMany({
+      where: { id: { in: orders.map((order) => order.id) } },
+      orderBy: { id: 'asc' },
+    });
+    assert.ok(settled.every((order) => order.status === 'PAID'));
+
+    const replayed = await confirmDeliveryHandoverCredential(
+      driverId,
+      issued.handoverToken,
+      true,
+    );
+    assert.equal(replayed.status, 'DELIVERED');
+    assert.deepEqual(
+      (
+        await prisma.paymentOrder.findMany({
+          where: { id: { in: orders.map((order) => order.id) } },
+          orderBy: { id: 'asc' },
+        })
+      ).map((order) => order.paidAt?.toISOString()),
+      settled.map((order) => order.paidAt?.toISOString()),
+    );
   });
 });

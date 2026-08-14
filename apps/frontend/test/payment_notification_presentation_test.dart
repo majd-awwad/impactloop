@@ -142,6 +142,40 @@ void main() {
       );
     });
 
+    test('aggregated payment-required uses accepted-ready copy and complete payment CTA', () {
+      final notification = _paymentNotification(
+        type: 'PAYMENT_REQUIRED',
+        amount: '31.00',
+        extraMetadata: {
+          'aggregatedCheckout': true,
+          'totalAmount': '31.00',
+          'materialOutstanding': true,
+          'deliveryFeeOutstanding': true,
+          'fulfillmentMethod': 'DELIVERY',
+        },
+      );
+
+      final copyEn = localizedPaymentNotificationCopy(notification, en);
+      final copyAr = localizedPaymentNotificationCopy(notification, ar);
+
+      expect(copyEn.title, en.notificationPaymentAcceptedReadyTitle);
+      expect(
+        copyEn.body,
+        en.notificationPaymentAcceptedReadyBodyMaterialsAndDelivery(
+          en.reservationMoneyAmountWithCurrency('31.00'),
+        ),
+      );
+      expect(copyAr.title, ar.notificationPaymentAcceptedReadyTitle);
+      expect(
+        paymentNotificationActionLabel(notification, en),
+        en.completePayment,
+      );
+      expect(
+        paymentNotificationOpenRoute(notification),
+        learnerReservationCheckoutRoute('res-1024'),
+      );
+    });
+
     test('stale payment-required metadata still opens reservation checkout', () {
       // Frozen metadata may say PAID while the notification type is still
       // PAYMENT_REQUIRED — never trust that over reservation-scoped checkout.

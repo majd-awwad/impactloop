@@ -195,10 +195,13 @@ describe('PAY-04 payment notifications', () => {
       PAYMENT_NOTIFICATION_TYPES.PAYMENT_REQUIRED,
     ]);
     assert.equal(required.length, 1);
+    assert.match(required[0]!.body, /ready for payment/i);
     assert.match(required[0]!.body, /pickup code stays hidden/i);
     assert.equal(required[0]!.relatedEntityId, reservationId);
     const meta = required[0]!.metadata as Record<string, unknown>;
-    assert.equal(meta.paymentOrderId, order.id);
+    assert.equal(meta.aggregatedCheckout, true);
+    assert.equal(meta.paymentOrderId, undefined);
+    assert.equal(meta.outstandingPaymentOrderIds, undefined);
     assert.equal(meta.fulfillmentBlocked, true);
     assert.ok(!JSON.stringify(meta).toLowerCase().includes('provider'));
     assert.ok(!JSON.stringify(meta).includes('selfPickupCode'));

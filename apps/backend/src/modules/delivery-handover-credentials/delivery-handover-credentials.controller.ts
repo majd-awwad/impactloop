@@ -48,6 +48,7 @@ export const confirmDeliveryHandoverCredentialHandler = async (
   const delivery = await confirmDeliveryHandoverCredential(
     req.auth!.sub,
     body.handoverToken,
+    body.cashReceivedConfirmed,
   );
 
   res.json(successResponse('Delivery handover confirmed.', delivery));

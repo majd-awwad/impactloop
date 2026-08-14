@@ -59,9 +59,9 @@ class ReservationDetailPaymentCard extends StatelessWidget {
           titleIcon: Icons.payments_outlined,
           child: Text(
             l10n.paymentSummaryUnavailable,
-            style: AppTextStyles.label(context).copyWith(
-              color: palette.textSecondary,
-            ),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textSecondary),
           ),
         );
       }
@@ -91,7 +91,9 @@ class ReservationDetailPaymentCard extends StatelessWidget {
       key: sectionKey,
       semantic: semantic,
       title: title,
-      titleIcon: Icons.credit_card_rounded,
+      titleIcon: summary.dueAtHandover
+          ? Icons.payments_outlined
+          : Icons.credit_card_rounded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -108,11 +110,13 @@ class ReservationDetailPaymentCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    requiresAction
+                    summary.dueAtHandover
+                        ? l10n.reservationPaymentDueAtHandover
+                        : requiresAction
                         ? l10n.reservationDetailTotalRequired
                         : (summary.isPaid
-                            ? l10n.reservationMoneyPaidInFull
-                            : l10n.reservationDetailPaymentTitle),
+                              ? l10n.reservationMoneyPaidInFull
+                              : l10n.reservationDetailPaymentTitle),
                     style: AppTextStyles.label(context).copyWith(
                       color: palette.textMuted,
                       fontWeight: FontWeight.w600,
@@ -141,9 +145,9 @@ class ReservationDetailPaymentCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       currency,
-                      style: AppTextStyles.label(context).copyWith(
-                        color: palette.textMuted,
-                      ),
+                      style: AppTextStyles.label(
+                        context,
+                      ).copyWith(color: palette.textMuted),
                     ),
                   ],
                 ],
@@ -156,7 +160,9 @@ class ReservationDetailPaymentCard extends StatelessWidget {
                   if (outstanding != null && outstanding.isNotEmpty)
                     _AmountRow(
                       label: l10n.reservationDetailRemainingAmount,
-                      value: l10n.reservationMoneyAmountWithCurrency(outstanding),
+                      value: l10n.reservationMoneyAmountWithCurrency(
+                        outstanding,
+                      ),
                       emphasize: true,
                     ),
                   if (summary.hasMaterialPaymentOutstanding &&
@@ -165,10 +171,9 @@ class ReservationDetailPaymentCard extends StatelessWidget {
                       padding: const EdgeInsets.only(top: AppSpacing.xs),
                       child: Text(
                         l10n.reservationMoneyBothOutstanding,
-                        style: AppTextStyles.label(context).copyWith(
-                          color: palette.textMuted,
-                          fontSize: 12,
-                        ),
+                        style: AppTextStyles.label(
+                          context,
+                        ).copyWith(color: palette.textMuted, fontSize: 12),
                       ),
                     )
                   else if (summary.outstandingOrderCount > 0)
@@ -178,10 +183,9 @@ class ReservationDetailPaymentCard extends StatelessWidget {
                         l10n.reservationMoneyOrdersRemaining(
                           summary.outstandingOrderCount,
                         ),
-                        style: AppTextStyles.label(context).copyWith(
-                          color: palette.textMuted,
-                          fontSize: 12,
-                        ),
+                        style: AppTextStyles.label(
+                          context,
+                        ).copyWith(color: palette.textMuted, fontSize: 12),
                       ),
                     ),
                 ],
@@ -211,18 +215,18 @@ class ReservationDetailPaymentCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Text(
             nextStep,
-            style: AppTextStyles.label(context).copyWith(
-              color: palette.textSecondary,
-            ),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textSecondary),
           ),
           if (summary.overallStatus == 'CANCELLED')
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.sm),
               child: Text(
                 l10n.previousPaymentCycleCancelled,
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textMuted,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textMuted),
               ),
             ),
           if (summary.isRefunded)
@@ -230,9 +234,9 @@ class ReservationDetailPaymentCard extends StatelessWidget {
               padding: const EdgeInsets.only(top: AppSpacing.sm),
               child: Text(
                 l10n.previousPaymentCycleRefunded,
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textMuted,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textMuted),
               ),
             ),
           if (summary.isRefundPending)
@@ -259,10 +263,11 @@ class ReservationDetailPaymentCard extends StatelessWidget {
                 onPressed: onCheckoutOrder != null
                     ? () => onCheckoutOrder!(orderId)
                     : null,
-                icon: const Icon(Icons.account_balance_wallet_outlined, size: 18),
-                label: Text(
-                  primaryActionLabel(primaryAction, l10n: l10n),
+                icon: const Icon(
+                  Icons.account_balance_wallet_outlined,
+                  size: 18,
                 ),
+                label: Text(primaryActionLabel(primaryAction, l10n: l10n)),
                 style: AppStatusButtonStyle.filled(
                   context,
                   AppStatusTone.primary,
@@ -279,10 +284,9 @@ class ReservationDetailPaymentCard extends StatelessWidget {
                     reservation.isDeliveryFulfillment
                         ? l10n.reservationNextStepPaySupportingDelivery
                         : l10n.reservationNextStepPaySupporting,
-                    style: AppTextStyles.label(context).copyWith(
-                      color: palette.textMuted,
-                      fontSize: 12,
-                    ),
+                    style: AppTextStyles.label(
+                      context,
+                    ).copyWith(color: palette.textMuted, fontSize: 12),
                   ),
                 ),
               ],

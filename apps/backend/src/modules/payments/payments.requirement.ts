@@ -1,6 +1,7 @@
 import type {
   DeliveryStatus,
   PaymentOrderStatus,
+  PaymentCollectionMethod,
   ReservationFulfillmentMethod,
   ReservationStatus,
 } from '../../generated/prisma/client.js';
@@ -29,6 +30,8 @@ export type ReservationPaymentRequirementDto = {
   reservationId: string;
   reservationStatus: ReservationStatus;
   paymentEnforcementEnabled: boolean;
+  paymentMethod: PaymentCollectionMethod;
+  dueAtHandover: boolean;
   overallStatus:
     | PaymentReadinessStatus
     | 'BLOCKED'
@@ -62,6 +65,7 @@ export type ReservationPaymentRequirementDto = {
   orders: Array<{
     id: string;
     purpose: 'MATERIAL_SUBTOTAL' | 'DELIVERY_FEE';
+    paymentMethod: PaymentCollectionMethod;
     amount: string;
     currency: string;
     status: PaymentOrderStatus;
@@ -94,6 +98,10 @@ const FULFILLMENT_STARTED_STATUSES = new Set<DeliveryStatus>([
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
+  'REDELIVERY_PENDING',
+  'REDELIVERY_SCHEDULED',
+  'RETURN_TO_SUPPLIER_REQUIRED',
+  'RETURNED_TO_SUPPLIER',
   'DELIVERED',
 ]);
 
@@ -116,6 +124,7 @@ const mapOrderRows = (
     amount: { toFixed?: (n: number) => string } | unknown;
     currency: string;
     status: PaymentOrderStatus;
+    paymentMethod: PaymentCollectionMethod;
     cycleNumber: number;
     paidAt: Date | null;
     createdAt: Date;
@@ -126,6 +135,7 @@ const mapOrderRows = (
     amount: { toFixed?: (n: number) => string } | unknown;
     currency: string;
     status: PaymentOrderStatus;
+    paymentMethod: PaymentCollectionMethod;
     cycleNumber: number;
     paidAt: Date | null;
     createdAt: Date;
@@ -138,12 +148,14 @@ const mapOrderRows = (
     ...materialOrders.map((order) => ({
       id: order.id,
       purpose: 'MATERIAL_SUBTOTAL' as const,
+      paymentMethod: order.paymentMethod,
       amount: moneyDecimalToString(order.amount as never),
       currency: order.currency,
       status: order.status,
       cycleNumber: order.cycleNumber,
       isCurrent: order.cycleNumber === currentMaterialCycle,
-      canStartCheckout: isPayablePaymentOrderStatus(order.status),
+      canStartCheckout:
+        order.paymentMethod === 'CARD' && isPayablePaymentOrderStatus(order.status),
       paidAt: order.paidAt?.toISOString() ?? null,
       createdAt: order.createdAt.toISOString(),
       updatedAt: order.updatedAt.toISOString(),
@@ -151,12 +163,14 @@ const mapOrderRows = (
     ...feeOrders.map((order) => ({
       id: order.id,
       purpose: 'DELIVERY_FEE' as const,
+      paymentMethod: order.paymentMethod,
       amount: moneyDecimalToString(order.amount as never),
       currency: order.currency,
       status: order.status,
       cycleNumber: order.cycleNumber,
       isCurrent: order.cycleNumber === currentFeeCycle,
-      canStartCheckout: isPayablePaymentOrderStatus(order.status),
+      canStartCheckout:
+        order.paymentMethod === 'CARD' && isPayablePaymentOrderStatus(order.status),
       paidAt: order.paidAt?.toISOString() ?? null,
       createdAt: order.createdAt.toISOString(),
       updatedAt: order.updatedAt.toISOString(),
@@ -175,6 +189,7 @@ export const getReservationPaymentRequirement = async (
       requesterId: true,
       status: true,
       fulfillmentMethod: true,
+      paymentMethod: true,
       deliveryGroupId: true,
       materialSubtotal: true,
       pricingCurrency: true,
@@ -189,7 +204,8 @@ export const getReservationPaymentRequirement = async (
 
   assertLearnerOwnerOrAdmin(reservation.requesterId, actor);
 
-  const enforcement = isElectronicPaymentEnforced();
+  const enforcement =
+    reservation.paymentMethod === 'CASH' || isElectronicPaymentEnforced();
   const evaluatedAt = new Date().toISOString();
 
   const materialOrders = await prisma.paymentOrder.findMany({
@@ -213,8 +229,10 @@ export const getReservationPaymentRequirement = async (
 
   const currentMaterial = materialOrders[0] ?? null;
   const currentFee = feeOrders[0] ?? null;
-  const mapCheckout = (order: { status: PaymentOrderStatus } | null) =>
-    order != null && isPayablePaymentOrderStatus(order.status);
+  const mapCheckout = (
+    order: { status: PaymentOrderStatus; paymentMethod: PaymentCollectionMethod } | null,
+  ) => order != null && order.paymentMethod === 'CARD' &&
+    isPayablePaymentOrderStatus(order.status);
 
   const delivery = reservation.deliveryGroupId
     ? await prisma.delivery.findFirst({
@@ -278,6 +296,8 @@ export const getReservationPaymentRequirement = async (
       reservationId: reservation.id,
       reservationStatus: reservation.status,
       paymentEnforcementEnabled: enforcement,
+      paymentMethod: reservation.paymentMethod,
+      dueAtHandover: pickup.dueAtHandover,
       overallStatus,
       fulfillmentMethod: 'PICKUP',
       material: {
@@ -297,10 +317,10 @@ export const getReservationPaymentRequirement = async (
       orders: mapOrderRows(materialOrders, []),
       paymentReady: pickup.ready,
       fulfillmentReady:
-        reservation.status === 'ACCEPTED' && pickup.ready,
+        reservation.status === 'ACCEPTED' && pickup.fulfillmentReady,
       pickupCodeAvailable:
         reservation.status === 'ACCEPTED' &&
-        pickup.ready &&
+        pickup.fulfillmentReady &&
         isPickupCodeVisibilityWindowOpen(
           reservation.pickupWindowStart,
           reservation.pickupWindowEnd,
@@ -330,7 +350,7 @@ export const getReservationPaymentRequirement = async (
   const feeReady = groupReadiness?.fee.ready ?? true;
 
   const paymentReady = groupReadiness
-    ? groupReadiness.overallReady
+    ? groupReadiness.overallPaymentReady
     : materialReady && feeReady;
 
   const lifecycleClass = classifyReservationPaymentLifecycle(reservation.status);
@@ -367,7 +387,10 @@ export const getReservationPaymentRequirement = async (
   }
 
   const fulfillmentReady =
-    reservation.status === 'ACCEPTED' && paymentReady;
+    reservation.status === 'ACCEPTED' &&
+    (groupReadiness
+      ? groupReadiness.overallFulfillmentReady
+      : materialPickup.fulfillmentReady);
 
   const deliveryDispatchable =
     fulfillmentReady &&
@@ -379,6 +402,9 @@ export const getReservationPaymentRequirement = async (
     reservationId: reservation.id,
     reservationStatus: reservation.status,
     paymentEnforcementEnabled: enforcement,
+    paymentMethod: reservation.paymentMethod,
+    dueAtHandover:
+      materialPickup.dueAtHandover || (groupReadiness?.fee.dueAtHandover ?? false),
     overallStatus,
     fulfillmentMethod: 'DELIVERY',
     material: {

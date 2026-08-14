@@ -1,6 +1,7 @@
 import type {
   DeliveryStatus,
   PaymentOrderStatus,
+  PaymentCollectionMethod,
   ReservationFulfillmentMethod,
   ReservationStatus,
 } from '../../generated/prisma/client.js';
@@ -18,6 +19,9 @@ import { isElectronicPaymentEnforced } from './payments.policy.js';
  */
 export type ReservationPaymentListSummary = {
   enforcementEnabled: boolean;
+  paymentMethod: PaymentCollectionMethod;
+  paymentReady: boolean;
+  dueAtHandover: boolean;
   overallStatus: string;
   outstandingOrderCount: number;
   outstandingAmount: string | null;
@@ -34,6 +38,7 @@ export type ReservationPaymentListSummaryInput = {
   id: string;
   status: ReservationStatus;
   fulfillmentMethod: ReservationFulfillmentMethod;
+  paymentMethod: PaymentCollectionMethod;
   materialSubtotal: unknown;
   deliveryFee: unknown;
   pricingCurrency: string | null;
@@ -85,6 +90,7 @@ type OrderRow = {
   amount: { toFixed: (n: number) => string };
   currency: string;
   cycleNumber: number;
+  paymentMethod: PaymentCollectionMethod;
 };
 
 const DISPATCHABLE_DELIVERY_STATUSES = new Set<DeliveryStatus>([
@@ -138,38 +144,6 @@ export const resolvePaymentSummariesByReservations = async (
 
   const enforcement = isElectronicPaymentEnforced();
 
-  if (!enforcement) {
-    for (const reservation of reservations) {
-      const accepted = reservation.status === 'ACCEPTED';
-      const pickup = reservation.fulfillmentMethod === 'PICKUP';
-      const windowOpen = isPickupCodeVisibilityWindowOpen(
-        reservation.pickupWindowStart,
-        reservation.pickupWindowEnd,
-      );
-      const deliveryDispatchable =
-        accepted &&
-        reservation.fulfillmentMethod === 'DELIVERY' &&
-        reservation.deliveryStatus != null &&
-        DISPATCHABLE_DELIVERY_STATUSES.has(reservation.deliveryStatus) &&
-        reservation.assignedDriverProfileId == null;
-
-      result.set(reservation.id, {
-        enforcementEnabled: false,
-        overallStatus: 'PAYMENT_DISABLED',
-        outstandingOrderCount: 0,
-        outstandingAmount: null,
-        currency: reservation.pricingCurrency,
-        hasMaterialPaymentOutstanding: false,
-        hasDeliveryFeeOutstanding: false,
-        checkoutableOrderId: null,
-        fulfillmentReady: accepted,
-        pickupCodeAvailable: accepted && pickup && windowOpen,
-        deliveryDispatchable,
-      });
-    }
-    return result;
-  }
-
   // PAY-05D: reads must not mutate. Report invariant without creating groups/orders.
   // Historical malformed rows are healed via reconcile CLI / command paths only.
   const reservationIds = reservations.map((r) => r.id);
@@ -197,6 +171,7 @@ export const resolvePaymentSummariesByReservations = async (
         amount: true,
         currency: true,
         cycleNumber: true,
+        paymentMethod: true,
       },
     }),
     groupIds.length === 0
@@ -216,6 +191,7 @@ export const resolvePaymentSummariesByReservations = async (
             amount: true,
             currency: true,
             cycleNumber: true,
+            paymentMethod: true,
           },
         }),
   ]);
@@ -248,6 +224,35 @@ export const resolvePaymentSummariesByReservations = async (
   }
 
   for (const reservation of reservations) {
+    if (!enforcement && reservation.paymentMethod === 'CARD') {
+      const accepted = reservation.status === 'ACCEPTED';
+      const windowOpen = isPickupCodeVisibilityWindowOpen(
+        reservation.pickupWindowStart,
+        reservation.pickupWindowEnd,
+      );
+      result.set(reservation.id, {
+        enforcementEnabled: false,
+        paymentMethod: 'CARD',
+        paymentReady: true,
+        dueAtHandover: false,
+        overallStatus: 'PAYMENT_DISABLED',
+        outstandingOrderCount: 0,
+        outstandingAmount: null,
+        currency: reservation.pricingCurrency,
+        hasMaterialPaymentOutstanding: false,
+        hasDeliveryFeeOutstanding: false,
+        checkoutableOrderId: null,
+        fulfillmentReady: accepted,
+        pickupCodeAvailable:
+          accepted && reservation.fulfillmentMethod === 'PICKUP' && windowOpen,
+        deliveryDispatchable:
+          accepted && reservation.fulfillmentMethod === 'DELIVERY' &&
+          reservation.deliveryStatus != null &&
+          DISPATCHABLE_DELIVERY_STATUSES.has(reservation.deliveryStatus) &&
+          reservation.assignedDriverProfileId == null,
+      });
+      continue;
+    }
     const materialOrder = currentMaterialByReservation.get(reservation.id);
     const feeOrder = reservation.deliveryGroupId
       ? currentFeeByGroup.get(reservation.deliveryGroupId) ?? null
@@ -313,10 +318,12 @@ export const resolvePaymentSummariesByReservations = async (
     const materialCheckoutable =
       reservation.status === 'ACCEPTED' &&
       materialOrder != null &&
+      materialOrder.paymentMethod === 'CARD' &&
       isPayablePaymentOrderStatus(materialOrder.status);
     const feeCheckoutable =
       reservation.status === 'ACCEPTED' &&
       feeOrder != null &&
+      feeOrder.paymentMethod === 'CARD' &&
       isPayablePaymentOrderStatus(feeOrder.status);
 
     const checkoutableOrderId = materialCheckoutable
@@ -332,8 +339,21 @@ export const resolvePaymentSummariesByReservations = async (
       !feeRequired || (feeOrder != null && feeOrder.status === 'PAID');
     const paymentReady = materialReady && feeReady;
 
+    const materialFulfillmentReady =
+      materialReady ||
+      (reservation.paymentMethod === 'CASH' &&
+        materialOrder?.status === 'REQUIRES_PAYMENT');
+    const feeFulfillmentReady =
+      feeReady ||
+      (reservation.paymentMethod === 'CASH' &&
+        feeOrder?.status === 'REQUIRES_PAYMENT');
+    const dueAtHandover =
+      reservation.paymentMethod === 'CASH' &&
+      (materialOutstanding || feeOutstanding);
+
     const accepted = reservation.status === 'ACCEPTED';
-    const fulfillmentReady = accepted && paymentReady;
+    const fulfillmentReady =
+      accepted && materialFulfillmentReady && feeFulfillmentReady;
     const windowOpen = isPickupCodeVisibilityWindowOpen(
       reservation.pickupWindowStart,
       reservation.pickupWindowEnd,
@@ -341,7 +361,7 @@ export const resolvePaymentSummariesByReservations = async (
     const pickup =
       reservation.fulfillmentMethod === 'PICKUP' &&
       accepted &&
-      paymentReady &&
+      fulfillmentReady &&
       windowOpen;
     const deliveryDispatchable =
       fulfillmentReady &&
@@ -428,6 +448,9 @@ export const resolvePaymentSummariesByReservations = async (
 
     result.set(reservation.id, {
       enforcementEnabled: true,
+      paymentMethod: reservation.paymentMethod,
+      paymentReady,
+      dueAtHandover,
       overallStatus,
       outstandingOrderCount,
       outstandingAmount,

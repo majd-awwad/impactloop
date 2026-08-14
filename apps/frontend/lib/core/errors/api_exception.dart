@@ -141,6 +141,11 @@ String localizedApiErrorMessage(
       return l10n.driverHandoverWindowNotStarted;
     case 'HANDOVER_WINDOW_EXPIRED':
       return l10n.driverHandoverWindowExpired;
+    case 'CASH_COLLECTION_CONFIRMATION_REQUIRED':
+      return l10n.cashCollectionRequiredError;
+    case 'HANDOVER_CASH_COLLECTOR_INVALID':
+    case 'HANDOVER_PAYMENT_INVARIANT_INVALID':
+      return l10n.driverActionNotAvailable;
     case 'HANDOVER_CREDENTIAL_INVALID':
       // Privacy-safe: do not distinguish wrong supplier / expired / used.
       return l10n.supplierPickupQrCredentialUnavailable;

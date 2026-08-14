@@ -78,6 +78,7 @@ const recoveryStatuses = new Set<DeliveryStatus>([
   'AWAITING_RESOLUTION',
   'DRIVER_NO_SHOW',
   'FAILED_PICKUP',
+  'RETURNED_TO_SUPPLIER',
 ]);
 const terminalFailureStatuses = new Set<DeliveryStatus>([
   'FAILED_DELIVERY',
@@ -93,6 +94,8 @@ const inTransitStatuses = new Set<DeliveryStatus>([
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
+  'REDELIVERY_PENDING',
+  'REDELIVERY_SCHEDULED',
 ]);
 const incidentDecisionActions = new Set([
   'VERIFY',
@@ -120,6 +123,9 @@ export const classifyLifecyclePhase = (
     context.reservation.status === 'AWAITING_SUPPLIER_CONFIRMATION' ||
     context.reservation.status === 'AWAITING_LEARNER_CONFIRMATION';
 
+  if (status === 'RETURN_TO_SUPPLIER_REQUIRED') {
+    return 'RECOVERY_IN_PROGRESS';
+  }
   if (isRecovery && (requiresResolution || !context.hasExpectedRecoveryIncident)) {
     return 'RECOVERY_REQUIRED';
   }
@@ -175,7 +181,9 @@ export const classifyAssignmentState = (input: {
   );
   if (
     active &&
-    (input.lifecyclePhase === 'PRE_PICKUP' || input.lifecyclePhase === 'IN_TRANSIT')
+    (input.lifecyclePhase === 'PRE_PICKUP' ||
+      input.lifecyclePhase === 'IN_TRANSIT' ||
+      input.lifecyclePhase === 'RECOVERY_IN_PROGRESS')
   ) {
     return 'ACTIVE';
   }

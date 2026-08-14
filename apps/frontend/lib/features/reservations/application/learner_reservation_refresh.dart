@@ -12,6 +12,9 @@ const _transitionalDeliveryStatuses = {
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
+  'REDELIVERY_PENDING',
+  'REDELIVERY_SCHEDULED',
+  'RETURN_TO_SUPPLIER_REQUIRED',
 };
 
 bool learnerReservationNeedsActiveRefresh(LearnerReservation reservation) {

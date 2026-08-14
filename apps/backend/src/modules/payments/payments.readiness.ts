@@ -1,5 +1,6 @@
 import type {
   PaymentOrderStatus,
+  PaymentCollectionMethod,
   Prisma,
   ReservationStatus,
 } from '../../generated/prisma/client.js';
@@ -28,7 +29,10 @@ export type ObligationReadiness = {
   amount: string | null;
   currency: string | null;
   cycleNumber: number | null;
+  paymentMethod: PaymentCollectionMethod;
   ready: boolean;
+  fulfillmentReady: boolean;
+  dueAtHandover: boolean;
 };
 
 export type PickupPaymentReadiness = ObligationReadiness & {
@@ -38,6 +42,8 @@ export type PickupPaymentReadiness = ObligationReadiness & {
 export type DeliveryGroupPaymentReadiness = {
   deliveryGroupId: string;
   overallReady: boolean;
+  overallPaymentReady: boolean;
+  overallFulfillmentReady: boolean;
   overallStatus: PaymentReadinessStatus;
   fee: ObligationReadiness;
   materials: Array<
@@ -77,6 +83,18 @@ const mapOrderStatus = (status: PaymentOrderStatus): PaymentReadinessStatus => {
   }
 };
 
+const orderReadiness = (
+  paymentMethod: PaymentCollectionMethod,
+  status: PaymentReadinessStatus,
+) => ({
+  ready: status === 'PAID',
+  fulfillmentReady:
+    status === 'PAID' ||
+    (paymentMethod === 'CASH' && status === 'REQUIRES_PAYMENT'),
+  dueAtHandover:
+    paymentMethod === 'CASH' && status === 'REQUIRES_PAYMENT',
+});
+
 const findCurrentMaterialOrder = (
   tx: Prisma.TransactionClient | typeof prisma,
   reservationId: string,
@@ -107,7 +125,22 @@ export const evaluatePickupPaymentReadiness = async (
 ): Promise<PickupPaymentReadiness> => {
   const tx = resolveTx(txClient);
 
-  if (!isElectronicPaymentEnforced()) {
+  const reservation = await tx.reservation.findUnique({
+    where: { id: reservationId },
+    select: {
+      id: true,
+      materialSubtotal: true,
+      pricingCurrency: true,
+      status: true,
+      paymentMethod: true,
+    },
+  });
+
+  if (!reservation) {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  if (reservation.paymentMethod === 'CARD' && !isElectronicPaymentEnforced()) {
     return {
       reservationId,
       status: 'PAYMENT_DISABLED',
@@ -116,22 +149,11 @@ export const evaluatePickupPaymentReadiness = async (
       amount: null,
       currency: null,
       cycleNumber: null,
+      paymentMethod: 'CARD',
       ready: true,
+      fulfillmentReady: true,
+      dueAtHandover: false,
     };
-  }
-
-  const reservation = await tx.reservation.findUnique({
-    where: { id: reservationId },
-    select: {
-      id: true,
-      materialSubtotal: true,
-      pricingCurrency: true,
-      status: true,
-    },
-  });
-
-  if (!reservation) {
-    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
   }
 
   const amount = toMoneyDecimal(reservation.materialSubtotal ?? 0);
@@ -144,7 +166,10 @@ export const evaluatePickupPaymentReadiness = async (
       amount: null,
       currency: null,
       cycleNumber: null,
+      paymentMethod: reservation.paymentMethod,
       ready: true,
+      fulfillmentReady: true,
+      dueAtHandover: false,
     };
   }
 
@@ -159,11 +184,15 @@ export const evaluatePickupPaymentReadiness = async (
       amount: amount.toFixed(2),
       currency: reservation.pricingCurrency ?? 'NIS',
       cycleNumber: null,
+      paymentMethod: reservation.paymentMethod,
       ready: false,
+      fulfillmentReady: false,
+      dueAtHandover: false,
     };
   }
 
   const status = mapOrderStatus(order.status);
+  const readiness = orderReadiness(order.paymentMethod, status);
   return {
     reservationId,
     status,
@@ -172,7 +201,8 @@ export const evaluatePickupPaymentReadiness = async (
     amount: order.amount.toFixed(2),
     currency: order.currency,
     cycleNumber: order.cycleNumber,
-    ready: status === 'PAID',
+    paymentMethod: order.paymentMethod,
+    ...readiness,
   };
 };
 
@@ -182,34 +212,13 @@ export const evaluateDeliveryGroupPaymentReadiness = async (
 ): Promise<DeliveryGroupPaymentReadiness> => {
   const tx = resolveTx(txClient);
 
-  if (!isElectronicPaymentEnforced()) {
-    return {
-      deliveryGroupId,
-      overallReady: true,
-      overallStatus: 'PAYMENT_DISABLED',
-      fee: {
-        status: 'PAYMENT_DISABLED',
-        paymentOrderId: null,
-        purpose: null,
-        amount: null,
-        currency: null,
-        cycleNumber: null,
-        ready: true,
-      },
-      materials: [],
-      awaitingConfirmationReservationIds: [],
-      outstandingReservationIds: [],
-      outstandingPaymentOrderIds: [],
-      invariantViolations: [],
-    };
-  }
-
   const group = await tx.deliveryGroup.findUnique({
     where: { id: deliveryGroupId },
     select: {
       id: true,
       deliveryFee: true,
       currency: true,
+      paymentMethod: true,
       reservations: {
         where: {
           status: { in: [...ACTIVE_GROUP_RESERVATION_STATUSES] },
@@ -220,6 +229,7 @@ export const evaluateDeliveryGroupPaymentReadiness = async (
           status: true,
           materialSubtotal: true,
           pricingCurrency: true,
+          paymentMethod: true,
         },
       },
     },
@@ -227,6 +237,25 @@ export const evaluateDeliveryGroupPaymentReadiness = async (
 
   if (!group) {
     throw new AppError('Delivery group not found.', 404, 'NOT_FOUND');
+  }
+
+  if (group.paymentMethod === 'CARD' && !isElectronicPaymentEnforced()) {
+    return {
+      deliveryGroupId,
+      overallReady: true,
+      overallPaymentReady: true,
+      overallFulfillmentReady: true,
+      overallStatus: 'PAYMENT_DISABLED',
+      fee: {
+        status: 'PAYMENT_DISABLED', paymentOrderId: null, purpose: null,
+        amount: null, currency: null, cycleNumber: null,
+        paymentMethod: 'CARD', ready: true, fulfillmentReady: true,
+        dueAtHandover: false,
+      },
+      materials: [], awaitingConfirmationReservationIds: [],
+      outstandingReservationIds: [], outstandingPaymentOrderIds: [],
+      invariantViolations: [],
+    };
   }
 
   const invariantViolations: string[] = [];
@@ -243,7 +272,10 @@ export const evaluateDeliveryGroupPaymentReadiness = async (
       amount: null,
       currency: null,
       cycleNumber: null,
+      paymentMethod: group.paymentMethod,
       ready: true,
+      fulfillmentReady: true,
+      dueAtHandover: false,
     };
   } else {
     const order = await findCurrentFeeOrder(tx, group.id);
@@ -255,13 +287,17 @@ export const evaluateDeliveryGroupPaymentReadiness = async (
         amount: feeAmount.toFixed(2),
         currency: group.currency,
         cycleNumber: null,
+        paymentMethod: group.paymentMethod,
         ready: false,
+        fulfillmentReady: false,
+        dueAtHandover: false,
       };
       invariantViolations.push(
         `Missing DELIVERY_FEE PaymentOrder for group ${group.id}`,
       );
     } else {
       const status = mapOrderStatus(order.status);
+      const readiness = orderReadiness(order.paymentMethod, status);
       fee = {
         status,
         paymentOrderId: order.id,
@@ -269,7 +305,8 @@ export const evaluateDeliveryGroupPaymentReadiness = async (
         amount: order.amount.toFixed(2),
         currency: order.currency,
         cycleNumber: order.cycleNumber,
-        ready: status === 'PAID',
+        paymentMethod: order.paymentMethod,
+        ...readiness,
       };
       if (!fee.ready && order.id) {
         outstandingPaymentOrderIds.push(order.id);
@@ -300,7 +337,10 @@ export const evaluateDeliveryGroupPaymentReadiness = async (
         amount: null,
         currency: null,
         cycleNumber: null,
+        paymentMethod: reservation.paymentMethod,
         ready: true,
+        fulfillmentReady: true,
+        dueAtHandover: false,
       });
       continue;
     }
@@ -315,7 +355,10 @@ export const evaluateDeliveryGroupPaymentReadiness = async (
         amount: amount.toFixed(2),
         currency: reservation.pricingCurrency ?? 'NIS',
         cycleNumber: null,
+        paymentMethod: reservation.paymentMethod,
         ready: false,
+        fulfillmentReady: false,
+        dueAtHandover: false,
       });
       outstandingReservationIds.push(reservation.id);
       invariantViolations.push(
@@ -325,7 +368,8 @@ export const evaluateDeliveryGroupPaymentReadiness = async (
     }
 
     const status = mapOrderStatus(order.status);
-    const ready = status === 'PAID';
+    const readiness = orderReadiness(order.paymentMethod, status);
+    const ready = readiness.ready;
     materials.push({
       reservationId: reservation.id,
       status,
@@ -334,7 +378,8 @@ export const evaluateDeliveryGroupPaymentReadiness = async (
       amount: order.amount.toFixed(2),
       currency: order.currency,
       cycleNumber: order.cycleNumber,
-      ready,
+      paymentMethod: order.paymentMethod,
+      ...readiness,
     });
     if (!ready) {
       outstandingReservationIds.push(reservation.id);
@@ -342,18 +387,24 @@ export const evaluateDeliveryGroupPaymentReadiness = async (
     }
   }
 
-  const overallReady =
+  const overallPaymentReady =
     fee.ready &&
     materials.every((row) => row.ready) &&
     awaitingConfirmationReservationIds.length === 0 &&
     invariantViolations.length === 0;
+  const overallFulfillmentReady =
+    fee.fulfillmentReady &&
+    materials.every((row) => row.fulfillmentReady) &&
+    awaitingConfirmationReservationIds.length === 0 &&
+    invariantViolations.length === 0;
+  const overallReady = overallFulfillmentReady;
 
   let overallStatus: PaymentReadinessStatus = 'PAID';
   if (invariantViolations.length > 0) {
     overallStatus = 'INVARIANT_VIOLATION';
   } else if (awaitingConfirmationReservationIds.length > 0) {
     overallStatus = 'AWAITING_GROUP_CONFIRMATION';
-  } else if (!overallReady) {
+  } else if (!overallPaymentReady) {
     if (
       fee.status === 'PROCESSING' ||
       materials.some((row) => row.status === 'PROCESSING')
@@ -382,6 +433,8 @@ export const evaluateDeliveryGroupPaymentReadiness = async (
   return {
     deliveryGroupId,
     overallReady,
+    overallPaymentReady,
+    overallFulfillmentReady,
     overallStatus,
     fee,
     materials,
@@ -410,7 +463,7 @@ export const assertPickupPaymentSatisfiedOrThrow = async (
     );
   }
 
-  if (!readiness.ready) {
+  if (!readiness.fulfillmentReady) {
     const code =
       readiness.status === 'REFUND_PENDING'
         ? 'REFUND_IN_PROGRESS'
@@ -458,7 +511,7 @@ export const assertDeliveryGroupPaymentReadyOrThrow = async (
     );
   }
 
-  if (!readiness.overallReady) {
+  if (!readiness.overallFulfillmentReady) {
     throw new AppError(
       'Delivery cannot dispatch until all payment obligations are satisfied.',
       409,

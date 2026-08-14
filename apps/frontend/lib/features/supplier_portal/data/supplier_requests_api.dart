@@ -101,6 +101,26 @@ class SupplierRequestsApi {
     }
   }
 
+  Future<void> confirmDeliveryReturn(String deliveryId) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        '/api/supplier/reservations/$deliveryId/confirm-delivery-return',
+      );
+      final body = response.data;
+      if (body == null || body['success'] != true) {
+        throw ApiException(
+          message: body?['message'] as String? ??
+              'Could not confirm material return',
+          statusCode: response.statusCode,
+        );
+      }
+    } on ApiException {
+      rethrow;
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
   Future<SupplierIncomingRequest> acceptRequest(
     String requestId,
     SupplierPickupWindow pickupWindow,
@@ -143,11 +163,15 @@ class SupplierRequestsApi {
   Future<SupplierIncomingRequest> completeRequest(
     String requestId, {
     required String confirmationCode,
+    bool cashReceivedConfirmed = false,
   }) async {
     try {
       final response = await _client.patch<Map<String, dynamic>>(
         '/api/supplier/reservations/$requestId/complete',
-        data: {'confirmationCode': confirmationCode},
+        data: {
+          'confirmationCode': confirmationCode,
+          'cashReceivedConfirmed': cashReceivedConfirmed,
+        },
       );
 
       return _parseReservationResponse(response);
@@ -177,7 +201,9 @@ class SupplierRequestsApi {
 
       final data = body['data'];
       if (data is! Map) {
-        throw const ApiException(message: 'Unexpected handover verify response');
+        throw const ApiException(
+          message: 'Unexpected handover verify response',
+        );
       }
 
       return HandoverVerifyPreview.fromJson(Map<String, dynamic>.from(data));
@@ -200,12 +226,16 @@ class SupplierRequestsApi {
   }
 
   Future<SupplierIncomingRequest> confirmHandoverCredential(
-    String handoverToken,
-  ) async {
+    String handoverToken, {
+    bool cashReceivedConfirmed = false,
+  }) async {
     try {
       final response = await _client.post<Map<String, dynamic>>(
         '/api/supplier/reservations/handover/confirm',
-        data: {'handoverToken': handoverToken},
+        data: {
+          'handoverToken': handoverToken,
+          'cashReceivedConfirmed': cashReceivedConfirmed,
+        },
       );
 
       return _parseReservationResponse(response);

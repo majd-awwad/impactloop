@@ -118,6 +118,7 @@ const createPartialPickupReplacementDelivery = async (
       dropoffArea: reservation.dropoffArea,
       preferredDeliveryWindows,
       deliveryZone,
+      paymentMethod: reservation.paymentMethod,
       tx,
     });
 
@@ -142,6 +143,7 @@ const createPartialPickupReplacementDelivery = async (
             deliveryAddressText: reservation.deliveryAddressText,
             deliveryFee: reservation.deliveryFee ?? new Prisma.Decimal(0),
             currency: reservation.pricingCurrency ?? 'NIS',
+            paymentMethod: reservation.paymentMethod,
             deliveryZone,
             status: 'OPEN',
             windowStart: window.start,

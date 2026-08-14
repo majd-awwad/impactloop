@@ -172,6 +172,17 @@ export const adminDeliveryDetailInclude = {
       owner: {
         select: ownerSupplierSelect,
       },
+      materialPaymentOrders: {
+        where: { purpose: 'MATERIAL_SUBTOTAL' as const },
+        orderBy: { cycleNumber: 'desc' as const },
+        take: 1,
+        select: {
+          paymentMethod: true,
+          status: true,
+          amount: true,
+          currency: true,
+        },
+      },
     },
   },
   pickupLocation: true,
@@ -194,6 +205,17 @@ export const adminDeliveryDetailInclude = {
       id: true,
       status: true,
       assignedDriverProfileId: true,
+      deliveryFeePaymentOrders: {
+        where: { purpose: 'DELIVERY_FEE' as const },
+        orderBy: { cycleNumber: 'desc' as const },
+        take: 1,
+        select: {
+          paymentMethod: true,
+          status: true,
+          amount: true,
+          currency: true,
+        },
+      },
       reservations: {
         orderBy: { createdAt: 'desc' as const },
         take: 50,
@@ -248,6 +270,38 @@ export const adminDeliveryDetailInclude = {
           user: { select: { displayName: true, email: true } },
         },
       },
+    },
+  },
+  attempts: {
+    orderBy: { attemptNumber: 'asc' as const },
+    select: {
+      attemptNumber: true,
+      attemptedAt: true,
+      failureReason: true,
+      learnerContactAttempted: true,
+      note: true,
+      outcome: true,
+      retryWindowStart: true,
+      retryWindowEnd: true,
+      retryDeadline: true,
+    },
+  },
+  pickupItems: {
+    where: { wasPicked: true },
+    orderBy: { recordedAt: 'asc' as const },
+    select: {
+      materialTitle: true,
+      quantity: true,
+      unit: true,
+      condition: true,
+    },
+  },
+  returnConfirmedBy: {
+    select: { displayName: true, email: true },
+  },
+  returnCustodyDriverProfile: {
+    select: {
+      user: { select: { displayName: true, email: true } },
     },
   },
   incidentReports: {
@@ -529,7 +583,7 @@ export const buildAdminDeliveriesWhere = (
   } else if (query.assignment === 'HISTORICAL') {
     and.push({
       assignments: { some: {} },
-      status: { in: ['DELIVERED', 'CANCELLED', 'FAILED_PICKUP', 'FAILED_DELIVERY', 'DRIVER_NO_SHOW', 'LEARNER_NO_SHOW'] },
+      status: { in: ['DELIVERED', 'RETURNED_TO_SUPPLIER', 'CANCELLED', 'FAILED_PICKUP', 'FAILED_DELIVERY', 'DRIVER_NO_SHOW', 'LEARNER_NO_SHOW'] },
     });
   }
 
@@ -555,12 +609,16 @@ const inProgressStatuses: DeliveryStatus[] = [
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
+  'REDELIVERY_PENDING',
+  'REDELIVERY_SCHEDULED',
+  'RETURN_TO_SUPPLIER_REQUIRED',
 ];
 
 const failedCancelledStatuses: DeliveryStatus[] = [
   'CANCELLED',
   'FAILED_PICKUP',
   'FAILED_DELIVERY',
+  'RETURNED_TO_SUPPLIER',
 ];
 
 /**

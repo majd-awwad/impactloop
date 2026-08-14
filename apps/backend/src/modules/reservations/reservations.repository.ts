@@ -62,6 +62,7 @@ const learnerReservationListScalarSelect = {
   quantityRequested: true,
   message: true,
   fulfillmentMethod: true,
+  paymentMethod: true,
   learnerPreferredPickupWindows: true,
   learnerPreferredDeliveryWindows: true,
   deliveryAddressText: true,
@@ -287,6 +288,7 @@ export const createLearnerReservation = async (input: {
   quantityRequested: number;
   message?: string;
   fulfillmentMethod: 'PICKUP' | 'DELIVERY';
+  paymentMethod: 'CARD' | 'CASH';
   learnerPreferredPickupWindows?: { start: string; end: string }[];
   learnerPreferredDeliveryWindows?: { start: string; end: string }[];
   deliveryAddressText?: string;
@@ -438,6 +440,7 @@ export const createLearnerReservation = async (input: {
       materialId: material.id,
       quantity: input.quantityRequested,
       fulfillmentMethod: input.fulfillmentMethod,
+      paymentMethod: input.paymentMethod,
       dropoffCity: input.dropoffCity,
       dropoffArea: input.dropoffArea,
       learnerPreferredDeliveryWindows: input.learnerPreferredDeliveryWindows,
@@ -498,10 +501,11 @@ export const createLearnerReservation = async (input: {
           deliveryAddressText: input.deliveryAddressText?.trim() ?? null,
           deliveryFee: groupAction.deliveryFee,
           currency: snapshot.pricingCurrency,
+          paymentMethod: input.paymentMethod,
           deliveryZone: groupAction.zone as 'SAME_CITY' | 'WEST_BANK' | 'JERUSALEM' | 'INSIDE_48',
           status: 'OPEN',
-          windowStart: groupAction.window.start,
-          windowEnd: groupAction.window.end,
+          windowStart: groupAction.window?.start ?? null,
+          windowEnd: groupAction.window?.end ?? null,
         },
       });
 
@@ -528,6 +532,7 @@ export const createLearnerReservation = async (input: {
         quantityRequested: requestedQuantity,
         message,
         fulfillmentMethod: input.fulfillmentMethod,
+        paymentMethod: input.paymentMethod,
         learnerPreferredPickupWindows:
           input.fulfillmentMethod === 'PICKUP'
             ? (input.learnerPreferredPickupWindows ?? Prisma.JsonNull)

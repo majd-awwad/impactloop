@@ -15,6 +15,7 @@ import {
   listActiveDriverDeliveriesHandler,
   listAvailableDriverDeliveriesHandler,
   updateDriverDeliveryStatusHandler,
+  setDriverDeliveryWindowHandler,
   verifyDeliveryHandoverCredentialHandler,
   verifySupplierPickupHandoverCredentialHandler,
   confirmSupplierPickupHandoverCredentialHandler,
@@ -36,6 +37,7 @@ import {
   updateDriverAvailabilitySchema,
   updateDriverDeliveryStatusSchema,
   updateDriverProfileSchema,
+  setDriverDeliveryWindowSchema,
   listDriverArchiveQuerySchema,
 } from './driver.validation.js';
 import {
@@ -115,6 +117,13 @@ driverRouter.patch(
   validate(deliveryIdParamsSchema, 'params'),
   validate(updateDriverDeliveryStatusSchema),
   asyncHandler(updateDriverDeliveryStatusHandler),
+);
+
+driverRouter.patch(
+  '/deliveries/:id/window',
+  validate(deliveryIdParamsSchema, 'params'),
+  validate(setDriverDeliveryWindowSchema),
+  asyncHandler(setDriverDeliveryWindowHandler),
 );
 
 driverRouter.post(

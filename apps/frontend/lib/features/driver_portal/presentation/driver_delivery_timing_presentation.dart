@@ -271,7 +271,9 @@ DriverNextActionGuidance buildDriverNextActionGuidance(
       );
     case 'ON_THE_WAY':
       return DriverNextActionGuidance(
-        actionLabel: l10n.driverStartDeliveryOnTheWay,
+        actionLabel: delivery.status == 'REDELIVERY_SCHEDULED'
+            ? l10n.driverStartRedelivery
+            : l10n.driverStartDeliveryOnTheWay,
         requirements: [
           l10n.driverStartDeliveryReq1,
           l10n.driverStartDeliveryReq2,

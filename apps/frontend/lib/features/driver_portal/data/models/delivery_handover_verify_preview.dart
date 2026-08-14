@@ -1,3 +1,5 @@
+import '../../../../shared/models/handover_payment_summary.dart';
+
 class DeliveryHandoverVerifyPreviewItem {
   const DeliveryHandoverVerifyPreviewItem({
     required this.reservationId,
@@ -42,6 +44,10 @@ class DeliveryHandoverVerifyPreview {
     this.destinationArea,
     required this.items,
     this.expiresAt,
+    this.payment = const HandoverPaymentSummary(
+      paymentMethod: 'CARD',
+      cashDueAtHandover: false,
+    ),
   });
 
   final String deliveryId;
@@ -51,6 +57,7 @@ class DeliveryHandoverVerifyPreview {
   final String? destinationArea;
   final List<DeliveryHandoverVerifyPreviewItem> items;
   final DateTime? expiresAt;
+  final HandoverPaymentSummary payment;
 
   factory DeliveryHandoverVerifyPreview.fromJson(Map<String, dynamic> json) {
     final learner = Map<String, dynamic>.from(
@@ -81,6 +88,9 @@ class DeliveryHandoverVerifyPreview {
       expiresAt: expiresRaw == null || expiresRaw.isEmpty
           ? null
           : DateTime.tryParse(expiresRaw)?.toLocal(),
+      payment: HandoverPaymentSummary.fromJson(
+        Map<String, dynamic>.from(json['payment'] as Map? ?? const {}),
+      ),
     );
   }
 }

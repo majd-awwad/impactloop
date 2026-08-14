@@ -66,6 +66,7 @@ class MaterialDetailsPage extends ConsumerStatefulWidget {
     this.componentName,
     this.recommendationImpressionId,
     this.materialRequestMatchId,
+    this.requestedQuantity,
   });
 
   final String materialId;
@@ -76,6 +77,7 @@ class MaterialDetailsPage extends ConsumerStatefulWidget {
   final String? componentName;
   final String? recommendationImpressionId;
   final String? materialRequestMatchId;
+  final double? requestedQuantity;
 
   @override
   ConsumerState<MaterialDetailsPage> createState() =>
@@ -523,6 +525,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
       builder: (dialogContext) => MaterialReservationDialog(
         material: material,
         onSubmit: _submitReservationRequest,
+        initialQuantity: widget.requestedQuantity,
       ),
     );
   }
@@ -540,6 +543,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
             materialId: request.materialId,
             quantityRequested: request.quantityRequested,
             fulfillmentMethod: request.fulfillmentMethod,
+            paymentMethod: request.paymentMethod,
             message: request.message,
             buildItemId: hasBuildItemId ? buildItemId : null,
             materialRequestMatchId: hasMaterialRequestMatchId
@@ -550,8 +554,10 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
             learnerPreferredDeliveryWindows:
                 request.learnerPreferredDeliveryWindows,
             deliveryAddressText: request.deliveryAddressText,
+            dropoffCity: request.dropoffCity,
             safeDropoffAllowed: request.safeDropoffAllowed,
             deliveryNote: request.deliveryNote,
+            combineWithDeliveryGroupId: request.combineWithDeliveryGroupId,
           )
         : request;
 

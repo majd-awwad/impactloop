@@ -34,6 +34,7 @@ class _FakeSupplierRequestsRepository implements SupplierRequestsRepository {
   @override
   Future<SupplierIncomingRequest> confirmHandoverCredential(
     String handoverToken,
+    {bool cashReceivedConfirmed = false}
   ) async {
     confirmCalls += 1;
     confirmedTokens.add(handoverToken);

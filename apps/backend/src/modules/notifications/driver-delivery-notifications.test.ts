@@ -1014,6 +1014,61 @@ describe('driver notification events', () => {
     );
   });
 
+  test('a new schedule occurrence gets one new drop-off reminder', async () => {
+    const { reservation } = await createAcceptedReservation(
+      ctx,
+      'Rescheduled Dropoff Pack',
+    );
+    const delivery = await requestDelivery(ctx, reservation.id);
+    const accepted = await acceptDelivery(ctx.driverId, delivery.id);
+    const pickupStart = new Date(Date.now() - 15 * 60_000);
+    const pickupEnd = new Date(Date.now() + 45 * 60_000);
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: {
+        supplierPickupWindowStart: pickupStart,
+        supplierPickupWindowEnd: pickupEnd,
+      },
+    });
+    await updateDriverDeliveryStatus(ctx.driverId, accepted.id, {
+      status: 'ARRIVED_PICKUP',
+    });
+    await updateDriverDeliveryStatus(ctx.driverId, accepted.id, {
+      status: 'PICKED_UP',
+      confirmationCode: deriveHandoverCode('supplier-handover', accepted.id),
+    });
+
+    for (const occurrence of [1, 2]) {
+      const start = new Date(Date.now() + 10 * 60_000);
+      await prisma.$transaction([
+        prisma.reservation.update({
+          where: { id: reservation.id },
+          data: {
+            confirmedDeliveryWindowStart: start,
+            confirmedDeliveryWindowEnd: new Date(start.getTime() + 60 * 60_000),
+          },
+        }),
+        prisma.delivery.update({
+          where: { id: accepted.id },
+          data: { scheduleOccurrence: occurrence },
+        }),
+      ]);
+      await notifyDriverDropoffTime(accepted.id);
+      await notifyDriverDropoffTime(accepted.id);
+    }
+
+    const reminders = await prisma.notification.findMany({
+      where: {
+        userId: ctx.driverId,
+        notificationType: DRIVER_NOTIFICATION_TYPES.DRIVER_DROPOFF_TIME,
+        relatedEntityId: accepted.id,
+      },
+      select: { eventKey: true },
+    });
+    assert.equal(reminders.length, 2);
+    assert.equal(new Set(reminders.map((row) => row.eventKey)).size, 2);
+  });
+
   test('drop-off reminders are not created after DELIVERED', async () => {
     const { reservation } = await createAcceptedReservation(
       ctx,

@@ -44,6 +44,7 @@ export const confirmHandoverCredentialHandler = async (
   const reservation = await confirmHandoverCredential(
     req.auth!.sub,
     body.handoverToken,
+    body.cashReceivedConfirmed,
   );
 
   res.json(successResponse('Reservation handover confirmed.', reservation));

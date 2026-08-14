@@ -253,6 +253,7 @@ export const mapSupplierReservation = (
   reservation: supplierReservationsRepository.SupplierReservationListRecord,
   latestMessage?: ReturnType<typeof mapReservationMessage> | null,
 ) => {
+  const currentMaterialOrder = reservation.materialPaymentOrders[0] ?? null;
   const directDelivery = reservation.deliveries[0] ?? null;
   const groupDelivery = reservation.deliveryGroup?.delivery ?? null;
   const latestDelivery = directDelivery ?? groupDelivery;
@@ -405,6 +406,18 @@ export const mapSupplierReservation = (
         deliveredAt: latestDelivery.deliveredAt?.toISOString() ?? null,
         failedAt: latestDelivery.failedAt?.toISOString() ?? null,
         failureReason: latestDelivery.failureReason,
+        returnRequiredAt:
+          latestDelivery.returnRequiredAt?.toISOString() ?? null,
+        returnReason: latestDelivery.returnReason,
+        returnedToSupplierAt:
+          latestDelivery.returnedToSupplierAt?.toISOString() ?? null,
+        canConfirmReturn:
+          latestDelivery.status === 'RETURN_TO_SUPPLIER_REQUIRED',
+        returnedItems: latestDelivery.pickupItems.map((item) => ({
+          title: item.materialTitle,
+          quantity: Number(item.quantity),
+          unit: item.unit,
+        })),
         recoveryRequired:
           reservation.status === 'AWAITING_RESOLUTION' ||
           latestDelivery.status === 'AWAITING_RESOLUTION',
@@ -503,6 +516,23 @@ export const mapSupplierReservation = (
     unit: reservation.material.unit,
     message: reservation.message,
     fulfillmentMethod: reservation.fulfillmentMethod,
+    handoverPayment: {
+      paymentMethod: reservation.paymentMethod,
+      cashDueAtHandover:
+        reservation.paymentMethod === 'CASH' &&
+        currentMaterialOrder?.paymentMethod === 'CASH' &&
+        currentMaterialOrder.status === 'REQUIRES_PAYMENT',
+      totalAmount:
+        reservation.paymentMethod === 'CASH' &&
+        currentMaterialOrder?.status === 'REQUIRES_PAYMENT'
+          ? currentMaterialOrder.amount.toFixed(2)
+          : null,
+      currency:
+        reservation.paymentMethod === 'CASH' &&
+        currentMaterialOrder?.status === 'REQUIRES_PAYMENT'
+          ? currentMaterialOrder.currency
+          : null,
+    },
     fulfillmentLabel: mapFulfillmentLabel(
       reservation.fulfillmentMethod,
       deliveryCount,
@@ -902,39 +932,12 @@ export const acceptSupplierReservation = async (
 
       pickupWindowStart = selectedWindow.start;
       pickupWindowEnd = selectedWindow.end;
-    } else if (existing.fulfillmentMethod === 'DELIVERY') {
-      const selectedWindow = resolvePreferredWindowByIndex(
-        existing.learnerPreferredDeliveryWindows,
-        input.selectedPreferredWindowIndex,
-      );
-
-      if (!selectedWindow) {
-        throw new AppError(
-          'Selected preferred delivery window is invalid.',
-          400,
-          'VALIDATION_ERROR',
-        );
-      }
-    } else {
-      throw new AppError(
-        'Preferred window index is only supported for pickup or delivery reservations.',
-        400,
-        'VALIDATION_ERROR',
-      );
     }
   }
 
-  let proposedDeliveryWindow: { start: Date; end: Date } | undefined;
-  if (
-    input.proposedDeliveryWindowStart &&
-    input.proposedDeliveryWindowEnd &&
-    existing.fulfillmentMethod === 'DELIVERY'
-  ) {
-    proposedDeliveryWindow = {
-      start: new Date(input.proposedDeliveryWindowStart),
-      end: new Date(input.proposedDeliveryWindowEnd),
-    };
-  }
+  // Legacy DELIVERY proposal fields remain accepted by the transport contract,
+  // but new initial DELIVERY acceptance intentionally ignores them. The driver
+  // establishes operational timing only after physical pickup.
 
   const now = Date.now();
   const isSelectedLearnerPickupWindow =
@@ -948,17 +951,6 @@ export const acceptSupplierReservation = async (
       : 'supplier_custom_proposal',
     now,
   );
-
-  if (
-    proposedDeliveryWindow &&
-    proposedDeliveryWindow.start.getTime() <= now
-  ) {
-    throw new AppError(
-      'Proposed delivery window start must be in the future.',
-      400,
-      'VALIDATION_ERROR',
-    );
-  }
 
   if (existing.fulfillmentMethod === 'DELIVERY') {
     if (!existing.material.deliveryAllowed) {
@@ -977,16 +969,6 @@ export const acceptSupplierReservation = async (
       );
     }
 
-    const learnerDeliveryWindows = parsePreferredWindowsJson(
-      existing.learnerPreferredDeliveryWindows,
-    );
-    if (learnerDeliveryWindows.length === 0 && !proposedDeliveryWindow) {
-      throw new AppError(
-        'Learner left delivery timing flexible. Propose a delivery window when accepting.',
-        400,
-        'DELIVERY_WINDOW_REQUIRED',
-      );
-    }
   }
 
   const result = await supplierReservationsRepository.acceptSupplierReservation({
@@ -996,7 +978,7 @@ export const acceptSupplierReservation = async (
     pickupWindowEnd,
     supplierNote: input.supplierNote,
     selectedPreferredWindowIndex: input.selectedPreferredWindowIndex,
-    proposedDeliveryWindow,
+    proposedDeliveryWindow: undefined,
   });
 
   if (!result) {
@@ -1088,6 +1070,7 @@ export const completeSupplierReservation = async (
       reservationId,
       ownerId,
       confirmationCode: input.confirmationCode,
+      cashReceivedConfirmed: input.cashReceivedConfirmed,
     },
   );
 
@@ -1157,6 +1140,7 @@ export const completeSupplierReservation = async (
 export const confirmHandoverCredential = async (
   ownerId: string,
   handoverToken: string,
+  cashReceivedConfirmed?: boolean,
 ) => {
   const {
     invalidHandoverCredentialError,
@@ -1179,6 +1163,7 @@ export const confirmHandoverCredential = async (
       {
         ownerId,
         tokenHash,
+        cashReceivedConfirmed,
       },
     );
 

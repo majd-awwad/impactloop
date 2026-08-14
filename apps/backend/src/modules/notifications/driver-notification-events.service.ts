@@ -24,6 +24,7 @@ const reminderSyncByUser = new Map<string, ReminderSyncEntry>();
 const deliveryContextSelect = {
   id: true,
   status: true,
+  scheduleOccurrence: true,
   reservationId: true,
   assignedDriverProfileId: true,
   reservation: {
@@ -50,6 +51,7 @@ const deliveryContextSelect = {
 type DeliveryContext = {
   id: string;
   status: DeliveryStatus;
+  scheduleOccurrence: number;
   reservationId: string;
   assignedDriverProfileId: string | null;
   reservation: {
@@ -74,6 +76,7 @@ const inTransitStatuses = new Set<DeliveryStatus>([
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
+  'REDELIVERY_SCHEDULED',
 ]);
 
 const notifySafely = async (task: () => Promise<unknown>) => {
@@ -366,6 +369,7 @@ export const notifyDriverDropoffTime = async (deliveryId: string) =>
       body: `Drop-off for ${material} starts soon.`,
       relatedEntityType: 'DELIVERY',
       relatedEntityId: delivery.id,
+      eventKey: `driver-dropoff:${delivery.id}:${delivery.scheduleOccurrence}:${driverUserId}`,
       metadata: driverNotificationMetadata(delivery, material),
     });
   });

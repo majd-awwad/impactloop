@@ -169,6 +169,7 @@ class LearnerReservation {
     this.rejectionReason,
     this.pickupLocationFull,
     this.fulfillmentMethod = 'PICKUP',
+    this.paymentMethod = 'CARD',
     this.learnerPreferredPickupWindows = const [],
     this.learnerPreferredDeliveryWindows = const [],
     this.deliveryAddressText,
@@ -227,6 +228,7 @@ class LearnerReservation {
   final String? rejectionReason;
   final LearnerReservationPickupLocation? pickupLocationFull;
   final String fulfillmentMethod;
+  final String paymentMethod;
   final List<ReservationPreferredWindow> learnerPreferredPickupWindows;
   final List<ReservationPreferredWindow> learnerPreferredDeliveryWindows;
   final String? deliveryAddressText;
@@ -318,6 +320,7 @@ class LearnerReservation {
           ? LearnerReservationPickupLocation.fromJson(pickupLocationJson)
           : null,
       fulfillmentMethod: json['fulfillmentMethod'] as String? ?? 'PICKUP',
+      paymentMethod: json['paymentMethod'] as String? ?? 'CARD',
       learnerPreferredPickupWindows: _parsePreferredWindows(
         json['learnerPreferredPickupWindows'],
       ),

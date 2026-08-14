@@ -1,3 +1,5 @@
+import '../../../../shared/models/handover_payment_summary.dart';
+
 class DriverDeliveryItem {
   const DriverDeliveryItem({
     required this.reservationId,
@@ -136,6 +138,58 @@ class DriverSafeLocation {
   bool get hasExactCoordinates => latitude != null && longitude != null;
 }
 
+class DriverPreferredDeliveryWindow {
+  const DriverPreferredDeliveryWindow({required this.start, required this.end});
+
+  final DateTime start;
+  final DateTime end;
+
+  static DriverPreferredDeliveryWindow? fromJson(Map<String, dynamic> json) {
+    final start = _dateFromJson(json['start'] ?? json['windowStart']);
+    final end = _dateFromJson(json['end'] ?? json['windowEnd']);
+    if (start == null || end == null) return null;
+    return DriverPreferredDeliveryWindow(start: start, end: end);
+  }
+}
+
+class DriverDeliveryAttempt {
+  const DriverDeliveryAttempt({
+    required this.attemptNumber,
+    required this.attemptedAt,
+    required this.failureReason,
+    required this.learnerContactAttempted,
+    required this.outcome,
+    this.note,
+    this.retryWindowStart,
+    this.retryWindowEnd,
+    this.retryDeadline,
+  });
+
+  final int attemptNumber;
+  final DateTime attemptedAt;
+  final String failureReason;
+  final bool learnerContactAttempted;
+  final String outcome;
+  final String? note;
+  final DateTime? retryWindowStart;
+  final DateTime? retryWindowEnd;
+  final DateTime? retryDeadline;
+
+  factory DriverDeliveryAttempt.fromJson(Map<String, dynamic> json) {
+    return DriverDeliveryAttempt(
+      attemptNumber: (json['attemptNumber'] as num?)?.toInt() ?? 0,
+      attemptedAt: _dateFromJson(json['attemptedAt']) ?? DateTime.now(),
+      failureReason: json['failureReason'] as String? ?? '',
+      learnerContactAttempted: json['learnerContactAttempted'] == true,
+      outcome: json['outcome'] as String? ?? '',
+      note: json['note'] as String?,
+      retryWindowStart: _dateFromJson(json['retryWindowStart']),
+      retryWindowEnd: _dateFromJson(json['retryWindowEnd']),
+      retryDeadline: _dateFromJson(json['retryDeadline']),
+    );
+  }
+}
+
 class DriverDelivery {
   const DriverDelivery({
     required this.id,
@@ -177,6 +231,14 @@ class DriverDelivery {
     this.dropoffArea,
     this.distanceKm,
     this.distanceLabel,
+    this.handoverPayment,
+    this.learnerPreferredDeliveryWindows = const [],
+    this.scheduleOccurrence = 0,
+    this.deliveryAttempts = const [],
+    this.retryDeadline,
+    this.returnRequiredAt,
+    this.returnReason,
+    this.returnedToSupplierAt,
   });
 
   final String id;
@@ -218,6 +280,14 @@ class DriverDelivery {
   final String? dropoffArea;
   final double? distanceKm;
   final String? distanceLabel;
+  final HandoverPaymentSummary? handoverPayment;
+  final List<DriverPreferredDeliveryWindow> learnerPreferredDeliveryWindows;
+  final int scheduleOccurrence;
+  final List<DriverDeliveryAttempt> deliveryAttempts;
+  final DateTime? retryDeadline;
+  final DateTime? returnRequiredAt;
+  final String? returnReason;
+  final DateTime? returnedToSupplierAt;
 
   factory DriverDelivery.fromJson(Map<String, dynamic> json) {
     final itemsJson = json['items'];
@@ -231,6 +301,23 @@ class DriverDelivery {
               )
               .toList(growable: false)
         : const <DriverDeliveryItem>[];
+    final preferredWindows =
+        (json['learnerPreferredDeliveryWindows'] as List? ?? const [])
+            .whereType<Map>()
+            .map(
+              (item) => DriverPreferredDeliveryWindow.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+            .whereType<DriverPreferredDeliveryWindow>()
+            .toList(growable: false);
+    final attempts = (json['deliveryAttempts'] as List? ?? const [])
+        .whereType<Map>()
+        .map(
+          (item) =>
+              DriverDeliveryAttempt.fromJson(Map<String, dynamic>.from(item)),
+        )
+        .toList(growable: false);
 
     return DriverDelivery(
       id: json['id'] as String? ?? '',
@@ -293,6 +380,18 @@ class DriverDelivery {
       dropoffArea: json['dropoffArea'] as String?,
       distanceKm: _doubleFromJson(json['distanceKm']),
       distanceLabel: json['distanceLabel'] as String?,
+      handoverPayment: json['handoverPayment'] is Map
+          ? HandoverPaymentSummary.fromJson(
+              Map<String, dynamic>.from(json['handoverPayment'] as Map),
+            )
+          : null,
+      learnerPreferredDeliveryWindows: preferredWindows,
+      scheduleOccurrence: (json['scheduleOccurrence'] as num?)?.toInt() ?? 0,
+      deliveryAttempts: attempts,
+      retryDeadline: _dateFromJson(json['retryDeadline']),
+      returnRequiredAt: _dateFromJson(json['returnRequiredAt']),
+      returnReason: json['returnReason'] as String?,
+      returnedToSupplierAt: _dateFromJson(json['returnedToSupplierAt']),
     );
   }
 
@@ -305,6 +404,11 @@ class DriverDelivery {
       case 'ARRIVED_PICKUP':
         return 'PICKED_UP';
       case 'PICKED_UP':
+        return confirmedDeliveryWindowStart != null &&
+                confirmedDeliveryWindowEnd != null
+            ? 'ON_THE_WAY'
+            : null;
+      case 'REDELIVERY_SCHEDULED':
         return 'ON_THE_WAY';
       case 'ON_THE_WAY':
         return 'ARRIVED_DROPOFF';
@@ -326,6 +430,9 @@ class DriverDelivery {
 
 const driverAutoPingEligibleStatuses = {
   'PICKED_UP',
+  'REDELIVERY_PENDING',
+  'REDELIVERY_SCHEDULED',
+  'RETURN_TO_SUPPLIER_REQUIRED',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
 };

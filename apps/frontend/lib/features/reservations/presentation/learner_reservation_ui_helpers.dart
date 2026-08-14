@@ -454,6 +454,17 @@ String? learnerDeliverySecondaryStatusLabel({
     case 'ON_THE_WAY':
     case 'ARRIVED_DROPOFF':
       return l10n?.statusOnTheWay ?? 'On the way';
+    case 'REDELIVERY_PENDING':
+      return l10n?.statusRedeliveryPending ??
+          'Delivery could not be completed. The driver is arranging another attempt.';
+    case 'REDELIVERY_SCHEDULED':
+      return l10n?.statusRedeliveryScheduled ?? 'Delivery rescheduled';
+    case 'RETURN_TO_SUPPLIER_REQUIRED':
+      return l10n?.statusReturnToSupplierRequired ??
+          'The delivery could not be completed. The material is being returned and the case will be reviewed.';
+    case 'RETURNED_TO_SUPPLIER':
+      return l10n?.statusReturnedToSupplier ??
+          'The material was returned to the supplier and the case is under review.';
     default:
       return null;
   }
@@ -487,7 +498,10 @@ String? learnerDeliveryPrimaryStatusLabel({
 
   if (normalizedDeliveryStatus == 'PICKED_UP' ||
       normalizedDeliveryStatus == 'ON_THE_WAY' ||
-      normalizedDeliveryStatus == 'ARRIVED_DROPOFF') {
+      normalizedDeliveryStatus == 'ARRIVED_DROPOFF' ||
+      normalizedDeliveryStatus == 'REDELIVERY_PENDING' ||
+      normalizedDeliveryStatus == 'REDELIVERY_SCHEDULED' ||
+      normalizedDeliveryStatus == 'RETURN_TO_SUPPLIER_REQUIRED') {
     return l10n?.statusInDelivery ?? 'In delivery';
   }
 

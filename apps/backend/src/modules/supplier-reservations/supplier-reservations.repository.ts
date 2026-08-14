@@ -25,10 +25,8 @@ import {
   handleReservationPaymentLifecycleTransition,
   type PostCommitRefundTask,
 } from '../payments/payments.lifecycle.js';
-import { assertPickupPaymentSatisfiedOrThrow } from '../payments/payments.readiness.js';
+import { collectPickupCashForHandover } from '../payments/payments.handover.js';
 import {
-  computeEarliestDeliveryStart,
-  findFeasibleDeliveryWindow,
   parsePreferredWindowsJson,
   resolvePreferredWindowByIndex,
   windowMatchesLearnerPreference,
@@ -76,7 +74,15 @@ export const reservationInclude = {
       deliveredAt: true,
       failedAt: true,
       failureReason: true,
+      returnRequiredAt: true,
+      returnReason: true,
+      returnedToSupplierAt: true,
+      returnConfirmedByUserId: true,
       deliveryGroupId: true,
+      pickupItems: {
+        where: { wasPicked: true },
+        select: { materialTitle: true, quantity: true, unit: true },
+      },
       assignedDriverProfile: {
         select: {
           id: true,
@@ -113,6 +119,14 @@ export const reservationInclude = {
           deliveredAt: true,
           failedAt: true,
           failureReason: true,
+          returnRequiredAt: true,
+          returnReason: true,
+          returnedToSupplierAt: true,
+          returnConfirmedByUserId: true,
+          pickupItems: {
+            where: { wasPicked: true },
+            select: { materialTitle: true, quantity: true, unit: true },
+          },
           assignedDriverProfile: {
             select: {
               id: true,
@@ -145,6 +159,17 @@ export const reservationInclude = {
       reviewedAt: true,
       reviewNote: true,
     },
+  },
+  materialPaymentOrders: {
+    where: { purpose: 'MATERIAL_SUBTOTAL' as const },
+    select: {
+      paymentMethod: true,
+      status: true,
+      amount: true,
+      currency: true,
+    },
+    orderBy: { cycleNumber: 'desc' as const },
+    take: 1,
   },
 } satisfies Prisma.ReservationInclude;
 
@@ -183,6 +208,7 @@ const supplierReservationListScalarSelect = {
   supplierNote: true,
   rejectionReason: true,
   completedAt: true,
+  paymentMethod: true,
 } satisfies Prisma.ReservationSelect;
 
 const supplierReservationListSelect = {
@@ -214,7 +240,15 @@ const supplierReservationListSelect = {
       deliveredAt: true,
       failedAt: true,
       failureReason: true,
+      returnRequiredAt: true,
+      returnReason: true,
+      returnedToSupplierAt: true,
+      returnConfirmedByUserId: true,
       deliveryGroupId: true,
+      pickupItems: {
+        where: { wasPicked: true },
+        select: { materialTitle: true, quantity: true, unit: true },
+      },
       assignedDriverProfile: {
         select: {
           id: true,
@@ -249,6 +283,14 @@ const supplierReservationListSelect = {
           deliveredAt: true,
           failedAt: true,
           failureReason: true,
+          returnRequiredAt: true,
+          returnReason: true,
+          returnedToSupplierAt: true,
+          returnConfirmedByUserId: true,
+          pickupItems: {
+            where: { wasPicked: true },
+            select: { materialTitle: true, quantity: true, unit: true },
+          },
           assignedDriverProfile: {
             select: {
               id: true,
@@ -279,6 +321,17 @@ const supplierReservationListSelect = {
       reviewedAt: true,
       reviewNote: true,
     },
+  },
+  materialPaymentOrders: {
+    where: { purpose: 'MATERIAL_SUBTOTAL' as const },
+    select: {
+      paymentMethod: true,
+      status: true,
+      amount: true,
+      currency: true,
+    },
+    orderBy: { cycleNumber: 'desc' as const },
+    take: 1,
   },
 } satisfies Prisma.ReservationSelect;
 
@@ -604,66 +657,6 @@ const acceptPickupReservation = async (
   });
 };
 
-const acceptDeliveryWithConfirmedWindow = async (
-  tx: Prisma.TransactionClient,
-  input: {
-    reservation: {
-      id: string;
-      requesterId: string;
-      deliveryGroupId: string | null;
-      deliveryAddressText: string | null;
-      dropoffCity: string | null;
-      dropoffArea: string | null;
-      deliveryNote: string | null;
-      material: {
-        location: {
-          country: string;
-          city: string;
-          area: string | null;
-          addressLine: string | null;
-          latitude: Prisma.Decimal | number | null;
-          longitude: Prisma.Decimal | number | null;
-          isApproximate: boolean;
-        };
-      };
-    };
-    ownerId: string;
-    supplierPickupWindow: PreferredWindow;
-    supplierNote: string | null;
-    confirmedDeliveryWindow: PreferredWindow;
-    earliestDeliveryStart: Date;
-  },
-) => {
-  const updated = await tx.reservation.update({
-    where: { id: input.reservation.id },
-    data: {
-      status: 'ACCEPTED',
-      supplierPickupWindowStart: input.supplierPickupWindow.start,
-      supplierPickupWindowEnd: input.supplierPickupWindow.end,
-      confirmedDeliveryWindowStart: input.confirmedDeliveryWindow.start,
-      confirmedDeliveryWindowEnd: input.confirmedDeliveryWindow.end,
-      earliestDeliveryStart: input.earliestDeliveryStart,
-      schedulingConflictReason: null,
-      supplierProposedPickupWindowStart: null,
-      supplierProposedPickupWindowEnd: null,
-      supplierNote: input.supplierNote,
-      acceptedAt: new Date(),
-    },
-    select: reservationMutationSelect,
-  });
-
-  await afterFinalAcceptanceInTransaction(tx, {
-    reservationId: updated.id,
-    ensureDelivery: {
-      reservation: input.reservation,
-      changedByUserId: input.ownerId,
-      statusHistoryNote: 'Delivery created when supplier accepted reservation',
-    },
-  });
-
-  return updated;
-};
-
 const acceptDeliveryReservation = async (
   tx: Prisma.TransactionClient,
   input: {
@@ -695,146 +688,32 @@ const acceptDeliveryReservation = async (
     proposedDeliveryWindow?: PreferredWindow;
   },
 ): Promise<ReservationMutationResult> => {
-  const learnerWindows = parsePreferredWindowsJson(
-    input.learnerPreferredDeliveryWindows,
-  );
-  const earliestDeliveryStart = computeEarliestDeliveryStart(
-    input.supplierPickupWindow.start,
-  );
-
-  if (input.proposedDeliveryWindow) {
-    const isLearnerPreference = windowMatchesLearnerPreference(
-      input.proposedDeliveryWindow,
-      learnerWindows,
-    );
-
-    // Learner listed preferences and supplier proposed a different window → confirm.
-    // Empty preferences mean the learner is flexible: auto-accept if feasible.
-    if (!isLearnerPreference && learnerWindows.length > 0) {
-      return tx.reservation.update({
-        where: { id: input.reservation.id },
-        data: {
-          status: 'AWAITING_LEARNER_CONFIRMATION',
-          supplierPickupWindowStart: input.supplierPickupWindow.start,
-          supplierPickupWindowEnd: input.supplierPickupWindow.end,
-          earliestDeliveryStart,
-          confirmedDeliveryWindowStart: input.proposedDeliveryWindow.start,
-          confirmedDeliveryWindowEnd: input.proposedDeliveryWindow.end,
-          schedulingConflictReason: null,
-          supplierNote: input.supplierNote,
-          acceptedAt: new Date(),
-        },
-        select: reservationMutationSelect,
-      });
-    }
-
-    const feasible = findFeasibleDeliveryWindow(
-      input.supplierPickupWindow.start,
-      [input.proposedDeliveryWindow],
-    );
-
-    if (feasible) {
-      return acceptDeliveryWithConfirmedWindow(tx, {
-        reservation: input.reservation,
-        ownerId: input.ownerId,
-        supplierPickupWindow: input.supplierPickupWindow,
-        supplierNote: input.supplierNote,
-        confirmedDeliveryWindow: feasible.confirmed,
-        earliestDeliveryStart: feasible.earliestDeliveryStart,
-      });
-    }
-
-    return tx.reservation.update({
-      where: { id: input.reservation.id },
-      data: {
-        status: 'AWAITING_LEARNER_CONFIRMATION',
-        supplierPickupWindowStart: input.supplierPickupWindow.start,
-        supplierPickupWindowEnd: input.supplierPickupWindow.end,
-        earliestDeliveryStart,
-        confirmedDeliveryWindowStart: input.proposedDeliveryWindow.start,
-        confirmedDeliveryWindowEnd: input.proposedDeliveryWindow.end,
-        schedulingConflictReason:
-          learnerWindows.length === 0
-            ? 'Proposed delivery window is not feasible after supplier pickup and delivery buffer.'
-            : 'Selected learner delivery window is not feasible after supplier pickup and delivery buffer.',
-        supplierNote: input.supplierNote,
-        acceptedAt: new Date(),
-      },
-      select: reservationMutationSelect,
-    });
-  }
-
-  // Flexible learner with no delivery proposal: do not invent a fake conflict.
-  // Service layer should require a proposed delivery window when prefs are empty.
-  if (learnerWindows.length === 0) {
-    return tx.reservation.update({
-      where: { id: input.reservation.id },
-      data: {
-        status: 'AWAITING_LEARNER_CONFIRMATION',
-        supplierPickupWindowStart: input.supplierPickupWindow.start,
-        supplierPickupWindowEnd: input.supplierPickupWindow.end,
-        earliestDeliveryStart,
-        confirmedDeliveryWindowStart: null,
-        confirmedDeliveryWindowEnd: null,
-        schedulingConflictReason: null,
-        supplierNote: input.supplierNote,
-        acceptedAt: new Date(),
-      },
-      select: reservationMutationSelect,
-    });
-  }
-
-  const windowsToEvaluate =
-    input.selectedPreferredWindowIndex != null
-      ? (() => {
-          const selected = resolvePreferredWindowByIndex(
-            input.learnerPreferredDeliveryWindows,
-            input.selectedPreferredWindowIndex,
-          );
-          return selected ? [selected] : null;
-        })()
-      : learnerWindows;
-
-  if (windowsToEvaluate === null) {
-    throw new Error('Selected preferred delivery window is invalid.');
-  }
-
-  const feasible = findFeasibleDeliveryWindow(
-    input.supplierPickupWindow.start,
-    windowsToEvaluate,
-  );
-
-  if (feasible) {
-    return acceptDeliveryWithConfirmedWindow(tx, {
-      reservation: input.reservation,
-      ownerId: input.ownerId,
-      supplierPickupWindow: input.supplierPickupWindow,
-      supplierNote: input.supplierNote,
-      confirmedDeliveryWindow: feasible.confirmed,
-      earliestDeliveryStart: feasible.earliestDeliveryStart,
-    });
-  }
-
-  const conflictReason =
-    input.selectedPreferredWindowIndex != null
-      ? 'Selected learner delivery window is not feasible after supplier pickup and delivery buffer.'
-      : 'No learner delivery window is feasible after supplier pickup and buffer.';
-
-  return tx.reservation.update({
+  const updated = await tx.reservation.update({
     where: { id: input.reservation.id },
     data: {
-      status: 'AWAITING_LEARNER_CONFIRMATION',
+      status: 'ACCEPTED',
       supplierPickupWindowStart: input.supplierPickupWindow.start,
       supplierPickupWindowEnd: input.supplierPickupWindow.end,
-      earliestDeliveryStart,
+      earliestDeliveryStart: null,
       confirmedDeliveryWindowStart: null,
       confirmedDeliveryWindowEnd: null,
-      schedulingConflictReason: conflictReason,
+      schedulingConflictReason: null,
       supplierNote: input.supplierNote,
       acceptedAt: new Date(),
     },
     select: reservationMutationSelect,
   });
+
+  await afterFinalAcceptanceInTransaction(tx, {
+    reservationId: updated.id,
+    ensureDelivery: {
+      reservation: input.reservation,
+      changedByUserId: input.ownerId,
+      statusHistoryNote: 'Delivery created when supplier accepted reservation',
+    },
+  });
+
+  return updated;
 };
 
 export const findSupplierReservationForOwner = async (
@@ -1102,6 +981,7 @@ export const completeSupplierReservation = async (input: {
   reservationId: string;
   ownerId: string;
   confirmationCode: string;
+  cashReceivedConfirmed?: boolean;
 }) => {
   const outcome = await runSerializableTransaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
@@ -1131,8 +1011,6 @@ export const completeSupplierReservation = async (input: {
       return { conflict: true as const, reservation: existing };
     }
 
-    await assertPickupPaymentSatisfiedOrThrow(existing.id, tx);
-
     await ensureSelfPickupCodeStored(tx, existing.id);
 
     const reservationWithCode = await tx.reservation.findUniqueOrThrow({
@@ -1160,6 +1038,14 @@ export const completeSupplierReservation = async (input: {
       return { invalidCode: true as const, reservation: existing };
     }
 
+    const now = new Date();
+    await collectPickupCashForHandover(tx, {
+      reservationId: existing.id,
+      collectorUserId: input.ownerId,
+      cashReceivedConfirmed: input.cashReceivedConfirmed,
+      now,
+    });
+
     const finalized = await finalizeAcceptedSelfPickupCompletion(tx, {
       reservation: {
         id: existing.id,
@@ -1170,6 +1056,7 @@ export const completeSupplierReservation = async (input: {
         handoverTokenHash: reservationWithCode.handoverTokenHash,
       },
       ownerId: input.ownerId,
+      now,
     });
 
     if ('windowNotStarted' in finalized) {
@@ -1221,6 +1108,7 @@ export const completeSupplierReservation = async (input: {
 export const completeSupplierReservationByHandoverToken = async (input: {
   ownerId: string;
   tokenHash: string;
+  cashReceivedConfirmed?: boolean;
 }) => {
   const outcome = await runSerializableTransaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
@@ -1266,7 +1154,12 @@ export const completeSupplierReservationByHandoverToken = async (input: {
       return { conflict: true as const, reservation: existing };
     }
 
-    await assertPickupPaymentSatisfiedOrThrow(existing.id, tx);
+    await collectPickupCashForHandover(tx, {
+      reservationId: existing.id,
+      collectorUserId: input.ownerId,
+      cashReceivedConfirmed: input.cashReceivedConfirmed,
+      now,
+    });
 
     const finalized = await finalizeAcceptedSelfPickupCompletion(tx, {
       reservation: {

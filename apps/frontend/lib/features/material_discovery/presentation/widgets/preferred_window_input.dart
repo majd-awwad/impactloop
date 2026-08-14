@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import 'reservation_form/reservation_form_theme.dart';
 
 class PreferredWindowDraft {
   PreferredWindowDraft({this.date, this.startTime, this.endTime});
@@ -42,22 +45,51 @@ class PreferredWindowDraft {
 
   bool get isBlank => date == null && startTime == null && endTime == null;
 
+  String? partialValidationError({
+    String? incompleteMessage,
+    String? endBeforeStartMessage,
+  }) {
+    if (isBlank) {
+      return null;
+    }
+
+    if (date == null || startTime == null || endTime == null) {
+      return incompleteMessage ?? 'Choose a date, start time, and end time.';
+    }
+
+    final startValue = start;
+    final endValue = end;
+    if (startValue != null &&
+        endValue != null &&
+        !endValue.isAfter(startValue)) {
+      return endBeforeStartMessage ?? 'End time must be after start time.';
+    }
+
+    return null;
+  }
+
   String? validationError({
     required DateTime now,
     Duration? minimumRemainingTime,
     String? minimumRemainingTimeMessage,
     Duration? minimumLeadTime,
     String? minimumLeadTimeMessage,
+    String? incompleteMessage,
+    String? endBeforeStartMessage,
   }) {
+    final partialError = partialValidationError(
+      incompleteMessage: incompleteMessage,
+      endBeforeStartMessage: endBeforeStartMessage,
+    );
+    if (partialError != null) {
+      return partialError;
+    }
+
     final startValue = start;
     final endValue = end;
 
     if (startValue == null || endValue == null) {
-      return 'Choose a date, start time, and end time.';
-    }
-
-    if (!endValue.isAfter(startValue)) {
-      return 'End time must be after start time.';
+      return incompleteMessage ?? 'Choose a date, start time, and end time.';
     }
 
     if (!startValue.isAfter(now)) {
@@ -91,6 +123,7 @@ class PreferredWindowInput extends StatelessWidget {
     required this.enabled,
     required this.onChanged,
     this.label = 'Preferred windows',
+    this.addAnotherLabel,
     this.allowMultipleWindows = true,
   });
 
@@ -98,7 +131,10 @@ class PreferredWindowInput extends StatelessWidget {
   final bool enabled;
   final ValueChanged<List<PreferredWindowDraft>> onChanged;
   final String label;
+  final String? addAnotherLabel;
   final bool allowMultipleWindows;
+
+  static const _mobileBreakpoint = 520.0;
 
   void _updateWindow(int index, PreferredWindowDraft window) {
     final next = [...windows];
@@ -122,36 +158,59 @@ class PreferredWindowInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final l10n = context.l10n;
+    final resolvedAddLabel = addAnotherLabel ?? l10n.reservationAddAnotherWindow;
+    final showWindowLabels = windows.length > 1;
+    final isMobile = MediaQuery.sizeOf(context).width < _mobileBreakpoint;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          label,
-          style: AppTextStyles.label(
-            context,
-          ).copyWith(color: palette.textSecondary),
-        ),
-        const SizedBox(height: AppSpacing.sm),
+        if (label.trim().isNotEmpty) ...[
+          Text(
+            label,
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
         for (var index = 0; index < windows.length; index++) ...[
-          if (index > 0) const SizedBox(height: AppSpacing.sm),
+          if (index > 0) const SizedBox(height: AppSpacing.md),
           _PreferredWindowRow(
+            key: ValueKey('preferred-window-row-$index'),
             index: index,
             window: windows[index],
             enabled: enabled,
             canRemove: windows.length > 1,
+            showWindowLabel: showWindowLabels,
+            isMobile: isMobile,
             onChanged: (window) => _updateWindow(index, window),
             onRemove: () => _removeWindow(index),
           ),
         ],
         if (allowMultipleWindows) ...[
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.md),
           Align(
             alignment: AlignmentDirectional.centerStart,
-            child: TextButton.icon(
-              onPressed: enabled ? _addWindow : null,
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Add another window'),
+            child: SizedBox(
+              width: isMobile ? double.infinity : null,
+              child: OutlinedButton.icon(
+                key: const ValueKey('preferred-window-add-button'),
+                onPressed: enabled ? _addWindow : null,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 46),
+                  foregroundColor: palette.mint,
+                  backgroundColor: palette.panelSurface,
+                  side: BorderSide(color: palette.mint.withValues(alpha: 0.35)),
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                ),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: Text(resolvedAddLabel),
+              ),
             ),
           ),
         ],
@@ -162,10 +221,13 @@ class PreferredWindowInput extends StatelessWidget {
 
 class _PreferredWindowRow extends StatelessWidget {
   const _PreferredWindowRow({
+    super.key,
     required this.index,
     required this.window,
     required this.enabled,
     required this.canRemove,
+    required this.showWindowLabel,
+    required this.isMobile,
     required this.onChanged,
     required this.onRemove,
   });
@@ -174,6 +236,8 @@ class _PreferredWindowRow extends StatelessWidget {
   final PreferredWindowDraft window;
   final bool enabled;
   final bool canRemove;
+  final bool showWindowLabel;
+  final bool isMobile;
   final ValueChanged<PreferredWindowDraft> onChanged;
   final VoidCallback onRemove;
 
@@ -215,12 +279,13 @@ class _PreferredWindowRow extends StatelessWidget {
     }
   }
 
-  String? _formatDate(DateTime? value) {
+  String? _formatDate(BuildContext context, DateTime? value) {
     if (value == null) {
       return null;
     }
 
-    return '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat.yMd(locale).format(value);
   }
 
   String? _formatTime(TimeOfDay? value) {
@@ -236,117 +301,208 @@ class _PreferredWindowRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final l10n = context.l10n;
+    final partialError = window.partialValidationError(
+      incompleteMessage: l10n.preferredWindowIncompleteError,
+      endBeforeStartMessage: l10n.endAfterStart,
+    );
 
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: palette.inputSurface,
-        borderRadius: AppRadius.mdAll,
-        border: Border.all(color: palette.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    final dateField = _PreferredWindowPickerField(
+      key: ValueKey('preferred-window-date-field-$index'),
+      label: l10n.preferredWindowDateLabel,
+      placeholder: l10n.preferredWindowChooseDate,
+      value: _formatDate(context, window.date),
+      icon: Icons.calendar_today_outlined,
+      enabled: enabled,
+      onTap: enabled ? () => _pickDate(context) : null,
+    );
+
+    final startField = _PreferredWindowPickerField(
+      key: ValueKey('preferred-window-start-field-$index'),
+      label: l10n.preferredWindowStartTimeLabel,
+      placeholder: l10n.preferredWindowChooseTime,
+      value: _formatTime(window.startTime),
+      icon: Icons.schedule_outlined,
+      enabled: enabled,
+      onTap: enabled ? () => _pickTime(context, isStart: true) : null,
+    );
+
+    final endField = _PreferredWindowPickerField(
+      key: ValueKey('preferred-window-end-field-$index'),
+      label: l10n.preferredWindowEndTimeLabel,
+      placeholder: l10n.preferredWindowChooseTime,
+      value: _formatTime(window.endTime),
+      icon: Icons.schedule_outlined,
+      enabled: enabled,
+      onTap: enabled ? () => _pickTime(context, isStart: false) : null,
+    );
+
+    final deleteButton = canRemove
+        ? IconButton(
+            key: ValueKey('preferred-window-remove-$index'),
+            onPressed: enabled ? onRemove : null,
+            tooltip: l10n.preferredWindowRemoveTooltip,
+            visualDensity: VisualDensity.compact,
+            style: IconButton.styleFrom(
+              minimumSize: const Size(44, 44),
+              foregroundColor: materialDanger.withValues(alpha: 0.85),
+            ),
+            icon: const Icon(Icons.delete_outline_rounded, size: 20),
+          )
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (showWindowLabel) ...[
           Row(
             children: [
               Expanded(
                 child: Text(
-                  'Window ${index + 1}',
-                  style: AppTextStyles.label(context).copyWith(
-                    color: palette.textPrimary,
+                  l10n.preferredWindowNumberLabel(index + 1),
+                  style: ReservationFormTheme.helperStyle(
+                    context,
+                    palette,
+                  ).copyWith(
+                    color: palette.textSecondary,
                     fontWeight: FontWeight.w600,
+                    fontSize: 12,
                   ),
                 ),
               ),
-              if (canRemove)
-                IconButton(
-                  onPressed: enabled ? onRemove : null,
-                  tooltip: 'Remove window',
-                  visualDensity: VisualDensity.compact,
-                  icon: Icon(Icons.close_rounded, color: palette.textMuted),
-                ),
+              if (isMobile && deleteButton != null) deleteButton,
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
-          _PickerField(
-            label: 'Date',
-            value: _formatDate(window.date),
-            onTap: enabled ? () => _pickDate(context) : null,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Row(
+        ],
+        if (isMobile)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: _PickerField(
-                  label: 'Start',
-                  value: _formatTime(window.startTime),
-                  onTap: enabled
-                      ? () => _pickTime(context, isStart: true)
-                      : null,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _PickerField(
-                  label: 'End',
-                  value: _formatTime(window.endTime),
-                  onTap: enabled
-                      ? () => _pickTime(context, isStart: false)
-                      : null,
-                ),
-              ),
+              dateField,
+              const SizedBox(height: AppSpacing.sm),
+              startField,
+              const SizedBox(height: AppSpacing.sm),
+              endField,
             ],
+          )
+        else
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: dateField),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: startField),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: endField),
+              if (!isMobile && deleteButton != null) ...[
+                const SizedBox(width: AppSpacing.xs),
+                Padding(
+                  padding: const EdgeInsets.only(top: 22),
+                  child: deleteButton,
+                ),
+              ],
+            ],
+          ),
+        if (partialError != null) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            partialError,
+            style: AppTextStyles.label(context).copyWith(
+              color: materialDanger,
+              fontSize: 12,
+            ),
           ),
         ],
-      ),
+      ],
     );
   }
 }
 
-class _PickerField extends StatelessWidget {
-  const _PickerField({
+class _PreferredWindowPickerField extends StatelessWidget {
+  const _PreferredWindowPickerField({
+    super.key,
     required this.label,
+    required this.placeholder,
     required this.value,
+    required this.icon,
+    required this.enabled,
     required this.onTap,
   });
 
   final String label;
+  final String placeholder;
   final String? value;
+  final IconData icon;
+  final bool enabled;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final hasValue = value != null && value!.trim().isNotEmpty;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: AppRadius.smAll,
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          isDense: true,
-          filled: true,
-          fillColor: palette.panelSurface,
-          contentPadding: const EdgeInsetsDirectional.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.sm,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: AppRadius.smAll,
-            borderSide: BorderSide(color: palette.borderSubtle),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: AppRadius.smAll,
-            borderSide: BorderSide(color: palette.borderSubtle),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          label,
+          style: ReservationFormTheme.fieldLabelStyle(context, palette),
+        ),
+        const SizedBox(height: 6),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: AppRadius.mdAll,
+            hoverColor: enabled
+                ? palette.borderSubtle.withValues(alpha: 0.35)
+                : null,
+            child: Ink(
+              decoration: BoxDecoration(
+                color: palette.panelSurface,
+                borderRadius: AppRadius.mdAll,
+                border: Border.all(color: palette.borderSubtle),
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        icon,
+                        size: ReservationFormTheme.metaIconSize,
+                        color: enabled ? palette.textSecondary : palette.textMuted,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          hasValue ? value! : placeholder,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.body(context).copyWith(
+                            color: hasValue
+                                ? palette.textPrimary
+                                : palette.textMuted,
+                            fontWeight:
+                                hasValue ? FontWeight.w500 : FontWeight.w400,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
-        child: Text(
-          value ?? 'Select',
-          style: AppTextStyles.body(context).copyWith(
-            color: value == null ? palette.textMuted : palette.textPrimary,
-          ),
-        ),
-      ),
+      ],
     );
   }
 }
+

@@ -24,6 +24,11 @@ import {
 } from '../delivery-groups/grouped-delivery-state.js';
 import { reconcileDriverAvailability } from '../driver/driver-availability.js';
 import { createNoShowReportOnce } from '../no-show-reports/no-show-report.create.js';
+import {
+  applyOperationalWindowToCarriedReservations,
+  assertValidOperationalWindow,
+  RETRY_WINDOW_LIMIT_MS,
+} from '../deliveries/delivery-operational-window.js';
 
 export { isTerminalDeliveryStatus } from '../deliveries/delivery-status.policy.js';
 
@@ -37,6 +42,8 @@ const postPickupDeliveryStatuses = [
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
+  'REDELIVERY_PENDING',
+  'REDELIVERY_SCHEDULED',
 ] as const satisfies readonly DeliveryStatus[];
 
 export const releaseDriverFromDelivery = async (
@@ -691,11 +698,18 @@ export const markDriverDeliveryFailed = async (input: {
   driverUserId: string;
   deliveryId: string;
   reason:
+    | 'LEARNER_UNREACHABLE'
+    | 'LEARNER_REQUESTED_RESCHEDULE'
+    | 'ADDRESS_OR_ACCESS_ISSUE'
+    | 'OTHER_RETRYABLE'
     | 'LEARNER_UNAVAILABLE'
     | 'ADDRESS_ISSUE'
     | 'ACCESS_ISSUE'
     | 'OTHER';
+  learnerContactAttempted: boolean;
   note?: string;
+  retryWindowStart?: string;
+  retryWindowEnd?: string;
 }) =>
   runSerializableTransaction(async (tx) => {
     const profile = await tx.driverProfile.findFirst({
@@ -711,7 +725,11 @@ export const markDriverDeliveryFailed = async (input: {
         id: input.deliveryId,
         assignedDriverProfileId: profile.id,
       },
-      include: { reservation: true },
+      include: {
+        reservation: true,
+        attempts: { orderBy: { attemptNumber: 'asc' } },
+        assignments: { where: { status: 'ACTIVE' } },
+      },
     });
 
     if (!delivery) {
@@ -722,12 +740,15 @@ export const markDriverDeliveryFailed = async (input: {
       return { outcome: 'INVALID_RESERVATION_STATUS' as const };
     }
 
-    if (
-      !(postPickupDeliveryStatuses as readonly DeliveryStatus[]).includes(
-        delivery.status,
-      )
-    ) {
+    if (delivery.status !== 'ARRIVED_DROPOFF') {
       return { outcome: 'INVALID_DELIVERY_STATUS' as const };
+    }
+
+    if (
+      delivery.assignments.length !== 1 ||
+      delivery.assignments[0]?.driverProfileId !== profile.id
+    ) {
+      return { outcome: 'NOT_FOUND' as const };
     }
 
     const groupedState = delivery.deliveryGroupId
@@ -747,30 +768,131 @@ export const markDriverDeliveryFailed = async (input: {
     }
 
     const now = new Date();
-
-    if (
-      !isAfterWindowWithGrace(
-        now,
-        delivery.reservation.confirmedDeliveryWindowEnd,
-        HANDOVER_GRACE_MINUTES,
-      )
-    ) {
-      return { outcome: 'WINDOW_NOT_EXPIRED' as const };
-    }
+    const normalizedReason =
+      input.reason === 'LEARNER_UNAVAILABLE'
+        ? ('LEARNER_UNREACHABLE' as const)
+        : input.reason === 'ADDRESS_ISSUE' || input.reason === 'ACCESS_ISSUE'
+          ? ('ADDRESS_OR_ACCESS_ISSUE' as const)
+          : input.reason === 'OTHER'
+            ? ('OTHER_RETRYABLE' as const)
+            : input.reason;
 
     const failureNote = [
-      input.reason,
+      normalizedReason,
       input.note?.trim() || null,
     ]
       .filter(Boolean)
       .join(': ');
 
-    const newDeliveryStatus: DeliveryStatus =
-      input.reason === 'LEARNER_UNAVAILABLE'
-        ? 'LEARNER_NO_SHOW'
-        : 'FAILED_DELIVERY';
+    if (delivery.attempts.length === 0) {
+      const retryDeadline = new Date(now.getTime() + RETRY_WINDOW_LIMIT_MS);
+      const retryWindowStart = input.retryWindowStart
+        ? new Date(input.retryWindowStart)
+        : null;
+      const retryWindowEnd = input.retryWindowEnd
+        ? new Date(input.retryWindowEnd)
+        : null;
+      if (retryWindowStart && retryWindowEnd) {
+        assertValidOperationalWindow({
+          start: retryWindowStart,
+          end: retryWindowEnd,
+          now,
+          requireFutureStart: true,
+          retryDeadline,
+        });
+        await applyOperationalWindowToCarriedReservations(tx, {
+          deliveryId: delivery.id,
+          start: retryWindowStart,
+          end: retryWindowEnd,
+        });
+      }
 
-    if (input.reason === 'LEARNER_UNAVAILABLE') {
+      await tx.deliveryAttempt.create({
+        data: {
+          deliveryId: delivery.id,
+          driverProfileId: profile.id,
+          attemptNumber: 1,
+          attemptedAt: now,
+          failureReason: normalizedReason,
+          learnerContactAttempted: input.learnerContactAttempted,
+          note: input.note?.trim() || null,
+          outcome: 'FAILED_RETRYABLE',
+          retryWindowStart,
+          retryWindowEnd,
+          retryDeadline,
+        },
+      });
+
+      const nextStatus: DeliveryStatus = retryWindowStart
+        ? 'REDELIVERY_SCHEDULED'
+        : 'REDELIVERY_PENDING';
+      const deliveryChanged = await tx.delivery.updateMany({
+        where: {
+          id: delivery.id,
+          status: 'ARRIVED_DROPOFF',
+          assignedDriverProfileId: profile.id,
+        },
+        data: {
+          status: nextStatus,
+          failureReason: failureNote,
+          driverNote: input.note?.trim() || delivery.driverNote,
+          ...(retryWindowStart
+            ? {
+                scheduleOccurrence: { increment: 1 },
+                learnerDeliveryHandoverTokenHash: null,
+                learnerDeliveryHandoverTokenIssuedAt: null,
+                learnerDeliveryHandoverTokenExpiresAt: null,
+              }
+            : {}),
+        },
+      });
+      if (deliveryChanged.count !== 1) groupedDeliveryStateConflict();
+
+      await tx.deliveryStatusHistory.create({
+        data: {
+          deliveryId: delivery.id,
+          oldStatus: 'ARRIVED_DROPOFF',
+          newStatus: nextStatus,
+          changedByUserId: input.driverUserId,
+          note: failureNote,
+        },
+      });
+
+      return {
+        outcome: 'RETRY_CREATED' as const,
+        reservation: delivery.reservation,
+        delivery: await tx.delivery.findUniqueOrThrow({
+          where: { id: delivery.id },
+        }),
+        retryScheduled: retryWindowStart != null,
+      };
+    }
+
+    if (delivery.attempts.length !== 1) {
+      return { outcome: 'RETRY_LIMIT_REACHED' as const };
+    }
+
+    await tx.deliveryAttempt.create({
+      data: {
+        deliveryId: delivery.id,
+        driverProfileId: profile.id,
+        attemptNumber: 2,
+        attemptedAt: now,
+        failureReason:
+          normalizedReason === 'OTHER_RETRYABLE'
+            ? 'OTHER_FINAL'
+            : normalizedReason,
+        learnerContactAttempted: input.learnerContactAttempted,
+        note: input.note?.trim() || null,
+        outcome: 'FAILED_FINAL',
+      },
+    });
+
+    const learnerAccountable = normalizedReason === 'LEARNER_UNREACHABLE';
+    const newDeliveryStatus: DeliveryStatus =
+      'RETURN_TO_SUPPLIER_REQUIRED';
+
+    if (learnerAccountable) {
       await createNoShowReportOnce(tx, {
         key: {
           reservationId: delivery.reservationId,
@@ -788,7 +910,7 @@ export const markDriverDeliveryFailed = async (input: {
           targetRole: 'LEARNER',
           reasonCode: 'DELIVERY_FAILED',
           note: failureNote,
-          reporterReasonDetail: input.reason,
+          reporterReasonDetail: normalizedReason,
           reporterNote: input.note?.trim() || null,
           pickupWindowStart: delivery.reservation.confirmedDeliveryWindowStart,
           pickupWindowEnd: delivery.reservation.confirmedDeliveryWindowEnd,
@@ -806,10 +928,15 @@ export const markDriverDeliveryFailed = async (input: {
       },
       data: {
         status: newDeliveryStatus,
-        assignedDriverProfileId: null,
         failedAt: now,
         failureReason: failureNote,
         driverNote: input.note?.trim() || delivery.driverNote,
+        returnRequiredAt: now,
+        returnReason: 'FINAL_ATTEMPT_FAILED',
+        returnCustodyDriverProfileId: profile.id,
+        learnerDeliveryHandoverTokenHash: null,
+        learnerDeliveryHandoverTokenIssuedAt: null,
+        learnerDeliveryHandoverTokenExpiresAt: null,
       },
     });
     if (deliveryChanged.count !== 1) {
@@ -829,26 +956,11 @@ export const markDriverDeliveryFailed = async (input: {
       },
     });
 
-    const reservation = await transitionFailureReservations(tx, {
-      delivery,
-      changedByUserId: input.driverUserId,
-      note: delivery.deliveryGroupId
-        ? 'Grouped delivery failed after pickup'
-        : 'Delivery failed after pickup',
-      groupedState,
-    });
-
-    await releaseDriverFromDelivery(tx, {
-      deliveryId: delivery.id,
-      driverProfileId: profile.id,
-      releaseReason: 'Delivery failed',
-      expectedActiveCount: groupedState ? 1 : undefined,
-    });
-
     return {
-      outcome: 'UPDATED' as const,
-      reservation,
+      outcome: 'FINAL_RETURN_REQUIRED' as const,
+      reservation: delivery.reservation,
       delivery: updatedDelivery,
+      learnerAccountable,
     };
   });
 

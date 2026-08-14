@@ -63,6 +63,9 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
       throw UnsupportedError('Mock reservation details are not configured.');
 
   @override
+  Future<void> confirmDeliveryReturn(String deliveryId) async {}
+
+  @override
   Future<SupplierIncomingRequest> acceptRequest(
     String requestId,
     SupplierPickupWindow pickupWindow,
@@ -105,6 +108,7 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
   Future<SupplierIncomingRequest> completeRequest(
     String requestId, {
     required String confirmationCode,
+    bool cashReceivedConfirmed = false,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 250));
     final index = _requests.indexWhere((request) => request.id == requestId);
@@ -167,8 +171,9 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
 
   @override
   Future<SupplierIncomingRequest> confirmHandoverCredential(
-    String handoverToken,
-  ) async {
+    String handoverToken, {
+    bool cashReceivedConfirmed = false,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     SupplierIncomingRequest? accepted;
     for (final request in _requests) {

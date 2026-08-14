@@ -32,6 +32,7 @@ import '../driver_delivery_timing_presentation.dart';
 import '../widgets/driver_delivery_completion_flow.dart';
 import '../widgets/driver_supplier_pickup_completion_flow.dart';
 import '../widgets/driver_route_block.dart';
+import '../widgets/driver_learner_contact_card.dart';
 import '../widgets/partial_pickup_selection_dialog.dart';
 import 'driver_history_detail_page.dart';
 
@@ -284,11 +285,64 @@ class _SummaryPanel extends StatelessWidget {
               label: l10n.driverDeliveryWindow,
               value: _deliveryWindowDetail(delivery, l10n),
             ),
+          _InfoRow(
+            label: l10n.driverLearnerPreferredDeliveryTimes,
+            value: delivery.learnerPreferredDeliveryWindows.isEmpty
+                ? l10n.driverNoPreferredDeliveryTime
+                : delivery.learnerPreferredDeliveryWindows
+                      .map(
+                        (window) => LocalizedFormatters(
+                          l10n,
+                        ).dateTimeRange(window.start, window.end),
+                      )
+                      .join('\n'),
+          ),
+          if (delivery.status == 'REDELIVERY_PENDING' ||
+              delivery.status == 'REDELIVERY_SCHEDULED') ...[
+            _InfoRow(
+              label: l10n.driverRetryDeadline,
+              value: delivery.retryDeadline == null
+                  ? l10n.driverNotSet
+                  : LocalizedFormatters(l10n).dateTime(delivery.retryDeadline!),
+            ),
+            _InfoRow(
+              label: l10n.driverFirstAttemptSummary,
+              value: delivery.deliveryAttempts.isEmpty
+                  ? l10n.driverNotSet
+                  : labels.failureDeliveryReason(
+                      delivery.deliveryAttempts.first.failureReason,
+                    ),
+            ),
+            _InlineNotice(
+              icon: Icons.inventory_2_outlined,
+              title: l10n.driverMaterialRemainsInCustody,
+              body: l10n.driverMaterialRemainsInCustody,
+            ),
+          ],
+          if (delivery.status == 'RETURN_TO_SUPPLIER_REQUIRED') ...[
+            _InlineNotice(
+              icon: Icons.assignment_return_outlined,
+              title: l10n.driverReturnToSupplierTitle,
+              body: l10n.driverReturnToSupplierBody,
+            ),
+            _InfoRow(
+              label: l10n.supplierFailureRecovery,
+              value: _driverReturnReason(delivery.returnReason, l10n),
+            ),
+            _InfoRow(
+              label: l10n.supplierReturnedItems,
+              value: delivery.hasGroupedItems
+                  ? delivery.groupedItemLines.join('\n')
+                  : '${delivery.material.title} × ${delivery.material.quantityLabel}',
+            ),
+          ],
           if (delivery.learnerNote?.trim().isNotEmpty == true)
             _InfoRow(
               label: l10n.driverLearnerNote,
               value: delivery.learnerNote!,
             ),
+          const Divider(height: AppSpacing.xl),
+          DriverLearnerContactCard(learner: delivery.learner),
           if (delivery.driverNote?.trim().isNotEmpty == true)
             _InfoRow(label: l10n.driverNote, value: delivery.driverNote!),
         ],
@@ -349,6 +403,11 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
     final isSubmitting = actionState.isLoading;
     final canPressAction =
         nextStatus != null && guidance.isActionEnabled && !isSubmitting;
+    final needsInitialWindow =
+        widget.delivery.status == 'PICKED_UP' &&
+        (widget.delivery.confirmedDeliveryWindowStart == null ||
+            widget.delivery.confirmedDeliveryWindowEnd == null);
+    final needsRetryWindow = widget.delivery.status == 'REDELIVERY_PENDING';
 
     return _Panel(
       child: Column(
@@ -358,7 +417,28 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           const SizedBox(height: AppSpacing.lg),
           _StepList(currentStatus: widget.delivery.status),
           const SizedBox(height: AppSpacing.lg),
-          if (nextStatus == null)
+          if (needsInitialWindow || needsRetryWindow) ...[
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: isSubmitting ? null : _setDeliveryWindow,
+                icon: const Icon(Icons.edit_calendar_outlined),
+                label: Text(
+                  needsRetryWindow
+                      ? l10n.driverScheduleRedelivery
+                      : l10n.driverSetDeliveryWindow,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+          if (widget.delivery.status == 'RETURN_TO_SUPPLIER_REQUIRED')
+            _InlineNotice(
+              icon: Icons.inventory_2_outlined,
+              title: l10n.driverWaitingSupplierConfirmation,
+              body: l10n.driverReturnToSupplierBody,
+            )
+          else if (nextStatus == null)
             _InlineNotice(
               icon: Icons.check_circle_outline,
               title: l10n.driverNoNextAction,
@@ -449,7 +529,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
                 AppStatusTone.danger,
               ),
               icon: const Icon(Icons.no_accounts_outlined),
-              label: Text(l10n.driverReportDeliveryFailed),
+              label: Text(l10n.driverCouldntDeliver),
             ),
           ],
           if (widget.delivery.canDriverReportDriverIssue) ...[
@@ -519,6 +599,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
         deliveryId: widget.delivery.id,
         reservationId: widget.delivery.reservationId,
         note: _noteController.text,
+        payment: widget.delivery.handoverPayment,
         showSuccessSnackBar: false,
       );
       if (!completed || !mounted) return;
@@ -611,14 +692,14 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
   Future<void> _reportDeliveryFailed() async {
     final l10n = context.l10n;
     final labels = DriverUiLabels(l10n);
-    final result = await _showDriverIncidentDialog(
+    final result = await _showDeliveryFailureDialog(
       context,
-      title: l10n.driverReportDeliveryFailed,
+      title: l10n.driverCouldntDeliver,
       reasonCodes: const [
-        'LEARNER_UNAVAILABLE',
-        'ADDRESS_ISSUE',
-        'ACCESS_ISSUE',
-        'OTHER',
+        'LEARNER_UNREACHABLE',
+        'LEARNER_REQUESTED_RESCHEDULE',
+        'ADDRESS_OR_ACCESS_ISSUE',
+        'OTHER_RETRYABLE',
       ],
       reasonLabel: labels.failureDeliveryReason,
     );
@@ -630,12 +711,35 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           .reportDeliveryFailed(
             deliveryId: widget.delivery.id,
             reason: result.reason,
+            learnerContactAttempted: result.learnerContactAttempted,
             note: result.note,
+            retryWindowStart: result.retryWindowStart,
+            retryWindowEnd: result.retryWindowEnd,
           );
       if (!mounted) return;
       showInfoSnackBar(context, l10n.driverDeliveryFailureReported);
-      context.popOrGo('/driver/active');
-      leaveDriverDeliveryDetail(ref);
+      ref.invalidate(driverDeliveryDetailProvider(widget.delivery.id));
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      showErrorSnackBar(context, localizedApiErrorMessage(error, l10n));
+    }
+  }
+
+  Future<void> _setDeliveryWindow() async {
+    final l10n = context.l10n;
+    final result = await _showDeliveryWindowDialog(context);
+    if (result == null || !mounted) return;
+    try {
+      await ref
+          .read(driverDeliveryActionControllerProvider.notifier)
+          .setDeliveryWindow(
+            deliveryId: widget.delivery.id,
+            start: result.start,
+            end: result.end,
+            note: _noteController.text,
+          );
+      if (!mounted) return;
+      showInfoSnackBar(context, l10n.driverWindowSaved);
     } on ApiException catch (error) {
       if (!mounted) return;
       showErrorSnackBar(context, localizedApiErrorMessage(error, l10n));
@@ -759,12 +863,252 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
     if (confirmed != true || note.isEmpty) return null;
     return _DriverIncidentFormResult(reason: selectedReason, note: note);
   }
+
+  Future<_DriverIncidentFormResult?> _showDeliveryFailureDialog(
+    BuildContext context, {
+    required String title,
+    required List<String> reasonCodes,
+    required String Function(String code) reasonLabel,
+  }) async {
+    final l10n = context.l10n;
+    var selectedReason = reasonCodes.first;
+    var contactAttempted = false;
+    var scheduleNow = false;
+    DateTime? retryStart;
+    DateTime? retryEnd;
+    final noteController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AppDialogShell(
+          title: Text(title),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: selectedReason,
+                  decoration: InputDecoration(labelText: l10n.driverReason),
+                  items: reasonCodes
+                      .map(
+                        (code) => DropdownMenuItem(
+                          value: code,
+                          child: Text(reasonLabel(code)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) setState(() => selectedReason = value);
+                  },
+                ),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: contactAttempted,
+                  title: Text(l10n.driverContactAttempted),
+                  onChanged: (value) =>
+                      setState(() => contactAttempted = value ?? false),
+                ),
+                TextField(
+                  controller: noteController,
+                  maxLength: 1000,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    labelText: l10n.driverOptionalNote,
+                  ),
+                ),
+                if (widget.delivery.deliveryAttempts.isEmpty)
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: scheduleNow,
+                    title: Text(l10n.driverScheduleRetryNow),
+                    onChanged: (value) =>
+                        setState(() => scheduleNow = value ?? false),
+                  ),
+                if (widget.delivery.deliveryAttempts.isEmpty &&
+                    scheduleNow) ...[
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      retryStart == null
+                          ? l10n.driverSelectWindowStart
+                          : LocalizedFormatters(l10n).dateTime(retryStart!),
+                    ),
+                    trailing: const Icon(Icons.schedule_outlined),
+                    onTap: () async {
+                      final value = await _pickDateTime(context);
+                      if (value != null) setState(() => retryStart = value);
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      retryEnd == null
+                          ? l10n.driverSelectWindowEnd
+                          : LocalizedFormatters(l10n).dateTime(retryEnd!),
+                    ),
+                    trailing: const Icon(Icons.schedule_outlined),
+                    onTap: () async {
+                      final value = await _pickDateTime(context);
+                      if (value != null) setState(() => retryEnd = value);
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+          footer: AppDialogFooter.decision(
+            secondaryAction: TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.driverCancelAction),
+            ),
+            primaryAction: FilledButton(
+              onPressed: () {
+                if (scheduleNow &&
+                    (retryStart == null ||
+                        retryEnd == null ||
+                        !retryEnd!.isAfter(retryStart!))) {
+                  showInfoSnackBar(context, l10n.driverInvalidWindow);
+                  return;
+                }
+                Navigator.of(context).pop(true);
+              },
+              child: Text(l10n.driverSubmitReport),
+            ),
+          ),
+        ),
+      ),
+    );
+    final note = noteController.text.trim();
+    noteController.dispose();
+    if (confirmed != true) return null;
+    return _DriverIncidentFormResult(
+      reason: selectedReason,
+      note: note,
+      learnerContactAttempted: contactAttempted,
+      retryWindowStart: scheduleNow ? retryStart : null,
+      retryWindowEnd: scheduleNow ? retryEnd : null,
+    );
+  }
+
+  Future<_DeliveryWindowFormResult?> _showDeliveryWindowDialog(
+    BuildContext context,
+  ) async {
+    final l10n = context.l10n;
+    DateTime? start;
+    DateTime? end;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AppDialogShell(
+          title: Text(
+            widget.delivery.status == 'REDELIVERY_PENDING'
+                ? l10n.driverScheduleRedelivery
+                : l10n.driverSetDeliveryWindow,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  start == null
+                      ? l10n.driverSelectWindowStart
+                      : LocalizedFormatters(l10n).dateTime(start!),
+                ),
+                trailing: const Icon(Icons.schedule_outlined),
+                onTap: () async {
+                  final value = await _pickDateTime(context);
+                  if (value != null) setState(() => start = value);
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  end == null
+                      ? l10n.driverSelectWindowEnd
+                      : LocalizedFormatters(l10n).dateTime(end!),
+                ),
+                trailing: const Icon(Icons.schedule_outlined),
+                onTap: () async {
+                  final value = await _pickDateTime(context);
+                  if (value != null) setState(() => end = value);
+                },
+              ),
+            ],
+          ),
+          footer: AppDialogFooter.decision(
+            secondaryAction: TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.driverCancelAction),
+            ),
+            primaryAction: FilledButton(
+              onPressed: () {
+                if (start == null || end == null || !end!.isAfter(start!)) {
+                  showInfoSnackBar(context, l10n.driverInvalidWindow);
+                  return;
+                }
+                Navigator.of(context).pop(true);
+              },
+              child: Text(l10n.save),
+            ),
+          ),
+        ),
+      ),
+    );
+    if (confirmed != true || start == null || end == null) return null;
+    return _DeliveryWindowFormResult(start: start!, end: end!);
+  }
+
+  Future<DateTime?> _pickDateTime(BuildContext context) async {
+    final now = DateTime.now();
+    final deadline = widget.delivery.retryDeadline;
+    final lastDate = deadline != null && deadline.isAfter(now)
+        ? deadline
+        : now.add(const Duration(days: 365));
+    final date = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: DateTime(lastDate.year, lastDate.month, lastDate.day),
+    );
+    if (date == null || !context.mounted) return null;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(now.add(const Duration(hours: 1))),
+    );
+    if (time == null) return null;
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  }
+}
+
+String _driverReturnReason(String? reason, AppLocalizations l10n) {
+  return switch (reason?.trim().toUpperCase()) {
+    'RETRY_DEADLINE_EXPIRED' => l10n.driverReturnReasonRetryExpired,
+    _ => l10n.driverReturnReasonFinalAttempt,
+  };
 }
 
 class _DriverIncidentFormResult {
-  const _DriverIncidentFormResult({required this.reason, required this.note});
+  const _DriverIncidentFormResult({
+    required this.reason,
+    required this.note,
+    this.learnerContactAttempted = false,
+    this.retryWindowStart,
+    this.retryWindowEnd,
+  });
   final String reason;
   final String note;
+  final bool learnerContactAttempted;
+  final DateTime? retryWindowStart;
+  final DateTime? retryWindowEnd;
+}
+
+class _DeliveryWindowFormResult {
+  const _DeliveryWindowFormResult({required this.start, required this.end});
+  final DateTime start;
+  final DateTime end;
 }
 
 class _LocationSharingSection extends ConsumerStatefulWidget {

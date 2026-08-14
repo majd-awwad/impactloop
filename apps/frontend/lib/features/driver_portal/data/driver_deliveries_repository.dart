@@ -78,6 +78,13 @@ class DriverDeliveriesRepository {
     return _api.updateDeliveryStatus(deliveryId, request);
   }
 
+  Future<DriverDelivery> setDeliveryWindow(
+    String deliveryId,
+    DriverDeliveryWindowRequest request,
+  ) {
+    return _api.setDeliveryWindow(deliveryId, request);
+  }
+
   Future<void> createLocationPing(
     String deliveryId,
     DriverLocationPingRequest request,
@@ -113,14 +120,17 @@ class DriverDeliveriesRepository {
   }
 
   Future<DriverDelivery> confirmDeliveryHandoverCredential(
-    String handoverToken,
-  ) {
-    return _api.confirmDeliveryHandoverCredential(handoverToken);
+    String handoverToken, {
+    bool cashReceivedConfirmed = false,
+  }) {
+    return _api.confirmDeliveryHandoverCredential(
+      handoverToken,
+      cashReceivedConfirmed: cashReceivedConfirmed,
+    );
   }
 
-  Future<SupplierPickupHandoverVerifyPreview> verifySupplierPickupHandoverCredential(
-    String handoverToken,
-  ) {
+  Future<SupplierPickupHandoverVerifyPreview>
+  verifySupplierPickupHandoverCredential(String handoverToken) {
     return _api.verifySupplierPickupHandoverCredential(handoverToken);
   }
 

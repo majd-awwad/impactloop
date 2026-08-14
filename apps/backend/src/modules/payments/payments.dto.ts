@@ -1,6 +1,7 @@
 import type {
   PaymentAttemptStatus,
   PaymentOrderStatus,
+  PaymentCollectionMethod,
   PaymentProviderMode,
   PaymentProviderType,
   PaymentRefundStatus,
@@ -42,6 +43,7 @@ export type PaymentRefundSummaryDto = {
 export type PaymentOrderDto = {
   id: string;
   purpose: 'MATERIAL_SUBTOTAL' | 'DELIVERY_FEE';
+  paymentMethod: PaymentCollectionMethod;
   cycleNumber: number;
   status: PaymentOrderStatus;
   amount: string;
@@ -120,6 +122,7 @@ const mapRefund = (refund: {
 export const mapPaymentOrderDto = (order: {
   id: string;
   purpose: 'MATERIAL_SUBTOTAL' | 'DELIVERY_FEE';
+  paymentMethod: PaymentCollectionMethod;
   cycleNumber: number;
   status: PaymentOrderStatus;
   amount: Prisma.Decimal;
@@ -159,6 +162,7 @@ export const mapPaymentOrderDto = (order: {
 }): PaymentOrderDto => ({
   id: order.id,
   purpose: order.purpose,
+  paymentMethod: order.paymentMethod,
   cycleNumber: order.cycleNumber,
   status: order.status,
   amount: moneyDecimalToString(order.amount),

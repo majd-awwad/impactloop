@@ -1,5 +1,6 @@
 import type {
   DeliveryStatus,
+  PaymentCollectionMethod,
   Prisma,
   ReservationStatus,
 } from '../../generated/prisma/client.js';
@@ -27,6 +28,10 @@ const BLOCKING_DELIVERY_STATUSES = [
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
+  'REDELIVERY_PENDING',
+  'REDELIVERY_SCHEDULED',
+  'RETURN_TO_SUPPLIER_REQUIRED',
+  'RETURNED_TO_SUPPLIER',
   'DELIVERED',
   'FAILED_PICKUP',
   'FAILED_DELIVERY',
@@ -64,7 +69,11 @@ const groupBlocksNewJoin = async (
   tx: Prisma.TransactionClient,
   groupId: string,
 ): Promise<boolean> => {
-  if (isElectronicPaymentEnforced()) {
+  const group = await tx.deliveryGroup.findUnique({
+    where: { id: groupId },
+    select: { paymentMethod: true },
+  });
+  if (isElectronicPaymentEnforced() || group?.paymentMethod === 'CASH') {
     const count = await tx.delivery.count({
       where: {
         OR: [
@@ -95,6 +104,7 @@ export const findCompatibleDeliveryGroupCandidate = async (input: {
   dropoffArea?: string | null;
   preferredDeliveryWindows: { start: string; end: string }[];
   deliveryZone: string;
+  paymentMethod: PaymentCollectionMethod;
   tx?: Prisma.TransactionClient;
 }): Promise<DeliveryGroupCandidate | null> => {
   const client = input.tx ?? prisma;
@@ -112,6 +122,9 @@ export const findCompatibleDeliveryGroupCandidate = async (input: {
       status: 'OPEN',
       assignedDriverProfileId: null,
       deliveryZone: input.deliveryZone as Prisma.EnumDeliveryZoneFilter['equals'],
+      paymentMethod: input.paymentMethod,
+      windowStart: { not: null },
+      windowEnd: { not: null },
       reservations: {
         some: {
           status: { notIn: [...TERMINAL_RESERVATION_STATUSES] },
@@ -149,8 +162,8 @@ export const findCompatibleDeliveryGroupCandidate = async (input: {
     }
 
     const groupWindow: TimeWindow = {
-      start: group.windowStart,
-      end: group.windowEnd,
+      start: group.windowStart!,
+      end: group.windowEnd!,
     };
 
     const overlap = findBestOverlappingWindow(candidateWindows, groupWindow);
@@ -183,6 +196,7 @@ export const validateDeliveryGroupForCombine = async (
     dropoffArea?: string | null;
     preferredDeliveryWindows: { start: string; end: string }[];
     deliveryZone: string;
+    paymentMethod: PaymentCollectionMethod;
   },
 ): Promise<
   | { ok: true; sharedWindow: TimeWindow; group: { id: string; deliveryFee: Prisma.Decimal } }
@@ -196,11 +210,16 @@ export const validateDeliveryGroupForCombine = async (
       status: 'OPEN',
       assignedDriverProfileId: null,
       deliveryZone: input.deliveryZone as Prisma.EnumDeliveryZoneFilter['equals'],
+      paymentMethod: input.paymentMethod,
     },
   });
 
   if (!group) {
     return { ok: false, code: 'GROUP_NOT_FOUND' };
+  }
+
+  if (!group.windowStart || !group.windowEnd) {
+    return { ok: false, code: 'GROUP_NOT_AVAILABLE' };
   }
 
   const dropoffKey = normalizeDropoffKey(input.dropoffCity, input.dropoffArea);

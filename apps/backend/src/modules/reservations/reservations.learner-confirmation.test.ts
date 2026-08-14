@@ -141,6 +141,24 @@ async function createAwaitingDeliveryReservation(ctx: TestContext) {
     pickupWindowEnd: supplierPickupEnd.toISOString(),
   });
 
+  // Recreate an in-flight row written by the pre-Slice 3 DELIVERY acceptance
+  // semantics. New acceptance no longer creates this state, but the legacy
+  // learner-confirmation contract must still resolve it safely.
+  await prisma.delivery.deleteMany({
+    where: { reservationId: reservation.id },
+  });
+  await prisma.reservation.update({
+    where: { id: reservation.id },
+    data: {
+      status: 'AWAITING_LEARNER_CONFIRMATION',
+      earliestDeliveryStart: earliestDelivery,
+      confirmedDeliveryWindowStart: null,
+      confirmedDeliveryWindowEnd: null,
+      schedulingConflictReason:
+        'Legacy delivery window requires learner confirmation.',
+    },
+  });
+
   return {
     material,
     supplierPickupStart,

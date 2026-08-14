@@ -1,12 +1,14 @@
 import { prisma } from '../../database/prisma.js';
 
 import { createNotification } from './notifications.repository.js';
+import { hasActionableCardPaymentForReservation } from '../payments/payments.notification-actionable.js';
 
 const reservationContextSelect = {
   id: true,
   status: true,
   requesterId: true,
   ownerId: true,
+  paymentMethod: true,
   material: { select: { title: true } },
   requester: { select: { displayName: true } },
 } as const;
@@ -16,6 +18,7 @@ type ReservationContext = {
   status: string;
   requesterId: string;
   ownerId: string;
+  paymentMethod: string;
   material: { title: string };
   requester: { displayName: string };
 };
@@ -75,6 +78,19 @@ export const notifyReservationAccepted = async (reservationId: string) =>
     const awaitingConfirmation =
       reservation.status === 'AWAITING_LEARNER_CONFIRMATION';
 
+    if (
+      !awaitingConfirmation &&
+      reservation.status === 'ACCEPTED' &&
+      (await hasActionableCardPaymentForReservation(reservation.id))
+    ) {
+      return;
+    }
+
+    const cashAccepted =
+      !awaitingConfirmation &&
+      reservation.status === 'ACCEPTED' &&
+      reservation.paymentMethod === 'CASH';
+
     await createNotification({
       userId: reservation.requesterId,
       notificationType: awaitingConfirmation
@@ -85,7 +101,9 @@ export const notifyReservationAccepted = async (reservationId: string) =>
         : 'Reservation accepted',
       body: awaitingConfirmation
         ? `Review the supplier proposal for ${materialLabel(reservation)}.`
-        : `${materialLabel(reservation)} was accepted. Check your pickup or delivery details.`,
+        : cashAccepted
+          ? `${materialLabel(reservation)} was accepted. Payment is due at handover.`
+          : `${materialLabel(reservation)} was accepted. Check your pickup or delivery details.`,
       relatedEntityType: 'RESERVATION',
       relatedEntityId: reservation.id,
       eventKey: `reservation:${awaitingConfirmation ? 'scheduling-proposal' : 'accepted'}:${reservation.id}:${reservation.requesterId}`,

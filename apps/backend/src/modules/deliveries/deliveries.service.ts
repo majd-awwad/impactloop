@@ -47,6 +47,9 @@ export const ACTIVE_DELIVERY_STATUSES = [
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
+  'REDELIVERY_PENDING',
+  'REDELIVERY_SCHEDULED',
+  'RETURN_TO_SUPPLIER_REQUIRED',
 ] as const satisfies readonly DeliveryStatus[];
 
 /** Driver may send location pings only after supplier pickup is confirmed. */
@@ -54,6 +57,9 @@ export const LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES = [
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
+  'REDELIVERY_PENDING',
+  'REDELIVERY_SCHEDULED',
+  'RETURN_TO_SUPPLIER_REQUIRED',
 ] as const satisfies readonly DeliveryStatus[];
 
 /** @deprecated Use LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES for pings. */
@@ -65,6 +71,9 @@ export const LEARNER_DRIVER_COORDINATE_VISIBLE_STATUSES = [
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
+  'REDELIVERY_PENDING',
+  'REDELIVERY_SCHEDULED',
+  'RETURN_TO_SUPPLIER_REQUIRED',
 ] as const satisfies readonly DeliveryStatus[];
 
 export const canLearnerTrackDriver = (status: DeliveryStatus) =>
@@ -86,6 +95,14 @@ export const learnerTrackingMessage = (status: DeliveryStatus) => {
       return 'Driver is on the way to your drop-off location.';
     case 'ARRIVED_DROPOFF':
       return 'Driver has arrived at your drop-off location.';
+    case 'REDELIVERY_PENDING':
+      return 'Delivery could not be completed. The driver is arranging another attempt.';
+    case 'REDELIVERY_SCHEDULED':
+      return 'Delivery has been rescheduled.';
+    case 'RETURN_TO_SUPPLIER_REQUIRED':
+      return 'Delivery could not be completed. The material is being returned to the supplier.';
+    case 'RETURNED_TO_SUPPLIER':
+      return 'The material was returned to the supplier and the case is under review.';
     case 'DELIVERED':
       return 'Delivery completed.';
     case 'CANCELLED':
@@ -137,6 +154,8 @@ const deliverySelect = {
       pickupWindowEnd: true,
       supplierPickupWindowStart: true,
       supplierPickupWindowEnd: true,
+      confirmedDeliveryWindowStart: true,
+      confirmedDeliveryWindowEnd: true,
       completedAt: true,
       material: {
         select: {
@@ -305,6 +324,10 @@ export const mapLearnerDelivery = (
       delivery.reservation.supplierPickupWindowStart?.toISOString() ?? null,
     supplierPickupWindowEnd:
       delivery.reservation.supplierPickupWindowEnd?.toISOString() ?? null,
+    confirmedDeliveryWindowStart:
+      delivery.reservation.confirmedDeliveryWindowStart?.toISOString() ?? null,
+    confirmedDeliveryWindowEnd:
+      delivery.reservation.confirmedDeliveryWindowEnd?.toISOString() ?? null,
     completedAt: delivery.reservation.completedAt?.toISOString() ?? null,
     material: delivery.reservation.material,
     supplier: {
@@ -462,6 +485,7 @@ export const requestDeliveryForReservation = async (
           id: true,
           status: true,
           fulfillmentMethod: true,
+          paymentMethod: true,
           materialId: true,
           deliveryGroupId: true,
           materialSubtotal: true,
@@ -585,6 +609,7 @@ export const requestDeliveryForReservation = async (
             status: 'OPEN',
             assignedDriverProfileId: null,
             delivery: null,
+            paymentMethod: reservation.paymentMethod,
             reservations: {
               some: {
                 status: 'ACCEPTED',
@@ -643,6 +668,7 @@ export const requestDeliveryForReservation = async (
               deliveryAddressText,
               deliveryFee: deliveryFeeDecimal,
               currency,
+              paymentMethod: reservation.paymentMethod,
               deliveryZone: pricing.zone,
               status: 'OPEN',
               windowStart: window.start,
@@ -713,6 +739,7 @@ export const requestDeliveryForReservation = async (
           if (
             (ensured.outcome === 'CREATED' ||
               ensured.outcome === 'EXISTING') &&
+            ensured.order.paymentMethod === 'CARD' &&
             ensured.order.status !== 'PAID'
           ) {
             return {

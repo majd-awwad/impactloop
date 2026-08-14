@@ -77,7 +77,7 @@ import {
   validatePartialPickupSelection,
   type PartialPickupUnpickedItem,
 } from './driver-partial-pickup.js';
-import { assertDeliveryGroupPaymentReadyOrThrow } from '../payments/payments.readiness.js';
+import { collectDeliveryCashForHandover } from '../payments/payments.handover.js';
 
 const fulfillMaterialRequestsForReservations = async (
   reservationIds: string[],
@@ -135,6 +135,7 @@ const allowedTransitions: Partial<Record<DeliveryStatus, DeliveryStatus>> = {
   PICKED_UP: 'ON_THE_WAY',
   ON_THE_WAY: 'ARRIVED_DROPOFF',
   ARRIVED_DROPOFF: 'DELIVERED',
+  REDELIVERY_SCHEDULED: 'ON_THE_WAY',
 };
 
 export const driverDeliveryInclude = {
@@ -143,6 +144,13 @@ export const driverDeliveryInclude = {
       id: true,
       deliveryFee: true,
       currency: true,
+      paymentMethod: true,
+      deliveryFeePaymentOrders: {
+        where: { purpose: 'DELIVERY_FEE' as const },
+        select: { paymentMethod: true, status: true, amount: true, currency: true },
+        orderBy: { cycleNumber: 'desc' as const },
+        take: 1,
+      },
       reservations: {
         where: {
           status: 'ACCEPTED',
@@ -152,6 +160,13 @@ export const driverDeliveryInclude = {
           id: true,
           quantityRequested: true,
           materialSubtotal: true,
+          paymentMethod: true,
+          materialPaymentOrders: {
+            where: { purpose: 'MATERIAL_SUBTOTAL' as const },
+            select: { paymentMethod: true, status: true, amount: true, currency: true },
+            orderBy: { cycleNumber: 'desc' as const },
+            take: 1,
+          },
           material: {
             select: {
               id: true,
@@ -176,7 +191,15 @@ export const driverDeliveryInclude = {
       supplierPickupWindowEnd: true,
       confirmedDeliveryWindowStart: true,
       confirmedDeliveryWindowEnd: true,
+      learnerPreferredDeliveryWindows: true,
       quantityRequested: true,
+      paymentMethod: true,
+      materialPaymentOrders: {
+        where: { purpose: 'MATERIAL_SUBTOTAL' as const },
+        select: { paymentMethod: true, status: true, amount: true, currency: true },
+        orderBy: { cycleNumber: 'desc' as const },
+        take: 1,
+      },
       material: {
         select: {
           id: true,
@@ -211,6 +234,20 @@ export const driverDeliveryInclude = {
   pickupLocation: true,
   dropoffLocation: true,
   assignedDriverProfile: true,
+  attempts: {
+    select: {
+      attemptNumber: true,
+      attemptedAt: true,
+      failureReason: true,
+      learnerContactAttempted: true,
+      note: true,
+      outcome: true,
+      retryWindowStart: true,
+      retryWindowEnd: true,
+      retryDeadline: true,
+    },
+    orderBy: { attemptNumber: 'asc' as const },
+  },
 } satisfies Prisma.DeliveryInclude;
 
 type DriverDeliveryRecord = Prisma.DeliveryGetPayload<{
@@ -346,6 +383,27 @@ const mapAssignedDelivery = (delivery: DriverDeliveryRecord) => ({
     delivery.reservation.confirmedDeliveryWindowStart?.toISOString() ?? null,
   confirmedDeliveryWindowEnd:
     delivery.reservation.confirmedDeliveryWindowEnd?.toISOString() ?? null,
+  learnerPreferredDeliveryWindows:
+    delivery.reservation.learnerPreferredDeliveryWindows,
+  scheduleOccurrence: delivery.scheduleOccurrence,
+  deliveryAttempts: delivery.attempts.map((attempt) => ({
+    attemptNumber: attempt.attemptNumber,
+    attemptedAt: attempt.attemptedAt.toISOString(),
+    failureReason: attempt.failureReason,
+    learnerContactAttempted: attempt.learnerContactAttempted,
+    note: attempt.note,
+    outcome: attempt.outcome,
+    retryWindowStart: attempt.retryWindowStart?.toISOString() ?? null,
+    retryWindowEnd: attempt.retryWindowEnd?.toISOString() ?? null,
+    retryDeadline: attempt.retryDeadline?.toISOString() ?? null,
+  })),
+  retryDeadline:
+    delivery.attempts.find((attempt) => attempt.attemptNumber === 1)
+      ?.retryDeadline?.toISOString() ?? null,
+  returnRequiredAt: delivery.returnRequiredAt?.toISOString() ?? null,
+  returnReason: delivery.returnReason,
+  returnedToSupplierAt:
+    delivery.returnedToSupplierAt?.toISOString() ?? null,
   canDriverReportPickupFailed: canDriverMarkPickupFailed({
     reservationStatus: delivery.reservation.status,
     deliveryStatus: delivery.status,
@@ -380,8 +438,41 @@ const mapAssignedDelivery = (delivery: DriverDeliveryRecord) => ({
   learner: {
     id: delivery.reservation.requester.id,
     displayName: delivery.reservation.requester.displayName,
-    phone: delivery.reservation.requester.phone,
+    ...(!isTerminalDeliveryStatus(delivery.status)
+      ? { phone: delivery.reservation.requester.phone }
+      : {}),
   },
+  handoverPayment: (() => {
+    const orders = delivery.deliveryGroup
+      ? [
+          delivery.deliveryGroup.deliveryFeePaymentOrders[0] ?? null,
+          ...delivery.deliveryGroup.reservations.map(
+            (reservation) => reservation.materialPaymentOrders[0] ?? null,
+          ),
+        ]
+      : [delivery.reservation.materialPaymentOrders[0] ?? null];
+    const outstanding = orders.filter(
+      (order): order is NonNullable<typeof order> =>
+        order?.paymentMethod === 'CASH' &&
+        order.status === 'REQUIRES_PAYMENT',
+    );
+    const paymentMethod =
+      delivery.deliveryGroup?.paymentMethod ?? delivery.reservation.paymentMethod;
+    const currencies = new Set(outstanding.map((order) => order.currency));
+    const total = outstanding.reduce(
+      (sum, order) => sum + Number(order.amount),
+      0,
+    );
+    return {
+      paymentMethod,
+      cashDueAtHandover: paymentMethod === 'CASH' && outstanding.length > 0,
+      totalAmount:
+        paymentMethod === 'CASH' && outstanding.length > 0
+          ? total.toFixed(2)
+          : null,
+      currency: currencies.size === 1 ? [...currencies][0] : null,
+    };
+  })(),
   supplier: {
     id: delivery.reservation.owner.id,
     displayName: resolveSupplierDisplayName(delivery.reservation.owner),
@@ -1024,6 +1115,11 @@ export const updateDriverDeliveryStatus = async (
           where: { status: 'ACTIVE' },
           select: { driverProfileId: true },
         },
+        attempts: {
+          where: { attemptNumber: 1 },
+          select: { retryDeadline: true },
+          take: 1,
+        },
       },
     });
 
@@ -1040,7 +1136,22 @@ export const updateDriverDeliveryStatus = async (
       return { outcome: 'INVALID_TRANSITION' as const };
     }
 
+    if (
+      input.status === 'ON_THE_WAY' &&
+      (!delivery.reservation.confirmedDeliveryWindowStart ||
+        !delivery.reservation.confirmedDeliveryWindowEnd)
+    ) {
+      return { outcome: 'DELIVERY_WINDOW_REQUIRED' as const };
+    }
+
     const now = new Date();
+    if (
+      delivery.status === 'REDELIVERY_SCHEDULED' &&
+      (!delivery.attempts[0]?.retryDeadline ||
+        delivery.attempts[0].retryDeadline.getTime() <= now.getTime())
+    ) {
+      return { outcome: 'REDELIVERY_DEADLINE_EXCEEDED' as const };
+    }
     const isGroupedPickup =
       input.status === 'PICKED_UP' && delivery.deliveryGroupId != null;
 
@@ -1142,6 +1253,13 @@ export const updateDriverDeliveryStatus = async (
 
           return { outcome: 'WINDOW_EXPIRED' as const };
         }
+
+        await collectDeliveryCashForHandover(tx, {
+          deliveryId: delivery.id,
+          collectorUserId: driverUserId,
+          cashReceivedConfirmed: input.cashReceivedConfirmed,
+          now,
+        });
       }
     }
 
@@ -1402,6 +1520,18 @@ export const updateDriverDeliveryStatus = async (
         409,
         'INVALID_DELIVERY_TRANSITION',
       );
+    case 'DELIVERY_WINDOW_REQUIRED':
+      throw new AppError(
+        'Set the operational delivery window before starting delivery.',
+        409,
+        'DELIVERY_WINDOW_REQUIRED',
+      );
+    case 'REDELIVERY_DEADLINE_EXCEEDED':
+      throw new AppError(
+        'The 48-hour redelivery deadline has passed.',
+        409,
+        'REDELIVERY_DEADLINE_EXCEEDED',
+      );
     case 'INVALID_CODE':
       throw new AppError(
         'The confirmation code is incorrect.',
@@ -1459,6 +1589,7 @@ export const updateDriverDeliveryStatus = async (
 export const completeDeliveryByHandoverToken = async (
   driverUserId: string,
   tokenHash: string,
+  cashReceivedConfirmed?: boolean,
 ) => {
   const result = await runSerializableTransaction(async (tx) => {
     const profile = await findActiveDriverProfile(driverUserId, tx);
@@ -1546,23 +1677,12 @@ export const completeDeliveryByHandoverToken = async (
       return { windowExpired: true as const };
     }
 
-    if (delivery.deliveryGroupId) {
-      try {
-        await assertDeliveryGroupPaymentReadyOrThrow(
-          delivery.deliveryGroupId,
-          tx,
-        );
-      } catch (error) {
-        if (
-          error instanceof AppError &&
-          error.code === 'DELIVERY_PAYMENT_NOT_READY'
-        ) {
-          return { paymentNotReady: true as const };
-        }
-
-        throw error;
-      }
-    }
+    await collectDeliveryCashForHandover(tx, {
+      deliveryId: delivery.id,
+      collectorUserId: driverUserId,
+      cashReceivedConfirmed,
+      now,
+    });
 
     const updateCount = await tx.delivery.updateMany({
       where: {

@@ -119,6 +119,13 @@ class _SupplierReservationDetailPageState
     );
     final schedule = _ScheduleCard(detail: detail);
     final fulfillment = _FulfillmentCard(detail: detail);
+    final returnRecovery = detail.delivery?.canConfirmReturn == true
+        ? _ReturnToSupplierCard(
+            delivery: detail.delivery!,
+            busy: _busyAction == 'CONFIRM_DELIVERY_RETURN',
+            onConfirm: () => _confirmDeliveryReturn(detail.delivery!),
+          )
+        : null;
     final incident = detail.incident == null
         ? null
         : _IncidentCard(incident: detail.incident!);
@@ -153,6 +160,10 @@ class _SupplierReservationDetailPageState
           schedule,
           const SizedBox(height: AppSpacing.md),
           fulfillment,
+          if (returnRecovery != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            returnRecovery,
+          ],
           if (incident != null) ...[
             const SizedBox(height: AppSpacing.md),
             incident,
@@ -191,6 +202,10 @@ class _SupplierReservationDetailPageState
                     attention,
                     const SizedBox(height: AppSpacing.md),
                     fulfillment,
+                    if (returnRecovery != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      returnRecovery,
+                    ],
                     if (incident != null) ...[
                       const SizedBox(height: AppSpacing.md),
                       incident,
@@ -265,6 +280,7 @@ class _SupplierReservationDetailPageState
             context,
             ref,
             reservationId: reservation.id,
+            payment: reservation.handoverPayment,
           );
           if (!completed) break;
         case SupplierReservationAction.acceptLearnerReschedule:
@@ -418,6 +434,40 @@ class _SupplierReservationDetailPageState
         ) ??
         false;
   }
+
+  Future<void> _confirmDeliveryReturn(SupplierDeliverySummary delivery) async {
+    final deliveryId = delivery.deliveryId;
+    if (_busyAction != null || deliveryId == null) return;
+    final confirmed = await _confirm(
+      title: context.l10n.supplierConfirmReturnTitle,
+      message: context.l10n.supplierConfirmReturnBody,
+      confirmLabel: context.l10n.supplierConfirmMaterialReturned,
+    );
+    if (!confirmed || !mounted) return;
+
+    setState(() {
+      _busyAction = 'CONFIRM_DELIVERY_RETURN';
+      _actionError = null;
+    });
+    try {
+      await ref
+          .read(supplierRequestsRepositoryProvider)
+          .confirmDeliveryReturn(deliveryId);
+      if (!mounted) return;
+      ref.invalidate(supplierReservationDetailProvider(widget.reservationId));
+      showSupplierInfoSnackBar(context, context.l10n.supplierReturnConfirmed);
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is ApiException
+          ? localizedApiErrorMessage(error, context.l10n)
+          : context.l10n.supplierCouldNotUpdateRequest;
+      setState(() => _actionError = message);
+      showSupplierErrorSnackBar(context, message);
+    } finally {
+      if (mounted) setState(() => _busyAction = null);
+    }
+  }
+
 }
 
 class _HeaderCard extends StatelessWidget {
@@ -816,6 +866,7 @@ class _ActionPanel extends StatelessWidget {
     ),
   );
   }
+
 }
 
 class _RequestSummaryCard extends StatelessWidget {
@@ -1119,6 +1170,70 @@ class _TerminalScheduleCard extends StatelessWidget {
               rows: [(l.supplierOutcomeLabel, _terminalScheduleOutcome(context, detail.reservation))],
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ReturnToSupplierCard extends StatelessWidget {
+  const _ReturnToSupplierCard({
+    required this.delivery,
+    required this.busy,
+    required this.onConfirm,
+  });
+
+  final SupplierDeliverySummary delivery;
+  final bool busy;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final reason = delivery.returnReason == 'RETRY_DEADLINE_EXPIRED'
+        ? l.supplierReturnReasonRetryExpired
+        : l.supplierReturnReasonFinalAttempt;
+    return AppSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _TitleRow(
+            icon: Icons.assignment_return_outlined,
+            title: l.supplierReturnRequiredTitle,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(l.supplierReturnRequiredBody),
+          const SizedBox(height: AppSpacing.md),
+          _InfoGrid(
+            rows: [
+              if (delivery.driver?.displayName != null)
+                (l.driver, delivery.driver!.displayName!),
+              (l.supplierFailureRecovery, reason),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            l.supplierReturnedItems,
+            style: context.supplierSectionTitle().copyWith(fontSize: 15),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          for (final item in delivery.returnedItems)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: Text('• ${item.presentation}'),
+            ),
+          const SizedBox(height: AppSpacing.md),
+          FilledButton.icon(
+            onPressed: busy ? null : onConfirm,
+            icon: busy
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.inventory_2_outlined),
+            label: Text(l.supplierConfirmMaterialReturned),
+          ),
         ],
       ),
     );

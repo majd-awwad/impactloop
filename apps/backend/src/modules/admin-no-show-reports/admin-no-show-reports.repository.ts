@@ -13,6 +13,8 @@ import {
 } from '../reservations/account-suspension.js';
 import type { AdminNoShowReportsListQuery, AdminNoShowReportsExportFilters } from './admin-no-show-reports.validation.js';
 import { buildAdminNoShowReportsWhere } from './admin-no-show-reports.where.js';
+import { AppError } from '../../utils/app-error.js';
+import { finalizeReturnedDeliveryInTransaction } from '../delivery-returns/delivery-return-resolution.js';
 
 export const reportInclude = {
   reservation: {
@@ -40,6 +42,7 @@ export const reportInclude = {
       status: true,
       assignedDriverProfileId: true,
       deliveryGroupId: true,
+      returnRequiredAt: true,
     },
   },
   reporter: { select: { id: true, displayName: true, email: true } },
@@ -76,6 +79,7 @@ const actionContextInclude = {
       status: true,
       assignedDriverProfileId: true,
       deliveryGroupId: true,
+      returnRequiredAt: true,
     },
   },
 } satisfies Prisma.NoShowReportInclude;
@@ -100,6 +104,22 @@ const actionIsAvailable = (
   report: Prisma.NoShowReportGetPayload<{ include: typeof actionContextInclude }>,
   action: AdminReportAction,
 ) => classifyAdminReportContract(toActionContext(report)).availableActions.includes(action);
+
+const assertPhysicalReturnConfirmed = (
+  report: Prisma.NoShowReportGetPayload<{ include: typeof actionContextInclude }>,
+) => {
+  if (
+    report.reasonCode === 'DELIVERY_FAILED' &&
+    report.delivery?.returnRequiredAt &&
+    report.delivery.status !== 'RETURNED_TO_SUPPLIER'
+  ) {
+    throw new AppError(
+      'Physical return must be confirmed before reviewing this delivery failure.',
+      409,
+      'DELIVERY_RETURN_CONFIRMATION_REQUIRED',
+    );
+  }
+};
 
 export const listNoShowReportsForAdmin = async (query: AdminNoShowReportsListQuery) => {
   const where = buildAdminNoShowReportsWhere(query);
@@ -194,6 +214,7 @@ export const verifyNoShowReport = async (input: {
     if (!actionIsAvailable(existing, 'VERIFY')) {
       return { actionUnavailable: true as const };
     }
+    assertPhysicalReturnConfirmed(existing);
 
     const updated = await tx.noShowReport.update({
       where: { id: existing.id },
@@ -224,11 +245,22 @@ export const verifyNoShowReport = async (input: {
       });
     }
 
+    const resolution =
+      existing.reasonCode === 'DELIVERY_FAILED' &&
+      existing.delivery?.returnRequiredAt
+        ? await finalizeReturnedDeliveryInTransaction(tx, {
+            deliveryId: existing.delivery.id,
+            adminUserId: input.adminUserId,
+            outcome: 'VERIFIED_LEARNER_RESPONSIBILITY',
+          })
+        : null;
+
     return {
       reportId: updated.id,
       verifiedCount,
       shouldWarnAdmin: verifiedCount >= SUSPENSION_VERIFIED_THRESHOLD,
       targetSuspended,
+      postCommitRefunds: resolution?.postCommitRefunds ?? [],
     };
   });
 
@@ -251,6 +283,7 @@ export const verifyNoShowReport = async (input: {
     verifiedCount: outcome.verifiedCount,
     shouldWarnAdmin: outcome.shouldWarnAdmin,
     targetSuspended: outcome.targetSuspended,
+    postCommitRefunds: outcome.postCommitRefunds,
   };
 };
 
@@ -272,6 +305,7 @@ export const resolveNoShowReportWithoutStrike = async (input: {
     if (!actionIsAvailable(existing, 'RESOLVE_WITHOUT_STRIKE')) {
       return { actionUnavailable: true as const };
     }
+    assertPhysicalReturnConfirmed(existing);
 
     const updated = await tx.noShowReport.update({
       where: { id: existing.id },
@@ -284,7 +318,19 @@ export const resolveNoShowReportWithoutStrike = async (input: {
       select: reportMutationSelect,
     });
 
-    return { reportId: updated.id };
+    const resolution =
+      existing.reasonCode === 'DELIVERY_FAILED' &&
+      existing.delivery?.returnRequiredAt
+        ? await finalizeReturnedDeliveryInTransaction(tx, {
+            deliveryId: existing.delivery.id,
+            adminUserId: input.adminUserId,
+            outcome: 'LEARNER_NOT_RESPONSIBLE',
+          })
+        : null;
+    return {
+      reportId: updated.id,
+      postCommitRefunds: resolution?.postCommitRefunds ?? [],
+    };
   });
 
   if (!outcome) {
@@ -301,7 +347,7 @@ export const resolveNoShowReportWithoutStrike = async (input: {
     return null;
   }
 
-  return { report };
+  return { report, postCommitRefunds: outcome.postCommitRefunds };
 };
 
 export const rejectNoShowReport = async (input: {
@@ -322,6 +368,7 @@ export const rejectNoShowReport = async (input: {
     if (!actionIsAvailable(existing, 'REJECT')) {
       return { actionUnavailable: true as const };
     }
+    assertPhysicalReturnConfirmed(existing);
 
     const updated = await tx.noShowReport.update({
       where: { id: existing.id },
@@ -334,7 +381,19 @@ export const rejectNoShowReport = async (input: {
       select: reportMutationSelect,
     });
 
-    return { reportId: updated.id };
+    const resolution =
+      existing.reasonCode === 'DELIVERY_FAILED' &&
+      existing.delivery?.returnRequiredAt
+        ? await finalizeReturnedDeliveryInTransaction(tx, {
+            deliveryId: existing.delivery.id,
+            adminUserId: input.adminUserId,
+            outcome: 'LEARNER_NOT_RESPONSIBLE',
+          })
+        : null;
+    return {
+      reportId: updated.id,
+      postCommitRefunds: resolution?.postCommitRefunds ?? [],
+    };
   });
 
   if (!outcome) {
@@ -351,5 +410,5 @@ export const rejectNoShowReport = async (input: {
     return null;
   }
 
-  return { report };
+  return { report, postCommitRefunds: outcome.postCommitRefunds };
 };

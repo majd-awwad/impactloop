@@ -139,6 +139,19 @@ class DriverDeliveriesApi {
     );
   }
 
+  Future<DriverDelivery> setDeliveryWindow(
+    String deliveryId,
+    DriverDeliveryWindowRequest request,
+  ) {
+    return unwrapApiResponse(
+      _client.patch<Map<String, dynamic>>(
+        '/api/driver/deliveries/$deliveryId/window',
+        data: request.toJson(),
+      ),
+      DriverDelivery.fromJson,
+    );
+  }
+
   Future<void> createLocationPing(
     String deliveryId,
     DriverLocationPingRequest request,
@@ -210,20 +223,23 @@ class DriverDeliveriesApi {
   }
 
   Future<DriverDelivery> confirmDeliveryHandoverCredential(
-    String handoverToken,
-  ) {
+    String handoverToken, {
+    bool cashReceivedConfirmed = false,
+  }) {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '/api/driver/deliveries/handover/confirm',
-        data: {'handoverToken': handoverToken},
+        data: {
+          'handoverToken': handoverToken,
+          'cashReceivedConfirmed': cashReceivedConfirmed,
+        },
       ),
       DriverDelivery.fromJson,
     );
   }
 
-  Future<SupplierPickupHandoverVerifyPreview> verifySupplierPickupHandoverCredential(
-    String handoverToken,
-  ) {
+  Future<SupplierPickupHandoverVerifyPreview>
+  verifySupplierPickupHandoverCredential(String handoverToken) {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '/api/driver/deliveries/pickup-handover/verify',

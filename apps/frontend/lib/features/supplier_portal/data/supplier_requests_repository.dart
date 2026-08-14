@@ -19,6 +19,10 @@ abstract class SupplierRequestsRepository {
 
   Future<SupplierReservationDetail> fetchReservationDetail(String requestId);
 
+  /// Confirms that the supplier physically received all authoritative carried
+  /// items for a failed delivery.
+  Future<void> confirmDeliveryReturn(String deliveryId);
+
   Future<SupplierIncomingRequest> acceptRequest(
     String requestId,
     SupplierPickupWindow pickupWindow,
@@ -32,6 +36,7 @@ abstract class SupplierRequestsRepository {
   Future<SupplierIncomingRequest> completeRequest(
     String requestId, {
     required String confirmationCode,
+    bool cashReceivedConfirmed = false,
   });
 
   /// Issues a supplier→driver pickup handover QR credential.
@@ -44,8 +49,9 @@ abstract class SupplierRequestsRepository {
 
   /// Explicitly confirms handover after a successful verify preview.
   Future<SupplierIncomingRequest> confirmHandoverCredential(
-    String handoverToken,
-  );
+    String handoverToken, {
+    bool cashReceivedConfirmed = false,
+  });
 
   Future<SupplierIncomingRequest> rescheduleRequest(
     String requestId,

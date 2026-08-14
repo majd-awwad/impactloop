@@ -72,7 +72,7 @@ describe('PAY-04R group fee dedupe and reconcile notify', () => {
     });
   }
 
-  test('two materials + one fee: fee required communicated once', async () => {
+  test('two materials + one fee: one aggregated actionable notification per acceptance', async () => {
     const group = await createPayDeliveryGroupFixture(ids, {
       learnerId,
       supplierId,
@@ -112,10 +112,15 @@ describe('PAY-04R group fee dedupe and reconcile notify', () => {
       where: {
         userId: learnerId,
         notificationType: PAYMENT_NOTIFICATION_TYPES.PAYMENT_REQUIRED,
-        eventKey: `payment:${fee.order.id}:required`,
+        eventKey: { startsWith: 'reservation:' },
       },
     });
-    assert.equal(feeRequired.length, 1);
+    assert.ok(feeRequired.length >= 1);
+    assert.ok(
+      feeRequired.every((row) =>
+        (row.eventKey ?? '').includes(':actionable-payment:'),
+      ),
+    );
 
     const materialRequired = await prisma.notification.findMany({
       where: {
@@ -129,7 +134,7 @@ describe('PAY-04R group fee dedupe and reconcile notify', () => {
         },
       },
     });
-    assert.equal(materialRequired.length, 2);
+    assert.equal(materialRequired.length, 0);
 
     const bundleSpam = await prisma.notification.count({
       where: {
@@ -192,7 +197,7 @@ describe('PAY-04R group fee dedupe and reconcile notify', () => {
     assert.equal(
       await prisma.notification.count({
         where: {
-          eventKey: `payment:${material.order.id}:required`,
+          eventKey: { startsWith: `reservation:${paid.id}:actionable-payment:` },
         },
       }),
       1,
@@ -201,7 +206,7 @@ describe('PAY-04R group fee dedupe and reconcile notify', () => {
       await prisma.notification.count({
         where: { eventKey: `payment:${fee.order.id}:required` },
       }),
-      1,
+      0,
     );
   });
 
@@ -291,7 +296,7 @@ describe('PAY-04R group fee dedupe and reconcile notify', () => {
     );
   });
 
-  test('reconcile creates material+fee then notifies once each; dry-run none', async () => {
+  test('reconcile creates material+fee then notifies once aggregated; dry-run none', async () => {
     const group = await createPayDeliveryGroupFixture(ids, {
       learnerId,
       supplierId,
@@ -343,15 +348,25 @@ describe('PAY-04R group fee dedupe and reconcile notify', () => {
 
     assert.equal(
       await prisma.notification.count({
-        where: { eventKey: `payment:${material.id}:required` },
+        where: {
+          userId: learnerId,
+          relatedEntityId: reservation.id,
+          notificationType: PAYMENT_NOTIFICATION_TYPES.PAYMENT_REQUIRED,
+        },
       }),
       1,
     );
     assert.equal(
       await prisma.notification.count({
+        where: { eventKey: `payment:${material.id}:required` },
+      }),
+      0,
+    );
+    assert.equal(
+      await prisma.notification.count({
         where: { eventKey: `payment:${fee.id}:required` },
       }),
-      1,
+      0,
     );
 
     await reconcileAcceptedPaymentObligations({
@@ -360,13 +375,11 @@ describe('PAY-04R group fee dedupe and reconcile notify', () => {
     });
     assert.equal(
       await prisma.notification.count({
-        where: { eventKey: `payment:${material.id}:required` },
-      }),
-      1,
-    );
-    assert.equal(
-      await prisma.notification.count({
-        where: { eventKey: `payment:${fee.id}:required` },
+        where: {
+          userId: learnerId,
+          relatedEntityId: reservation.id,
+          notificationType: PAYMENT_NOTIFICATION_TYPES.PAYMENT_REQUIRED,
+        },
       }),
       1,
     );

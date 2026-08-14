@@ -30,6 +30,7 @@ export const createReservationSchema = z
     quantityRequested: z.number().positive(),
     message: z.string().trim().max(1000).optional(),
     fulfillmentMethod: z.enum(['PICKUP', 'DELIVERY']),
+    paymentMethod: z.enum(['CARD', 'CASH']).default('CARD'),
     learnerPreferredPickupWindows: z.array(preferredWindowSchema).optional(),
     learnerPreferredDeliveryWindows: z.array(preferredWindowSchema).optional(),
     deliveryAddressText: z.string().trim().min(1).max(500).optional(),
@@ -69,6 +70,14 @@ export const createReservationSchema = z
         path: ['safeDropoffAllowed'],
       });
     }
+
+    if (value.paymentMethod === 'CASH' && value.safeDropoffAllowed === true) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Cash on delivery requires an in-person handover.',
+        path: ['safeDropoffAllowed'],
+      });
+    }
   });
 
 export type CreateReservationInput = z.infer<typeof createReservationSchema>;
@@ -78,6 +87,7 @@ export const reservationQuoteSchema = z
     materialId: z.string().trim().min(1),
     quantity: z.number().positive(),
     fulfillmentMethod: z.enum(['PICKUP', 'DELIVERY']),
+    paymentMethod: z.enum(['CARD', 'CASH']).default('CARD'),
     dropoffCity: z.string().trim().min(1).max(120).optional(),
     dropoffArea: z.string().trim().max(120).optional(),
     learnerPreferredDeliveryWindows: z.array(preferredWindowSchema).optional(),

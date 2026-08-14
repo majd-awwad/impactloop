@@ -894,6 +894,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             returnTo: query['returnTo'],
             componentName: query['componentName'],
             materialRequestMatchId: query['materialRequestMatchId'],
+            requestedQuantity: double.tryParse(
+              query['requestedQuantity'] ?? '',
+            ),
           );
         },
       ),

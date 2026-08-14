@@ -233,6 +233,15 @@ class AdminDeliveriesApi {
       AdminDeliveryDetail.fromJson,
     );
   }
+
+  Future<AdminDeliveryDetail> finalizeReturnedDelivery(String id) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/admin/deliveries/$id/finalize-returned',
+      ),
+      AdminDeliveryDetail.fromJson,
+    );
+  }
 }
 
 final adminDeliveriesApiProvider = Provider<AdminDeliveriesApi>((ref) {

@@ -8,6 +8,7 @@ import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_close_button.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../../shared/models/handover_payment_summary.dart';
 
 /// Result of the driver delivery verification dialog.
 sealed class CompleteDeliveryChoice {
@@ -15,8 +16,12 @@ sealed class CompleteDeliveryChoice {
 }
 
 class CompleteDeliveryManualCode extends CompleteDeliveryChoice {
-  const CompleteDeliveryManualCode(this.code);
+  const CompleteDeliveryManualCode(
+    this.code, {
+    required this.cashReceivedConfirmed,
+  });
   final String code;
+  final bool cashReceivedConfirmed;
 }
 
 class CompleteDeliveryScanQr extends CompleteDeliveryChoice {
@@ -27,18 +32,22 @@ class CompleteDeliveryDialog extends StatefulWidget {
   const CompleteDeliveryDialog({
     super.key,
     this.allowScan = true,
+    this.payment,
   });
 
   /// When false, only the manual confirmation-code path is shown.
   final bool allowScan;
+  final HandoverPaymentSummary? payment;
 
   static Future<CompleteDeliveryChoice?> show(
     BuildContext context, {
     bool allowScan = true,
+    HandoverPaymentSummary? payment,
   }) {
     return showDialog<CompleteDeliveryChoice>(
       context: context,
-      builder: (context) => CompleteDeliveryDialog(allowScan: allowScan),
+      builder: (context) =>
+          CompleteDeliveryDialog(allowScan: allowScan, payment: payment),
     );
   }
 
@@ -49,6 +58,7 @@ class CompleteDeliveryDialog extends StatefulWidget {
 class _CompleteDeliveryDialogState extends State<CompleteDeliveryDialog> {
   final _codeController = TextEditingController();
   String? _errorText;
+  var _cashConfirmed = false;
 
   @override
   void dispose() {
@@ -64,8 +74,14 @@ class _CompleteDeliveryDialogState extends State<CompleteDeliveryDialog> {
       });
       return;
     }
+    if (widget.payment?.requiresCashConfirmation == true && !_cashConfirmed) {
+      setState(() => _errorText = context.l10n.cashCollectionRequiredError);
+      return;
+    }
 
-    Navigator.of(context).pop(CompleteDeliveryManualCode(code));
+    Navigator.of(context).pop(
+      CompleteDeliveryManualCode(code, cashReceivedConfirmed: _cashConfirmed),
+    );
   }
 
   @override
@@ -94,10 +110,11 @@ class _CompleteDeliveryDialogState extends State<CompleteDeliveryDialog> {
             AppSpacing.lg,
             AppSpacing.md,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               Row(
                 children: [
                   Expanded(
@@ -116,18 +133,18 @@ class _CompleteDeliveryDialogState extends State<CompleteDeliveryDialog> {
               const SizedBox(height: AppSpacing.sm),
               Text(
                 context.l10n.driverLearnerDeliveryCodeMessage,
-                style: AppTextStyles.body(context).copyWith(
-                  color: palette.textSecondary,
-                  fontSize: 14,
-                ),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textSecondary, fontSize: 14),
               ),
               if (widget.allowScan) ...[
                 const SizedBox(height: AppSpacing.lg),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: () =>
-                        Navigator.of(context).pop(const CompleteDeliveryScanQr()),
+                    onPressed: () => Navigator.of(
+                      context,
+                    ).pop(const CompleteDeliveryScanQr()),
                     icon: const Icon(Icons.qr_code_scanner),
                     label: Text(context.l10n.completeDeliveryScanQr),
                   ),
@@ -142,10 +159,9 @@ class _CompleteDeliveryDialogState extends State<CompleteDeliveryDialog> {
                       ),
                       child: Text(
                         context.l10n.supplierPickupVerificationOr,
-                        style: AppTextStyles.body(context).copyWith(
-                          color: palette.textSecondary,
-                          fontSize: 13,
-                        ),
+                        style: AppTextStyles.body(
+                          context,
+                        ).copyWith(color: palette.textSecondary, fontSize: 13),
                       ),
                     ),
                     Expanded(child: Divider(color: palette.borderSubtle)),
@@ -171,6 +187,28 @@ class _CompleteDeliveryDialogState extends State<CompleteDeliveryDialog> {
                 },
                 onSubmitted: (_) => _submit(),
               ),
+              if (widget.payment?.requiresCashConfirmation == true) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  context.l10n.cashToCollect,
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textSecondary),
+                ),
+                Text(
+                  '${widget.payment!.totalAmount} ${widget.payment!.currency}',
+                  style: AppTextStyles.title(context).copyWith(fontSize: 20),
+                ),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _cashConfirmed,
+                  title: Text(context.l10n.cashReceivedConfirmation),
+                  onChanged: (value) => setState(() {
+                    _cashConfirmed = value == true;
+                    _errorText = null;
+                  }),
+                ),
+              ],
               const SizedBox(height: AppSpacing.lg),
               SizedBox(
                 width: double.infinity,
@@ -184,7 +222,8 @@ class _CompleteDeliveryDialogState extends State<CompleteDeliveryDialog> {
                   child: Text(context.l10n.driverMarkDelivered),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

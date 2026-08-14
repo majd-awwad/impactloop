@@ -9,10 +9,12 @@ import 'package:frontend/features/driver_portal/data/models/driver_delivery.dart
 
 class _FakeDriverDeliveriesRepository implements DriverDeliveriesRepository {
   Future<DeliveryHandoverVerifyPreview> Function(String token)? onVerify;
-  Future<DriverDelivery> Function(String token)? onConfirm;
+  Future<DriverDelivery> Function(String token, bool cashReceivedConfirmed)?
+  onConfirm;
 
   int verifyCalls = 0;
   int confirmCalls = 0;
+  final List<bool> cashReceivedConfirmations = [];
 
   @override
   Future<DeliveryHandoverVerifyPreview> verifyDeliveryHandoverCredential(
@@ -28,14 +30,16 @@ class _FakeDriverDeliveriesRepository implements DriverDeliveriesRepository {
 
   @override
   Future<DriverDelivery> confirmDeliveryHandoverCredential(
-    String handoverToken,
-  ) async {
+    String handoverToken, {
+    bool cashReceivedConfirmed = false,
+  }) async {
     confirmCalls += 1;
+    cashReceivedConfirmations.add(cashReceivedConfirmed);
     final handler = onConfirm;
     if (handler == null) {
       throw StateError('onConfirm not configured');
     }
-    return handler(handoverToken);
+    return handler(handoverToken, cashReceivedConfirmed);
   }
 
   @override
@@ -81,26 +85,30 @@ const _validPayload =
 
 ProviderContainer _container(_FakeDriverDeliveriesRepository repo) {
   final container = ProviderContainer(
-    overrides: [
-      driverDeliveriesRepositoryProvider.overrideWithValue(repo),
-    ],
+    overrides: [driverDeliveriesRepositoryProvider.overrideWithValue(repo)],
   );
   container.listen(driverDeliveryQrControllerProvider, (_, _) {});
   return container;
 }
 
 void main() {
-  test('looksLikeImpactLoopDeliveryHandoverQr accepts URI and opaque token', () {
-    expect(looksLikeImpactLoopDeliveryHandoverQr(_validPayload), isTrue);
-    expect(
-      looksLikeImpactLoopDeliveryHandoverQr(
-        'opaque-token-aaaaaaaaaaaaaaaaaaaaaaaa',
-      ),
-      isTrue,
-    );
-    expect(looksLikeImpactLoopDeliveryHandoverQr('https://example.com'), isFalse);
-    expect(looksLikeImpactLoopDeliveryHandoverQr(''), isFalse);
-  });
+  test(
+    'looksLikeImpactLoopDeliveryHandoverQr accepts URI and opaque token',
+    () {
+      expect(looksLikeImpactLoopDeliveryHandoverQr(_validPayload), isTrue);
+      expect(
+        looksLikeImpactLoopDeliveryHandoverQr(
+          'opaque-token-aaaaaaaaaaaaaaaaaaaaaaaa',
+        ),
+        isTrue,
+      );
+      expect(
+        looksLikeImpactLoopDeliveryHandoverQr('https://example.com'),
+        isFalse,
+      );
+      expect(looksLikeImpactLoopDeliveryHandoverQr(''), isFalse);
+    },
+  );
 
   test('valid QR triggers exactly one verify request', () async {
     final repo = _FakeDriverDeliveriesRepository()
@@ -110,7 +118,9 @@ void main() {
       };
     final container = _container(repo);
     addTearDown(container.dispose);
-    final notifier = container.read(driverDeliveryQrControllerProvider.notifier);
+    final notifier = container.read(
+      driverDeliveryQrControllerProvider.notifier,
+    );
 
     await notifier.onCodeDetected(_validPayload);
 
@@ -131,7 +141,9 @@ void main() {
         };
       final container = _container(repo);
       addTearDown(container.dispose);
-      final notifier = container.read(driverDeliveryQrControllerProvider.notifier);
+      final notifier = container.read(
+        driverDeliveryQrControllerProvider.notifier,
+      );
 
       await Future.wait([
         notifier.onCodeDetected(_validPayload),
@@ -149,10 +161,12 @@ void main() {
   test('unrelated QR stays invalid and never confirms', () async {
     final repo = _FakeDriverDeliveriesRepository();
     repo.onVerify = (_) async => _preview();
-    repo.onConfirm = (_) async => _completedDelivery();
+    repo.onConfirm = (_, _) async => _completedDelivery();
     final container = _container(repo);
     addTearDown(container.dispose);
-    final notifier = container.read(driverDeliveryQrControllerProvider.notifier);
+    final notifier = container.read(
+      driverDeliveryQrControllerProvider.notifier,
+    );
 
     await notifier.onCodeDetected('https://example.com');
 
@@ -166,19 +180,49 @@ void main() {
   test('explicit confirm issues one confirm request and succeeds', () async {
     final repo = _FakeDriverDeliveriesRepository();
     repo.onVerify = (_) async => _preview();
-    repo.onConfirm = (token) async {
+    repo.onConfirm = (token, cashReceivedConfirmed) async {
       expect(token, _validPayload);
+      expect(cashReceivedConfirmed, isFalse);
       return _completedDelivery();
     };
     final container = _container(repo);
     addTearDown(container.dispose);
-    final notifier = container.read(driverDeliveryQrControllerProvider.notifier);
+    final notifier = container.read(
+      driverDeliveryQrControllerProvider.notifier,
+    );
 
     await notifier.onCodeDetected(_validPayload);
     await notifier.confirmHandover();
 
     expect(repo.verifyCalls, 1);
     expect(repo.confirmCalls, 1);
+    expect(repo.cashReceivedConfirmations, [false]);
+    expect(
+      container.read(driverDeliveryQrControllerProvider).phase,
+      DriverDeliveryQrPhase.completed,
+    );
+  });
+
+  test('cash confirmation is forwarded to the repository', () async {
+    final repo = _FakeDriverDeliveriesRepository();
+    repo.onVerify = (_) async => _preview();
+    repo.onConfirm = (token, cashReceivedConfirmed) async {
+      expect(token, _validPayload);
+      expect(cashReceivedConfirmed, isTrue);
+      return _completedDelivery();
+    };
+    final container = _container(repo);
+    addTearDown(container.dispose);
+    final notifier = container.read(
+      driverDeliveryQrControllerProvider.notifier,
+    );
+
+    await notifier.onCodeDetected(_validPayload);
+    await notifier.confirmHandover(cashReceivedConfirmed: true);
+
+    expect(repo.verifyCalls, 1);
+    expect(repo.confirmCalls, 1);
+    expect(repo.cashReceivedConfirmations, [true]);
     expect(
       container.read(driverDeliveryQrControllerProvider).phase,
       DriverDeliveryQrPhase.completed,
@@ -188,13 +232,15 @@ void main() {
   test('double confirm tap issues at most one confirm request', () async {
     final repo = _FakeDriverDeliveriesRepository();
     repo.onVerify = (_) async => _preview();
-    repo.onConfirm = (_) async {
+    repo.onConfirm = (_, _) async {
       await Future<void>.delayed(const Duration(milliseconds: 40));
       return _completedDelivery();
     };
     final container = _container(repo);
     addTearDown(container.dispose);
-    final notifier = container.read(driverDeliveryQrControllerProvider.notifier);
+    final notifier = container.read(
+      driverDeliveryQrControllerProvider.notifier,
+    );
 
     await notifier.onCodeDetected(_validPayload);
     await Future.wait([

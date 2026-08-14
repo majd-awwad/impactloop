@@ -24,6 +24,7 @@ import {
   reportSupplierNoDriverHandler,
   submitNoDriverPickupWindowHandler,
   submitSupplierNoShowReportHandler,
+  confirmSupplierDeliveryReturnHandler,
 } from './supplier-reservations.controller.js';
 import {
   acceptSupplierReservationSchema,
@@ -167,6 +168,14 @@ supplierReservationsRouter.patch(
   validate(reservationIdParamsSchema, 'params'),
   validate(cancelSupplierReservationSchema),
   asyncHandler(cancelSupplierAcceptedReservationHandler),
+);
+
+supplierReservationsRouter.post(
+  '/:id/confirm-delivery-return',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(reservationIdParamsSchema, 'params'),
+  asyncHandler(confirmSupplierDeliveryReturnHandler),
 );
 
 supplierReservationsRouter.post(
