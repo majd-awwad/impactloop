@@ -6,6 +6,7 @@ import '../domain/models/project_material_coverage.dart';
 import '../domain/models/learning_project_draft_component.dart';
 import '../domain/models/learning_project_submission.dart';
 import '../domain/models/project_build.dart';
+import '../domain/models/smart_build_plan.dart';
 
 class LearningHubApiMapper {
   const LearningHubApiMapper._();
@@ -1667,5 +1668,207 @@ class LearningHubApiMapper {
           ? null
           : fromBuildLearningSummaryJson(summaryJson),
     );
+  }
+
+  static SmartBuildPlanResult fromSmartBuildPlanJson(Map<String, dynamic> json) {
+    final summaryJson = _asMap(json['summary']) ?? const <String, dynamic>{};
+    final plansJson = json['plans'];
+
+    return SmartBuildPlanResult(
+      buildId: _stringOrFallback(json['buildId'], fallback: ''),
+      projectId: _stringOrFallback(json['projectId'], fallback: ''),
+      generatedAt: DateTime.tryParse(
+            _stringOrFallback(json['generatedAt'], fallback: ''),
+          ) ??
+          DateTime.now(),
+      advisory: json['advisory'] == true,
+      summary: SmartBuildPlanBuildSummary(
+        requiredComponents:
+            _intFromDynamic(summaryJson['requiredComponents']) ?? 0,
+        alreadySatisfied: _intFromDynamic(summaryJson['alreadySatisfied']) ?? 0,
+        inProgress: _intFromDynamic(summaryJson['inProgress']) ?? 0,
+        attention: _intFromDynamic(summaryJson['attention']) ?? 0,
+        optimizable: _intFromDynamic(summaryJson['optimizable']) ?? 0,
+      ),
+      plans: plansJson is List
+          ? plansJson
+                .whereType<Map>()
+                .map(
+                  (plan) => _mapSmartBuildPlan(Map<String, dynamic>.from(plan)),
+                )
+                .toList(growable: false)
+          : const <SmartBuildPlan>[],
+    );
+  }
+
+  static SmartBuildPlan _mapSmartBuildPlan(Map<String, dynamic> json) {
+    final summaryJson = _asMap(json['summary']) ?? const <String, dynamic>{};
+    final itemsJson = json['items'];
+    final labelsJson = json['labels'];
+
+    return SmartBuildPlan(
+      key: _mapSmartBuildPlanPolicyKey(json['key']),
+      labels: labelsJson is List
+          ? labelsJson
+                .map((label) => _mapSmartBuildPlanLabel(label))
+                .whereType<SmartBuildPlanLabel>()
+                .toList(growable: false)
+          : const <SmartBuildPlanLabel>[],
+      summary: SmartBuildPlanPlanSummary(
+        newlyPlannedComponents:
+            _intFromDynamic(summaryJson['newlyPlannedComponents']) ?? 0,
+        totalCoveredComponents:
+            _intFromDynamic(summaryJson['totalCoveredComponents']) ?? 0,
+        totalRequiredComponents:
+            _intFromDynamic(summaryJson['totalRequiredComponents']) ?? 0,
+        uncoveredComponents:
+            _intFromDynamic(summaryJson['uncoveredComponents']) ?? 0,
+        materialSubtotal:
+            _numberFromDynamic(summaryJson['materialSubtotal']) ?? 0,
+        currency: _stringOrFallback(summaryJson['currency'], fallback: 'NIS'),
+        priceUnknownCount: _intFromDynamic(summaryJson['priceUnknownCount']) ?? 0,
+        supplierCount: _intFromDynamic(summaryJson['supplierCount']) ?? 0,
+        pickupLocationCount:
+            _intFromDynamic(summaryJson['pickupLocationCount']) ?? 0,
+        deliveryFeeIncluded: summaryJson['deliveryFeeIncluded'] == true,
+      ),
+      items: itemsJson is List
+          ? itemsJson
+                .whereType<Map>()
+                .map(
+                  (item) =>
+                      _mapSmartBuildPlanItem(Map<String, dynamic>.from(item)),
+                )
+                .toList(growable: false)
+          : const <SmartBuildPlanItem>[],
+    );
+  }
+
+  static SmartBuildPlanItem _mapSmartBuildPlanItem(Map<String, dynamic> json) {
+    final candidateJson = _asMap(json['candidate']);
+    final reasonTagsJson = json['reasonTags'];
+
+    return SmartBuildPlanItem(
+      buildItemId: _stringOrFallback(json['buildItemId'], fallback: ''),
+      requiredComponentId: _stringOrFallback(
+        json['requiredComponentId'],
+        fallback: '',
+      ),
+      componentName: _stringOrFallback(json['componentName'], fallback: ''),
+      requiredQuantity:
+          _numberFromDynamic(json['requiredQuantity']) ?? 0,
+      requiredUnit: _stringOrFallback(json['requiredUnit'], fallback: 'piece'),
+      plannerState: _mapSmartBuildPlannerState(json['plannerState']),
+      acquisitionState: _nullableString(json['acquisitionState']),
+      allocationResult: _nullableString(json['allocationResult']),
+      candidate: candidateJson == null
+          ? null
+          : _mapSmartBuildPlanCandidate(candidateJson),
+      reasonTags: reasonTagsJson is List
+          ? reasonTagsJson
+                .map((tag) => _mapSmartBuildReasonTag(tag))
+                .whereType<SmartBuildReasonTag>()
+                .toList(growable: false)
+          : const <SmartBuildReasonTag>[],
+      uncoveredReason: _mapSmartBuildUncoveredReason(json['uncoveredReason']),
+    );
+  }
+
+  static SmartBuildPlanCandidate _mapSmartBuildPlanCandidate(
+    Map<String, dynamic> json,
+  ) {
+    final hintsJson = json['matchHints'];
+
+    return SmartBuildPlanCandidate(
+      materialId: _stringOrFallback(json['materialId'], fallback: ''),
+      title: _stringOrFallback(json['title'], fallback: ''),
+      matchType: _mapSmartBuildMatchType(json['matchType']),
+      matchHints: hintsJson is List
+          ? hintsJson
+                .map((hint) => hint.toString())
+                .where((hint) => hint.trim().isNotEmpty)
+                .toList(growable: false)
+          : const <String>[],
+      allocatedQuantity: _numberFromDynamic(json['allocatedQuantity']) ?? 0,
+      unit: _stringOrFallback(json['unit'], fallback: 'piece'),
+      availableQuantity: _numberFromDynamic(json['availableQuantity']) ?? 0,
+      isFree: json['isFree'] == true,
+      unitPrice: _numberFromDynamic(json['unitPrice']),
+      lineSubtotal: _numberFromDynamic(json['lineSubtotal']),
+      currency: _stringOrFallback(json['currency'], fallback: 'NIS'),
+      priceKnown: json['priceKnown'] == true,
+      supplierProfileId: _nullableString(json['supplierProfileId']),
+      locationId: _stringOrFallback(json['locationId'], fallback: ''),
+      city: _stringOrFallback(json['city'], fallback: ''),
+      area: _nullableString(json['area']),
+      pickupAllowed: json['pickupAllowed'] == true,
+      deliveryAllowed: json['deliveryAllowed'] == true,
+      imageUrl: _resolveMediaUrl(_nullableString(json['imageUrl'])),
+    );
+  }
+
+  static SmartBuildPlanPolicyKey _mapSmartBuildPlanPolicyKey(dynamic value) {
+    return switch (value?.toString()) {
+      'cheapest' => SmartBuildPlanPolicyKey.cheapest,
+      'fewest_pickups' => SmartBuildPlanPolicyKey.fewestPickups,
+      _ => SmartBuildPlanPolicyKey.recommended,
+    };
+  }
+
+  static SmartBuildPlanLabel? _mapSmartBuildPlanLabel(dynamic value) {
+    return switch (value?.toString()) {
+      'BEST_OVERALL' => SmartBuildPlanLabel.bestOverall,
+      'CHEAPEST' => SmartBuildPlanLabel.cheapest,
+      'FEWEST_PICKUP_LOCATIONS' => SmartBuildPlanLabel.fewestPickupLocations,
+      _ => null,
+    };
+  }
+
+  static SmartBuildPlannerState _mapSmartBuildPlannerState(dynamic value) {
+    return switch (value?.toString()) {
+      'IN_PROGRESS' => SmartBuildPlannerState.inProgress,
+      'ATTENTION' => SmartBuildPlannerState.attention,
+      'PLANNED' => SmartBuildPlannerState.planned,
+      'UNCOVERED' => SmartBuildPlannerState.uncovered,
+      _ => SmartBuildPlannerState.alreadySatisfied,
+    };
+  }
+
+  static SmartBuildMatchType _mapSmartBuildMatchType(dynamic value) {
+    return switch (value?.toString()) {
+      'COMPATIBLE' => SmartBuildMatchType.compatible,
+      'ALTERNATIVE' => SmartBuildMatchType.alternative,
+      _ => SmartBuildMatchType.exact,
+    };
+  }
+
+  static SmartBuildReasonTag? _mapSmartBuildReasonTag(dynamic value) {
+    return switch (value?.toString()) {
+      'EXACT_MATCH' => SmartBuildReasonTag.exactMatch,
+      'COMPATIBLE_MATCH' => SmartBuildReasonTag.compatibleMatch,
+      'APPROVED_ALTERNATIVE' => SmartBuildReasonTag.approvedAlternative,
+      'FREE' => SmartBuildReasonTag.free,
+      'SAME_CITY' => SmartBuildReasonTag.sameCity,
+      'SAME_AREA' => SmartBuildReasonTag.sameArea,
+      'SAME_PICKUP_AS_OTHER_ITEM' => SmartBuildReasonTag.samePickupAsOtherItem,
+      'SAME_SUPPLIER_AS_OTHER_ITEM' =>
+        SmartBuildReasonTag.sameSupplierAsOtherItem,
+      'ONLY_COMPATIBLE_OPTION' => SmartBuildReasonTag.onlyCompatibleOption,
+      _ => null,
+    };
+  }
+
+  static SmartBuildUncoveredReason? _mapSmartBuildUncoveredReason(
+    dynamic value,
+  ) {
+    return switch (value?.toString()) {
+      'INSUFFICIENT_AVAILABLE_QUANTITY' =>
+        SmartBuildUncoveredReason.insufficientAvailableQuantity,
+      'INCOMPATIBLE_UNIT' => SmartBuildUncoveredReason.incompatibleUnit,
+      'NO_AVAILABLE_MATERIAL' => SmartBuildUncoveredReason.noAvailableMaterial,
+      'NOT_OPTIMIZABLE' => SmartBuildUncoveredReason.notOptimizable,
+      'NO_ELIGIBLE_CANDIDATES' => SmartBuildUncoveredReason.noEligibleCandidates,
+      _ => null,
+    };
   }
 }
