@@ -34,6 +34,7 @@ import '../../features/learning_hub/presentation/pages/learning_hub_page.dart';
 import '../../features/learning_hub/domain/models/project_build.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_build_guide_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_build_page.dart';
+import '../../features/learning_hub/presentation/pages/smart_build_plan_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_details_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_submissions_page.dart';
 import '../../features/landing/presentation/pages/landing_page.dart';
@@ -820,6 +821,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => LearningProjectSubmissionDetailPage(
           submissionId: state.pathParameters['id']!,
         ),
+      ),
+      GoRoute(
+        path: '/learning/:id/build/smart-plan',
+        builder: (context, state) {
+          final projectId = state.pathParameters['id']!;
+
+          return SmartBuildPlanPage(projectId: projectId);
+        },
       ),
       GoRoute(
         path: '/learning/:id/build/guide',
