@@ -249,6 +249,8 @@ const candidateMaterialSelect = {
   pickupAllowed: true,
   deliveryAllowed: true,
   ownerId: true,
+  supplierProfileId: true,
+  locationId: true,
   unit: true,
   createdAt: true,
   category: linkedMaterialSelect.category,
@@ -365,7 +367,7 @@ const buildTextFallbackCandidateWhere = (input: {
   ]),
 });
 
-const loadLearnerCandidateContext = async (
+export const loadLearnerCandidateContext = async (
   learnerId: string,
 ): Promise<BuildCandidateLearnerContext> => {
   const savedLocation = await prisma.userSavedLocation.findFirst({
@@ -513,7 +515,7 @@ const fetchCandidateMaterials = async (where: Prisma.MaterialWhereInput) =>
     take: CANDIDATE_POOL_LIMIT,
   });
 
-type RequiredComponentForMatching = {
+export type RequiredComponentForMatching = {
   id: string;
   componentRole: string;
   categoryId: string | null;
@@ -523,19 +525,26 @@ type RequiredComponentForMatching = {
   alternativeKeywords?: Prisma.JsonValue | null;
 };
 
-const listMaterialCandidatesForRequiredComponent = async (input: {
+export type RequiredComponentCandidatePool = {
+  componentId: string;
+  searchTerm: string;
+  searchTerms: string[];
+  learner: BuildCandidateLearnerContext;
+  materials: CandidateMaterialRecord[];
+  rankingComponent: BuildCandidateComponentInput;
+  ownerCompletedHandoversByOwnerId: Map<string, number>;
+  materialConceptKeysById: Map<string, string[]>;
+};
+
+export const fetchRequiredComponentCandidateMaterialPool = async (input: {
   learnerId: string;
   component: RequiredComponentForMatching;
   preloadedLearner?: BuildCandidateLearnerContext;
-}) => {
+}): Promise<RequiredComponentCandidatePool | null> => {
   const component = input.component;
 
   if (component.componentRole === 'TOOL') {
-    return {
-      componentId: component.id,
-      searchTerm: component.componentName.trim(),
-      items: [],
-    };
+    return null;
   }
 
   const searchTerms = buildCandidateSearchTerms(component);
@@ -611,17 +620,60 @@ const listMaterialCandidatesForRequiredComponent = async (input: {
   return {
     componentId: component.id,
     searchTerm,
-    items: mapRankedCandidateItems({
-      materials,
-      component: {
+    searchTerms,
+    learner,
+    materials,
+    rankingComponent: toRankingComponentInput(
+      {
         ...component,
         conceptCanonicalKeys: componentTaxonomy?.conceptCanonicalKeys ?? [],
         satisfiedByFormKeys: componentTaxonomy?.satisfiedByFormKeys ?? [],
       },
       searchTerms,
-      learner,
-      ownerCompletedHandoversByOwnerId,
-      materialConceptKeysById,
+    ),
+    ownerCompletedHandoversByOwnerId,
+    materialConceptKeysById,
+  };
+};
+
+const listMaterialCandidatesForRequiredComponent = async (input: {
+  learnerId: string;
+  component: RequiredComponentForMatching;
+  preloadedLearner?: BuildCandidateLearnerContext;
+}) => {
+  const component = input.component;
+
+  if (component.componentRole === 'TOOL') {
+    return {
+      componentId: component.id,
+      searchTerm: component.componentName.trim(),
+      items: [],
+    };
+  }
+
+  const pool = await fetchRequiredComponentCandidateMaterialPool(input);
+  if (!pool) {
+    return {
+      componentId: component.id,
+      searchTerm: component.componentName.trim(),
+      items: [],
+    };
+  }
+
+  return {
+    componentId: pool.componentId,
+    searchTerm: pool.searchTerm,
+    items: mapRankedCandidateItems({
+      materials: pool.materials,
+      component: {
+        ...component,
+        conceptCanonicalKeys: pool.rankingComponent.conceptCanonicalKeys ?? [],
+        satisfiedByFormKeys: pool.rankingComponent.satisfiedByFormKeys ?? [],
+      },
+      searchTerms: pool.searchTerms,
+      learner: pool.learner,
+      ownerCompletedHandoversByOwnerId: pool.ownerCompletedHandoversByOwnerId,
+      materialConceptKeysById: pool.materialConceptKeysById,
     }),
   };
 };
