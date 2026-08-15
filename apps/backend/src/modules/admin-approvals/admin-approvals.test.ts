@@ -540,15 +540,20 @@ describe('admin approvals', () => {
     context.after(async () => {
       if (!cleaned) await cleanupApprovalTestExecution(resources);
     });
-    const preExistingCategory = await prisma.category.findFirstOrThrow({
-      where: {
+    const preExistingCategoryId = `pre-existing-cleanup-${Date.now()}`;
+    const concept = await activeMaterialFamily();
+    const preExistingCategory = await prisma.category.create({
+      data: {
+        nameEn: `${TEST_MARKER} Pre-existing cleanup safety ${preExistingCategoryId}`,
+        nameAr: `${TEST_MARKER} Pre-existing cleanup safety ${preExistingCategoryId}`,
+        categoryType: 'MATERIAL',
         isActive: true,
-        categoryType: { in: ['MATERIAL', 'BOTH'] },
-        materialFamilyConcept: {
-          is: { conceptType: 'MATERIAL_FAMILY', status: 'ACTIVE' },
-        },
+        materialFamilyConceptId: concept.id,
       },
       select: { id: true, nameEn: true },
+    });
+    context.after(async () => {
+      await prisma.category.deleteMany({ where: { id: preExistingCategory.id } });
     });
     const admin = await createAdminUser();
     resources.adminUserId = admin.id;
@@ -654,7 +659,30 @@ describe('admin approvals', () => {
     );
   });
 
-  test('material category options expose only active owned material-capable categories', async () => {
+  test('material category options expose only active owned material-capable categories', async (context) => {
+    const resources: ApprovalTestResources = { ownedCategoryIds: [] };
+    context.after(() => cleanupApprovalTestExecution(resources));
+    const concept = await activeMaterialFamily();
+    const visibleCategory = await prisma.category.create({
+      data: {
+        nameEn: `${TEST_MARKER} Material options visible ${Date.now()}`,
+        nameAr: `${TEST_MARKER} Material options visible ${Date.now()}`,
+        categoryType: 'MATERIAL',
+        isActive: true,
+        materialFamilyConceptId: concept.id,
+      },
+    });
+    const hiddenCategory = await prisma.category.create({
+      data: {
+        nameEn: `${TEST_MARKER} Material options hidden ${Date.now()}`,
+        nameAr: `${TEST_MARKER} Material options hidden ${Date.now()}`,
+        categoryType: 'MATERIAL',
+        isActive: false,
+        materialFamilyConceptId: concept.id,
+      },
+    });
+    resources.ownedCategoryIds!.push(visibleCategory.id, hiddenCategory.id);
+
     const result = await listMaterialCategoryOptions();
     assert.ok(result.items.length > 0);
     assert.equal(
@@ -665,6 +693,14 @@ describe('admin approvals', () => {
           item.materialFamily != null,
       ),
       true,
+    );
+    assert.equal(
+      result.items.some((item) => item.id === visibleCategory.id),
+      true,
+    );
+    assert.equal(
+      result.items.some((item) => item.id === hiddenCategory.id),
+      false,
     );
   });
 
@@ -1130,18 +1166,25 @@ describe('admin approvals', () => {
   });
 
   test('category reject requires suggested category when categories exist', async (context) => {
-    const resources: ApprovalTestResources = {};
+    const resources: ApprovalTestResources = { ownedCategoryIds: [] };
     context.after(() => cleanupApprovalTestExecution(resources));
     const admin = await createAdminUser();
     resources.adminUserId = admin.id;
     const supplier = await seedSupplierUser();
     resources.supplierUserId = supplier.id;
 
-    const existingCategory = await prisma.category.findFirst({
-      where: { isActive: true, categoryType: 'MATERIAL' },
+    const concept = await activeMaterialFamily();
+    const existingCategory = await prisma.category.create({
+      data: {
+        nameEn: `${TEST_MARKER} Reject suggested existing ${Date.now()}`,
+        nameAr: `${TEST_MARKER} Reject suggested existing ${Date.now()}`,
+        categoryType: 'MATERIAL',
+        isActive: true,
+        materialFamilyConceptId: concept.id,
+      },
       select: { id: true },
     });
-    assert.ok(existingCategory, 'Expected at least one active material category');
+    resources.ownedCategoryIds!.push(existingCategory.id);
 
     const categoryRequest = await prisma.categoryRequest.create({
       data: {

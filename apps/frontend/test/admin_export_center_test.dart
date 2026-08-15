@@ -250,7 +250,8 @@ void main() {
     final ok = await controller.export();
     expect(ok, isFalse);
     expect(controller.isExporting, isFalse);
-    expect(controller.error, contains('Backend offline'));
+    expect(controller.error, isA<ApiException>());
+    expect((controller.error! as ApiException).message, 'Backend offline');
     expect(controller.canExport, isTrue);
   });
 

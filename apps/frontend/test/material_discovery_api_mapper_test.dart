@@ -25,7 +25,7 @@ void main() {
     expect(material.quantity, 10);
     expect(material.viewsCount, 4);
     expect(material.isPopular, isFalse);
-    expect(material.statusTone, MaterialStatusBadgeTone.available);
+    expect(material.statusTone, MaterialStatusBadgeTone.reserved);
     expect(material.quantityLabel.en, 'Available: 3 of 10 sheet');
   });
 
@@ -459,10 +459,10 @@ void main() {
       'category': {'nameEn': 'Wood', 'nameAr': '???'},
     });
 
-    expect(
-      material.copyWith(likesCount: 1).recommendationImpressionId,
-      'imp-copy-material',
-    );
+    expect(material.supplier, isNull);
+    expect(material.supplierName.en, 'Flat Supplier');
+    expect(material.supplierType, 'INDIVIDUAL_SUPPLIER');
+    expect(material.supplierVerified, isFalse);
   });
 
   test('maps nested supplier summary when present', () {

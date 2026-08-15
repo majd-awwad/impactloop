@@ -12,6 +12,9 @@ import 'package:frontend/features/notifications/application/notifications_routes
 import 'package:frontend/features/notifications/presentation/pages/user_notifications_page.dart';
 import 'package:frontend/shared/widgets/notification_bell_button.dart';
 import 'package:frontend/shared/widgets/user_avatar.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
+import 'package:frontend/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('learner desktop navigation renders exactly one notification bell', (
@@ -166,8 +169,16 @@ void main() {
           ),
           appSettingsProvider.overrideWith(() => _ArabicSettingsNotifier()),
         ],
-        child: const MaterialApp(
-          home: Scaffold(
+        child: MaterialApp(
+          locale: const Locale('ar'),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(
             body: EntryNavBar(
               showSignIn: false,
               showCreateAccount: false,

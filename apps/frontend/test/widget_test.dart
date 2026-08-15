@@ -652,14 +652,14 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         router.routeInformationProvider.value.uri.path,
-        '/supplier/profile',
+        '/supplier/overview',
       );
 
       router.go('/profile/learner/edit');
       await tester.pumpAndSettle();
       expect(
         router.routeInformationProvider.value.uri.path,
-        '/supplier/profile',
+        '/supplier/overview',
       );
     },
   );
@@ -902,8 +902,13 @@ void main() {
     ).go('/materials');
     await tester.pumpAndSettle();
 
-    expect(find.text('Material Discovery'), findsOneWidget);
-    expect(find.text('Reusable Materials'), findsOneWidget);
+    expect(find.text('Discover Materials'), findsOneWidget);
+    expect(
+      find.text(
+        'Browse reusable materials from verified suppliers. Search, filter, and reserve what you need.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('learning route q parameter pre-fills project search', (
@@ -916,7 +921,7 @@ void main() {
     ).go('/learning?q=Cardboard%20sheets');
     await tester.pumpAndSettle();
 
-    expect(find.text('Learning Hub'), findsOneWidget);
+    expect(find.text('Learning Hub & Projects'), findsOneWidget);
     expect(find.text('Cardboard sheets'), findsOneWidget);
     expect(find.text('No projects match your filters'), findsOneWidget);
   });

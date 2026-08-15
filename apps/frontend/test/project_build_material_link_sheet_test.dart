@@ -271,7 +271,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Link to component'));
+    await tester.tap(find.text('ربط بالمكوّن'));
     await tester.pump();
     await tester.pumpAndSettle();
 

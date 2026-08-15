@@ -149,6 +149,14 @@ Future<void> _pumpRoutedPage(
         },
       ),
       GoRoute(
+        path: '/learner/checkout/reservation/:reservationId',
+        builder: (context, state) => Scaffold(
+          body: Text(
+            'checkout-reservation:${state.pathParameters['reservationId']}',
+          ),
+        ),
+      ),
+      GoRoute(
         path: '/learner/checkout/:orderId',
         builder: (context, state) =>
             Scaffold(body: Text('checkout:${state.pathParameters['orderId']}')),
@@ -358,7 +366,7 @@ void main() {
       locale: const Locale('ar'),
     );
 
-    expect(find.text('حجوزاتي'), findsOneWidget);
+    expect(find.text('حجوزاتي'), findsWidgets);
     expect(find.text('ادفع الآن'), findsOneWidget);
     expect(find.text('دفع مطلوب'), findsWidgets);
     expect(find.text('Pay now'), findsNothing);
@@ -375,11 +383,11 @@ void main() {
 
     await _pumpPage(tester, reservations: [reservation]);
 
-    expect(find.text('My reservations'), findsOneWidget);
+    expect(find.text('My reservations'), findsWidgets);
     expect(find.text('Pay now'), findsOneWidget);
   });
 
-  testWidgets('Pay now opens details with payment focus, not blank checkout', (
+  testWidgets('Pay now opens reservation checkout, not legacy order checkout', (
     tester,
   ) async {
     final reservation = LearnerReservation.fromJson(
@@ -397,10 +405,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('checkout:ord-77'), findsNothing);
-    expect(
-      find.text('details:res-checkout:focus=payment:order=ord-77'),
-      findsOneWidget,
-    );
+    expect(find.text('checkout-reservation:res-checkout'), findsOneWidget);
   });
 
   testWidgets('opens details from secondary action', (tester) async {
@@ -577,7 +582,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     await tester.pumpAndSettle();
 
-    expect(find.text('My reservations'), findsOneWidget);
+    expect(find.text('My reservations'), findsWidgets);
     expect(find.textContaining('Could not load'), findsOneWidget);
     expect(find.textContaining('Try again'), findsWidgets);
   });

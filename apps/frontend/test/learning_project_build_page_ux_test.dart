@@ -21,6 +21,7 @@ import 'package:frontend/features/learner_builds/application/learner_builds_prov
 import 'package:frontend/features/learner_builds/data/learner_builds_api.dart';
 import 'package:frontend/features/learner_builds/data/models/learner_build_models.dart';
 import 'package:frontend/features/notifications/application/notifications_provider.dart';
+import 'package:frontend/shared/widgets/app_back_action.dart';
 import 'package:frontend/shared/widgets/app_feedback.dart';
 
 void main() {
@@ -34,7 +35,6 @@ void main() {
     );
 
     expect(find.text('Build actions'), findsOneWidget);
-    expect(find.text('Back to project'), findsOneWidget);
     expect(find.text('My builds'), findsOneWidget);
     expect(find.text('Progress is saved automatically.'), findsOneWidget);
     expect(find.text('In progress'), findsOneWidget);
@@ -123,14 +123,14 @@ void main() {
     expect(find.bySemanticsLabel('Build actions'), findsOneWidget);
   });
 
-  testWidgets('Back to project opens the correct Project ID', (tester) async {
+  testWidgets('Back action opens the correct Project ID', (tester) async {
     final router = await _pumpBuildPage(
       tester,
       build: _sampleBuild(),
       viewport: const Size(1024, 900),
     );
 
-    await tester.tap(find.text('Back to project'));
+    await tester.tap(find.byType(AppBackAction));
     await tester.pumpAndSettle();
 
     expect(
@@ -382,7 +382,7 @@ void main() {
       viewport: const Size(1024, 900),
     );
 
-    expect(find.text('العودة إلى المشروع'), findsOneWidget);
+    expect(find.byType(AppBackAction), findsOneWidget);
     expect(find.text('مشاريعي'), findsOneWidget);
     expect(find.text('إجراءات المشروع'), findsOneWidget);
     expect(find.text('متوقف مؤقتًا'), findsOneWidget);

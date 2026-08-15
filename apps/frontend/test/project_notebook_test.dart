@@ -99,6 +99,12 @@ class _FetchCountingNotebookApi extends _FakeNotebookApi {
   }
 }
 
+Future<void> _tapAddPage(WidgetTester tester) async {
+  final label = find.text(ProjectNotebookL10n.addPage.en);
+  await tester.ensureVisible(label);
+  await tester.tap(label);
+}
+
 Future<void> _pumpNotebook(
   WidgetTester tester,
   _FakeNotebookApi api, {
@@ -181,11 +187,9 @@ void main() {
     final api = _FakeNotebookApi();
     await _pumpNotebook(tester, api);
 
-    final addButton = find.widgetWithText(FilledButton, ProjectNotebookL10n.addPage.en);
-    expect(addButton, findsOneWidget);
-    expect(tester.widget<FilledButton>(addButton).onPressed, isNotNull);
+    expect(find.text(ProjectNotebookL10n.addPage.en), findsOneWidget);
 
-    await tester.tap(addButton);
+    await _tapAddPage(tester);
     await tester.pump();
 
     expect(find.text('Page 2'), findsOneWidget);
@@ -196,7 +200,7 @@ void main() {
     final api = _FakeNotebookApi();
     await _pumpNotebook(tester, api);
 
-    await tester.tap(find.widgetWithText(FilledButton, ProjectNotebookL10n.addPage.en));
+    await _tapAddPage(tester);
     await tester.pump();
 
     final container = ProviderScope.containerOf(
@@ -219,7 +223,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1200));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, ProjectNotebookL10n.addPage.en));
+    await _tapAddPage(tester);
     await tester.pump();
 
     await tester.tap(find.textContaining('1.'));
@@ -234,7 +238,7 @@ void main() {
     final api = _FakeNotebookApi()..failNextSave = true;
     await _pumpNotebook(tester, api);
 
-    await tester.tap(find.widgetWithText(FilledButton, ProjectNotebookL10n.addPage.en));
+    await _tapAddPage(tester);
     await tester.pumpAndSettle();
 
     expect(find.text('Page 2'), findsOneWidget);
@@ -249,9 +253,8 @@ void main() {
     final api = _FakeNotebookApi();
     await _pumpNotebook(tester, api);
 
-    final addButton = find.widgetWithText(FilledButton, ProjectNotebookL10n.addPage.en);
-    await tester.tap(addButton);
-    await tester.tap(addButton);
+    await _tapAddPage(tester);
+    await _tapAddPage(tester);
     await tester.pumpAndSettle();
 
     final container = ProviderScope.containerOf(
@@ -280,9 +283,17 @@ void main() {
     );
     await _pumpNotebook(tester, api);
 
-    final addButton = find.widgetWithText(FilledButton, ProjectNotebookL10n.addPage.en);
-    expect(tester.widget<FilledButton>(addButton).onPressed, isNull);
+    expect(find.text(ProjectNotebookL10n.addPage.en), findsOneWidget);
     expect(find.text(ProjectNotebookL10n.pageLimitReached.en), findsOneWidget);
+
+    await _tapAddPage(tester);
+    await tester.pump();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ProjectNotebookPage)),
+    );
+    final state = container.read(projectNotebookControllerProvider('build-1'));
+    expect(state.document?.pages.length, notebookMaxPages);
   });
 
   testWidgets('typing triggers debounced save once', (tester) async {
@@ -449,7 +460,7 @@ void main() {
     await tester.enterText(_notesField(), 'Page one note');
     await tester.pump();
 
-    await tester.tap(find.widgetWithText(FilledButton, ProjectNotebookL10n.addPage.en));
+    await _tapAddPage(tester);
     await tester.pump();
 
     await tester.enterText(_notesField(), 'Page two note');
@@ -479,7 +490,7 @@ void main() {
     await tester.enterText(_notesField(), 'Remember this');
     await tester.pump();
 
-    await tester.tap(find.widgetWithText(FilledButton, ProjectNotebookL10n.addPage.en));
+    await _tapAddPage(tester);
     await tester.pump();
     await tester.enterText(_notesField(), 'Other page');
     await tester.pump();

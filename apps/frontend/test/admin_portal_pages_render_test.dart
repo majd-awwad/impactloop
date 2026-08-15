@@ -203,6 +203,11 @@ class _FakeAdminDeliveriesApi implements AdminDeliveriesApi {
     String? dateFrom,
     String? dateTo,
   }) async {}
+
+  @override
+  Future<AdminDeliveryDetail> finalizeReturnedDelivery(String id) async {
+    return reopenCalled ? reopenResult : detail;
+  }
 }
 
 _adminDeliveriesOverrides(_FakeAdminDeliveriesApi api) {

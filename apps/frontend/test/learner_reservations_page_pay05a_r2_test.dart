@@ -347,7 +347,7 @@ void main() {
     expect(find.text('Pay now'), findsOneWidget);
   });
 
-  testWidgets('Pay CTA opens details with payment focus', (tester) async {
+  testWidgets('Pay CTA opens reservation checkout', (tester) async {
     final reservation = LearnerReservation.fromJson(
       _baseReservation(
         id: 'res-nav',
@@ -374,6 +374,14 @@ void main() {
               ),
             );
           },
+        ),
+        GoRoute(
+          path: '/learner/checkout/reservation/:reservationId',
+          builder: (context, state) => Scaffold(
+            body: Text(
+              'checkout-reservation:${state.pathParameters['reservationId']}',
+            ),
+          ),
         ),
         GoRoute(
           path: '/learner/checkout/:orderId',
@@ -412,10 +420,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('checkout:ord-55'), findsNothing);
-    expect(
-      find.text('details:res-nav:focus=payment:order=ord-55'),
-      findsOneWidget,
-    );
+    expect(find.text('checkout-reservation:res-nav'), findsOneWidget);
   });
 
   testWidgets('money presentation does not double-count shared fees', (

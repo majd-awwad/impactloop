@@ -1824,16 +1824,23 @@ class _BuildHeader extends StatelessWidget {
                     children: [
                       Expanded(child: titleBlock),
                       const SizedBox(width: AppSpacing.sm),
-                      menuAction,
-                      const SizedBox(width: AppSpacing.sm),
-                      notebookAction,
-                      const SizedBox(width: AppSpacing.sm),
-                      guideAction,
-                      if (buildRecord.status == ProjectBuildStatus.inProgress ||
-                          buildRecord.status == ProjectBuildStatus.paused) ...[
-                        const SizedBox(width: AppSpacing.sm),
-                        smartPlanAction,
-                      ],
+                      Flexible(
+                        child: Wrap(
+                          spacing: AppSpacing.sm,
+                          runSpacing: AppSpacing.sm,
+                          alignment: WrapAlignment.end,
+                          children: [
+                            menuAction,
+                            notebookAction,
+                            guideAction,
+                            if (buildRecord.status ==
+                                    ProjectBuildStatus.inProgress ||
+                                buildRecord.status ==
+                                    ProjectBuildStatus.paused)
+                              smartPlanAction,
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                   if (buildRecord.status == ProjectBuildStatus.paused) ...[

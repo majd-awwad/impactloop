@@ -704,7 +704,7 @@ void main() {
       tester,
     ) async {
       _setWideBuildViewport(tester);
-      final hubRepository = _RefreshingBuildGuideHubRepository(
+      final hubRepository = _FinalStepRefreshingBuildGuideHubRepository(
         initial: _sampleSingleStepReadyBuild(),
         refreshed: _sampleFinalStepCompletedBuild(),
       );
@@ -725,8 +725,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(hubRepository.fetchMyBuildCalls, greaterThanOrEqualTo(1));
-      expect(find.text('Build completed'), findsOneWidget);
-      expect(find.textContaining('100%'), findsWidgets);
+      expect(find.text('Completed'), findsWidgets);
+      expect(
+        find.textContaining('You finished the practical build'),
+        findsOneWidget,
+      );
       expect(find.text('Current'), findsNothing);
       expect(find.byType(AiBuildGuideSidePanel), findsOneWidget);
       expect(find.text('Step completed'), findsOneWidget);
@@ -736,7 +739,7 @@ void main() {
       tester,
     ) async {
       _setNarrowBuildViewport(tester);
-      final hubRepository = _RefreshingBuildGuideHubRepository(
+      final hubRepository = _FinalStepRefreshingBuildGuideHubRepository(
         initial: _sampleSingleStepReadyBuild(),
         refreshed: _sampleFinalStepCompletedBuild(),
       );
@@ -1372,6 +1375,33 @@ class _RefreshingBuildGuideHubRepository extends _BuildGuideHubRepository {
     if (fetchMyBuildCalls < 3) {
       return _initial;
     }
+    return _refreshed;
+  }
+}
+
+class _FinalStepRefreshingBuildGuideHubRepository extends _BuildGuideHubRepository {
+  _FinalStepRefreshingBuildGuideHubRepository({
+    required ProjectBuild initial,
+    required ProjectBuild refreshed,
+  })  : _initial = initial,
+        _refreshed = refreshed,
+        super(build: initial);
+
+  final ProjectBuild _initial;
+  final ProjectBuild _refreshed;
+  int fetchMyBuildCalls = 0;
+
+  @override
+  Future<ProjectBuild?> fetchMyBuild(String projectId) async {
+    fetchMyBuildCalls += 1;
+    if (fetchMyBuildCalls < 3) {
+      return _initial;
+    }
+    return _refreshed;
+  }
+
+  @override
+  Future<ProjectBuild> completeBuildStep(String projectId, String stepId) async {
     return _refreshed;
   }
 }

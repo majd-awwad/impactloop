@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/core/errors/api_exception.dart';
 import 'package:frontend/features/admin_portal/data/admin_learning_projects_api.dart';
 import 'package:frontend/features/admin_portal/data/models/admin_learning_projects_models.dart';
+import 'package:frontend/l10n/app_localizations.dart';
 import 'package:frontend/features/admin_portal/presentation/widgets/admin_learning_project_component_editor_dialog.dart';
 import 'package:frontend/features/materials/application/material_listing_providers.dart';
 import 'package:frontend/features/materials/data/models/category.dart';
@@ -162,6 +163,7 @@ void main() {
     });
 
     test('formatAdminComponentEditorError shows field validation message', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
       final message = formatAdminComponentEditorError(
         ApiException(
           message: 'Validation failed',
@@ -175,11 +177,12 @@ void main() {
             ],
           },
         ),
+        l10n,
       );
 
       expect(
         message,
-        contains('Category id must be a valid category identifier.'),
+        contains('Choose a project category before submitting.'),
       );
       expect(message, isNot('Validation failed'));
     });

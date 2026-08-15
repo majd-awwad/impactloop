@@ -205,10 +205,7 @@ Set<String> normalizeSelectedInterestKeys(
     }
 
     if (isCustomInterestKey(trimmed)) {
-      final customKey = customInterestKeyFromText(trimmed);
-      if (customKey != null) {
-        keys.add(customKey);
-      }
+      keys.add(trimmed);
       continue;
     }
 

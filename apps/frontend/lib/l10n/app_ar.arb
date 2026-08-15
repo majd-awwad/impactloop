@@ -4696,6 +4696,7 @@
   "learningProjectCreator": "صاحب المشروع",
   "learningViewProfile": "عرض الملف",
   "learningViewCreatorProfile": "عرض الملف العام لـ {name}",
+  "@learningViewCreatorProfile": {"placeholders": {"name": {"type": "String"}}},
   "learningSearchProjectsHint": "ابحث بالعنوان أو الملخص أو المكوّن أو صاحب المشروع",
   "publicUserPublishedProjects": "المشاريع المنشورة",
   "publicUserNoPublishedProjects": "لا توجد مشاريع منشورة بعد",
@@ -4703,6 +4704,7 @@
   "publicUserSupplierActivity": "نشاط المورد",
   "publicUserViewSupplierProfile": "عرض ملف المورد",
   "publicUserAvailableMaterials": "{count} مواد متاحة",
+  "@publicUserAvailableMaterials": {"placeholders": {"count": {"type": "int"}}},
   "publicRoleLearner": "متعلم",
   "publicRoleSupplier": "مورد",
   "publicUserProfileUnavailable": "الملف غير متاح",
@@ -4710,5 +4712,6 @@
   "phsNewRequest": "طلب جلسة مساعدة",
   "phsChooseProject": "اختر المشروع",
   "phsSearchEligibleProjects": "ابحث بعنوان المشروع أو اسم صاحبه",
-  "phsByCreator": "بواسطة {name}"
+  "phsByCreator": "بواسطة {name}",
+  "@phsByCreator": {"placeholders": {"name": {"type": "String"}}}
 }

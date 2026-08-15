@@ -5,7 +5,7 @@ import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { deriveHandoverCode } from '../../utils/handover-codes.js';
 import { hashPassword } from '../../utils/password.js';
-import { updateDriverDeliveryStatus } from '../driver/driver.service.js';
+import { acceptDelivery, updateDriverDeliveryStatus } from '../driver/driver.service.js';
 import { requestDeliveryForReservation } from '../deliveries/deliveries.service.js';
 import { getMaterialById } from '../materials/materials.service.js';
 import {
@@ -522,17 +522,25 @@ describe('partial quantity reservations', () => {
       data: activeConfirmedDeliveryWindowUpdate(),
     });
 
-    await prisma.delivery.update({
-      where: { id: delivery.id },
-      data: {
-        assignedDriverProfileId: ctx.driverProfileId,
-        status: 'ARRIVED_DROPOFF',
-      },
+    await acceptDelivery(ctx.driverId, delivery.id);
+    await updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+      status: 'ARRIVED_PICKUP',
+    });
+    await updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+      status: 'PICKED_UP',
+      confirmationCode: deriveHandoverCode('supplier-handover', delivery.id),
+    });
+    await updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+      status: 'ON_THE_WAY',
+    });
+    await updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
+      status: 'ARRIVED_DROPOFF',
     });
 
     await updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
       status: 'DELIVERED',
       confirmationCode: deriveHandoverCode('learner-delivery', delivery.id),
+      cashReceivedConfirmed: true,
     });
 
     const stored = await prisma.material.findUnique({

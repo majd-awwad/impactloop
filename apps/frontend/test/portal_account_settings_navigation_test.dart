@@ -252,12 +252,19 @@ Future<GoRouter> _pumpRouter(
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
 
+  GoRouter.optionURLReflectsImperativeAPIs = true;
+  addTearDown(() {
+    GoRouter.optionURLReflectsImperativeAPIs = false;
+  });
+  final rootNavigatorKey = GlobalKey<NavigatorState>();
   final router = GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: startPath,
     routes: [
       GoRoute(path: startPath, builder: (context, state) => startPage),
       GoRoute(
         path: accountSettingsRoute,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const Scaffold(
           body: Center(child: Text('Account settings destination')),
         ),
