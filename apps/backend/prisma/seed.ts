@@ -12,8 +12,13 @@ import { hashPassword } from "../src/utils/password.js";
 import { normalizeSearchText } from "../src/utils/normalize-search-text.js";
 import { resolveNoShowReportIncidentKey } from "../src/modules/no-show-reports/no-show-report.incident-key.js";
 import { isAllowedSeedImageUrl } from "../src/utils/allowed-seed-image-url.js";
-import { SEED_CATALOG_REAL_IMAGE_PATHS } from "./demo-data/materials/seed-catalog-images.data.js";
 import { LEGACY_PROJECT_COVERS } from "./demo-data/projects/legacy-project-covers.data.js";
+import { resolveCoreDemoPersonVisualAssets } from "./demo-data/visual-assets/manifests/demo-people-images.data.js";
+import { resolveCoreMaterialImageUrls } from "./demo-data/visual-assets/manifests/resolve-core-material-images.js";
+import {
+  demoVisualAssetDiskPath,
+  demoVisualAssetUrl,
+} from "../src/constants/demo-visual-assets.js";
 import { assertSafeDestructiveSeedTarget } from "../scripts/lib/local-database-guard.mjs";
 
 const SEED_PASSWORD = "password";
@@ -41,34 +46,33 @@ const assertImage = (label: string, imageUrl: string | null | undefined) => {
     );
   }
 
-  const demoPrefix = "/demo-assets/community-materials/";
-  if (imageUrl.startsWith(demoPrefix)) {
-    const relative = imageUrl.slice(demoPrefix.length);
+  const materialDemoPrefix = "/demo-assets/community-materials/";
+  if (imageUrl.startsWith(materialDemoPrefix)) {
+    const relative = imageUrl.slice(materialDemoPrefix.length);
     const diskPath = communityDemoMaterialImageDiskPath(relative);
     if (!fs.existsSync(diskPath)) {
       throw new Error(`Missing demo asset file for ${label}: ${diskPath}`);
     }
+    return;
+  }
+
+  const visualAssetsPrefix = "/demo-assets/visual-assets/";
+  if (imageUrl.startsWith(visualAssetsPrefix)) {
+    const relative = imageUrl.slice(visualAssetsPrefix.length);
+    const diskPath = demoVisualAssetDiskPath(relative);
+    if (!fs.existsSync(diskPath)) {
+      throw new Error(`Missing visual asset file for ${label}: ${diskPath}`);
+    }
   }
 };
 
-const applySeedCatalogRealImages = <
-  T extends { key: string; imageUrls: string[] },
->(
+const applyCoreMaterialImages = <T extends { key: string; imageUrls: string[] }>(
   materials: T[],
 ): T[] =>
-  materials.map((material) => {
-    const relativePaths = SEED_CATALOG_REAL_IMAGE_PATHS[material.key];
-    if (!relativePaths || relativePaths.length === 0) {
-      return material;
-    }
-
-    return {
-      ...material,
-      imageUrls: relativePaths.map((relativePath) =>
-        communityDemoMaterialImageUrl(relativePath),
-      ),
-    };
-  });
+  materials.map((material) => ({
+    ...material,
+    imageUrls: [...resolveCoreMaterialImageUrls(material.key)],
+  }));
 
 const jsonArray = (value: string[] | undefined): Prisma.InputJsonValue =>
   value == null ? Prisma.JsonNull : value;
@@ -4184,7 +4188,7 @@ const ADDITIONAL_MATERIALS: MaterialSeed[] = [
   },
 ];
 
-const MATERIALS: MaterialSeed[] = applySeedCatalogRealImages([
+const MATERIALS: MaterialSeed[] = applyCoreMaterialImages([
   ...CORE_MATERIALS,
   ...ADDITIONAL_MATERIALS,
 ]);
@@ -7066,6 +7070,12 @@ const createUsers = async (passwordHash: string, context: SeedContext) => {
   const learnerDropoffs = new Map<string, string>();
 
   for (const learner of LEARNERS) {
+    const visuals = resolveCoreDemoPersonVisualAssets(learner.email);
+    if (!visuals) {
+      throw new Error(`Missing demo profile image mapping for ${learner.email}`);
+    }
+    assertImage(`${learner.email} profile`, visuals.profileImageUrl);
+
     const user = await prisma.user.create({
       data: {
         displayName: learner.displayName,
@@ -7075,6 +7085,7 @@ const createUsers = async (passwordHash: string, context: SeedContext) => {
         activeRole: "LEARNER",
         emailVerifiedAt: now(),
         recommendationEvidenceEligibility: "EXCLUDED_DEMO",
+        profileImageUrl: visuals.profileImageUrl,
         roles: { create: [{ role: "LEARNER", isPrimary: true }] },
         learnerProfile: {
           create: {
@@ -7127,6 +7138,16 @@ const createUsers = async (passwordHash: string, context: SeedContext) => {
   }
 
   for (const supplier of SUPPLIERS) {
+    const visuals = resolveCoreDemoPersonVisualAssets(supplier.email);
+    if (!visuals?.supplierAvatarImageUrl || !visuals.supplierCoverImageUrl) {
+      throw new Error(
+        `Missing supplier avatar/cover mapping for ${supplier.email}`,
+      );
+    }
+    assertImage(`${supplier.email} profile`, visuals.profileImageUrl);
+    assertImage(`${supplier.email} avatar`, visuals.supplierAvatarImageUrl);
+    assertImage(`${supplier.email} cover`, visuals.supplierCoverImageUrl);
+
     const user = await prisma.user.create({
       data: {
         displayName: supplier.displayName,
@@ -7136,12 +7157,15 @@ const createUsers = async (passwordHash: string, context: SeedContext) => {
         activeRole: "SUPPLIER",
         emailVerifiedAt: now(),
         recommendationEvidenceEligibility: "EXCLUDED_DEMO",
+        profileImageUrl: visuals.profileImageUrl,
         roles: { create: [{ role: "SUPPLIER", isPrimary: true }] },
         supplierProfile: {
           create: {
             supplierType: supplier.supplierType,
             publicName: supplier.publicName,
             description: supplier.description,
+            avatarImageUrl: visuals.supplierAvatarImageUrl,
+            coverImageUrl: visuals.supplierCoverImageUrl,
             verificationStatus: "APPROVED",
             verificationSubmittedAt: dateAt(-20, 10),
             verificationReviewedAt: dateAt(-18, 15),
@@ -7212,6 +7236,12 @@ const createUsers = async (passwordHash: string, context: SeedContext) => {
   }
 
   for (const driver of DRIVERS) {
+    const visuals = resolveCoreDemoPersonVisualAssets(driver.email);
+    if (!visuals) {
+      throw new Error(`Missing demo profile image mapping for ${driver.email}`);
+    }
+    assertImage(`${driver.email} profile`, visuals.profileImageUrl);
+
     const user = await prisma.user.create({
       data: {
         displayName: driver.displayName,
@@ -7222,6 +7252,7 @@ const createUsers = async (passwordHash: string, context: SeedContext) => {
         activeRole: "DRIVER",
         emailVerifiedAt: now(),
         recommendationEvidenceEligibility: "EXCLUDED_INTERNAL",
+        profileImageUrl: visuals.profileImageUrl,
         roles: { create: [{ role: "DRIVER", isPrimary: true }] },
         driverProfile: {
           create: {
@@ -7258,6 +7289,12 @@ const createUsers = async (passwordHash: string, context: SeedContext) => {
   }
 
   for (const admin of ADMINS) {
+    const visuals = resolveCoreDemoPersonVisualAssets(admin.email);
+    if (!visuals) {
+      throw new Error(`Missing demo profile image mapping for ${admin.email}`);
+    }
+    assertImage(`${admin.email} profile`, visuals.profileImageUrl);
+
     const user = await prisma.user.create({
       data: {
         displayName: admin.displayName,
@@ -7267,6 +7304,7 @@ const createUsers = async (passwordHash: string, context: SeedContext) => {
         activeRole: "ADMIN",
         emailVerifiedAt: now(),
         recommendationEvidenceEligibility: "EXCLUDED_INTERNAL",
+        profileImageUrl: visuals.profileImageUrl,
         roles: { create: [{ role: "ADMIN", isPrimary: true }] },
       },
       select: { id: true },
@@ -7292,9 +7330,7 @@ const createAdditionalLearners = async (
       activeRole: "LEARNER" as const,
       emailVerifiedAt: now(),
       recommendationEvidenceEligibility: "EXCLUDED_DEMO" as const,
-      profileImageUrl: `https://api.dicebear.com/9.x/initials/png?seed=${encodeURIComponent(
-        learner.displayName,
-      )}`,
+      profileImageUrl: null,
     })),
   });
 
@@ -8401,7 +8437,7 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
         title: "Reusable lab glassware set",
         requestedCategoryName: "Lab Glassware",
         imageUrls: [
-          "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&w=1200&q=80",
+          communityDemoMaterialImageUrl("seed-catalog/israa-tin-cans-01.webp"),
         ],
         _seedMarker: SEED_MARKER,
       },

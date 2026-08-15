@@ -11,6 +11,10 @@ import {
   COMMUNITY_DEMO_PEOPLE,
   type CommunityDemoPerson,
 } from "./community-demo-people.data.js";
+import {
+  resolveCommunityDemoProfileImageUrl,
+  resolveCommunityDemoSupplierCoverImageUrl,
+} from "./visual-assets/manifests/demo-people-images.data.js";
 
 const SEED_PASSWORD = "password";
 const ORGANIZATION_TYPES = new Set<OrganizationType>([
@@ -62,7 +66,7 @@ const seedLearner = async (
       activeRole: "LEARNER",
       emailVerifiedAt: createdAt,
       recommendationEvidenceEligibility: "EXCLUDED_DEMO",
-      profileImageUrl: person.profileImageUrl,
+      profileImageUrl: resolveCommunityDemoProfileImageUrl(person.email),
       createdAt,
       roles: {
         create: [{ role: "LEARNER", isPrimary: true, createdAt }],
@@ -125,7 +129,7 @@ const seedSupplier = async (
       activeRole: "SUPPLIER",
       emailVerifiedAt: createdAt,
       recommendationEvidenceEligibility: "EXCLUDED_DEMO",
-      profileImageUrl: person.profileImageUrl,
+      profileImageUrl: resolveCommunityDemoProfileImageUrl(person.email),
       createdAt,
       roles: {
         create: [{ role: "SUPPLIER", isPrimary: true, createdAt }],
@@ -135,7 +139,11 @@ const seedSupplier = async (
           supplierType: person.supplierType || "INDIVIDUAL_SUPPLIER",
           publicName: person.publicName || person.displayName,
           description: person.description || null,
-          avatarImageUrl: person.profileImageUrl,
+          avatarImageUrl: resolveCommunityDemoProfileImageUrl(person.email),
+          coverImageUrl:
+            person.supplierKind === "ORGANIZATION"
+              ? resolveCommunityDemoSupplierCoverImageUrl(person.email)
+              : null,
           verificationStatus: "APPROVED",
           verificationSubmittedAt: createdAt,
           verificationReviewedAt: createdAt,

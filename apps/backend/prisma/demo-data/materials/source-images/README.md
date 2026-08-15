@@ -28,6 +28,13 @@ Do not replace these with Unsplash or other stock imagery.
 `../seed-catalog-images.data.ts` and is applied by `prisma/seed.ts` on every
 `migrate reset` / `npm run prisma:seed`.
 
+Additional core materials without dedicated seed-catalog photos are mapped in
+`../visual-assets/manifests/core-material-supplement.data.ts` (semantic reuse of
+seed-catalog + community `materials/MAT-*` photos — never Unsplash).
+
+People avatars/covers for demo accounts live under `../visual-assets/people/`.
+Generate them with `npm run demo:assets:people`.
+
 Public URL prefix (served by the backend): `/demo-assets/community-materials/...`
 
 `UPLOAD_ROOT_DIR` (runtime user uploads) is separate — do not copy demo assets

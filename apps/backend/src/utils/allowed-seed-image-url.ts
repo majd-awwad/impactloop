@@ -7,5 +7,6 @@ export const isAllowedSeedImageUrl = (imageUrl: string): boolean => {
   if (trimmed.startsWith("https://")) return true;
   if (trimmed.startsWith("/demo-assets/community-materials/")) return true;
   if (trimmed.startsWith("/demo-assets/community-projects/")) return true;
+  if (trimmed.startsWith("/demo-assets/visual-assets/")) return true;
   return false;
 };

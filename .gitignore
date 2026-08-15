@@ -73,6 +73,9 @@ apps/backend/pnpm-lock.yaml
 !apps/backend/prisma/demo-data/projects/source-images/**/*.jpg
 !apps/backend/prisma/demo-data/projects/source-images/**/*.jpeg
 !apps/backend/prisma/demo-data/projects/source-images/**/*.webp
+# Keep curated demo visual assets (people avatars/covers) trackable in-repo.
+!apps/backend/prisma/demo-data/visual-assets/**
+!apps/backend/prisma/demo-data/visual-assets/**/*.png
 
 # Local recovery / forensic audit artifacts (not demo assets)
 apps/backend/tmp-recovery-audit/

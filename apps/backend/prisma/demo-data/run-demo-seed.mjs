@@ -48,9 +48,9 @@ const STAGES = [
     label: 'Behavior journeys (viewsCount + MR journeys)',
     script: 'demo:seed:behavior:journeys',
   },
-] as const;
+];
 
-const runStage = (stage: (typeof STAGES)[number], index: number) => {
+const runStage = (stage, index) => {
   const step = `[demo:seed ${index + 1}/${STAGES.length}]`;
   console.log(`${step} Starting: ${stage.label} (${stage.script})`);
 
@@ -90,7 +90,7 @@ const main = () => {
   );
 
   for (let index = 0; index < STAGES.length; index += 1) {
-    runStage(STAGES[index]!, index);
+    runStage(STAGES[index], index);
   }
 
   console.log(

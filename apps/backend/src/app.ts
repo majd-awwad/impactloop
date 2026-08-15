@@ -43,6 +43,7 @@ import {
 } from './modules/payments/payments.routes.js';
 import { COMMUNITY_DEMO_MATERIALS_SOURCE_IMAGES_DIR } from './constants/community-demo-materials.js';
 import { COMMUNITY_DEMO_PROJECTS_SOURCE_IMAGES_DIR } from './constants/community-demo-projects.js';
+import { DEMO_VISUAL_ASSETS_DIR } from './constants/demo-visual-assets.js';
 import {
   ensureMaterialUploadsDir,
   MATERIAL_UPLOADS_DIR,
@@ -117,6 +118,10 @@ export const createApp = (options: CreateAppOptions): Express => {
   app.use(
     '/demo-assets/community-projects',
     express.static(COMMUNITY_DEMO_PROJECTS_SOURCE_IMAGES_DIR),
+  );
+  app.use(
+    '/demo-assets/visual-assets',
+    express.static(DEMO_VISUAL_ASSETS_DIR),
   );
   // Supplier verification documents and build-completion photos are private —
   // never serve via anonymous express.static. Use authenticated download endpoints.
