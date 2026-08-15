@@ -136,6 +136,7 @@ export const createUserWithOnboarding = async (
         phone: input.phone,
         passwordHash: input.passwordHash,
         activeRole,
+        emailVerificationRequired: true,
         roles: {
           create: roleCreates,
         },
@@ -416,6 +417,133 @@ export const completePasswordReset = async (input: {
       where: {
         userId: input.userId,
         tokenType: 'REFRESH_TOKEN',
+        usedAt: null,
+      },
+      data: { usedAt },
+    });
+
+    return true;
+  });
+};
+
+export type EmailVerificationTokenRecord = {
+  id: string;
+  userId: string;
+  usedAt: Date | null;
+  expiresAt: Date;
+  user: {
+    email: string;
+    emailVerifiedAt: Date | null;
+    accountStatus: string;
+  };
+};
+
+export const findUserEmailVerificationTarget = async (
+  userId: string,
+): Promise<{
+  id: string;
+  email: string;
+  emailVerifiedAt: Date | null;
+  emailVerificationRequired: boolean;
+} | null> => {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      emailVerifiedAt: true,
+      emailVerificationRequired: true,
+    },
+  });
+};
+
+export const invalidateEmailVerificationTokens = async (
+  userId: string,
+): Promise<void> => {
+  await prisma.authToken.updateMany({
+    where: {
+      userId,
+      tokenType: 'EMAIL_VERIFICATION',
+      usedAt: null,
+    },
+    data: { usedAt: new Date() },
+  });
+};
+
+export const findEmailVerificationTokenByHash = async (
+  tokenHash: string,
+): Promise<EmailVerificationTokenRecord | null> => {
+  return prisma.authToken.findFirst({
+    where: {
+      tokenHash,
+      tokenType: 'EMAIL_VERIFICATION',
+    },
+    select: {
+      id: true,
+      userId: true,
+      usedAt: true,
+      expiresAt: true,
+      user: {
+        select: {
+          email: true,
+          emailVerifiedAt: true,
+          accountStatus: true,
+        },
+      },
+    },
+  });
+};
+
+export const completeEmailVerification = async (input: {
+  tokenId: string;
+  userId: string;
+}): Promise<boolean> => {
+  return prisma.$transaction(async (tx) => {
+    const usedAt = new Date();
+
+    const claim = await tx.authToken.updateMany({
+      where: {
+        id: input.tokenId,
+        userId: input.userId,
+        tokenType: 'EMAIL_VERIFICATION',
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      data: { usedAt },
+    });
+
+    if (claim.count !== 1) {
+      return false;
+    }
+
+    const user = await tx.user.findUnique({
+      where: { id: input.userId },
+      select: {
+        emailVerifiedAt: true,
+        accountStatus: true,
+      },
+    });
+
+    if (!user) {
+      throw new Error('User record missing during email verification');
+    }
+
+    if (!user.emailVerifiedAt) {
+      await tx.user.update({
+        where: { id: input.userId },
+        data: {
+          emailVerifiedAt: usedAt,
+          ...(user.accountStatus === 'PENDING_VERIFICATION'
+            ? { accountStatus: 'ACTIVE' as const }
+            : {}),
+        },
+      });
+    }
+
+    await tx.authToken.updateMany({
+      where: {
+        userId: input.userId,
+        tokenType: 'EMAIL_VERIFICATION',
         usedAt: null,
       },
       data: { usedAt },

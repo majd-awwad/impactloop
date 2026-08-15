@@ -117,6 +117,14 @@ class AuthRepository {
     return _api.resetPassword(token: token, newPassword: newPassword);
   }
 
+  Future<void> resendEmailVerification() {
+    return _api.resendEmailVerification();
+  }
+
+  Future<void> confirmEmailVerification({required String token}) {
+    return _api.confirmEmailVerification(token: token);
+  }
+
   Future<void> _persistSession(AuthTokens tokens, User user) async {
     await _applyTokens(tokens);
   }

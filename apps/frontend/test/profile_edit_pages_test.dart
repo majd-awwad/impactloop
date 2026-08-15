@@ -13,6 +13,7 @@ import 'package:frontend/features/profile/data/profile_api.dart';
 import 'package:frontend/features/profile/data/profile_repository.dart';
 import 'package:frontend/features/profile/data/models/learner_interest_options.dart';
 import 'package:frontend/features/profile/presentation/pages/learner_profile_edit_page.dart';
+import 'package:frontend/features/auth/application/auth_route_helpers.dart';
 import 'package:frontend/features/profile/presentation/pages/profile_edit_page.dart';
 import 'package:frontend/features/profile/presentation/widgets/profile_edit_widgets.dart';
 
@@ -458,6 +459,22 @@ Widget _profileEditApp({
   required _RecordingProfileRepository repository,
   Locale locale = const Locale('en'),
 }) {
+  final router = GoRouter(
+    initialLocation: '/profile/edit',
+    routes: [
+      GoRoute(
+        path: '/profile/edit',
+        builder: (context, state) => child,
+      ),
+      GoRoute(
+        path: accountSettingsRoute,
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('Account settings')),
+        ),
+      ),
+    ],
+  );
+
   return ProviderScope(
     overrides: [
       authControllerProvider.overrideWith(
@@ -465,7 +482,7 @@ Widget _profileEditApp({
       ),
       profileRepositoryProvider.overrideWithValue(repository),
     ],
-    child: MaterialApp(
+    child: MaterialApp.router(
       theme: AppTheme.light,
       locale: locale,
       supportedLocales: const [Locale('en'), Locale('ar')],
@@ -474,7 +491,7 @@ Widget _profileEditApp({
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: child,
+      routerConfig: router,
     ),
   );
 }

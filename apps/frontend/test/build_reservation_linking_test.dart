@@ -39,9 +39,37 @@ void main() {
     expect(parsed.queryParameters['projectId'], 'project-1');
     expect(parsed.queryParameters['buildItemId'], 'item-1');
     expect(parsed.queryParameters['componentName'], 'Arduino board');
+    expect(parsed.queryParameters.containsKey('requestedQuantity'), isFalse);
     expect(
       Uri.decodeComponent(parsed.queryParameters['returnTo']!),
       '/learning/project-1/build',
+    );
+  });
+
+  test('buildChecklistMaterialDetailUri includes requestedQuantity when positive', () {
+    final uri = buildChecklistMaterialDetailUri(
+      materialId: 'mat-1',
+      projectId: 'project-1',
+      buildItemId: 'item-1',
+      requestedQuantity: 2.5,
+    );
+
+    final parsed = Uri.parse(uri);
+
+    expect(parsed.queryParameters['requestedQuantity'], '2.5');
+  });
+
+  test('buildChecklistMaterialDetailUri omits non-positive requestedQuantity', () {
+    final uri = buildChecklistMaterialDetailUri(
+      materialId: 'mat-1',
+      projectId: 'project-1',
+      buildItemId: 'item-1',
+      requestedQuantity: 0,
+    );
+
+    expect(
+      Uri.parse(uri).queryParameters.containsKey('requestedQuantity'),
+      isFalse,
     );
   });
 }

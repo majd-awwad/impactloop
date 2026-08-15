@@ -81,6 +81,7 @@ class User {
     this.learnerProfile,
     this.supplierProfile,
     this.emailVerifiedAt,
+    this.emailVerificationRequired = false,
     this.phoneVerifiedAt,
     this.lastLoginAt,
     required this.createdAt,
@@ -101,6 +102,7 @@ class User {
   final LearnerProfile? learnerProfile;
   final SupplierProfile? supplierProfile;
   final DateTime? emailVerifiedAt;
+  final bool emailVerificationRequired;
   final DateTime? phoneVerifiedAt;
   final DateTime? lastLoginAt;
   final DateTime createdAt;
@@ -145,6 +147,8 @@ class User {
       emailVerifiedAt: DateTime.tryParse(
         json['emailVerifiedAt'] as String? ?? '',
       ),
+      emailVerificationRequired:
+          json['emailVerificationRequired'] as bool? ?? false,
       phoneVerifiedAt: DateTime.tryParse(
         json['phoneVerifiedAt'] as String? ?? '',
       ),

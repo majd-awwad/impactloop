@@ -23,6 +23,11 @@ String reservationCreateErrorMessage(
         'This material is no longer available for new reservations.';
   }
 
+  if (error.code == 'EMAIL_VERIFICATION_REQUIRED') {
+    return l10n?.reservationEmailVerificationRequired ??
+        'Please verify your email before creating a new reservation request.';
+  }
+
   final invalidQuantityMessage = _invalidQuantityErrorMessage(error, l10n);
   if (invalidQuantityMessage != null) {
     return invalidQuantityMessage;

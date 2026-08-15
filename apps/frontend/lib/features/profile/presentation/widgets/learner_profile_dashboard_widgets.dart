@@ -12,6 +12,8 @@ import '../../../../core/config/api_config.dart';
 import '../../../../shared/widgets/account_status_presentation.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/user_avatar.dart';
+import '../../../auth/application/auth_providers.dart';
+import '../../../auth/application/email_verification_actions.dart';
 import '../../../auth/data/models/user.dart';
 import '../../../project_help_sessions/application/project_help_sessions_providers.dart';
 import '../../data/models/learner_profile_summary.dart';
@@ -67,9 +69,11 @@ class LearnerProfileDashboard extends StatelessWidget {
                   state: verification,
                   onAction: () => _open(
                     verification.kind ==
-                            AccountVerificationNoticeKind.emailUnverified
-                        ? '/profile/account'
-                        : '/profile/edit',
+                            AccountVerificationNoticeKind.phoneMissing ||
+                            verification.kind ==
+                                AccountVerificationNoticeKind.phoneUnverified
+                        ? '/profile/edit'
+                        : '/profile/account',
                   ),
                 ),
               ],
@@ -515,7 +519,7 @@ class _HeroOrb extends StatelessWidget {
   }
 }
 
-class CompactAccountVerificationNotice extends StatelessWidget {
+class CompactAccountVerificationNotice extends ConsumerStatefulWidget {
   const CompactAccountVerificationNotice({
     super.key,
     required this.state,
@@ -526,13 +530,40 @@ class CompactAccountVerificationNotice extends StatelessWidget {
   final VoidCallback onAction;
 
   @override
+  ConsumerState<CompactAccountVerificationNotice> createState() =>
+      _CompactAccountVerificationNoticeState();
+}
+
+class _CompactAccountVerificationNoticeState
+    extends ConsumerState<CompactAccountVerificationNotice> {
+  var _isSending = false;
+  String? _feedback;
+
+  Future<void> _resendEmailVerification() async {
+    setState(() {
+      _isSending = true;
+      _feedback = null;
+    });
+
+    await resendEmailVerificationWithFeedback(context, ref);
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => _isSending = false);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final l10n = LearnerProfileL10n.of(context);
-    final (title, action) = switch (state.kind) {
+    final isEmail =
+        widget.state.kind == AccountVerificationNoticeKind.emailUnverified;
+    final (title, action) = switch (widget.state.kind) {
       AccountVerificationNoticeKind.emailUnverified => (
         l10n.emailNotVerifiedTitle,
-        l10n.reviewAccountAction,
+        l10n.resendEmailVerificationAction,
       ),
       AccountVerificationNoticeKind.phoneMissing => (
         l10n.phoneMissingTitle,
@@ -558,31 +589,55 @@ class CompactAccountVerificationNotice extends StatelessWidget {
           borderRadius: AppRadius.lgAll,
           border: Border.all(color: colors.warningBorder),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Icon(
-              Icons.info_outline_rounded,
-              color: colors.warningText,
-              size: 20,
+            Row(
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  color: colors.warningText,
+                  size: 20,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: AppTextStyles.label(context).copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: _isSending
+                      ? null
+                      : isEmail
+                      ? _resendEmailVerification
+                      : widget.onAction,
+                  style: TextButton.styleFrom(
+                    foregroundColor: colors.warningText,
+                    minimumSize: const Size(48, 48),
+                  ),
+                  child: _isSending
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(action),
+                ),
+              ],
             ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                title,
-                style: AppTextStyles.label(context).copyWith(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w700,
+            if (isEmail) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                l10n.emailNotVerifiedBody,
+                style: AppTextStyles.body(context).copyWith(
+                  color: colors.textSecondary,
                 ),
               ),
-            ),
-            TextButton(
-              onPressed: onAction,
-              style: TextButton.styleFrom(
-                foregroundColor: colors.warningText,
-                minimumSize: const Size(48, 48),
-              ),
-              child: Text(action),
-            ),
+            ],
           ],
         ),
       ),

@@ -41,8 +41,13 @@ const assertCiDatabaseMode = () => {
   if (process.env.NODE_ENV !== 'test') {
     fail('NODE_ENV must be exactly "test" for CI database seeding.');
   }
-  if (process.env.IMPACTLOOP_CI_DATABASE !== '1') {
-    fail('IMPACTLOOP_CI_DATABASE must be exactly "1" to authorize CI database seeding.');
+  const authorized =
+    process.env.IMPACTLOOP_CI_DATABASE === '1'
+    || process.env.IMPACTLOOP_TEST_DATABASE_SEED === '1';
+  if (!authorized) {
+    fail(
+      'Set IMPACTLOOP_CI_DATABASE=1 (CI) or IMPACTLOOP_TEST_DATABASE_SEED=1 (local test DB) to authorize taxonomy seeding.',
+    );
   }
   if (!process.env.DATABASE_URL?.trim()) {
     fail('DATABASE_URL is required for CI database seeding.');
@@ -50,6 +55,7 @@ const assertCiDatabaseMode = () => {
 };
 
 const ensureLegacyCategories = async () => {
+  const testMode = process.env.IMPACTLOOP_TEST_DATABASE_SEED === '1';
   const materialCount = await prisma.category.count({
     where: { categoryType: 'MATERIAL', isActive: true, parentId: null },
   });
@@ -57,8 +63,71 @@ const ensureLegacyCategories = async () => {
     where: { categoryType: 'PROJECT', isActive: true, parentId: null },
   });
 
-  if (materialCount === MATERIAL_CATEGORIES.length && projectCount === PROJECT_CATEGORIES.length) {
+  if (
+    materialCount === MATERIAL_CATEGORIES.length
+    && projectCount === PROJECT_CATEGORIES.length
+  ) {
     return { materialCount, projectCount, created: 0 };
+  }
+
+  if (testMode) {
+    let created = 0;
+
+    for (const category of MATERIAL_CATEGORIES) {
+      const existing = await prisma.category.findFirst({
+        where: {
+          nameEn: category.nameEn,
+          categoryType: 'MATERIAL',
+          parentId: null,
+        },
+        select: { id: true },
+      });
+      if (existing) {
+        continue;
+      }
+      await prisma.category.create({
+        data: {
+          nameEn: category.nameEn,
+          nameAr: category.nameAr,
+          categoryType: 'MATERIAL',
+          isActive: true,
+        },
+      });
+      created += 1;
+    }
+
+    for (const category of PROJECT_CATEGORIES) {
+      const existing = await prisma.category.findFirst({
+        where: {
+          nameEn: category.nameEn,
+          categoryType: 'PROJECT',
+          parentId: null,
+        },
+        select: { id: true },
+      });
+      if (existing) {
+        continue;
+      }
+      await prisma.category.create({
+        data: {
+          nameEn: category.nameEn,
+          nameAr: category.nameAr,
+          categoryType: 'PROJECT',
+          isActive: true,
+        },
+      });
+      created += 1;
+    }
+
+    return {
+      materialCount: await prisma.category.count({
+        where: { categoryType: 'MATERIAL', isActive: true, parentId: null },
+      }),
+      projectCount: await prisma.category.count({
+        where: { categoryType: 'PROJECT', isActive: true, parentId: null },
+      }),
+      created,
+    };
   }
 
   if (materialCount > 0 || projectCount > 0) {
@@ -176,12 +245,22 @@ const ensureEligibleDriver = async () => {
   return true;
 };
 
+const authoritativeLegacyCategoryNames = () => [
+  ...MATERIAL_CATEGORIES.map((category) => category.nameEn),
+  ...PROJECT_CATEGORIES.map((category) => category.nameEn),
+];
+
 const main = async () => {
   assertCiDatabaseMode();
+  const testMode = process.env.IMPACTLOOP_TEST_DATABASE_SEED === '1';
 
   await seedTaxonomyFoundation();
   const legacyCategories = await ensureLegacyCategories();
-  const categoryOwnership = await seedCategoryTaxonomyOwnership();
+  const categoryOwnership = await seedCategoryTaxonomyOwnership(
+    testMode
+      ? { onlyCategoryNamesEn: authoritativeLegacyCategoryNames() }
+      : undefined,
+  );
   await seedTaxonomyCompatibilityRelations();
   const learnersCreated = await ensureLearners();
   const driverCreated = await ensureEligibleDriver();

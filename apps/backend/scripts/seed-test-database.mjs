@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 /**
- * Migrate ONLY the dedicated test database (TEST_DATABASE_URL).
+ * Seed taxonomy + minimal category fixtures on the dedicated test database.
  *
  * Does not touch the development DATABASE_URL database.
- *
- * After migrate, run `npm run test:db:seed` (taxonomy bootstrap) or
- * `npm run test:db:bootstrap` (migrate + seed) for a complete test DB.
+ * Lighter than `prisma db seed` — mirrors CI taxonomy bootstrap only.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -13,14 +11,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 
-import {
-  assertSafeTestDatabaseUrl,
-} from './lib/test-database-guard.mjs';
+import { assertSafeTestDatabaseUrl } from './lib/test-database-guard.mjs';
 
 const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const fail = (message) => {
-  console.error(`migrate-test-database: ${message}`);
+  console.error(`seed-test-database: ${message}`);
   process.exit(1);
 };
 
@@ -42,7 +38,7 @@ try {
 console.log(
   JSON.stringify(
     {
-      action: 'prisma-migrate-deploy',
+      action: 'seed-test-taxonomy',
       target: 'TEST_DATABASE_URL',
       host: validated.hostname,
       port: validated.port,
@@ -53,7 +49,7 @@ console.log(
   ),
 );
 
-const result = spawnSync('npx', ['prisma', 'migrate', 'deploy'], {
+const result = spawnSync('npx', ['tsx', 'scripts/ci/seed-ci-database.ts'], {
   cwd: backendRoot,
   stdio: 'inherit',
   env: {
@@ -61,11 +57,12 @@ const result = spawnSync('npx', ['prisma', 'migrate', 'deploy'], {
     NODE_ENV: 'test',
     DATABASE_URL: validated.testDatabaseUrl,
     TEST_DATABASE_URL: validated.testDatabaseUrl,
+    IMPACTLOOP_TEST_DATABASE_SEED: '1',
   },
   shell: true,
 });
 
 if (result.error) {
-  fail(`Failed to launch prisma migrate deploy: ${result.error.message}`);
+  fail(`Failed to launch test taxonomy seed: ${result.error.message}`);
 }
 process.exit(result.status ?? 1);

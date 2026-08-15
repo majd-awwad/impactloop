@@ -89,6 +89,12 @@ void main() {
       controller.syncEnabled(true);
       await Future<void>.delayed(const Duration(milliseconds: 160));
       expect(attempts, greaterThanOrEqualTo(2));
+      for (var i = 0; i < 30; i++) {
+        if (!controller.isRefreshInFlight) {
+          break;
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
       expect(controller.isRefreshInFlight, isFalse);
 
       controller.dispose();

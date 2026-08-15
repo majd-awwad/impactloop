@@ -172,3 +172,11 @@ export const switchRoleSchema = z.object({
 export type BecomeSupplierInput = z.infer<typeof becomeSupplierSchema>;
 export type BecomeLearnerInput = z.infer<typeof becomeLearnerSchema>;
 export type SwitchRoleInput = z.infer<typeof switchRoleSchema>;
+
+export const confirmEmailVerificationSchema = z.object({
+  token: z.string().trim().min(1, 'Verification token is required'),
+});
+
+export type ConfirmEmailVerificationInput = z.infer<
+  typeof confirmEmailVerificationSchema
+>;

@@ -14,6 +14,7 @@ import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/reset_password_page.dart';
+import '../../features/auth/presentation/pages/verify_email_page.dart';
 import '../../features/health/presentation/pages/health_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/home/presentation/pages/learner_home_recommendations_page.dart';
@@ -177,7 +178,8 @@ bool _isAuthPage(String path) =>
     path == loginRoute ||
     path == registerRoute ||
     path == forgotPasswordRoute ||
-    path == resetPasswordRoute;
+    path == resetPasswordRoute ||
+    path == verifyEmailRoute;
 
 _RouteAccessLevel _routeAccessForPath(String path) {
   if (path == learningProfileRoute || path == learnerProfileEditRoute) {
@@ -338,6 +340,11 @@ String? _resolveAuthCheckingRedirect(AuthState authState, GoRouterState state) {
 
 String? _resolveAuthPageRedirect(AuthState authState, GoRouterState state) {
   if (authState.status != AuthStatus.authenticated || authState.user == null) {
+    return null;
+  }
+
+  final path = Uri.parse(state.matchedLocation).path;
+  if (path == verifyEmailRoute || path == resetPasswordRoute) {
     return null;
   }
 
@@ -929,6 +936,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: resetPasswordRoute,
         builder: (context, state) => _AuthPageGuard(
           child: ResetPasswordPage(token: state.uri.queryParameters['token']),
+        ),
+      ),
+      GoRoute(
+        path: verifyEmailRoute,
+        builder: (context, state) => _AuthPageGuard(
+          child: VerifyEmailPage(token: state.uri.queryParameters['token']),
         ),
       ),
       GoRoute(

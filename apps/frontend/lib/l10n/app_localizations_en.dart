@@ -2843,6 +2843,56 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your password has been updated. Sign in with your new password.';
 
   @override
+  String get emailVerificationTitle => 'Email verification';
+
+  @override
+  String get emailVerificationConfirming => 'Verifying your email...';
+
+  @override
+  String get emailVerificationSuccessTitle => 'Email verified';
+
+  @override
+  String get emailVerificationSuccessBody =>
+      'Your account is verified and all ImpactLoop features are now available.';
+
+  @override
+  String get emailVerificationInvalidToken =>
+      'This verification link is invalid.';
+
+  @override
+  String get emailVerificationExpiredToken =>
+      'This verification link has expired.';
+
+  @override
+  String get emailVerificationUsedToken =>
+      'This verification link has already been used.';
+
+  @override
+  String get emailVerificationGenericFailure =>
+      'We could not verify your email. Please try again.';
+
+  @override
+  String get emailVerificationContinue => 'Continue';
+
+  @override
+  String get emailVerificationResendAction => 'Resend verification email';
+
+  @override
+  String get emailVerificationResendSuccess =>
+      'Verification email sent. Check your inbox.';
+
+  @override
+  String get emailVerificationRequiredTitle => 'Email verification required';
+
+  @override
+  String get reservationEmailVerificationRequired =>
+      'Please verify your email before creating a new reservation request.';
+
+  @override
+  String get supplierMaterialEmailVerificationRequired =>
+      'Please verify your email before publishing a new material.';
+
+  @override
   String get goToSignIn => 'Go to sign in';
 
   @override

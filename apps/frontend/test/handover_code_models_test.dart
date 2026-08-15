@@ -58,16 +58,21 @@ void main() {
     expect(pickedUp.toJson(), {
       'status': 'PICKED_UP',
       'confirmationCode': '123456',
+      'cashReceivedConfirmed': false,
     });
     expect(delivered.toJson(), {
       'status': 'DELIVERED',
       'confirmationCode': '654321',
+      'cashReceivedConfirmed': false,
     });
   });
 
   test('UpdateDriverDeliveryStatusRequest omits empty confirmationCode', () {
     const request = UpdateDriverDeliveryStatusRequest(status: 'ARRIVED_PICKUP');
 
-    expect(request.toJson(), {'status': 'ARRIVED_PICKUP'});
+    expect(request.toJson(), {
+      'status': 'ARRIVED_PICKUP',
+      'cashReceivedConfirmed': false,
+    });
   });
 }

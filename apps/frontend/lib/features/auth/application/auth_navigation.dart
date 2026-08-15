@@ -59,7 +59,8 @@ String sanitizeRedirectTarget(String? from, {String fallback = rootRoute}) {
       path == loginRoute ||
       path == registerRoute ||
       path == forgotPasswordRoute ||
-      path == resetPasswordRoute) {
+      path == resetPasswordRoute ||
+      path == verifyEmailRoute) {
     return fallback;
   }
 

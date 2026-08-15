@@ -23,6 +23,7 @@ String buildChecklistMaterialDetailUri({
   required String buildItemId,
   String? componentName,
   String? returnTo,
+  double? requestedQuantity,
 }) {
   final resolvedReturnTo = Uri.encodeComponent(
     returnTo ?? '/learning/$projectId/build',

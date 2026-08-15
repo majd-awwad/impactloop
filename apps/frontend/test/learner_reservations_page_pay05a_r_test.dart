@@ -172,6 +172,14 @@ Future<GoRouter> _pumpRouted(
         },
       ),
       GoRoute(
+        path: '/learner/checkout/reservation/:reservationId',
+        builder: (context, state) => Scaffold(
+          body: Text(
+            'checkout-reservation:${state.pathParameters['reservationId']}',
+          ),
+        ),
+      ),
+      GoRoute(
         path: '/learner/checkout/:orderId',
         builder: (context, state) =>
             Scaffold(body: Text('checkout:${state.pathParameters['orderId']}')),
@@ -248,14 +256,16 @@ void main() {
     await _pumpRouted(tester, reservations: [reservation]);
 
     expect(find.byType(LearnerReservationListCard), findsOneWidget);
-    await tester.tap(find.byKey(const Key('reservation-view-details')));
+    final detailsButton = find.byKey(const Key('reservation-view-details'));
+    await tester.ensureVisible(detailsButton);
+    await tester.tap(detailsButton);
     await tester.pumpAndSettle();
 
     expect(find.byType(LearnerReservationDetailsBody), findsOneWidget);
     expect(find.byKey(const Key('reservation-view-details')), findsNothing);
   });
 
-  testWidgets('Pay CTA opens details payment focus with checkoutable order', (
+  testWidgets('Pay CTA opens reservation checkout with checkoutable order', (
     tester,
   ) async {
     final reservation = LearnerReservation.fromJson(
@@ -272,9 +282,8 @@ void main() {
     await tester.tap(payButton);
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('checkout:'), findsNothing);
-    expect(find.byType(LearnerReservationDetailsBody), findsOneWidget);
-    expect(find.byKey(const Key('checkoutable-order-ord-99')), findsOneWidget);
+    expect(find.text('checkout-reservation:res-pay'), findsOneWidget);
+    expect(find.byType(LearnerReservationDetailsBody), findsNothing);
   });
 
   testWidgets('closed card has no error accent and no pay CTA', (tester) async {
@@ -340,7 +349,7 @@ void main() {
       size: const Size(390, 844),
     );
 
-    expect(find.text('حجوزاتي'), findsOneWidget);
+    expect(find.text('حجوزاتي'), findsWidgets);
     expect(find.byTooltip('تحديث'), findsOneWidget);
     expect(find.text('يتطلب إجراء'), findsWidgets);
     expect(find.text('1 قطعة'), findsNothing);
@@ -367,11 +376,11 @@ void main() {
       initialLocation: '/learner/reservations/res-ar-d',
     );
 
-    expect(find.text('تفاصيل الحجز'), findsOneWidget);
-    expect(find.text('جميع الحجوزات'), findsOneWidget);
+    expect(find.text('تفاصيل الحجز'), findsWidgets);
+    expect(find.text('حجوزاتي'), findsOneWidget);
     expect(find.text('تحديث'), findsWidgets);
     expect(find.text('Reservation details'), findsNothing);
-    expect(find.text('All reservations'), findsNothing);
+    expect(find.text('My reservations'), findsNothing);
     expect(find.text('Refresh'), findsNothing);
   });
 

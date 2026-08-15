@@ -612,10 +612,14 @@ const linkMaterialRequestMatchToReservation = async (input: {
   });
 };
 
+import { assertEmailVerifiedForMarketplaceCommitment } from '../auth/email-verification.policy.js';
+
 export const createReservation = async (
   requesterId: string,
   input: CreateReservationInput,
 ) => {
+  await assertEmailVerifiedForMarketplaceCommitment(requesterId);
+
   if (input.fulfillmentMethod === 'PICKUP') {
     for (const window of input.learnerPreferredPickupWindows ?? []) {
       assertValidPickupWindow(

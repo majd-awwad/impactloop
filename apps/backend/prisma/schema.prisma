@@ -649,6 +649,7 @@ model User {
   recommendationEvidenceEligibility      RecommendationEvidenceEligibility      @default(ELIGIBLE) @map("recommendation_evidence_eligibility")
   profileImageUrl                        String?                                @map("profile_image_url")
   emailVerifiedAt                        DateTime?                              @map("email_verified_at")
+  emailVerificationRequired              Boolean                                @default(false) @map("email_verification_required")
   phoneVerifiedAt                        DateTime?                              @map("phone_verified_at")
   lastLoginAt                            DateTime?                              @map("last_login_at")
   activeRole                             UserRole?                              @map("active_role")

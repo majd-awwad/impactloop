@@ -24,6 +24,8 @@ import {
   postBecomeSupplier,
   postBecomeLearner,
   postSwitchRole,
+  postResendEmailVerification,
+  postConfirmEmailVerification,
 } from './auth.controller.js';
 
 import { getRefreshTokenRateLimitKey } from './auth-token-delivery.js';
@@ -37,6 +39,7 @@ import {
   becomeSupplierSchema,
   becomeLearnerSchema,
   switchRoleSchema,
+  confirmEmailVerificationSchema,
 } from './auth.validation.js';
 
 export const authRouter = Router();
@@ -112,6 +115,30 @@ const resetPasswordTokenPolicy: RateLimitPolicy = {
   max: 5,
 };
 
+const emailVerificationResendIpPolicy: RateLimitPolicy = {
+  name: 'email-verification-resend-ip',
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+};
+
+const emailVerificationResendUserPolicy: RateLimitPolicy = {
+  name: 'email-verification-resend-user',
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+};
+
+const emailVerificationConfirmIpPolicy: RateLimitPolicy = {
+  name: 'email-verification-confirm-ip',
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+};
+
+const emailVerificationConfirmTokenPolicy: RateLimitPolicy = {
+  name: 'email-verification-confirm-token',
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+};
+
 const registerIpRateLimit = createRateLimitMiddleware({
   policy: registerIpPolicy,
   keyGenerator: getRequestIp,
@@ -162,6 +189,29 @@ const resetPasswordTokenRateLimit = createRateLimitMiddleware({
   keyGenerator: (req) => normalizeBodyToken(req.body?.token),
 });
 
+const getAuthenticatedUserId = (req: Request): string =>
+  req.auth?.sub ?? 'missing';
+
+const emailVerificationResendIpRateLimit = createRateLimitMiddleware({
+  policy: emailVerificationResendIpPolicy,
+  keyGenerator: getRequestIp,
+});
+
+const emailVerificationResendUserRateLimit = createRateLimitMiddleware({
+  policy: emailVerificationResendUserPolicy,
+  keyGenerator: getAuthenticatedUserId,
+});
+
+const emailVerificationConfirmIpRateLimit = createRateLimitMiddleware({
+  policy: emailVerificationConfirmIpPolicy,
+  keyGenerator: getRequestIp,
+});
+
+const emailVerificationConfirmTokenRateLimit = createRateLimitMiddleware({
+  policy: emailVerificationConfirmTokenPolicy,
+  keyGenerator: (req) => normalizeBodyToken(req.body?.token),
+});
+
 authRouter.post(
   '/register',
   registerIpRateLimit,
@@ -192,6 +242,22 @@ authRouter.post(
   validate(resetPasswordSchema),
   resetPasswordTokenRateLimit,
   asyncHandler(resetPassword),
+);
+
+authRouter.post(
+  '/email-verification/resend',
+  authMiddleware,
+  emailVerificationResendIpRateLimit,
+  emailVerificationResendUserRateLimit,
+  asyncHandler(postResendEmailVerification),
+);
+
+authRouter.post(
+  '/email-verification/confirm',
+  emailVerificationConfirmIpRateLimit,
+  validate(confirmEmailVerificationSchema),
+  emailVerificationConfirmTokenRateLimit,
+  asyncHandler(postConfirmEmailVerification),
 );
 
 authRouter.post(

@@ -24,9 +24,9 @@ class AiAssistantLauncher extends ConsumerWidget {
     }
 
     // Hide on transaction-heavy reservation surfaces so the FAB cannot cover CTAs.
-    final path = GoRouterState.of(context).uri.path;
+    final path = GoRouter.maybeOf(context)?.state.uri.path;
     if (path == '/learner/reservations' ||
-        path.startsWith('/learner/reservations/')) {
+        (path?.startsWith('/learner/reservations/') ?? false)) {
       return const SizedBox.shrink();
     }
 

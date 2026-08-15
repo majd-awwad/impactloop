@@ -2804,6 +2804,53 @@ class AppLocalizationsAr extends AppLocalizations {
       'تم تحديث كلمة المرور. سجّل الدخول باستخدام كلمة المرور الجديدة.';
 
   @override
+  String get emailVerificationTitle => 'التحقق من البريد الإلكتروني';
+
+  @override
+  String get emailVerificationConfirming => 'جارٍ تأكيد بريدك الإلكتروني...';
+
+  @override
+  String get emailVerificationSuccessTitle => 'تم تأكيد بريدك الإلكتروني';
+
+  @override
+  String get emailVerificationSuccessBody =>
+      'أصبح حسابك موثقًا ويمكنك استخدام جميع ميزات ImpactLoop.';
+
+  @override
+  String get emailVerificationInvalidToken => 'رابط التحقق غير صالح.';
+
+  @override
+  String get emailVerificationExpiredToken => 'انتهت صلاحية رابط التحقق.';
+
+  @override
+  String get emailVerificationUsedToken => 'تم استخدام رابط التحقق مسبقًا.';
+
+  @override
+  String get emailVerificationGenericFailure =>
+      'تعذر تأكيد بريدك الإلكتروني. حاول مرة أخرى.';
+
+  @override
+  String get emailVerificationContinue => 'متابعة';
+
+  @override
+  String get emailVerificationResendAction => 'إعادة إرسال رسالة التحقق';
+
+  @override
+  String get emailVerificationResendSuccess =>
+      'تم إرسال رسالة التحقق. راجع بريدك الإلكتروني.';
+
+  @override
+  String get emailVerificationRequiredTitle => 'يلزم تأكيد البريد الإلكتروني';
+
+  @override
+  String get reservationEmailVerificationRequired =>
+      'يرجى تأكيد بريدك الإلكتروني قبل إنشاء طلب حجز جديد.';
+
+  @override
+  String get supplierMaterialEmailVerificationRequired =>
+      'يرجى تأكيد بريدك الإلكتروني قبل نشر مادة جديدة.';
+
+  @override
   String get goToSignIn => 'الانتقال إلى تسجيل الدخول';
 
   @override

@@ -83,6 +83,7 @@ export type UserSummary = {
   learnerProfile: LearnerProfileSummary | null;
   supplierProfile: SupplierProfileSummary | null;
   emailVerifiedAt: string | null;
+  emailVerificationRequired: boolean;
   phoneVerifiedAt: string | null;
   lastLoginAt: string | null;
   createdAt: string;
@@ -112,6 +113,30 @@ const PASSWORD_RESET_ACCOUNT_RATE_LIMIT = {
   max: 5,
 };
 
+const EMAIL_VERIFICATION_RESEND_ACCOUNT_RATE_LIMIT = {
+  name: 'email-verification-resend-account',
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+};
+
+const EMAIL_VERIFICATION_ALREADY_VERIFIED_MESSAGE =
+  'Email is already verified.';
+
+const EMAIL_VERIFICATION_RESEND_MESSAGE =
+  'If your account requires verification, a verification email has been sent.';
+
+const EMAIL_VERIFICATION_CONFIRM_SUCCESS_MESSAGE =
+  'Email verified successfully.';
+
+export const EMAIL_VERIFICATION_TOKEN_INVALID_CODE =
+  'EMAIL_VERIFICATION_TOKEN_INVALID';
+
+export const EMAIL_VERIFICATION_TOKEN_EXPIRED_CODE =
+  'EMAIL_VERIFICATION_TOKEN_EXPIRED';
+
+export const EMAIL_VERIFICATION_TOKEN_USED_CODE =
+  'EMAIL_VERIFICATION_TOKEN_USED';
+
 const toUserSummary = (
   user: {
     id: string;
@@ -122,6 +147,7 @@ const toUserSummary = (
     profileImageUrl: string | null;
     activeRole: UserRole | null;
     emailVerifiedAt: Date | null;
+    emailVerificationRequired: boolean;
     phoneVerifiedAt: Date | null;
     lastLoginAt: Date | null;
     createdAt: Date;
@@ -196,6 +222,7 @@ const toUserSummary = (
         }
       : null,
     emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+    emailVerificationRequired: user.emailVerificationRequired,
     phoneVerifiedAt: user.phoneVerifiedAt?.toISOString() ?? null,
     lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
     createdAt: user.createdAt.toISOString(),
@@ -270,6 +297,178 @@ const buildPasswordResetLink = (token: string): string => {
   resetUrl.searchParams.set('token', token);
 
   return resetUrl.toString();
+};
+
+const assertEmailVerificationLinkConfig = (): void => {
+  assertPasswordResetLinkConfig();
+};
+
+const getEmailVerificationExpiry = (): Date => {
+  const duration = env.emailVerificationExpiresIn;
+  const match = duration.match(/^(\d+)([smhd])$/);
+
+  if (!match) {
+    return new Date(Date.now() + 24 * 60 * 60 * 1000);
+  }
+
+  const amount = Number(match[1]);
+  const unit = match[2];
+
+  const multipliers: Record<string, number> = {
+    s: 1000,
+    m: 60 * 1000,
+    h: 60 * 60 * 1000,
+    d: 24 * 60 * 60 * 1000,
+  };
+
+  return new Date(Date.now() + amount * multipliers[unit]!);
+};
+
+const buildEmailVerificationLink = (token: string): string => {
+  assertEmailVerificationLinkConfig();
+
+  const verificationUrl = new URL(
+    '/verify-email',
+    `${env.appPublicBaseUrl}/`,
+  );
+  verificationUrl.searchParams.set('token', token);
+
+  return verificationUrl.toString();
+};
+
+const issueEmailVerificationToken = async (user: {
+  id: string;
+  email: string;
+}): Promise<void> => {
+  assertEmailVerificationLinkConfig();
+
+  const verificationToken = generateOpaqueToken();
+  const expiresAt = getEmailVerificationExpiry();
+  const verificationLink = buildEmailVerificationLink(verificationToken);
+
+  await authRepository.invalidateEmailVerificationTokens(user.id);
+
+  await authRepository.createAuthTokenRecord({
+    userId: user.id,
+    tokenHash: hashToken(verificationToken),
+    tokenType: 'EMAIL_VERIFICATION',
+    target: user.email,
+    expiresAt,
+  });
+
+  const emailResult = await getAuthEmailProvider().sendEmailVerificationEmail({
+    recipientEmail: user.email,
+    verificationLink,
+    expiresAt,
+  });
+
+  if (emailResult.status === 'FAILED') {
+    logAuthEmailFailure('Email verification email', emailResult.sendError);
+  }
+};
+
+export const sendEmailVerificationAfterRegistration = async (
+  userId: string,
+): Promise<void> => {
+  try {
+    const user = await authRepository.findUserEmailVerificationTarget(userId);
+
+    if (!user || user.emailVerifiedAt || !user.emailVerificationRequired) {
+      return;
+    }
+
+    await issueEmailVerificationToken(user);
+  } catch (error) {
+    logAuthEmailFailure(
+      'Email verification after registration',
+      error instanceof Error ? error.message : undefined,
+    );
+  }
+};
+
+export type EmailVerificationActionResult = {
+  message: string;
+};
+
+export const resendEmailVerification = async (
+  userId: string,
+): Promise<EmailVerificationActionResult> => {
+  const user = await authRepository.findUserEmailVerificationTarget(userId);
+
+  if (!user) {
+    throw new AppError('User not found', 404, COMMON_ERROR_CODES.notFound);
+  }
+
+  if (user.emailVerifiedAt) {
+    return { message: EMAIL_VERIFICATION_ALREADY_VERIFIED_MESSAGE };
+  }
+
+  checkRateLimit(userId, EMAIL_VERIFICATION_RESEND_ACCOUNT_RATE_LIMIT);
+
+  await issueEmailVerificationToken(user);
+
+  return { message: EMAIL_VERIFICATION_RESEND_MESSAGE };
+};
+
+export const confirmEmailVerification = async (
+  token: string,
+): Promise<EmailVerificationActionResult> => {
+  const normalizedToken = token.trim();
+
+  if (!normalizedToken) {
+    throw new AppError(
+      'Invalid verification token',
+      400,
+      EMAIL_VERIFICATION_TOKEN_INVALID_CODE,
+    );
+  }
+
+  const storedToken = await authRepository.findEmailVerificationTokenByHash(
+    hashToken(normalizedToken),
+  );
+
+  if (!storedToken) {
+    throw new AppError(
+      'Invalid verification token',
+      400,
+      EMAIL_VERIFICATION_TOKEN_INVALID_CODE,
+    );
+  }
+
+  if (storedToken.usedAt) {
+    throw new AppError(
+      'Verification token has already been used',
+      400,
+      EMAIL_VERIFICATION_TOKEN_USED_CODE,
+    );
+  }
+
+  if (storedToken.expiresAt <= new Date()) {
+    throw new AppError(
+      'Verification token has expired',
+      400,
+      EMAIL_VERIFICATION_TOKEN_EXPIRED_CODE,
+    );
+  }
+
+  if (storedToken.user.emailVerifiedAt) {
+    return { message: EMAIL_VERIFICATION_CONFIRM_SUCCESS_MESSAGE };
+  }
+
+  const completed = await authRepository.completeEmailVerification({
+    tokenId: storedToken.id,
+    userId: storedToken.userId,
+  });
+
+  if (!completed) {
+    throw new AppError(
+      'Invalid verification token',
+      400,
+      EMAIL_VERIFICATION_TOKEN_INVALID_CODE,
+    );
+  }
+
+  return { message: EMAIL_VERIFICATION_CONFIRM_SUCCESS_MESSAGE };
 };
 
 const logAuthEmailFailure = (event: string, error?: string): void => {
@@ -347,7 +546,10 @@ export const registerUser = async (
     supplierProfile: parsed.supplierProfile,
   });
 
-  return createAuthSession(user);
+  const session = await createAuthSession(user);
+  void sendEmailVerificationAfterRegistration(user.id);
+
+  return session;
 };
 
 export const loginUser = async (input: LoginInput): Promise<AuthResult> => {

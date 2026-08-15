@@ -3,6 +3,7 @@ import { after, before, describe, test } from 'node:test';
 import type { NextFunction, Request, Response } from 'express';
 
 import { prisma } from '../../database/prisma.js';
+import { findPublishableMaterialCategoryId } from '../../test-support/publishable-category.fixture.js';
 import { requireRoles } from '../../middlewares/role.middleware.js';
 import { AppError } from '../../utils/app-error.js';
 import { deriveHandoverCode } from '../../utils/handover-codes.js';
@@ -237,12 +238,7 @@ describe('createReservation', () => {
   };
 
   before(async () => {
-    const category = await prisma.category.findFirst({
-      where: { categoryType: { in: ['MATERIAL', 'BOTH'] } },
-      select: { id: true },
-    });
-
-    assert.ok(category, 'Expected at least one material category');
+    const categoryId = await findPublishableMaterialCategoryId();
 
     const location = await prisma.location.create({
       data: {
@@ -276,7 +272,7 @@ describe('createReservation', () => {
       role: 'SUPPLIER',
     });
 
-    ctx.categoryId = category.id;
+    ctx.categoryId = categoryId;
     ctx.locationId = location.id;
     ctx.learnerId = learner.id;
     ctx.otherLearnerId = otherLearner.id;

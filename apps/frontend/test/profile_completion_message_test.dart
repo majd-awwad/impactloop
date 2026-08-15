@@ -89,10 +89,28 @@ void main() {
 
   test('account notice prioritizes email before phone', () {
     final notice = resolveAccountVerificationNotice(
-      _user(emailVerified: false, phone: null, phoneVerified: false),
+      _user(
+        emailVerified: false,
+        emailVerificationRequired: true,
+        phone: null,
+        phoneVerified: false,
+      ),
     );
 
     expect(notice?.kind, AccountVerificationNoticeKind.emailUnverified);
+  });
+
+  test('legacy unverified email does not show verification notice', () {
+    final notice = resolveAccountVerificationNotice(
+      _user(
+        emailVerified: false,
+        emailVerificationRequired: false,
+        phone: '+970 599 000 000',
+        phoneVerified: true,
+      ),
+    );
+
+    expect(notice, isNull);
   });
 
   test('account notice then targets a missing phone', () {
@@ -117,6 +135,7 @@ User _user({
   ),
   String? phone = '+970 599 000 000',
   bool emailVerified = true,
+  bool emailVerificationRequired = false,
   bool phoneVerified = true,
 }) {
   return User(
@@ -128,6 +147,7 @@ User _user({
     learnerProfile: profile,
     phone: phone,
     emailVerifiedAt: emailVerified ? DateTime.utc(2026, 1, 2) : null,
+    emailVerificationRequired: emailVerificationRequired,
     phoneVerifiedAt: phoneVerified ? DateTime.utc(2026, 1, 2) : null,
     createdAt: DateTime.utc(2026),
   );

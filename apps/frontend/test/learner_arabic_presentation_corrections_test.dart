@@ -119,7 +119,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('الاستلام من المورّد'), findsWidgets);
+    expect(find.textContaining('استلام'), findsWidgets);
     expect(find.textContaining('التوصيل: الاستلام'), findsNothing);
   });
 

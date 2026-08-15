@@ -1,3 +1,4 @@
+import { assertEmailVerifiedForMarketplaceCommitment } from "../auth/email-verification.policy.js";
 import { AppError } from "../../utils/app-error.js";
 import { prisma } from "../../database/prisma.js";
 import { createNotification } from "../notifications/notifications.repository.js";
@@ -42,6 +43,8 @@ export const createSupplierMaterial = async (
   input: CreateSupplierMaterialInput,
   tx?: Prisma.TransactionClient,
 ) => {
+  await assertEmailVerifiedForMarketplaceCommitment(userId);
+
   const supplierProfile =
     await supplierRepository.findSupplierProfileForMaterialCreate(userId);
 

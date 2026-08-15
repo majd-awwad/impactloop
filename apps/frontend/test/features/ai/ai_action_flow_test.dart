@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../../support/learning_project_authoring_repository_stubs.dart';
+import '../../support/learning_hub_test_support.dart';
 
 import 'package:frontend/core/errors/api_exception.dart';
 import 'package:frontend/features/ai/application/ai_assistant_shell_provider.dart';
@@ -1345,7 +1346,9 @@ class _BuildOwnershipConfirmRepository extends _RecordingAiRepository {
   }
 }
 
-class _TrackingBuildRepository implements LearningProjectRepository {
+class _TrackingBuildRepository
+    with LearningHubRepositorySessionDefaults
+    implements LearningProjectRepository {
   int fetchMyBuildCalls = 0;
   String? lastProjectId;
 
@@ -1708,7 +1711,9 @@ class _StepCompletionConfirmRepository extends _RecordingAiRepository {
   }
 }
 
-class _StepCompletionTrackingBuildRepository implements LearningProjectRepository {
+class _StepCompletionTrackingBuildRepository
+    with LearningHubRepositorySessionDefaults
+    implements LearningProjectRepository {
   int fetchMyBuildCalls = 0;
   String? lastProjectId;
 

@@ -57,7 +57,7 @@ class AccountVerificationNoticeState {
 }
 
 AccountVerificationNoticeState? resolveAccountVerificationNotice(User user) {
-  if (user.emailVerifiedAt == null) {
+  if (user.emailVerificationRequired && user.emailVerifiedAt == null) {
     return const AccountVerificationNoticeState(
       AccountVerificationNoticeKind.emailUnverified,
     );

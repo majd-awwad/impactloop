@@ -58,7 +58,9 @@ void main() {
 
   test('verification notices use email then phone priority', () {
     expect(
-      resolveAccountVerificationNotice(_user())?.kind,
+      resolveAccountVerificationNotice(
+        _user(emailVerificationRequired: true),
+      )?.kind,
       AccountVerificationNoticeKind.emailUnverified,
     );
     expect(
@@ -125,6 +127,7 @@ class _TestAuthController extends AuthController {
 User _user({
   String? phone,
   DateTime? emailVerifiedAt,
+  bool emailVerificationRequired = false,
   DateTime? phoneVerifiedAt,
   List<String> roles = const ['LEARNER'],
   String activeRole = 'LEARNER',
@@ -138,6 +141,7 @@ User _user({
     roles: roles,
     activeRole: activeRole,
     emailVerifiedAt: emailVerifiedAt,
+    emailVerificationRequired: emailVerificationRequired,
     phoneVerifiedAt: phoneVerifiedAt,
     createdAt: DateTime(2026),
   );
