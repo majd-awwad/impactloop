@@ -4873,6 +4873,90 @@ abstract class AppLocalizations {
   /// **'Your password has been updated. Sign in with your new password.'**
   String get passwordUpdated;
 
+  /// No description provided for @emailVerificationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Email verification'**
+  String get emailVerificationTitle;
+
+  /// No description provided for @emailVerificationConfirming.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying your email...'**
+  String get emailVerificationConfirming;
+
+  /// No description provided for @emailVerificationSuccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Email verified'**
+  String get emailVerificationSuccessTitle;
+
+  /// No description provided for @emailVerificationSuccessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is verified and all ImpactLoop features are now available.'**
+  String get emailVerificationSuccessBody;
+
+  /// No description provided for @emailVerificationInvalidToken.
+  ///
+  /// In en, this message translates to:
+  /// **'This verification link is invalid.'**
+  String get emailVerificationInvalidToken;
+
+  /// No description provided for @emailVerificationExpiredToken.
+  ///
+  /// In en, this message translates to:
+  /// **'This verification link has expired.'**
+  String get emailVerificationExpiredToken;
+
+  /// No description provided for @emailVerificationUsedToken.
+  ///
+  /// In en, this message translates to:
+  /// **'This verification link has already been used.'**
+  String get emailVerificationUsedToken;
+
+  /// No description provided for @emailVerificationGenericFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not verify your email. Please try again.'**
+  String get emailVerificationGenericFailure;
+
+  /// No description provided for @emailVerificationContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get emailVerificationContinue;
+
+  /// No description provided for @emailVerificationResendAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend verification email'**
+  String get emailVerificationResendAction;
+
+  /// No description provided for @emailVerificationResendSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification email sent. Check your inbox.'**
+  String get emailVerificationResendSuccess;
+
+  /// No description provided for @emailVerificationRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Email verification required'**
+  String get emailVerificationRequiredTitle;
+
+  /// No description provided for @reservationEmailVerificationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please verify your email before creating a new reservation request.'**
+  String get reservationEmailVerificationRequired;
+
+  /// No description provided for @supplierMaterialEmailVerificationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please verify your email before publishing a new material.'**
+  String get supplierMaterialEmailVerificationRequired;
+
   /// No description provided for @goToSignIn.
   ///
   /// In en, this message translates to:

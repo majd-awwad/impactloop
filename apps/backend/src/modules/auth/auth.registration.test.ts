@@ -90,6 +90,8 @@ describe('auth registration', () => {
     ]);
     assert.equal(session.user.supplierProfile?.supplierType, 'STUDENT_SUPPLIER');
     assert.equal(session.user.supplierProfile?.verificationStatus, 'NOT_REQUIRED');
+    assert.equal(session.user.emailVerificationRequired, true);
+    assert.equal(session.user.emailVerifiedAt, null);
   });
 
   test('duplicate email returns CONFLICT', async () => {

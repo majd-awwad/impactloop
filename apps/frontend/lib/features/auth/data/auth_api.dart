@@ -133,6 +133,26 @@ class AuthApi {
     );
   }
 
+  Future<void> resendEmailVerification() {
+    return unwrapApiVoidResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_authBasePath/email-verification/resend',
+      ),
+    );
+  }
+
+  Future<void> confirmEmailVerification({required String token}) {
+    return unwrapApiVoidResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_authBasePath/email-verification/confirm',
+        data: {'token': token.trim()},
+        options: Options(
+          extra: const {AuthInterceptor.skipAuthRefreshExtraKey: true},
+        ),
+      ),
+    );
+  }
+
   Future<({AuthTokens tokens, User user})> _postAuthSession(
     String path, {
     required Map<String, dynamic> data,

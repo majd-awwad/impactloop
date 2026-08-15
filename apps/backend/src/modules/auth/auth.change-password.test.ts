@@ -11,6 +11,7 @@ import { verifyAccessToken } from '../../utils/jwt.js';
 import type {
   AuthEmailProvider,
   EmailSendResult,
+  EmailVerificationEmailPayload,
   PasswordChangedEmailPayload,
   PasswordResetEmailPayload,
 } from './email/auth-email-provider.js';
@@ -58,6 +59,12 @@ class RecordingAuthEmailProvider implements AuthEmailProvider {
     if (this.mode === 'failure') {
       return { status: 'FAILED', sendError: 'SMTP unavailable' };
     }
+    return { status: 'SENT' };
+  }
+
+  async sendEmailVerificationEmail(
+    _payload: EmailVerificationEmailPayload,
+  ): Promise<EmailSendResult> {
     return { status: 'SENT' };
   }
 }

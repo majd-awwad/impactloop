@@ -3,6 +3,7 @@ import { logger } from '../../../observability/logger.js';
 import type {
   AuthEmailProvider,
   EmailSendResult,
+  EmailVerificationEmailPayload,
   PasswordChangedEmailPayload,
   PasswordResetEmailPayload,
 } from './auth-email-provider.js';
@@ -53,6 +54,35 @@ export class MockAuthEmailProvider implements AuthEmailProvider {
       },
       'Mock auth password changed email generated',
     );
+
+    return { status: 'SENT' };
+  }
+
+  async sendEmailVerificationEmail(
+    payload: EmailVerificationEmailPayload,
+  ): Promise<EmailSendResult> {
+    if (canLogMockEmailLinks()) {
+      logger.info(
+        {
+          operation: 'mock_auth_email.email_verification',
+          emailType: 'email_verification',
+          recipientDomain: recipientDomain(payload.recipientEmail),
+          expiresAt: payload.expiresAt.toISOString(),
+          mockDevLink: payload.verificationLink,
+        },
+        'Mock auth email verification email generated',
+      );
+    } else {
+      logger.info(
+        {
+          operation: 'mock_auth_email.email_verification',
+          emailType: 'email_verification',
+          recipientDomain: recipientDomain(payload.recipientEmail),
+          expiresAt: payload.expiresAt.toISOString(),
+        },
+        'Mock auth email verification email generated',
+      );
+    }
 
     return { status: 'SENT' };
   }

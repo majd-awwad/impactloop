@@ -16,6 +16,7 @@ import '../../../reservations/data/models/create_reservation_request.dart';
 import '../../../reservations/data/models/reservation_preferred_window.dart';
 import '../../../reservations/data/models/reservation_quote.dart';
 import '../../../reservations/data/reservations_repository.dart';
+import '../../../auth/application/email_verification_actions.dart';
 import '../../../reservations/presentation/reservation_create_error_message.dart';
 import '../../domain/discovery_material.dart';
 import '../reservation_dialog_copy.dart';
@@ -570,14 +571,7 @@ class MaterialReservationDialogState
           ),
         );
       } on ApiException catch (error) {
-        if (!mounted) return;
-        setState(() {
-          _isSubmitting = false;
-          _errorMessage = reservationCreateErrorMessage(
-            error,
-            l10n: context.l10n,
-          );
-        });
+        await _handleReservationSubmitError(error);
         return;
       } catch (_) {
         if (!mounted) return;
@@ -627,14 +621,7 @@ class MaterialReservationDialogState
           ),
         );
       } on ApiException catch (error) {
-        if (!mounted) return;
-        setState(() {
-          _isSubmitting = false;
-          _errorMessage = reservationCreateErrorMessage(
-            error,
-            l10n: context.l10n,
-          );
-        });
+        await _handleReservationSubmitError(error);
         return;
       } catch (_) {
         if (!mounted) return;
@@ -656,6 +643,30 @@ class MaterialReservationDialogState
     }
 
     Navigator.of(context).pop();
+  }
+
+  Future<void> _handleReservationSubmitError(ApiException error) async {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => _isSubmitting = false);
+
+    if (isEmailVerificationRequiredError(error)) {
+      await showEmailVerificationRequiredDialog(
+        context,
+        ref,
+        message: reservationCreateErrorMessage(error, l10n: context.l10n),
+      );
+      return;
+    }
+
+    setState(() {
+      _errorMessage = reservationCreateErrorMessage(
+        error,
+        l10n: context.l10n,
+      );
+    });
   }
 
   Widget _buildFormSections({

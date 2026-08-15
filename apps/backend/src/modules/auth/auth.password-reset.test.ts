@@ -14,6 +14,7 @@ import { generateOpaqueToken, hashToken } from '../../utils/token.js';
 import type {
   AuthEmailProvider,
   EmailSendResult,
+  EmailVerificationEmailPayload,
   PasswordChangedEmailPayload,
   PasswordResetEmailPayload,
 } from './email/auth-email-provider.js';
@@ -47,6 +48,12 @@ class RecordingAuthEmailProvider implements AuthEmailProvider {
     payload: PasswordChangedEmailPayload,
   ): Promise<EmailSendResult> {
     this.passwordChangedEmails.push(payload);
+    return { status: 'SENT' };
+  }
+
+  async sendEmailVerificationEmail(
+    _payload: EmailVerificationEmailPayload,
+  ): Promise<EmailSendResult> {
     return { status: 'SENT' };
   }
 }

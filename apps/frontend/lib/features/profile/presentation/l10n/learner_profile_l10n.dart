@@ -255,10 +255,14 @@ class LearnerProfileL10n {
   String memberSince(String date) => t('Member since $date', 'عضو منذ $date');
 
   String get emailNotVerifiedTitle =>
-      t('Email not verified', 'البريد الإلكتروني غير موثّق');
+      t('Email not verified', 'بريدك الإلكتروني غير موثق');
   String get emailNotVerifiedBody => t(
-    'Email verification is still pending for this account.',
-    'لا يزال توثيق البريد الإلكتروني معلقاً لهذا الحساب.',
+    'Verify your email to create new reservations and publish materials.',
+    'تحقق من بريدك لتتمكن من إنشاء حجوزات جديدة ونشر مواد.',
+  );
+  String get resendEmailVerificationAction => t(
+    'Resend verification email',
+    'إعادة إرسال رسالة التحقق',
   );
   String get phoneMissingTitle => t('Add a phone number', 'أضف رقم هاتف');
   String get phoneMissingBody => t(

@@ -23,6 +23,8 @@ import {
   becomeSupplier,
   becomeLearner,
   switchActiveRole,
+  resendEmailVerification,
+  confirmEmailVerification,
 } from './auth.service.js';
 
 import type {
@@ -34,6 +36,7 @@ import type {
   BecomeSupplierInput,
   BecomeLearnerInput,
   SwitchRoleInput,
+  ConfirmEmailVerificationInput,
 } from './auth.validation.js';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -155,4 +158,23 @@ export const postSwitchRole = async (
   const result = await switchActiveRole(req.auth!.sub, activeRole);
 
   sendAuthSessionResponse(req, res, 'Active role updated', result);
+};
+
+export const postResendEmailVerification = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const result = await resendEmailVerification(req.auth!.sub);
+
+  res.json(successResponse(result.message, result));
+};
+
+export const postConfirmEmailVerification = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { token } = req.body as ConfirmEmailVerificationInput;
+  const result = await confirmEmailVerification(token);
+
+  res.json(successResponse(result.message, result));
 };

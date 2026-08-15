@@ -24,6 +24,7 @@ import '../../../materials/data/models/material_price_check_result.dart';
 import '../../../materials/data/models/material_type.dart' as material_models;
 import '../../../materials/data/models/price_rule_request.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../auth/application/email_verification_actions.dart';
 import '../../application/supplier_material_requests_providers.dart';
 import '../../application/supplier_my_materials_providers.dart';
 import '../../application/supplier_verification_access.dart';
@@ -2320,6 +2321,18 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       context.popOrGo('/supplier/materials');
     } on ApiException catch (error) {
       if (!mounted) return;
+      if (isEmailVerificationRequiredError(error)) {
+        await showEmailVerificationRequiredDialog(
+          context,
+          ref,
+          message: localizedApiErrorMessage(
+            error,
+            context.l10n,
+            operation: 'supplier_material',
+          ),
+        );
+        return;
+      }
       showSupplierErrorSnackBar(context, _apiErrorMessage(error));
     } catch (_) {
       if (!mounted) return;

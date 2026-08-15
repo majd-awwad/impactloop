@@ -5,6 +5,7 @@ const loginRoute = '/login';
 const registerRoute = '/register';
 const forgotPasswordRoute = '/forgot-password';
 const resetPasswordRoute = '/reset-password';
+const verifyEmailRoute = '/verify-email';
 const authCheckingRoute = '/auth/checking';
 const supplierPortalRoute = '/supplier';
 const supplierOverviewRoute = '/supplier/overview';

@@ -165,6 +165,15 @@ String localizedApiErrorMessage(
       return l10n.forbiddenError;
     case 'ACCOUNT_SUSPENDED':
       return l10n.accountSuspended;
+    case 'EMAIL_VERIFICATION_REQUIRED':
+      return operation == 'supplier_material'
+          ? l10n.supplierMaterialEmailVerificationRequired
+          : l10n.reservationEmailVerificationRequired;
+    case 'EMAIL_VERIFICATION_TOKEN_EXPIRED':
+      return l10n.emailVerificationExpiredToken;
+    case 'EMAIL_VERIFICATION_TOKEN_INVALID':
+    case 'EMAIL_VERIFICATION_TOKEN_USED':
+      return l10n.emailVerificationInvalidToken;
     case 'PICKUP_WINDOW_REQUIRED':
       return l10n.pickupWindowRequired;
     case 'RESERVATION_EXPIRED':

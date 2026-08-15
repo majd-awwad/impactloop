@@ -6,6 +6,7 @@ import { sanitizeSmtpError } from '../../invitations/email/smtp-utils.js';
 import type {
   AuthEmailProvider,
   EmailSendResult,
+  EmailVerificationEmailPayload,
   PasswordChangedEmailPayload,
   PasswordResetEmailPayload,
 } from './auth-email-provider.js';
@@ -101,6 +102,51 @@ export class SmtpAuthEmailProvider implements AuthEmailProvider {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Password changed email failed';
+      return {
+        status: 'FAILED',
+        sendError: sanitizeSmtpError(message),
+      };
+    }
+  }
+
+  async sendEmailVerificationEmail(
+    payload: EmailVerificationEmailPayload,
+  ): Promise<EmailSendResult> {
+    const configurationErrors = getSmtpConfigurationErrors();
+
+    if (configurationErrors.length > 0) {
+      return {
+        status: 'FAILED',
+        sendError: configurationErrors.join('; '),
+      };
+    }
+
+    const verificationLink = escapeHtml(payload.verificationLink);
+    const expiresAt = escapeHtml(payload.expiresAt.toISOString());
+
+    try {
+      await this.transporter.sendMail({
+        from: env.smtpFrom,
+        to: payload.recipientEmail,
+        subject: 'Verify your ImpactLoop email',
+        text:
+          'Use this link to verify your ImpactLoop email address. ' +
+          `It expires at ${payload.expiresAt.toISOString()}.\n\n` +
+          `${payload.verificationLink}\n\n` +
+          'If you did not create this account, you can ignore this email.',
+        html:
+          '<p>Use this link to verify your ImpactLoop email address.</p>' +
+          `<p><a href="${verificationLink}">Verify your email</a></p>` +
+          `<p>This link expires at ${expiresAt}.</p>` +
+          '<p>If you did not create this account, you can ignore this email.</p>',
+      });
+
+      return { status: 'SENT' };
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Email verification email failed';
       return {
         status: 'FAILED',
         sendError: sanitizeSmtpError(message),
