@@ -1,16 +1,18 @@
-# frontend
+# ImpactLoop frontend
 
-A new Flutter project.
+Flutter client for ImpactLoop (web and mobile). Feature code lives under `lib/features/`; routing uses GoRouter; state management uses Riverpod.
 
-## Getting Started
+## Run locally
 
-This project is a starting point for a Flutter application.
+```bash
+flutter pub get
+flutter run -d chrome   # or another device
+```
 
-A few resources to get you started if this is your first Flutter project:
+The API defaults to `http://localhost:4000` in development. Release builds require `API_BASE_URL` or `API_USE_SAME_ORIGIN` — see [docs/deployment.md](../../docs/deployment.md).
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Documentation
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- [Repository README](../../README.md) — project overview and setup
+- [docs/frontend/routes-map.md](../../docs/frontend/routes-map.md) — routes and guards
+- [docs/development/local-development.md](../../docs/development/local-development.md) — full local setup

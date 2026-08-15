@@ -10,22 +10,34 @@ Documents the implemented Mock + enforcement-ON payment journey for reservations
 
 ## Happy paths
 
-### Paid pickup
+### Paid pickup (`CARD`)
 
-1. Learner reserves PICKUP with positive `materialSubtotal`.
-2. Supplier accepts → `MATERIAL_SUBTOTAL` PaymentOrder.
-3. Learner opens reservation → Pay now → reservation-scoped checkout.
-4. One Mock charge → order PAID; no Delivery.
+1. Learner reserves PICKUP with positive `materialSubtotal` and `paymentMethod: CARD`.
+2. Supplier accepts → `MATERIAL_SUBTOTAL` PaymentOrder (`CARD`).
+3. Learner opens reservation → Pay now → reservation-scoped Mock checkout.
+4. One Mock charge → order `PAID`; no Delivery.
 5. Pickup code hidden before window; visible inside window.
 6. Supplier completes with correct handover code.
 
+### Paid pickup (`CASH`)
+
+1. Learner reserves with `paymentMethod: CASH` (not allowed with `safeDropoffAllowed`).
+2. Supplier accepts → `MATERIAL_SUBTOTAL` PaymentOrder (`CASH`, `REQUIRES_PAYMENT`).
+3. No checkout — Pay CTA is not used; cash is due at handover.
+4. Pickup code/window rules still apply when payment readiness is `fulfillmentReady` for cash.
+5. Supplier completes pickup and confirms cash collection when `cashDueAtHandover` is true.
+
 ### Free pickup
 
-`materialSubtotal = 0` → no PaymentOrder → no checkout → payment status **not required** → pickup rules still apply.
+`materialSubtotal = 0` → no PaymentOrder → no checkout → payment status **not required** → pickup rules still apply (any `paymentMethod`).
 
-### Delivery selected before payment
+### Delivery selected before payment (`CARD`)
 
-Material + fee obligations exist → one CheckoutSession totaling both → one Mock attempt → both settle atomically → Delivery `WAITING_FOR_DRIVER` once → driver notify after settlement. UI must not say “two separate payments”.
+Material + fee obligations exist (`CARD`) → one CheckoutSession totaling both → one Mock attempt → both settle atomically → Delivery `WAITING_FOR_DRIVER` once → driver notify after settlement. UI must not say “two separate payments”.
+
+### Delivery with `CASH` material payment
+
+Material obligation remains `CASH` / `REQUIRES_PAYMENT` at handover. Delivery fee (if any) may still be `CARD` and require separate Mock checkout before driver notify — verify combined requirement API for the reservation/group.
 
 ### Paid pickup then Request Delivery
 

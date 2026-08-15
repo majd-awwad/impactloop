@@ -1,6 +1,6 @@
 # Auth Feature
 
-**Sources inspected:** `apps/frontend/lib/features/auth/`, `apps/backend/src/modules/auth/`, `apps/frontend/lib/app/router/app_router.dart`, `apps/frontend/lib/core/auth/`, `docs/backend/api-catalog.md`, `docs/08-implementation-status.md`
+**Sources inspected:** `apps/frontend/lib/features/auth/`, `apps/backend/src/modules/auth/`, `apps/frontend/lib/app/router/app_router.dart`, `apps/frontend/lib/core/auth/`, `docs/backend/api-catalog.md`, `docs/product/implementation-status.md`
 
 ## Purpose
 

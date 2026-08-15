@@ -1,6 +1,6 @@
 # Invitations Feature
 
-**Sources inspected:** `apps/backend/src/modules/invitations/*`, `apps/backend/src/modules/admin/*`, `apps/backend/src/app.ts`, `apps/backend/prisma/schema.prisma`, `apps/frontend/lib/features/invitations/`, `apps/frontend/lib/features/admin_portal/`, `apps/frontend/lib/app/router/app_router.dart`, `docs/backend/api-catalog.md`, `docs/frontend/routes-map.md`, `docs/08-implementation-status.md`
+**Sources inspected:** `apps/backend/src/modules/invitations/*`, `apps/backend/src/modules/admin/*`, `apps/backend/src/app.ts`, `apps/backend/prisma/schema.prisma`, `apps/frontend/lib/features/invitations/`, `apps/frontend/lib/features/admin_portal/`, `apps/frontend/lib/app/router/app_router.dart`, `docs/backend/api-catalog.md`, `docs/frontend/routes-map.md`, `docs/product/implementation-status.md`
 
 ## Purpose
 

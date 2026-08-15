@@ -31,7 +31,7 @@ Delivery request state must not use a separate `delivery_requests` table. ADR 00
 - [docs/database/tables-catalog.md](../database/tables-catalog.md) documents the `deliveries` table and legacy `reservations` delivery fields.
 - [docs/features/reservations.md](../features/reservations.md) marks learner create and supplier list/accept/decline/complete as partial, with delivery handled by the delivery feature.
 - [docs/features/delivery.md](../features/delivery.md) documents learner request/status/tracking UI and driver jobs/status/manual ping UI.
-- [docs/08-implementation-status.md](../08-implementation-status.md) marks delivery workflow as partial with backend and Flutter learner/driver delivery surfaces implemented.
+- [docs/product/implementation-status.md](../product/implementation-status.md) marks delivery workflow as partial with backend and Flutter learner/driver delivery surfaces implemented.
 - [apps/backend/src/app.ts](../../apps/backend/src/app.ts) mounts `/api/deliveries` and `/api/driver`, and no `/api/delivery-requests` router.
 - [apps/backend/prisma/schema.prisma](../../apps/backend/prisma/schema.prisma) defines `Delivery` models and no `DeliveryRequest` model.
 
@@ -43,4 +43,4 @@ Delivery request state must not use a separate `delivery_requests` table. ADR 00
 - [docs/flows/learner-reservation-flow.md](../flows/learner-reservation-flow.md)
 - [docs/backend/api-catalog.md](../backend/api-catalog.md)
 - [docs/database/schema-overview.md](../database/schema-overview.md)
-- [docs/09-open-questions.md](../09-open-questions.md)
+- [docs/product/open-questions.md](../product/open-questions.md)

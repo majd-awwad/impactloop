@@ -132,7 +132,7 @@ Return:
 - data.items
 - data.pagination
 
-Each item should return raw fields close to docs/api/materials-api-contract.md:
+Each item should return raw fields close to docs/backend/api-catalog.md:
 
 - id
 - title

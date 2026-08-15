@@ -7,6 +7,21 @@ This document describes how Learner Home recommendation surfaces are built, rank
 
 For decision history see [decisions.md](../recommendation/decisions.md). For contracts see [feature-token-contract-v3.md](../recommendation/feature-token-contract-v3.md) and [taxonomy.md](../recommendation/taxonomy.md).
 
+### Reference documents
+
+| Document | Purpose |
+|----------|---------|
+| [decisions.md](../recommendation/decisions.md) | Decision ledger (REC-*) |
+| [taxonomy.md](../recommendation/taxonomy.md) | Typed taxonomy foundation |
+| [feature-token-contract-v3.md](../recommendation/feature-token-contract-v3.md) | ML feature token contract |
+| [events.md](../recommendation/events.md) | Recommendation events |
+| [outbox.md](../recommendation/outbox.md) | Outbox delivery |
+| [version-registry.md](../recommendation/version-registry.md) | Algorithm / stamp registry |
+| [development/local-ml.md](../development/local-ml.md) | Local snapshot → train → validate → smoke |
+| [operations/recommendation-observability.md](../operations/recommendation-observability.md) | Serving health and logs |
+
+Historical phase/slice reports: [archive/recommendation-history/](../archive/recommendation-history/) — not current runtime truth.
+
 ---
 
 ## 1. Purpose
@@ -262,7 +277,7 @@ Evidence supports:
 
 We have **not** established statistical superiority of ML over deterministic ranking in production. ML is the **current primary serving ranker**; quality tuning remains an empirical process. Offline metrics and shadow comparisons inform decisions; they do not auto-promote behavior.
 
-Experiment spec: [recommendation-evaluation-experiment-spec.ar.md](../recommendation/recommendation-evaluation-experiment-spec.ar.md).
+Experiment spec (historical): [archive/investigations/recommendation-evaluation-experiment-spec.ar.md](../archive/investigations/recommendation-evaluation-experiment-spec.ar.md).
 
 ---
 
@@ -296,7 +311,7 @@ See [deployment.md](../deployment.md) and `validate-production-config.ts`.
 | Demo data (separate from artifact training) | [demo-data.md](../demo-data.md) |
 | Events / outbox | [events.md](../recommendation/events.md), [outbox.md](../recommendation/outbox.md) |
 | Decisions | [decisions.md](../recommendation/decisions.md) |
-| Historical phases | [history/recommendation/README.md](../history/recommendation/README.md) |
+| Historical phases | [archive/recommendation-history/README.md](../archive/recommendation-history/README.md) |
 
 ---
 
@@ -305,4 +320,4 @@ See [deployment.md](../deployment.md) and `validate-production-config.ts`.
 **Recommendation ML** (LightFM, Learner Home ranking) and **conversational AI** (ImpactLoop Assistant / chat) are separate subsystems. Do not describe them as one model or runtime.
 
 - Recommendation: this document and [ai-system.md](ai-system.md) (boundary section).
-- Chat: [01-general-learning-chat.md](../ai/01-general-learning-chat.md).
+- Chat: [ai-assistant.md](../features/ai-assistant.md).

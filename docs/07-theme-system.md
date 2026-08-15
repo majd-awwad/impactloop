@@ -160,6 +160,36 @@ Treat supplier theme as a scoped compatibility/theme-bridge layer, not an indepe
 - When touching legacy auth, supplier, learning, or material UI, prefer moving local colors/radii/shadows toward `AppThemeColors`, `AppSpacing`, `AppRadius`, and text theme without changing behavior.
 - Do not add raw `Color(0x...)` values in presentation widgets; new raw colors belong in `app_color_tokens.dart`.
 
+## Auth UI appendix
+
+Auth screens follow the same central theme with scoped auth layout rules. Use this section when touching login, register, or password flows.
+
+### Auth visual concept
+
+- Neutral form surfaces with green primary accent
+- Elevated form card; distinct mobile vs web layouts (breakpoint `AppSpacing.authLayoutBreakpoint` = 700)
+- Login screen is the layout reference
+
+### Auth tokens and files
+
+| Concern | File |
+|---------|------|
+| Semantic colors | `app_theme_colors.dart` |
+| Auth bridge palette | `auth_ui_palette.dart` |
+| Spacing (incl. auth layout) | `app_spacing.dart` — `authFormMaxWidth`, `authBrandingPanelFlex`, etc. |
+| Typography | `app_text_styles.dart` — `display`, `subtitle`, `brandingHeadline`, … |
+| Layout shell | `auth_shell.dart` — `AuthShellLayout.webSplit` / `.mobile` |
+| Form card | `auth_form_card.dart` |
+| Branding panel | `auth_branding_panel.dart` |
+
+### Auth widget rules
+
+1. Every auth screen uses `AuthShell` + mobile/web views at the 700px breakpoint.
+2. Structure: `AuthHeader` + `AuthFormCard` + screen form + footer.
+3. Use shared `AppTextField`, `AppPrimaryButton`, `AppLinkButton` — no raw Material form controls in pages.
+4. No raw `Color(0x…)` in auth presentation — use `AppThemeColors` and `AuthUiPalette`.
+5. Do not import auth palette into unrelated features.
+
 ## Not Complete Yet
 
 Remaining legacy or uncertain areas:

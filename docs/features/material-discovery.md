@@ -1,6 +1,6 @@
 # Material Discovery Feature
 
-**Sources inspected:** `apps/frontend/lib/features/material_discovery/`, `apps/backend/src/modules/materials/`, `docs/api/materials-api-contract.md`, `docs/backend/api-catalog.md`
+**Sources inspected:** `apps/frontend/lib/features/material_discovery/`, `apps/backend/src/modules/materials/`, `docs/backend/api-catalog.md`, `docs/backend/api-catalog.md`
 
 ## Purpose
 

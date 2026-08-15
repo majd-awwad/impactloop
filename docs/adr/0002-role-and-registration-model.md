@@ -24,12 +24,11 @@ Use this role and registration model:
 
 ## Current implementation evidence
 
-- [AGENTS.md](../../AGENTS.md) states public registration supports only learner/supplier, driver/moderator/admin use admin invitation links, and mentor does not exist.
 - [docs/features/auth.md](../features/auth.md) documents public signup/login for learner and supplier roles and marks driver/moderator/admin self-registration as not in scope.
 - [docs/features/invitations.md](../features/invitations.md) documents invitation-only `DRIVER`, `MODERATOR`, and `ADMIN` roles.
 - [docs/database/enums.md](../database/enums.md) lists `UserRole` as `LEARNER`, `SUPPLIER`, `DRIVER`, `MODERATOR`, `ADMIN` and `RoleInvitationTargetRole` as `DRIVER`, `MODERATOR`, `ADMIN`.
 - [apps/backend/prisma/schema.prisma](../../apps/backend/prisma/schema.prisma) contains the current role and invitation enums and no `MENTOR` enum value.
-- [docs/08-implementation-status.md](../08-implementation-status.md) marks public learner/supplier registration as implemented and role invitations as backend-only.
+- [docs/product/implementation-status.md](../product/implementation-status.md) marks public learner/supplier registration as implemented and role invitations as backend-only.
 
 ## Related docs
 

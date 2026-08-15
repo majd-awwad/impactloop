@@ -1,6 +1,8 @@
 # ImpactLoop Database Reference
 
-> **⚠️ Stale / aspirational.** This file describes a planned 34-table baseline and tables not in the current schema.  
+> Historical document — not a source of truth for the current implementation. See [docs/README.md](../../README.md) and [database/schema-overview.md](../../database/schema-overview.md).
+
+> **Stale / aspirational.** This file describes a planned 34-table baseline and tables not in the current schema.
 > **Use instead (code-derived):** [database/schema-overview.md](database/schema-overview.md), [database/tables-catalog.md](database/tables-catalog.md), [database/enums.md](database/enums.md).  
 > **Source of truth:** `apps/backend/prisma/schema.prisma` (28 models as of last inventory).
 

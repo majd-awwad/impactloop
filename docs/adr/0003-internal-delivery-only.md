@@ -24,9 +24,8 @@ Use internal delivery only:
 
 ## Current implementation evidence
 
-- [AGENTS.md](../../AGENTS.md) states delivery is internal only and there are no delivery partners.
 - [docs/features/delivery.md](../features/delivery.md) documents learner request/status/tracking UI, driver jobs/status/manual ping UI, and remaining realtime tracking, cost, and admin reassignment gaps.
-- [docs/08-implementation-status.md](../08-implementation-status.md) marks delivery workflow and driver portal as partial with learner and driver Flutter UI implemented.
+- [docs/product/implementation-status.md](../product/implementation-status.md) marks delivery workflow and driver portal as partial with learner and driver Flutter UI implemented.
 - [docs/database/schema-overview.md](../database/schema-overview.md) documents `deliveries`, `driver_profiles`, delivery history, and legacy reservation delivery fields.
 - [docs/database/tables-catalog.md](../database/tables-catalog.md) lists the delivery domain tables.
 - [apps/backend/prisma/schema.prisma](../../apps/backend/prisma/schema.prisma) defines delivery domain models and no external partner models.
@@ -38,4 +37,4 @@ Use internal delivery only:
 - [docs/features/reservations.md](../features/reservations.md)
 - [docs/database/schema-overview.md](../database/schema-overview.md)
 - [docs/database/tables-catalog.md](../database/tables-catalog.md)
-- [docs/09-open-questions.md](../09-open-questions.md)
+- [docs/product/open-questions.md](../product/open-questions.md)

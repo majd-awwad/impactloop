@@ -1,8 +1,7 @@
 # API Conventions
 
-> **Conventions only — not an endpoint inventory.** Response shape, naming, auth headers, and error codes below are still valid.  
-> For **mounted routes as of the current codebase**, use [backend/api-catalog.md](backend/api-catalog.md).  
-> The “First Endpoints To Build” section is **aspirational** and may list routes not yet implemented.
+> **Conventions only — not an endpoint inventory.**
+> For **mounted routes as of the current codebase**, use [backend/api-catalog.md](backend/api-catalog.md).
 
 ## Base URL
 
@@ -105,37 +104,6 @@ Authorization: Bearer <token>
 - INTERNAL_ERROR
 - RATE_LIMITED
 
-## First Endpoints To Build
+## Endpoint inventory
 
-Health:
-
-GET /health
-
-Auth:
-
-POST /api/auth/register
-POST /api/auth/login
-GET /api/auth/me
-POST /api/auth/forgot-password
-POST /api/auth/reset-password
-
-Materials:
-
-GET /api/materials
-GET /api/materials/:id
-POST /api/materials
-PATCH /api/materials/:id
-
-Reservations:
-
-POST /api/reservations
-GET /api/reservations/my
-GET /api/reservations/incoming
-PATCH /api/reservations/:id/accept
-PATCH /api/reservations/:id/reject
-
-AI:
-
-POST /api/ai/requests
-GET /api/ai/requests/:id
-GET /api/ai/credits/me
+Do not use this file as a route list. See [backend/api-catalog.md](backend/api-catalog.md) for every mounted route, including routes that differ from early design sketches (for example supplier-scoped reservation accept paths and `/api/ai/v1` assistant endpoints).

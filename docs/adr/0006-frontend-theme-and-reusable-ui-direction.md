@@ -46,4 +46,4 @@ Use a central frontend theme and reusable UI direction based on current code:
 - [docs/07-theme-system.md](../07-theme-system.md)
 - [docs/frontend/reusable-widgets.md](../frontend/reusable-widgets.md)
 - [docs/frontend/state-management.md](../frontend/state-management.md)
-- [docs/07-ui-style-guide.md](../07-ui-style-guide.md)
+- [docs/07-theme-system.md](../07-theme-system.md)

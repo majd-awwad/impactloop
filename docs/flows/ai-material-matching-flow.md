@@ -2,10 +2,10 @@
 
 **Gap / stub flow.** Product “AI agent” for matching project components to materials is **not built**. This is distinct from:
 
-- **ImpactLoop Assistant** — shipped at `/api/ai/v1` + Flutter `/ai/assistant` ([01-general-learning-chat.md](../ai/01-general-learning-chat.md))
+- **ImpactLoop Assistant** — shipped at `/api/ai/v1` + Flutter `/ai/assistant` ([ai-assistant.md](../features/ai-assistant.md))
 - **Price-rule AI** — internal supplier listing review ([materials-listing.md](../features/materials-listing.md))
 
-**Sources inspected:** `docs/features/ai-agent.md`, `apps/backend/src/modules/ai/`, `apps/backend/prisma/schema.prisma`, `apps/frontend/lib/features/ai/`, `apps/frontend/lib/features/learning_hub/`, `apps/backend/src/services/ai-price-suggestion.service.ts`
+**Sources inspected:** `docs/features/ai-material-matching.md`, `apps/backend/src/modules/ai/`, `apps/backend/prisma/schema.prisma`, `apps/frontend/lib/features/ai/`, `apps/frontend/lib/features/learning_hub/`, `apps/backend/src/services/ai-price-suggestion.service.ts`
 
 ## Trigger (planned)
 
@@ -76,4 +76,4 @@ Do not document `/api/ai/requests` or `/api/ai/credits/me` as shipped — they a
 - Credit wallet MVP rules?
 - One-shot match vs conversational agent?
 - Moderation of AI-suggested external purchases?
-- See [09-open-questions.md](../09-open-questions.md) and [learning-hub-browse-flow](learning-hub-browse-flow.md).
+- See [product/open-questions.md](../product/open-questions.md) and [learning-hub-browse-flow](learning-hub-browse-flow.md).

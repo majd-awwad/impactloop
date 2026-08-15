@@ -1,16 +1,16 @@
-# AI Material Matching Agent (Gap Doc)
+# AI Material Matching (Product Feature — Not Implemented)
 
-**Gap / stub — not an implementation guide.**
+**Gap documentation for a planned product capability.** This is **not** a coding-agent or development-tool document.
 
 Distinguish three AI surfaces in the codebase:
 
 | Surface | Status | Doc |
 |---------|--------|-----|
-| **ImpactLoop Assistant** (`/api/ai/v1`, Flutter `/ai/assistant`) | **Partial** | [01-general-learning-chat.md](../ai/01-general-learning-chat.md) |
+| **ImpactLoop Assistant** (`/api/ai/v1`, Flutter `/ai/assistant`) | **Partial** | [ai-assistant.md](ai-assistant.md) |
 | **Price suggestion** (supplier price-rule review) | **Partial** | [materials-listing.md](materials-listing.md) |
 | **Material-matching agent** (credits, `ai_material_matches`, project component matching) | **Not implemented** | This doc |
 
-**Sources inspected:** `apps/backend/src/app.ts`, `apps/backend/src/modules/ai/`, `apps/backend/prisma/schema.prisma`, `apps/backend/src/services/ai-price-suggestion.service.ts`, `apps/frontend/lib/features/ai/`, `apps/frontend/lib/features/home/`, `docs/08-implementation-status.md`
+**Sources inspected:** `apps/backend/src/app.ts`, `apps/backend/src/modules/ai/`, `apps/backend/prisma/schema.prisma`, `apps/backend/src/services/ai-price-suggestion.service.ts`, `apps/frontend/lib/features/ai/`, `apps/frontend/lib/features/home/`, `docs/product/implementation-status.md`
 
 ## Intended purpose (requirements / roadmap — aspirational)
 
@@ -44,7 +44,7 @@ The `ai` module at `/api/ai/v1` provides:
 - Build-guide agent tools for trusted `BUILD_GUIDE` conversations linked to `projectBuildId`.
 - Project authoring clarification, proposal preview/review/apply waves.
 
-See [01-general-learning-chat.md](../ai/01-general-learning-chat.md) and [08-implementation-status.md](../08-implementation-status.md).
+See [ai-assistant.md](../features/ai-assistant.md) and [product/implementation-status.md](../product/implementation-status.md).
 
 ## Product intent from role planning
 
@@ -110,12 +110,12 @@ These are planned/future capabilities and should not be documented as shipped un
 
 - Single module vs split `ai-price` vs `ai-matching`?
 - Credit grants on registration vs admin allocation?
-- See [09-open-questions.md](../09-open-questions.md) and [ai-material-matching-flow](../flows/ai-material-matching-flow.md).
+- See [product/open-questions.md](../product/open-questions.md) and [ai-material-matching-flow](../flows/ai-material-matching-flow.md).
 
 ## Related docs
 
-- [General learning chat](../ai/01-general-learning-chat.md) — shipped assistant (partial)
+- [General learning chat](../features/ai-assistant.md) — shipped assistant (partial)
 - [Recommendation ML vs conversational AI](../architecture/ai-system.md) — current subsystem boundary
-- [Historical AI architecture plan](../history/ai/00-ai-system-architecture-plan.md) — Phase 0 planning doc (not current architecture)
+- [Historical AI architecture plan](../archive/ai-history/00-ai-system-architecture-plan.md) — Phase 0 planning doc (not current architecture)
 - [Learning hub](learning-hub.md) — current non-AI project planning context
 - [Materials listing](materials-listing.md) — price-rule AI overlap

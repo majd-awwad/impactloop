@@ -103,4 +103,4 @@ Learner sees a success snack bar, refreshed material detail, and a pending card 
 ## Open Questions
 
 - Product policy for learner cancellation after `ACCEPTED` self-pickup or after a delivery row exists. Current code allows learner cancellation only while `PENDING` or `AWAITING_LEARNER_CONFIRMATION`.
-- See [09-open-questions.md](../09-open-questions.md) § Reservations.
+- See [product/open-questions.md](../product/open-questions.md) § Reservations.

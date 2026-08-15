@@ -2,6 +2,8 @@
 
 The core internal delivery lifecycle is implemented, with partial tracking and partial operational recovery. Flutter learner request/status UI, driver jobs/status UI, foreground auto-location sharing on the active delivery detail page, manual driver location pings, learner-owned polling map tracking, supplier incident actions, admin pre-pickup driver-assignment reopen, and admin pickup-recovery actions exist. Realtime streaming, background GPS, general delivery cancellation, selected-driver reassignment, ETA, and post-pickup retry are not implemented.
 
+Delivery fee obligations use the same payment readiness model as reservations (`CARD` Mock checkout when enforcement is on; `CASH` at handover). Driver new-job notifications require fee readiness when a positive delivery fee applies. See [payments.md](../features/payments.md).
+
 ## Triggers
 
 - A learner requests internal delivery after a supplier accepts a pickup reservation and the material allows delivery.

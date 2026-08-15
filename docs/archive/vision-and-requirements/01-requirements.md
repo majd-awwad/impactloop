@@ -1,6 +1,8 @@
 # ImpactLoop Requirements
 
-This document describes product requirements and intended scope. It is not implementation proof. For current shipped status, use [08-implementation-status.md](08-implementation-status.md). For role-by-role capability framing, use [features/roles-and-capabilities.md](features/roles-and-capabilities.md).
+> Historical document — not a source of truth for the current implementation. See [docs/README.md](../../README.md) and [product/implementation-status.md](../../product/implementation-status.md).
+
+This document describes product requirements and intended scope. It is not implementation proof. For role-by-role capability framing, use [features/roles-and-capabilities.md](../../features/roles-and-capabilities.md).
 
 ## Authentication
 

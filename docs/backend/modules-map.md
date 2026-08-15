@@ -3,7 +3,7 @@
 Maps each folder under `apps/backend/src/modules/` to its responsibility and key files.
 
 **Source:** directory listing of `apps/backend/src/modules/` and route/controller files.  
-**Not sourced from:** aspirational module lists in older `docs/02-architecture.md`.
+**Not sourced from:** aspirational module lists in older architecture drafts.
 
 ## Module index
 
@@ -190,7 +190,7 @@ Mount order: `apps/backend/src/app.ts`
 
 **Prisma:** `LearningProject`, `ProjectLike`, `ProjectSave`, `ProjectFollow`, `ProjectUserReview`, `ProjectBuild`, `ProjectBuildItem`, and related project tables
 
-**Frontend:** Learning hub list/detail, home spotlight, and add-draft submission are API-backed; admin moderation lives under `/api/admin/learning-projects*` — see [08-implementation-status.md](../08-implementation-status.md)
+**Frontend:** Learning hub list/detail, home spotlight, and add-draft submission are API-backed; admin moderation lives under `/api/admin/learning-projects*` — see [product/implementation-status.md](../product/implementation-status.md)
 
 ---
 

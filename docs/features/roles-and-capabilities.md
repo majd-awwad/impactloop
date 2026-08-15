@@ -2,7 +2,7 @@
 
 Canonical product framing for ImpactLoop roles. This document separates product intent from implementation status so future work can be planned without treating every capability as already shipped.
 
-**Source context:** `AGENTS.md`, `docs/08-implementation-status.md`, current feature docs, current route/module maps, and the project role notes supplied by the team.
+**Source context:** `docs/product/implementation-status.md`, current feature docs, current route/module maps, and ADR role decisions.
 
 ## Role model
 

@@ -1,6 +1,8 @@
 # ImpactLoop Vision
 
-> **Aspirational — product vision, not implementation status.** For what is built today, see [08-implementation-status.md](08-implementation-status.md).
+> Historical document — not a source of truth for the current implementation. See [docs/README.md](../../README.md) and [product/implementation-status.md](../../product/implementation-status.md) for current behavior.
+
+> **Aspirational — product vision, not implementation status.**
 
 ImpactLoop is a graduation software project that encourages reuse of surplus materials and helps learners build practical projects.
 

@@ -1,5 +1,7 @@
 # ImpactLoop Roadmap
 
+> Historical document — not a source of truth for the current implementation. See [product/implementation-status.md](../../product/implementation-status.md).
+
 ## Phase 0 — Project Setup
 
 Goal:
@@ -8,7 +10,7 @@ Create a working monorepo with Flutter and Express.
 Tasks:
 
 - Create repo structure.
-- Add AGENTS.md.
+- Add project documentation index (`docs/README.md`).
 - Add docs.
 - Add Cursor rules.
 - Create backend skeleton.

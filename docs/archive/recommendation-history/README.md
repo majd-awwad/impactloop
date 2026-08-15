@@ -1,5 +1,7 @@
 # Historical recommendation documentation
 
+> Historical document — not a source of truth for the current implementation. See [architecture/recommendation-system.md](../../architecture/recommendation-system.md).
+
 > **Historical corpus** — these files record earlier design, evaluation, and implementation phases. They are **not** current runtime truth.
 
 **Current architecture:** [architecture/recommendation-system.md](../../architecture/recommendation-system.md)

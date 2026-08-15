@@ -74,7 +74,7 @@ npm run test:recommendations:ci:pure -w apps/backend
 npm run test:database-isolation -w apps/backend
 ```
 
-Baseline pure tests include known unrelated JWT env failures — see [08-implementation-status.md](../08-implementation-status.md).
+Baseline pure tests include known unrelated JWT env failures — see [product/implementation-status.md](../product/implementation-status.md).
 
 ---
 

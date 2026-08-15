@@ -19,7 +19,8 @@ Role-scope boundary: driver is an operational support role for basic internal de
 | Flutter learner delivery UI | **Partial** | My Reservations request dialog (saved or new dropoff with optional current-location coordinates + optional save), `/learner/deliveries/:id` status page, `/learner/deliveries/:id/track` polling map after `PICKED_UP`; no realtime stream |
 | Flutter driver portal | **Partial** | `/driver/jobs` job board, `/driver/deliveries/:id` status updates, code prompts, incident reports, foreground auto-location sharing on the active delivery detail page, and manual location ping; no live route map or background pings |
 | Flutter admin operations | **Partial** | Responsive delivery monitoring overview with server-backed summary/filter/pagination data, a concise Delivery/Journey/Progress/Attention/Updated list, and `/admin/deliveries/:deliveryId`: a conditional overview/timeline/assignment/group/incident/tracking workspace. It renders only returned contract fields and exposes pre-pickup **Reopen to drivers** only when authorized; no selected-driver reassignment or general delivery cancel screen |
-| External partners/payment/AI | **Out of scope** | Not implemented |
+| External partners | **Out of scope** | No external delivery partners |
+| Delivery fee payment | **Partial** | Fee metadata and `DELIVERY_FEE` PaymentOrders exist; CARD Mock checkout when enforcement on; CASH at handover where applicable; real PSP not configured |
 
 ## Data Model
 
@@ -35,7 +36,7 @@ Delivery is separate from reservation lifecycle:
 Booking vs logistics:
 
 - **`fulfillmentMethod`** (`PICKUP` | `DELIVERY`) on `reservations` is the booking source of truth.
-- **`deliveries`** owns logistics status, driver assignment, pickup/dropoff locations, and delivery cost (when implemented).
+- **`deliveries`** owns logistics status, driver assignment, pickup/dropoff locations, and delivery fee obligations linked to `PaymentOrder` (`DELIVERY_FEE`).
 - A pickup reservation with a later delivery job is detected via `deliveries` rows and `activeDelivery` in API responses — not a reservation flag.
 
 ## Backend Behavior
@@ -52,6 +53,13 @@ Learner delivery request:
 - Creates `Delivery` with `WAITING_FOR_DRIVER`.
 - Creates `DeliveryStatusHistory`.
 - Notifies eligible active drivers with a persisted `DRIVER_NEW_JOB` notification.
+
+Delivery payment readiness:
+
+- Delivery creation and driver new-job notifications require delivery-fee payment readiness when a positive fee applies.
+- `CARD` delivery fees use the same Mock checkout path as material obligations when electronic enforcement is on.
+- `CASH` material or fee obligations are collected at handover and are not checkoutable via Mock provider.
+- See [payments.md](payments.md) and [payment-flow.md](../flows/payment-flow.md) for provider boundaries.
 
 Delivery reservation handoff:
 
@@ -191,7 +199,7 @@ Admin:
 - General learner/supplier/admin delivery cancellation workflow outside incident-scoped admin cancel/release-hold.
 - Real-time tracking stream and WebSockets.
 - Background GPS streaming.
-- Delivery payment/settlement. Delivery fee metadata exists for reservation pricing/groups, but payment is not implemented.
 - Post-pickup delivery failure retry/redelivery workflow.
-- ETA/route calculation and proof-of-delivery media/signature. Handover codes are implemented.
+- ETA/route calculation and proof-of-delivery media/signature beyond handover codes/QR.
 - External delivery partners.
+- Real payment service provider (Mock CARD checkout and CASH handover semantics are implemented; production uses `PAYMENT_PROVIDER=disabled`).

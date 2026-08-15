@@ -2,7 +2,7 @@
 
 **Gap / stub - not an implementation guide.**
 
-**Sources inspected:** `apps/backend/src/app.ts`, `apps/backend/src/modules/admin*`, `apps/backend/src/modules/category-requests/*`, `apps/backend/src/modules/price-rule-requests/*`, `apps/backend/src/modules/materials/*`, `apps/backend/prisma/schema.prisma`, `apps/frontend/lib/features/`, `docs/features/admin.md`, `docs/features/roles-and-capabilities.md`, `docs/08-implementation-status.md`
+**Sources inspected:** `apps/backend/src/app.ts`, `apps/backend/src/modules/admin*`, `apps/backend/src/modules/category-requests/*`, `apps/backend/src/modules/price-rule-requests/*`, `apps/backend/src/modules/materials/*`, `apps/backend/prisma/schema.prisma`, `apps/frontend/lib/features/`, `docs/features/admin.md`, `docs/features/roles-and-capabilities.md`, `docs/product/implementation-status.md`
 
 ## Purpose
 
@@ -81,7 +81,7 @@ Admin remains the current implemented owner for approvals and material report re
 - Can ADMIN act as moderator for every queue permanently, or only until moderator portal is built?
 - What audit trail is required for moderator actions?
 
-See [09-open-questions.md](../09-open-questions.md) for the current open-question index.
+See [product/open-questions.md](../product/open-questions.md) for the current open-question index.
 
 ## Related docs
 

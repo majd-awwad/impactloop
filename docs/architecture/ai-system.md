@@ -19,7 +19,7 @@ This is **not** the chat assistant. It does not use Gemini/OpenAI for ranking.
 
 - **Purpose:** General/learning chat, tutoring-style responses
 - **Providers:** Configured LLM providers (e.g. Gemini) via backend AI modules
-- **Documentation:** [01-general-learning-chat.md](../ai/01-general-learning-chat.md), [features/ai-agent.md](../features/ai-agent.md) (material matching gap)
+- **Documentation:** [ai-assistant.md](../features/ai-assistant.md), [features/ai-material-matching.md](../features/ai-material-matching.md) (material matching gap)
 
 Chat behavior does not control Learner Home section ordering.
 
@@ -27,4 +27,4 @@ Chat behavior does not control Learner Home section ordering.
 
 ## Historical planning
 
-Early combined AI architecture plan (2026-07): [history/ai/00-ai-system-architecture-plan.md](../history/ai/00-ai-system-architecture-plan.md) — historical only.
+Early combined AI architecture plan (2026-07): [archive/ai-history/00-ai-system-architecture-plan.md](../archive/ai-history/00-ai-system-architecture-plan.md) — historical only.

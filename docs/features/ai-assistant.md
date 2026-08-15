@@ -1,6 +1,10 @@
-# General Learning Chat — Phase 1
+# ImpactLoop Assistant
 
-Phase 1 ships the first learner-facing AI feature: **General Learning** educational chat with conversation persistence, scope guard, structured assistant blocks, and a minimal Flutter chat UI.
+The **ImpactLoop Assistant** is the shipped conversational AI product at `/api/ai/v1` and Flutter `/ai/assistant`. It provides general learning chat, build-guide tools, and project authoring waves.
+
+**Not the same as:** [ai-material-matching.md](ai-material-matching.md) (material-matching agent — not implemented).
+
+Phase 1 ships General Learning educational chat with conversation persistence, scope guard, structured assistant blocks, and a minimal Flutter chat UI.
 
 ## Environment variables
 

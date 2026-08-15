@@ -1,23 +1,19 @@
 # ImpactLoop documentation
 
-Developer documentation index. **Start here** before editing code.
+Canonical documentation index. **Start here** before changing user-visible behavior, APIs, or schema.
 
-For agent coding rules see [AGENTS.md](../AGENTS.md) at the repository root.
+**Source of truth order:** checked-in code → [product/implementation-status.md](product/implementation-status.md) → code-derived inventories → feature/flow docs → [archive/](archive/) (historical evidence only).
 
 ---
 
-## Start here
+## Getting started
 
-| Topic | Document |
-|-------|----------|
-| Project overview | [01-project-map.md](01-project-map.md) |
-| System architecture | [architecture/system-overview.md](architecture/system-overview.md) |
-| Local development | [development/local-development.md](development/local-development.md) |
-| Recommendation architecture | [architecture/recommendation-system.md](architecture/recommendation-system.md) |
-| Conversational AI | [ai/01-general-learning-chat.md](ai/01-general-learning-chat.md) |
-| Demo data | [demo-data.md](demo-data.md) |
-| Deployment | [deployment.md](deployment.md) |
-| What is implemented | [08-implementation-status.md](08-implementation-status.md) |
+| Document | Purpose |
+|----------|---------|
+| [development/local-development.md](development/local-development.md) | Fresh checkout, database, backend, Flutter |
+| [development/local-ml.md](development/local-ml.md) | LightFM snapshot, train, validate, smoke |
+| [demo-data.md](demo-data.md) | Core seed vs community demo seed |
+| [deployment.md](deployment.md) | Deployment and environment notes |
 
 ---
 
@@ -25,55 +21,19 @@ For agent coding rules see [AGENTS.md](../AGENTS.md) at the repository root.
 
 | Document | Purpose |
 |----------|---------|
-| [architecture/system-overview.md](architecture/system-overview.md) | Monorepo, backend modules, frontend features |
-| [architecture/recommendation-system.md](architecture/recommendation-system.md) | **Authoritative** Learner Home ML_PRIMARY serving |
-| [architecture/ai-system.md](architecture/ai-system.md) | Recommendation ML vs conversational AI boundary |
-
-Legacy numbered overview: [02-architecture.md](02-architecture.md) redirects to system-overview.
+| [architecture/system-overview.md](architecture/system-overview.md) | Monorepo, modules, request flow |
+| [architecture/recommendation-system.md](architecture/recommendation-system.md) | Learner Home ML_PRIMARY serving |
+| [architecture/ai-system.md](architecture/ai-system.md) | Recommendation ML vs conversational AI |
 
 ---
 
-## Development
+## Product status
 
 | Document | Purpose |
 |----------|---------|
-| [development/local-development.md](development/local-development.md) | Fresh checkout, DB, backend, Flutter |
-| [development/local-ml.md](development/local-ml.md) | Snapshot, train, validate, smoke, preflight |
-
-Legacy combined runbook: [local-development-and-ml.md](local-development-and-ml.md) redirects to local-ml.
-
----
-
-## Recommendation (reference index)
-
-Router: [recommendation/README.md](recommendation/README.md)
-
-| Document | Purpose |
-|----------|---------|
-| [architecture/recommendation-system.md](architecture/recommendation-system.md) | Current architecture (canonical) |
-| [recommendation/decisions.md](recommendation/decisions.md) | Decision ledger |
-| [recommendation/taxonomy.md](recommendation/taxonomy.md) | Typed taxonomy foundation |
-| [recommendation/feature-token-contract-v3.md](recommendation/feature-token-contract-v3.md) | ML feature tokens |
-| [recommendation/events.md](recommendation/events.md) | Recommendation events |
-| [recommendation/outbox.md](recommendation/outbox.md) | Outbox delivery |
-| [recommendation/version-registry.md](recommendation/version-registry.md) | Version stamps |
-| [operations/recommendation-observability.md](operations/recommendation-observability.md) | Serving health and logs |
-
-**Historical recommendation work:** [history/recommendation/README.md](history/recommendation/README.md) — not current runtime truth.
-
----
-
-## Backend, frontend, database, API
-
-| Area | Entry |
-|------|-------|
-| API conventions | [04-api-conventions.md](04-api-conventions.md) |
-| API catalog | [backend/api-catalog.md](backend/api-catalog.md) |
-| Modules | [backend/modules-map.md](backend/modules-map.md) |
-| Observability | [backend/observability.md](backend/observability.md) |
-| Schema | [database/schema-overview.md](database/schema-overview.md) |
-| Flutter routes | [frontend/routes-map.md](frontend/routes-map.md) |
-| Theme | [07-theme-system.md](07-theme-system.md) |
+| [product/implementation-status.md](product/implementation-status.md) | Implemented / partial / not built |
+| [product/open-questions.md](product/open-questions.md) | Unresolved risks |
+| [features/roles-and-capabilities.md](features/roles-and-capabilities.md) | Role capability framing |
 
 ---
 
@@ -83,32 +43,39 @@ Router: [recommendation/README.md](recommendation/README.md)
 |-------|----------|
 | Features | [features/](features/) |
 | User flows | [flows/](flows/) |
-| Driver ops | [driver-e2e-verification.md](driver-e2e-verification.md) |
 
-When changing user-visible behavior, update the matching feature/flow doc and [08-implementation-status.md](08-implementation-status.md).
-
----
-
-## Historical material
-
-| Location | Contents |
-|----------|----------|
-| [history/recommendation/](history/recommendation/) | Phase/slice reports, old plans, investigations |
-| [history/ai/](history/ai/) | Early AI architecture plan |
-| [archive/README.md](archive/README.md) | Aspirational product docs, gap stubs |
-
-Historical documents are **not** current architecture. They are kept for archaeology.
+Key AI product docs: [features/ai-assistant.md](features/ai-assistant.md) (shipped assistant), [features/ai-material-matching.md](features/ai-material-matching.md) (planned matching — not built).
 
 ---
 
-## Editing guide (quick)
+## API and database reference
 
-| If you change… | Read/update |
-|----------------|-------------|
-| Recommendation ranking/serving | [architecture/recommendation-system.md](architecture/recommendation-system.md), [recommendation/decisions.md](recommendation/decisions.md) |
-| Flutter UI | [frontend/routes-map.md](frontend/routes-map.md), matching [features/](features/) |
-| Backend API | [backend/api-catalog.md](backend/api-catalog.md) |
-| Prisma schema | [database/](database/) |
-| Local ML artifacts | [development/local-ml.md](development/local-ml.md) |
+| Document | Purpose |
+|----------|---------|
+| [04-api-conventions.md](04-api-conventions.md) | Response shape, auth, errors |
+| [backend/api-catalog.md](backend/api-catalog.md) | HTTP endpoints |
+| [backend/modules-map.md](backend/modules-map.md) | Backend modules |
+| [database/schema-overview.md](database/schema-overview.md) | Prisma relationships |
+| [frontend/routes-map.md](frontend/routes-map.md) | Flutter routes |
+| [07-theme-system.md](07-theme-system.md) | Theme tokens and auth UI appendix |
 
-Legacy router: [00-ai-docs-router.md](00-ai-docs-router.md) — superseded by this index for navigation.
+---
+
+## Operations
+
+| Document | Purpose |
+|----------|---------|
+| [operations/recommendation-observability.md](operations/recommendation-observability.md) | Recommendation serving health |
+| [operations/email-invitations-setup.md](operations/email-invitations-setup.md) | SMTP invitations |
+| [driver-e2e-verification.md](driver-e2e-verification.md) | Driver E2E runbook |
+
+---
+
+## ADRs and archive
+
+| Location | Purpose |
+|----------|---------|
+| [adr/](adr/) | Accepted architecture decisions |
+| [archive/](archive/) | **Historical evidence — not current implementation source of truth** |
+
+When changing behavior, update matching feature/flow docs and [product/implementation-status.md](product/implementation-status.md).

@@ -2,7 +2,7 @@
 
 **Authority for current architecture:** [architecture/recommendation-system.md](../architecture/recommendation-system.md)
 
-Historical phase evidence lives in [history/recommendation/README.md](../history/recommendation/README.md). Dated slice reports do not independently change production behavior.
+Historical phase evidence lives in [archive/recommendation-history/README.md](../archive/recommendation-history/README.md). Dated slice reports do not independently change production behavior.
 
 ---
 

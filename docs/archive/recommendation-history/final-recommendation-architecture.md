@@ -161,7 +161,7 @@ These are ImpactLoop project gates, not universal standards. Any future model ex
 ## 9. Files Changed
 
 - `docs/recommendation/final-recommendation-architecture.md` — final architecture freeze.
-- `docs/recommendation/README.md` — current freeze and documentation index update.
+- `docs/architecture/recommendation-system.md` — current freeze and documentation index update.
 - `docs/recommendation/implementation-status.md` — final implementation status update.
 - `docs/recommendation/phase-3b-real-interaction-pilot.md` — operational deferral note; technical readiness result preserved.
 

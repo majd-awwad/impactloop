@@ -289,4 +289,4 @@ Hub page controls fetch server pages beyond `page=1` while preserving active fil
 
 ## Open questions
 
-See [09-open-questions.md](../09-open-questions.md) — Learning hub section for ratings model, AI matching, and moderator workspace.
+See [product/open-questions.md](../product/open-questions.md) — Learning hub section for ratings model, AI matching, and moderator workspace.

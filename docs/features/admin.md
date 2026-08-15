@@ -2,7 +2,7 @@
 
 Current MVP status for the invitation-only `ADMIN` role and admin portal.
 
-**Sources inspected:** `apps/backend/src/app.ts`, `apps/backend/src/modules/admin*`, `apps/backend/src/modules/invitations/*`, `apps/frontend/lib/features/admin_portal/`, `apps/frontend/lib/app/router/app_router.dart`, `docs/backend/api-catalog.md`, `docs/frontend/routes-map.md`, `docs/08-implementation-status.md`
+**Sources inspected:** `apps/backend/src/app.ts`, `apps/backend/src/modules/admin*`, `apps/backend/src/modules/invitations/*`, `apps/frontend/lib/features/admin_portal/`, `apps/frontend/lib/app/router/app_router.dart`, `docs/backend/api-catalog.md`, `docs/frontend/routes-map.md`, `docs/product/implementation-status.md`
 
 ## Purpose
 
@@ -136,7 +136,7 @@ From the role capability plan:
 - Moderator responsibilities currently overlap with admin because the moderator portal is not implemented.
 - Delivery failure/reassignment/cancellation admin workflow is not implemented beyond the existing eligible pre-pickup reopen and incident recovery flows.
 
-See [09-open-questions.md](../09-open-questions.md) for unresolved admin/moderator questions.
+See [product/open-questions.md](../product/open-questions.md) for unresolved admin/moderator questions.
 
 ## Related docs
 

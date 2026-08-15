@@ -1,8 +1,28 @@
 # Payments (Mock + enforcement-ON)
 
-Local electronic payment for learner reservations and delivery fees.
+Reservation and delivery-fee payment lifecycle for learners, with **`CARD`** electronic checkout and **`CASH`** collection at handover.
 
 **Status:** **Implemented** for local Mock + enforcement-ON (PAY-01…PAY-07). Real PSP / Bank of Palestine / Admin Payment Center are **not** implemented.
+
+---
+
+## Payment methods (`CARD` vs `CASH`)
+
+Learners choose `paymentMethod` on reservation create/quote (`CARD` default, `CASH` optional). The value is stored on the reservation and copied to related `PaymentOrder` rows.
+
+| Method | Collection | Checkout | Fulfillment gate |
+|--------|------------|----------|------------------|
+| **`CARD`** | Electronic (Mock provider when enforcement is on) | `POST /api/payments/reservations/:id/checkout` → Mock attempt | Order must reach `PAID` (or `NOT_REQUIRED` for zero amounts) before pickup codes / driver notify |
+| **`CASH`** | Supplier (pickup) or driver (delivery) at handover | **Not checkoutable** — `CASH_PAYMENT_NOT_CHECKOUTABLE` | `fulfillmentReady` while order stays `REQUIRES_PAYMENT`; supplier completion requires cash-collection confirmation when cash is due |
+
+**CASH rules (verified in code):**
+
+- `CASH` cannot be combined with `safeDropoffAllowed: true` on reservation create.
+- Cash obligations never start Mock checkout; Flutter Pay CTAs apply to `CARD` only.
+- Supplier reservation detail exposes `handoverPayment.cashDueAtHandover` and amount when cash is still due.
+- When electronic enforcement is **off** and method is `CARD`, readiness treats payment as disabled/fulfillment-ready for local dev paths (see `payments.readiness.ts`).
+
+**Provider boundary:** Mock checkout (`PAYMENT_PROVIDER=mock`) implements `CARD` settlement only. `CASH` semantics are implemented in the reservation/payment-order lifecycle regardless of provider; production currently uses `PAYMENT_PROVIDER=disabled` without a real PSP.
 
 **Related:** [payment-flow.md](../flows/payment-flow.md), [reservations.md](reservations.md), [delivery.md](delivery.md), [learner-reservation-flow.md](../flows/learner-reservation-flow.md)
 

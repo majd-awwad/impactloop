@@ -25,9 +25,7 @@ Use this project structure and stack for the MVP:
 
 ## Current implementation evidence
 
-- [AGENTS.md](../../AGENTS.md) defines Flutter mobile/web, Node.js + Express.js, PostgreSQL + PostGIS, Prisma, and TypeScript preference.
-- [docs/02-architecture.md](../02-architecture.md) documents the code-derived repository layout and backend/frontend stacks.
-- [docs/08-implementation-status.md](../08-implementation-status.md) marks monorepo/backend scripts, Flutter app, PostgreSQL + Prisma, and PostGIS as implemented.
+- [docs/product/implementation-status.md](../product/implementation-status.md) marks monorepo/backend scripts, Flutter app, PostgreSQL + Prisma, and PostGIS as implemented.
 - [package.json](../../package.json) declares the root npm workspace for `apps/backend`.
 - [apps/backend/package.json](../../apps/backend/package.json) includes Express, TypeScript, Prisma, PostgreSQL driver, and backend scripts.
 - [apps/frontend/pubspec.yaml](../../apps/frontend/pubspec.yaml) defines the Flutter frontend and dependencies including Riverpod, GoRouter, and Dio.
@@ -35,7 +33,7 @@ Use this project structure and stack for the MVP:
 
 ## Related docs
 
-- [docs/01-project-map.md](../01-project-map.md)
-- [docs/02-architecture.md](../02-architecture.md)
-- [docs/08-implementation-status.md](../08-implementation-status.md)
+- [docs/architecture/system-overview.md](../architecture/system-overview.md)
+- [docs/architecture/system-overview.md](../architecture/system-overview.md)
+- [docs/product/implementation-status.md](../product/implementation-status.md)
 - [docs/database/schema-overview.md](../database/schema-overview.md)

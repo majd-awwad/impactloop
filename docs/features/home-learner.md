@@ -1,6 +1,6 @@
 # Home (Learner) Feature
 
-**Sources inspected:** `apps/frontend/lib/features/home/`, `apps/backend/src/modules/learner-home/`, `app_router.dart`, `docs/08-implementation-status.md`, `docs/features/material-discovery.md`, `docs/features/learning-hub.md`
+**Sources inspected:** `apps/frontend/lib/features/home/`, `apps/backend/src/modules/learner-home/`, `app_router.dart`, `docs/product/implementation-status.md`, `docs/features/material-discovery.md`, `docs/features/learning-hub.md`
 
 ## Purpose
 
@@ -26,9 +26,10 @@ Role-scope framing: see [roles-and-capabilities](roles-and-capabilities.md).
 | Free materials near you | **Implemented** | Section `free_materials_near_you` |
 | Popular projects | **Implemented** | Section `popular_projects` (fallback / general discovery) |
 | Profile completion hints | **Implemented** | `profileCompletion.hasInterests` drives interests prompt banner |
-| Coming later (impact + AI) | **Frontend-only** | Empty / Coming Soon placeholders — no learner-facing APIs |
+| Impact snapshot | **Implemented** | **API-backed** — `learnerProfileSummaryProvider` → learner journey metrics (completed/active reservations and builds); empty state prompts browse materials |
+| ImpactLoop Assistant | **Implemented** (global) | Not a home-feed section — global launcher and `/ai/assistant`; see [ai-assistant.md](../features/ai-assistant.md) |
 
-**Not documented as implemented:** learner reservation cancel, AI agent, learner impact analytics, neural/vector recommendations.
+**Not documented as implemented:** home-embedded AI material-matching agent, neural/vector recommendations beyond ML_PRIMARY serving.
 
 ## Main user flow
 
@@ -40,7 +41,8 @@ Role-scope framing: see [roles-and-capabilities](roles-and-capabilities.md).
 6. User taps **My Reservations** (Quick actions) → `/learner/reservations`.
 7. User taps **Become a supplier** → `supplierEntryRouteForUser(user)`.
 8. Continue-project cards navigate to `/learning/:id/build`.
-9. Disabled / Coming Soon cards show info snackbars for impact and AI helper.
+9. Impact snapshot shows journey metrics when activity exists; otherwise an empty-state card links to `/materials`.
+10. Learner opens ImpactLoop Assistant from the global launcher (not from a home feed card).
 
 ## Frontend files
 
@@ -52,7 +54,7 @@ Role-scope framing: see [roles-and-capabilities](roles-and-capabilities.md).
 | Data | `data/learner_home_api.dart`, `data/learner_home_item_mapper.dart` |
 | Models | `domain/learner_home_models.dart` |
 | Browse page | `presentation/pages/learner_home_recommendations_page.dart` |
-| Widgets | `presentation/widgets/learner_home_feed_sections.dart`, `home_material_recommendation_grid.dart`, `home_continue_project_card.dart`, `learning_spotlight_section.dart` (`HomeLearningProjectCard`), `home_action_card.dart`, `empty_activity_card.dart`, `home_section_header.dart` |
+| Widgets | `presentation/widgets/learner_home_feed_sections.dart`, `home_material_recommendation_grid.dart`, `home_continue_project_card.dart`, `learning_spotlight_section.dart` (`HomeLearningProjectCard`), `home_action_card.dart`, `empty_activity_card.dart`, `home_section_header.dart`, `learner_impact_snapshot_section.dart` |
 | Related (not feed UI) | `application/home_suggested_materials_provider.dart` (still used for cache invalidation outside home feed) |
 | Shared nav helper | `auth/application/auth_navigation.dart` |
 | Router | `app/router/app_router.dart` — `/home`, `/learner/reservations` |

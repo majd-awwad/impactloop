@@ -441,7 +441,7 @@ Details that add complexity without current measurable ML value include an unres
 
 ### Recommendation documentation
 
-- `docs/recommendation/README.md`
+- `docs/architecture/recommendation-system.md`
 - `docs/recommendation/implementation-status.md`
 - `docs/recommendation/recommendation-evaluation-experiment-spec.ar.md`
 - `docs/recommendation/events.md`

@@ -1,49 +1,37 @@
 # Historical documentation archive
 
-These documents are kept for context but are **not** canonical proof of what ships today.
+These documents are preserved as **graduation and engineering evidence**. They record design decisions, investigations, earlier implementation states, recommendation experiments, and product evolution.
 
-Always verify behavior against checked-in code and:
+They are **not** the current source of truth for what ImpactLoop ships today.
 
-- [08-implementation-status.md](../08-implementation-status.md) — what is implemented vs partial vs not built
-- [09-open-questions.md](../09-open-questions.md) — unresolved risks
-- [backend/api-catalog.md](../backend/api-catalog.md) — HTTP endpoints
-- [00-ai-docs-router.md](../00-ai-docs-router.md) — which docs to read when changing code
+## Where to look for current behavior
 
-## Aspirational product docs
+| Document | Purpose |
+|----------|---------|
+| [../README.md](../README.md) | Documentation index |
+| [../product/implementation-status.md](../product/implementation-status.md) | What is implemented, partial, or not built |
+| [../architecture/system-overview.md](../architecture/system-overview.md) | Current system architecture |
+| [../architecture/recommendation-system.md](../architecture/recommendation-system.md) | Current recommendation serving |
 
-| Doc | Notes |
-|-----|-------|
-| [00-vision.md](../00-vision.md) | Product vision |
-| [01-requirements.md](../01-requirements.md) | Requirements draft |
-| [05-roadmap.md](../05-roadmap.md) | Phased plan — map to code via [08-implementation-status.md](../08-implementation-status.md) |
-| [03-database.md](../03-database.md) | Superseded by [database/](../database/) |
+Always verify behavior against checked-in code and the documents above before acting on archived material.
 
-## Historical AI planning
+---
 
-| Doc | Notes |
-|-----|-------|
-| [history/ai/00-ai-system-architecture-plan.md](../history/ai/00-ai-system-architecture-plan.md) | Phase 0 architecture plan (2026-07-14). Partial implementation followed — see [ai/01-general-learning-chat.md](../ai/01-general-learning-chat.md) |
+## Archive contents
 
-## Historical recommendation work
+| Folder | Contents |
+|--------|----------|
+| [vision-and-requirements/](vision-and-requirements/) | Early vision, requirements, roadmap, legacy database baseline |
+| [recommendation-history/](recommendation-history/) | Recommendation phase/slice reports, master plans, investigations |
+| [ai-history/](ai-history/) | Early AI architecture planning |
+| [backend-history/](backend-history/) | Historical backend implementation plans |
+| [investigations/](investigations/) | Performance, taxonomy, and evaluation investigations |
 
-| Doc | Notes |
-|-----|-------|
-| [history/recommendation/README.md](../history/recommendation/README.md) | Phase/slice reports, old plans — **not current architecture** |
-| Current recommendation architecture | [architecture/recommendation-system.md](../architecture/recommendation-system.md) |
+### Intentional gap docs (still in active `features/`)
 
-## Gap / stub docs (planned features)
-
-These describe **intentional gaps**, not missing documentation:
+These describe **planned product gaps**, not missing documentation:
 
 | Doc | Notes |
 |-----|-------|
-| [features/ai-agent.md](../features/ai-agent.md) | Material-matching agent — **not implemented** |
-| [flows/ai-material-matching-flow.md](../flows/ai-material-matching-flow.md) | Planned matching flow |
+| [features/ai-material-matching.md](../features/ai-material-matching.md) | Material-matching product feature — not implemented |
 | [features/moderator.md](../features/moderator.md) | Moderator portal — role exists; admin owns queues today |
-
-## Supplementary / handoff snapshots
-
-| Doc | Notes |
-|-----|-------|
-| [frontend/material-discovery-handoff.md](../frontend/material-discovery-handoff.md) | Historical handoff |
-| [tasks/](../tasks/) | Task snapshots |

@@ -2,7 +2,7 @@
 
 Consolidated unresolved questions from Phase 2A/2B feature and flow docs, plus code inspection. **Not implementation proof** — verify against code before acting.
 
-**Sources inspected:** `docs/features/*.md`, `docs/flows/*.md`, `docs/08-implementation-status.md`, `docs/backend/api-catalog.md`, `docs/frontend/routes-map.md`, `docs/database/tables-catalog.md`, `AGENTS.md`
+**Sources inspected:** `docs/features/*.md`, `docs/flows/*.md`, `docs/product/implementation-status.md`, `docs/backend/api-catalog.md`, `docs/frontend/routes-map.md`, `docs/database/tables-catalog.md`
 
 Status key: items marked **Needs verification** lack a single confirmed answer in checked-in code/docs.
 
@@ -89,7 +89,7 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 | Show fake ratings on API-backed pages? | **Resolved** — fake ratings are not shown; `ratingSummary` is real and comes from `project_user_reviews`, or null when there are no reviews | [learning-hub](features/learning-hub.md) |
 | Project submission/admin review workflow (draft → pending → published)? | **Resolved** — learner submit creates `PENDING_REVIEW`; `/admin/learning-projects` moderation can approve/request changes/reject/hide/restore/archive. Moderator-owned review remains not implemented. | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md), `learning-projects.routes.ts`, `admin.routes.ts`, `admin-learning-projects.*` |
 | Learning project ratings/reviews model and API? | **Resolved** — `project_user_reviews` stores one learner review per project; list/detail include `ratingSummary`, detail includes `recentReviews` and `viewerReview`; `PUT/DELETE /api/learning-projects/:id/review` are learner-only | [learning-hub](features/learning-hub.md), [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
-| AI material matching for project components? | **Not implemented** | [ai-agent](features/ai-agent.md) |
+| AI material matching for project components? | **Not implemented** | [ai-agent](features/ai-material-matching.md) |
 | Open external project links in browser (`url_launcher`)? | **Resolved** — detail links open safe `http`/`https` URLs; invalid/missing URLs render disabled | [learning-hub](features/learning-hub.md) |
 | Expose Hub search (`q`), difficulty, tag filters, or server pagination in UI? | **Resolved** — search, difficulty, tag filters, and server `page > 1` navigation are wired | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
 | Project likes API/UI? | **Resolved** — `project_likes` stores learner likes; list/detail include `likesCount` and viewer-specific `isLiked`; list, Home spotlight, and detail have optimistic like/unlike | [learning-hub](features/learning-hub.md), [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
@@ -118,7 +118,7 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 | Should admins explicitly reassign a delivery to a selected replacement driver? | Open — admins can reopen an eligible pre-pickup assigned delivery to `WAITING_FOR_DRIVER`, but no endpoint/UI exists to assign a selected replacement driver directly | [delivery](features/delivery.md), [delivery-flow](flows/delivery-flow.md) |
 | What should happen after post-pickup delivery failure? | Open — current code moves the reservation/delivery to `AWAITING_RESOLUTION` and keeps custody/hold semantics; no redelivery/retry/completion recovery workflow exists | [delivery](features/delivery.md), [delivery-flow](flows/delivery-flow.md) |
 | Should delivery tracking become realtime or include ETA/routes? | Open — current learner tracking is 20-second polling of latest driver ping only; no WebSocket/SSE, ETA, or route calculation | [delivery](features/delivery.md), [delivery-flow](flows/delivery-flow.md) |
-| AI material matching credit model — roadmap tables not in schema | **Not implemented** | [ai-agent](features/ai-agent.md), `05-roadmap.md` |
+| AI material matching credit model — roadmap tables not in schema | **Not implemented** | [ai-agent](features/ai-material-matching.md), `05-roadmap.md` |
 
 ---
 
@@ -152,7 +152,7 @@ From [learner-reservation-flow](flows/learner-reservation-flow.md), [delivery-fl
 
 | Question | Status | Source |
 |----------|--------|--------|
-| Flutter test coverage beyond isolated model tests? | **Partial** — reservation models/helpers/payloads and selected UI helpers have tests; full learner/supplier widget or E2E lifecycle coverage and manual regression docs are still missing | [08-implementation-status](08-implementation-status.md), [reservations](features/reservations.md) |
+| Flutter test coverage beyond isolated model tests? | **Partial** — reservation models/helpers/payloads and selected UI helpers have tests; full learner/supplier widget or E2E lifecycle coverage and manual regression docs are still missing | [implementation-status](implementation-status.md), [reservations](../features/reservations.md) |
 | Delivery manual regression coverage? | **Needs verification** — backend tests cover many delivery paths and Flutter unit/widget tests cover selected models/helpers, but no single manual checklist was found for the full learner/supplier/driver/admin delivery lifecycle | [delivery](features/delivery.md), [delivery-flow](flows/delivery-flow.md) |
 | Supplier notifications — exact query derivation | **Needs verification** | [backend/modules-map](backend/modules-map.md) |
 
@@ -162,4 +162,4 @@ From [learner-reservation-flow](flows/learner-reservation-flow.md), [delivery-fl
 
 1. When closing a question, update the relevant feature/flow doc and remove or strike the row here.
 2. Do not treat aspirational answers from [01-requirements.md](01-requirements.md) or [05-roadmap.md](05-roadmap.md) as shipped behavior.
-3. Link new gap docs: [reservations](features/reservations.md), [delivery](features/delivery.md), [ai-agent](features/ai-agent.md), [admin](features/admin.md), [moderator](features/moderator.md).
+3. Link new gap docs: [reservations](features/reservations.md), [delivery](features/delivery.md), [ai-agent](features/ai-material-matching.md), [admin](features/admin.md), [moderator](features/moderator.md).

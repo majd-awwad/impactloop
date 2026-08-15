@@ -169,6 +169,10 @@ Optional query `discoveryOnly=true` applies discovery name filtering and dedupe 
 
 **`POST /api/materials/:id/like` / `DELETE /api/materials/:id/like`:** Learner-only material like toggle. Both operations are idempotent. Response (`data`): `{ materialId, likesCount, isLiked }`. Liking own material is allowed.
 
+**Frontend boundary:** Flutter discovery uses `ApiMaterialDiscoveryRepository` → maps API DTOs into `DiscoveryMaterial` before `AppMaterialCard`. `MockMaterialDiscoveryRepository` remains for tests. Presentation widgets must not depend on transport-layer field names. List/detail mappers live under `apps/frontend/lib/features/material_discovery/data/`.
+
+**Public visibility:** Only materials with active `MATERIAL`/`BOTH` categories and status `AVAILABLE`, `PENDING_RESERVATION`, or `RESERVED` appear in discovery. `REUSED` and `UNAVAILABLE` are excluded. No exact address or coordinates in public responses.
+
 ## Reservations — `/api/reservations`
 
 | Method | Path | Auth | Roles | Source file |
@@ -630,7 +634,7 @@ No-show report verify counts as a strike. At **3 verified reports** the verify r
 
 ## Endpoints documented elsewhere but **not mounted**
 
-These appear in `docs/04-api-conventions.md` or `docs/02-architecture.md` examples but have **no route file** in the current codebase:
+These appear in `docs/04-api-conventions.md` historical examples or early design sketches but have **no route file** in the current codebase:
 
 | Example | Status |
 |---------|--------|

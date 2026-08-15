@@ -2,13 +2,13 @@
 
 > **Historical — planning document (2026-07-14).** Several sections below describe a pre-implementation snapshot and are **no longer accurate** as a whole-system description.
 >
-> **Current state:** see [08-implementation-status.md](../08-implementation-status.md), [01-general-learning-chat.md](01-general-learning-chat.md), and [features/ai-agent.md](../features/ai-agent.md) (material matching gap).
+> **Current state:** see [product/implementation-status.md](../product/implementation-status.md), [features/ai-assistant.md](../../features/ai-assistant.md), and [features/ai-material-matching.md](../../features/ai-material-matching.md) (material matching gap).
 >
 > **Shipped since this plan:** `apps/backend/src/modules/ai/` mounted at `/api/ai/v1`; Flutter `features/ai/` (`/ai/assistant`); general learning, build-guide tools, and project authoring waves. **Not shipped:** material-matching agent, credit wallets, `ai_material_matches` schema.
 
 **Status:** Historical planning doc — superseded for status by code-derived inventories above.  
 **Date:** 2026-07-14  
-**Sources inspected:** `apps/backend/src/`, `apps/backend/prisma/schema.prisma`, `apps/frontend/lib/`, `docs/08-implementation-status.md`, `docs/features/ai-agent.md`, `docs/features/learning-hub.md`, `docs/features/home-learner.md`, `docs/features/material-discovery.md`, `docs/features/reservations.md`, `AGENTS.md`
+**Sources inspected:** `apps/backend/src/`, `apps/backend/prisma/schema.prisma`, `apps/frontend/lib/`, `docs/product/implementation-status.md`, `docs/features/ai-material-matching.md`, `docs/features/learning-hub.md`, `docs/features/home-learner.md`, `docs/features/material-discovery.md`, `docs/features/reservations.md`, `AGENTS.md`
 
 **Evidence labels used throughout:**
 
@@ -23,7 +23,7 @@
 
 ## 1. Executive decision summary
 
-ImpactLoop today has a **partial learner-facing AI system** at `/api/ai/v1` (ImpactLoop Assistant) plus **internal price-rule review** AI (`suggestPriceReferenceForReview` in `apps/backend/src/services/ai-price-suggestion.service.ts`). Material **matching** with credits, `ai_material_matches`, and auto-reservation remains **not implemented** — see [features/ai-agent.md](../features/ai-agent.md) and [01-general-learning-chat.md](01-general-learning-chat.md).
+ImpactLoop today has a **partial learner-facing AI system** at `/api/ai/v1` (ImpactLoop Assistant) plus **internal price-rule review** AI (`suggestPriceReferenceForReview` in `apps/backend/src/services/ai-price-suggestion.service.ts`). Material **matching** with credits, `ai_material_matches`, and auto-reservation remains **not implemented** — see [features/ai-material-matching.md](../features/ai-material-matching.md) and [ai-assistant.md](ai-assistant.md).
 
 **RECOMMENDED CHANGE — core architectural decisions:**
 
@@ -46,7 +46,7 @@ ImpactLoop today has a **partial learner-facing AI system** at `/api/ai/v1` (Imp
 - Global middleware order: `requestContextMiddleware` → `helmet` → `cors` (allows `Idempotency-Key`, `Authorization`) → static uploads → `express.json()`.
 - Routes mounted under `/health`, `/api/auth`, `/api/profile`, `/api/categories`, `/api/material-types`, `/api/price-rule-requests`, `/api/invitations`, `/api/learning-projects`, `/api/materials`, `/api/reservations`, `/api/payments`, `/api/deliveries`, `/api/driver`, `/api/uploads`, `/api/locations`, `/api/learner/*`, `/api/ai/v1`, `/api/notifications`, `/api/supplier`, `/api/admin`.
 - Terminal: `notFoundMiddleware`, `errorMiddleware`.
-- **`/api/ai/v1` router exists** (ImpactLoop Assistant). See [01-general-learning-chat.md](01-general-learning-chat.md). **No global auth or rate limit** on all routes (AI has module-local limits).
+- **`/api/ai/v1` router exists** (ImpactLoop Assistant). See [ai-assistant.md](ai-assistant.md). **No global auth or rate limit** on all routes (AI has module-local limits).
 
 **VERIFIED CURRENT STATE — Auth & roles:**
 
