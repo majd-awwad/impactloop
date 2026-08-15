@@ -13,8 +13,9 @@ export type SeedCategoryTaxonomyOwnershipResult = {
  * Apply authoritative category → taxonomy concept ownership FKs.
  * Migrations intentionally skip this on empty DBs; seed owns the link for local reset.
  */
-export const seedCategoryTaxonomyOwnership =
-  async (): Promise<SeedCategoryTaxonomyOwnershipResult> => {
+export const seedCategoryTaxonomyOwnership = async (options?: {
+  onlyCategoryNamesEn?: readonly string[];
+}): Promise<SeedCategoryTaxonomyOwnershipResult> => {
     const legacyIndex = buildAuthoritativeLegacyCategoryIndex();
     const concepts = await prisma.taxonomyConcept.findMany({
       where: {
@@ -36,6 +37,9 @@ export const seedCategoryTaxonomyOwnership =
         isActive: true,
         parentId: null,
         categoryType: { in: ['MATERIAL', 'PROJECT'] },
+        ...(options?.onlyCategoryNamesEn
+          ? { nameEn: { in: [...options.onlyCategoryNamesEn] } }
+          : {}),
       },
       select: {
         id: true,
@@ -121,9 +125,16 @@ export const seedCategoryTaxonomyOwnership =
       projectOwned += 1;
     }
 
-    if (materialOwned !== 13 || projectOwned !== 6) {
+    const expectedMaterial = categories.filter(
+      (category) => category.categoryType === 'MATERIAL',
+    ).length;
+    const expectedProject = categories.filter(
+      (category) => category.categoryType === 'PROJECT',
+    ).length;
+
+    if (materialOwned !== expectedMaterial || projectOwned !== expectedProject) {
       throw new Error(
-        `CATEGORY_OWNERSHIP_SEED_POSTCONDITION_FAILED: material_owned=${materialOwned}, project_owned=${projectOwned}`,
+        `CATEGORY_OWNERSHIP_SEED_POSTCONDITION_FAILED: material_owned=${materialOwned}, project_owned=${projectOwned}, expected_material=${expectedMaterial}, expected_project=${expectedProject}`,
       );
     }
 

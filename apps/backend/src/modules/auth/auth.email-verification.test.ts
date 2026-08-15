@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { after, before, beforeEach, describe, test } from 'node:test';
 
 import { env } from '../../config/env.js';
+import { findPublishableMaterialCategoryId } from '../../test-support/publishable-category.fixture.js';
 import { prisma } from '../../database/prisma.js';
 import {
   checkRateLimit,
@@ -134,8 +135,7 @@ async function findExistingAvailableMaterial() {
 }
 
 async function findExistingCategoryId() {
-  const material = await findExistingAvailableMaterial();
-  return material.categoryId;
+  return findPublishableMaterialCategoryId();
 }
 
 async function createSupplierFixture(input?: {
