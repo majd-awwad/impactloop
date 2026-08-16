@@ -266,6 +266,8 @@ export const processGeneralLearningTurn = async (input: {
       env.aiChatMaxHistoryMessages,
     );
 
+    const deterministicScope = classifyScopeDeterministic(input.text);
+
     const agentResult = await executeLearnerAgentPlatformTurn({
       userMessage: input.text,
       locale: responseLocale,
@@ -276,15 +278,31 @@ export const processGeneralLearningTurn = async (input: {
       history,
     });
 
-    if (agentResult?.semanticRoute === 'GENERAL_LEARNING') {
+    if (deterministicScope.classification === 'OUT_OF_SCOPE') {
+      blocks = [textBlock(REFUSAL_COPY[responseLocale], 'refusal')];
+      scopeClassification = 'OUT_OF_SCOPE';
+      assistantStatus = 'REFUSED';
+      providerName = 'system';
+      model = null;
+    } else if (deterministicScope.classification === 'DANGEROUS_REQUEST') {
+      blocks = [textBlock(DANGEROUS_SAFETY_COPY[responseLocale], 'safety')];
+      scopeClassification = 'DANGEROUS_REQUEST';
+      assistantStatus = 'REFUSED';
+      providerName = 'system';
+      model = null;
+    } else if (agentResult?.semanticRoute === 'GENERAL_LEARNING') {
       assertProviderOperational(responseLocale);
 
       const provider = getAiChatProvider();
+      const providerScopeClassification: AiScopeClassification =
+        deterministicScope.classification === 'MIXED'
+          ? 'MIXED'
+          : 'DOMAIN_KNOWLEDGE';
       const answer = await provider.generateGeneralLearningAnswer({
         locale: responseLocale,
         userMessage: input.text,
         history,
-        scopeClassification: 'DOMAIN_KNOWLEDGE',
+        scopeClassification: providerScopeClassification,
       });
 
       blocks = answer.data.blocks;
@@ -293,7 +311,7 @@ export const processGeneralLearningTurn = async (input: {
       latencyMs = answer.latencyMs;
       inputTokens = answer.usage.inputTokens;
       outputTokens = answer.usage.outputTokens;
-      scopeClassification = 'DOMAIN_KNOWLEDGE';
+      scopeClassification = providerScopeClassification;
     } else if (agentResult) {
       blocks = agentResult.blocks;
       providerName = agentResult.providerName;

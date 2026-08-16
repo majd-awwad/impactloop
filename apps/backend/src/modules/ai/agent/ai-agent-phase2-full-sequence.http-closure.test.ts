@@ -116,6 +116,10 @@ before(async () => {
   resetRateLimitersForTests();
   setAiChatProviderForTests(new MockAiChatProviderClass());
 
+  const { createTaxonomyReadyProjectCategory } = await import(
+    '../../../test-support/publishable-category.fixture.js'
+  );
+
   const materialCategory = await prisma.category.create({
     data: {
       nameEn: `Electronics ${SEED_TOKEN}`,
@@ -127,13 +131,9 @@ before(async () => {
   ids.materialCategoryId = materialCategory.id;
   ids.createdCategoryIds.push(materialCategory.id);
 
-  const projectCategory = await prisma.category.create({
-    data: {
-      nameEn: `Robotics ${SEED_TOKEN}`,
-      nameAr: `روبوتات ${SEED_TOKEN}`,
-      categoryType: 'PROJECT',
-      isActive: true,
-    },
+  const projectCategory = await createTaxonomyReadyProjectCategory({
+    nameEn: `Robotics ${SEED_TOKEN}`,
+    nameAr: `روبوتات ${SEED_TOKEN}`,
   });
   ids.projectCategoryId = projectCategory.id;
   ids.createdCategoryIds.push(projectCategory.id);
@@ -223,7 +223,7 @@ before(async () => {
   const beginnerProject = await prisma.learningProject.create({
     data: {
       categoryId: ids.projectCategoryId,
-      createdBy: ids.learnerId,
+      createdBy: ids.supplierId,
       title: `${SEED_TOKEN} Beginner Blink`,
       shortDescription: `${TEST_MARKER} beginner`,
       description: `${TEST_MARKER} beginner project`,
@@ -260,7 +260,7 @@ before(async () => {
   const intermediateProject = await prisma.learningProject.create({
     data: {
       categoryId: ids.projectCategoryId,
-      createdBy: ids.learnerId,
+      createdBy: ids.supplierId,
       title: `${SEED_TOKEN} Advanced Robot`,
       shortDescription: `${TEST_MARKER} intermediate`,
       description: `${TEST_MARKER} intermediate project`,

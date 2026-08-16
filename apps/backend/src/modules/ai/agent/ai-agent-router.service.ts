@@ -257,6 +257,15 @@ const matchSemanticPlatformRoute = (text: string): AiAgentRouteDecision | null =
     };
   }
 
+  if (detectProjectComponentsIntent(text)) {
+    return {
+      route: 'PROJECT_COMPONENTS',
+      confidence: 0.94,
+      source: 'deterministic',
+      suggestedTool: 'get_project_required_components',
+    };
+  }
+
   if (detectRecentProjectDetailsIntent(text)) {
     return {
       route: 'PROJECT_DETAILS',
@@ -308,15 +317,6 @@ const matchSemanticPlatformRoute = (text: string): AiAgentRouteDecision | null =
       confidence: 0.94,
       source: 'deterministic',
       suggestedTool: 'match_available_materials_for_project',
-    };
-  }
-
-  if (detectProjectComponentsIntent(text)) {
-    return {
-      route: 'PROJECT_COMPONENTS',
-      confidence: 0.94,
-      source: 'deterministic',
-      suggestedTool: 'get_project_required_components',
     };
   }
 
@@ -412,6 +412,15 @@ const matchPlatformRoute = (text: string): AiAgentRouteDecision | null => {
     };
   }
 
+  if (detectProjectComponentsIntent(text)) {
+    return {
+      route: 'PROJECT_COMPONENTS',
+      confidence: 0.94,
+      source: 'deterministic',
+      suggestedTool: 'get_project_required_components',
+    };
+  }
+
   if (detectRecentProjectDetailsIntent(text)) {
     return {
       route: 'PROJECT_DETAILS',
@@ -448,7 +457,7 @@ const matchPlatformRoute = (text: string): AiAgentRouteDecision | null => {
       }
       if (
         candidate.route === 'PROJECT_DETAILS' &&
-        detectSavedProjectsIntent(text)
+        (detectSavedProjectsIntent(text) || detectProjectComponentsIntent(text))
       ) {
         continue;
       }

@@ -280,7 +280,11 @@ describe('ai http closure', () => {
     assert.equal(sent.json.data?.meta?.scopeClassification, 'OUT_OF_SCOPE');
     assert.equal(provider.answerCalls, 0);
     const blocks = sent.json.data?.contentBlocks as Array<Record<string, unknown>>;
-    assert.ok(blocks.some((block) => block.purpose === 'answer'));
+    assert.ok(
+      blocks.some(
+        (block) => block.purpose === 'refusal' || block.purpose === 'answer',
+      ),
+    );
     assert.match(
       JSON.stringify(blocks),
       /الطقس|مواضيع التعلم/,

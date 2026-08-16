@@ -1526,12 +1526,12 @@ const reconcilePlannerWithPlatformIntent = (input: {
     }
   }
 
-  if (
-    detectProjectComponentsIntent(input.userMessage) &&
+  if (detectProjectComponentsIntent(input.userMessage) &&
     !detectBuildGapIntent(input.userMessage) &&
     (input.plan.route === 'GENERAL_LEARNING' ||
       input.plan.route === 'CLARIFICATION' ||
-      input.plan.route === 'BUILD_GAP_ANALYSIS')
+      input.plan.route === 'BUILD_GAP_ANALYSIS' ||
+      input.plan.route === 'MATERIAL_SEARCH')
   ) {
     const fallback = buildDeterministicFallbackPlan({
       userMessage: input.userMessage,
@@ -1539,6 +1539,27 @@ const reconcilePlannerWithPlatformIntent = (input: {
         ...input.routeDecision,
         route: 'PROJECT_COMPONENTS',
         suggestedTool: 'get_project_required_components',
+        confidence: 0.94,
+      },
+      locale: input.locale,
+      conversationContext: input.conversationContext,
+    });
+    fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+    fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
+    return fallback;
+  }
+
+  if (detectMaterialSearchIntent(input.userMessage).detected) {
+    if (detectComparisonFollowUpIntent(input.userMessage)) {
+      return input.plan;
+    }
+
+    const fallback = buildDeterministicFallbackPlan({
+      userMessage: input.userMessage,
+      routeDecision: {
+        ...input.routeDecision,
+        route: 'MATERIAL_SEARCH',
+        suggestedTool: 'search_available_materials',
         confidence: 0.94,
       },
       locale: input.locale,
@@ -1703,6 +1724,27 @@ const reconcilePlannerWithPlatformIntent = (input: {
         ...input.routeDecision,
         route: 'MATERIAL_COMPARISON',
         suggestedTool: 'compare_materials',
+        confidence: 0.94,
+      },
+      locale: input.locale,
+      conversationContext: input.conversationContext,
+    });
+    fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+    fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
+    return fallback;
+  }
+
+  if (detectMaterialSearchIntent(input.userMessage).detected) {
+    if (detectComparisonFollowUpIntent(input.userMessage)) {
+      return input.plan;
+    }
+
+    const fallback = buildDeterministicFallbackPlan({
+      userMessage: input.userMessage,
+      routeDecision: {
+        ...input.routeDecision,
+        route: 'MATERIAL_SEARCH',
+        suggestedTool: 'search_available_materials',
         confidence: 0.94,
       },
       locale: input.locale,
@@ -2358,6 +2400,87 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     }
   }
 
+  if (detectDeterministicPlatformActionIntent(input.userMessage)) {
+    return markStructuredContinuationDiagnostics({
+      route: 'ACTION_REQUEST',
+      toolName: 'prepare_action',
+      toolInput: {},
+      diagnostics: {
+        deterministicRoute: 'ACTION_REQUEST',
+        deterministicConfidence: 0.95,
+        semanticPlannerUsed: false,
+        semanticRoute: null,
+        validatedRoute: 'ACTION_REQUEST',
+        normalizedFilters: null,
+        toolName: 'prepare_action',
+        plannerConfidence: null,
+        resolvedEntityTitle: null,
+      },
+    });
+  }
+
+  if (detectProjectsWithinBudgetIntent(input.userMessage)) {
+    const budgetBound = extractBudgetBound(input.userMessage);
+    if (!budgetBound?.maxBudgetNis) {
+      return markStructuredContinuationDiagnostics(
+        buildProjectsWithinBudgetClarificationPlan({
+          routeDecision: {
+            route: 'PROJECTS_WITHIN_BUDGET',
+            confidence: 0.92,
+            source: 'deterministic',
+            suggestedTool: 'find_projects_within_budget',
+          },
+          locale: input.locale,
+          semanticPlannerUsed: false,
+          semanticRoute: null,
+          plannerConfidence: null,
+        }),
+      );
+    }
+
+    return markStructuredContinuationDiagnostics(
+      buildProjectsWithinBudgetExecutionPlan({
+        routeDecision: {
+          route: 'PROJECTS_WITHIN_BUDGET',
+          confidence: 0.94,
+          source: 'deterministic',
+          suggestedTool: 'find_projects_within_budget',
+        },
+        toolInput: parseProjectsWithinBudgetInput(input.userMessage),
+        semanticPlannerUsed: false,
+        semanticRoute: null,
+        plannerConfidence: null,
+      }),
+    );
+  }
+
+  if (
+    conversationContext &&
+    detectProjectBudgetEstimationFollowUp(input.userMessage) &&
+    conversationContext.entities.some((entity) => entity.type === 'PROJECT')
+  ) {
+    const budgetPlan = buildProjectBudgetFallbackPlan({
+      userMessage: input.userMessage,
+      routeDecision: {
+        route: 'PROJECT_BUDGET_ESTIMATION',
+        confidence: 0.94,
+        source: 'deterministic',
+        suggestedTool: 'estimate_project_material_budget',
+      },
+      locale: input.locale,
+      conversationContext,
+      semanticPlannerUsed: false,
+      semanticRoute: null,
+      plannerConfidence: null,
+    });
+    if (
+      budgetPlan.route === 'PROJECT_BUDGET_ESTIMATION' &&
+      (budgetPlan.toolInput.projectId || budgetPlan.toolInput.projectQuery)
+    ) {
+      return markStructuredContinuationDiagnostics(budgetPlan);
+    }
+  }
+
   if (
     detectProjectComponentsIntent(input.userMessage) &&
     !detectBuildGapIntent(input.userMessage)
@@ -2375,6 +2498,20 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     });
   }
 
+  if (detectComponentMaterialMatchingIntent(input.userMessage)) {
+    return buildDeterministicFallbackPlan({
+      userMessage: input.userMessage,
+      routeDecision: {
+        route: 'COMPONENT_MATERIAL_MATCHING',
+        confidence: 0.94,
+        source: 'deterministic',
+        suggestedTool: 'find_materials_for_component',
+      },
+      locale: input.locale,
+      conversationContext,
+    });
+  }
+
   if (detectBuildGapIntent(input.userMessage)) {
     return buildDeterministicFallbackPlan({
       userMessage: input.userMessage,
@@ -2383,6 +2520,20 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
         confidence: 0.93,
         source: 'deterministic',
         suggestedTool: 'analyze_build_gaps',
+      },
+      locale: input.locale,
+      conversationContext,
+    });
+  }
+
+  if (detectMaterialSearchIntent(input.userMessage).detected) {
+    return buildDeterministicFallbackPlan({
+      userMessage: input.userMessage,
+      routeDecision: {
+        route: 'MATERIAL_SEARCH',
+        confidence: 0.94,
+        source: 'deterministic',
+        suggestedTool: 'search_available_materials',
       },
       locale: input.locale,
       conversationContext,

@@ -453,7 +453,7 @@ describe('AI project authoring wave 2A.1 real provider integration', () => {
 
     assert.equal(bootstrap.response.status, 201);
     assert.equal(getLastAuthoringClarificationRouteForTests(), 'openai');
-    assert.equal(realInvokerCalls, 1);
+    assert.equal(realInvokerCalls(), 1);
   });
 
   test('explicit mock provider uses deterministic clarification generator', async () => {
@@ -537,7 +537,7 @@ describe('AI project authoring wave 2A.1 real provider integration', () => {
 
     assert.equal(bootstrap.response.status, 201);
     assert.equal(getLastAuthoringClarificationRouteForTests(), 'override');
-    assert.equal(realInvokerCalls, 0);
+    assert.equal(realInvokerCalls(), 0);
     assert.match(
       String(clarificationFromTurn(bootstrap.json)?.summary),
       /Override summary/,
@@ -716,7 +716,7 @@ describe('AI project authoring wave 2A.1 real provider integration', () => {
 
     assert.equal(bootstrap.response.status, 502);
     assert.equal(bootstrap.json.error?.code, 'AI_RESPONSE_INVALID');
-    assert.equal(realInvokerCalls, 2);
+    assert.equal(realInvokerCalls(), 2);
   });
 
   test('repeated question from real provider is repaired to READY fallback', async () => {
@@ -794,7 +794,7 @@ describe('AI project authoring wave 2A.1 real provider integration', () => {
 
     assert.equal(bootstrap.response.status, 502);
     assert.equal(bootstrap.json.error?.code, 'AI_PROVIDER_ERROR');
-    assert.equal(realInvokerCalls, 1);
+    assert.equal(realInvokerCalls(), 1);
   });
 
   test('provider rate limit maps to AI_PROVIDER_RATE_LIMITED', async () => {
@@ -927,6 +927,6 @@ describe('AI project authoring wave 2A.1 real provider integration', () => {
       token,
     });
 
-    assert.equal(realInvokerCalls, 1);
+    assert.equal(realInvokerCalls(), 1);
   });
 });

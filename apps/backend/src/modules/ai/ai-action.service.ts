@@ -311,7 +311,7 @@ const executeConfirmedAction = async (input: {
         materialId: payload.target.materialId,
         quantityRequested: payload.parameters.quantityRequested,
         fulfillmentMethod: payload.parameters.fulfillmentMethod,
-        paymentMethod: 'CARD',
+        paymentMethod: 'CASH',
         message: payload.parameters.message,
         learnerPreferredPickupWindows: payload.parameters.learnerPreferredPickupWindows,
         learnerPreferredDeliveryWindows:
