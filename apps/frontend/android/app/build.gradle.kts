@@ -50,10 +50,24 @@ android {
     buildTypes {
         release {
             val releaseSigning = signingConfigs.getByName("release")
-            check(releaseSigning.storeFile != null) {
-                "Release signing is not configured. Copy android/key.properties.example to android/key.properties and provide a release keystore before building for distribution."
+            if (releaseSigning.storeFile != null) {
+                signingConfig = releaseSigning
             }
-            signingConfig = releaseSigning
+        }
+    }
+}
+
+gradle.taskGraph.whenReady {
+    val isReleaseDistributionTask = allTasks.any { task ->
+        val name = task.name
+        name.contains("Release", ignoreCase = true) &&
+            (name.startsWith("assemble", ignoreCase = true) ||
+                name.startsWith("bundle", ignoreCase = true))
+    }
+    if (isReleaseDistributionTask) {
+        val releaseSigning = android.signingConfigs.getByName("release")
+        check(releaseSigning.storeFile != null) {
+            "Release signing is not configured. Copy android/key.properties.example to android/key.properties and provide a release keystore before building for distribution."
         }
     }
 }
