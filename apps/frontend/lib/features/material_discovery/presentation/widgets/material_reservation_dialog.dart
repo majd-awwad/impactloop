@@ -66,11 +66,11 @@ class MaterialReservationDialogState
   final _deliveryNoteController = TextEditingController();
 
   String? _fulfillmentMethod;
-  String _paymentMethod = 'CARD';
+  String _paymentMethod = 'CASH';
   final _pickupWindows = <PreferredWindowDraft>[PreferredWindowDraft()];
   final _deliveryWindows = <PreferredWindowDraft>[PreferredWindowDraft()];
 
-  var _safeDropoffAllowed = true;
+  var _safeDropoffAllowed = false;
   bool? _safeDropoffBeforeCash;
 
   String _cachedDeliveryCity = '';
@@ -565,7 +565,7 @@ class MaterialReservationDialogState
             materialId: widget.material.id,
             quantityRequested: quantity,
             fulfillmentMethod: 'PICKUP',
-            paymentMethod: _quote?.totalAmount == 0 ? 'CARD' : _paymentMethod,
+            paymentMethod: _quote?.totalAmount == 0 ? 'CASH' : _paymentMethod,
             message: message.isEmpty ? null : message,
             learnerPreferredPickupWindows: windows,
           ),
@@ -605,7 +605,7 @@ class MaterialReservationDialogState
             materialId: widget.material.id,
             quantityRequested: quantity,
             fulfillmentMethod: 'DELIVERY',
-            paymentMethod: _quote?.totalAmount == 0 ? 'CARD' : _paymentMethod,
+            paymentMethod: _quote?.totalAmount == 0 ? 'CASH' : _paymentMethod,
             message: message.isEmpty ? null : message,
             learnerPreferredDeliveryWindows: windows,
             deliveryAddressText: _deliveryAddressController.text.trim(),

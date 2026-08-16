@@ -48,13 +48,19 @@ Map<String, dynamic> _paymentSummary({
   bool enforcementEnabled = true,
   bool hasMaterialPaymentOutstanding = true,
   bool hasDeliveryFeeOutstanding = false,
-  String? checkoutableOrderId = 'ord-1',
+  String? checkoutableOrderId,
   String? outstandingAmount = '16.00',
   bool pickupCodeAvailable = false,
   bool fulfillmentReady = false,
+  bool? dueAtHandover,
 }) {
+  final resolvedDueAtHandover = dueAtHandover ??
+      (overallStatus == 'REQUIRES_PAYMENT' &&
+          (hasMaterialPaymentOutstanding || hasDeliveryFeeOutstanding));
   return {
     'enforcementEnabled': enforcementEnabled,
+    'paymentMethod': 'CASH',
+    'dueAtHandover': resolvedDueAtHandover,
     'overallStatus': overallStatus,
     'outstandingOrderCount':
         (hasMaterialPaymentOutstanding ? 1 : 0) +
@@ -199,7 +205,9 @@ Future<void> _pumpRoutedPage(
 }
 
 void main() {
-  testWidgets('payment-required pickup card shows Pay now', (tester) async {
+  testWidgets('payment-required pickup card shows cash due at handover', (
+    tester,
+  ) async {
     final reservation = LearnerReservation.fromJson(
       _baseReservation(
         id: 'res-pay',
@@ -210,13 +218,14 @@ void main() {
 
     await _pumpPage(tester, reservations: [reservation]);
 
-    expect(find.text('Pay now'), findsOneWidget);
-    expect(find.text('Payment required'), findsOneWidget);
+    expect(find.text('View details'), findsOneWidget);
+    expect(find.text('Due at handover'), findsOneWidget);
+    expect(find.text('Pay now'), findsNothing);
     expect(find.byKey(const Key('reservation-next-step-panel')), findsOneWidget);
     expect(find.text('PICKUP-CODE-SECRET'), findsNothing);
   });
 
-  testWidgets('partial delivery payment card shows Complete payment', (
+  testWidgets('partial delivery payment card shows cash due at handover', (
     tester,
   ) async {
     final reservation = LearnerReservation.fromJson(
@@ -227,7 +236,6 @@ void main() {
         paymentSummary: _paymentSummary(
           hasMaterialPaymentOutstanding: false,
           hasDeliveryFeeOutstanding: true,
-          checkoutableOrderId: 'fee-1',
           outstandingAmount: '12.00',
         ),
       ),
@@ -235,8 +243,10 @@ void main() {
 
     await _pumpPage(tester, reservations: [reservation]);
 
-    expect(find.text('Complete payment'), findsOneWidget);
-    expect(find.text('Partial payment'), findsOneWidget);
+    expect(find.text('Due at handover'), findsOneWidget);
+    expect(find.text('Remaining'), findsOneWidget);
+    expect(find.textContaining('12.00'), findsOneWidget);
+    expect(find.text('Complete payment'), findsNothing);
   });
 
   testWidgets('paid and ready pickup shows view pickup code action', (
@@ -367,8 +377,8 @@ void main() {
     );
 
     expect(find.text('حجوزاتي'), findsWidgets);
-    expect(find.text('ادفع الآن'), findsOneWidget);
-    expect(find.text('دفع مطلوب'), findsWidgets);
+    expect(find.text('مستحق عند التسليم'), findsWidgets);
+    expect(find.text('ادفع الآن'), findsNothing);
     expect(find.text('Pay now'), findsNothing);
   });
 
@@ -384,28 +394,33 @@ void main() {
     await _pumpPage(tester, reservations: [reservation]);
 
     expect(find.text('My reservations'), findsWidgets);
-    expect(find.text('Pay now'), findsOneWidget);
+    expect(find.text('Due at handover'), findsOneWidget);
+    expect(find.text('Pay now'), findsNothing);
   });
 
-  testWidgets('Pay now opens reservation checkout, not legacy order checkout', (
+  testWidgets('cash due at handover opens reservation details, not checkout', (
     tester,
   ) async {
     final reservation = LearnerReservation.fromJson(
       _baseReservation(
         id: 'res-checkout',
         status: 'ACCEPTED',
-        paymentSummary: _paymentSummary(checkoutableOrderId: 'ord-77'),
+        paymentSummary: _paymentSummary(),
       ),
     );
 
     await _pumpRoutedPage(tester, reservations: [reservation]);
-    final payButton = find.byKey(const Key('reservation-primary-action'));
-    await tester.ensureVisible(payButton);
-    await tester.tap(payButton);
+    final primaryButton = find.byKey(const Key('reservation-primary-action'));
+    await tester.ensureVisible(primaryButton);
+    await tester.tap(primaryButton);
     await tester.pumpAndSettle();
 
     expect(find.text('checkout:ord-77'), findsNothing);
-    expect(find.text('checkout-reservation:res-checkout'), findsOneWidget);
+    expect(find.text('checkout-reservation:res-checkout'), findsNothing);
+    expect(
+      find.text('details:res-checkout:focus=null:order=null'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('opens details from secondary action', (tester) async {
@@ -418,7 +433,7 @@ void main() {
     );
 
     await _pumpRoutedPage(tester, reservations: [reservation]);
-    final detailsButton = find.byKey(const Key('reservation-view-details'));
+    final detailsButton = find.byKey(const Key('reservation-primary-action'));
     expect(detailsButton, findsOneWidget);
     await tester.ensureVisible(detailsButton);
     await tester.tap(detailsButton);
@@ -476,7 +491,7 @@ void main() {
     for (final size in sizes) {
       await _pumpPage(tester, reservations: [reservation], size: size);
       expect(tester.takeException(), isNull);
-      expect(find.text('Pay now'), findsOneWidget);
+      expect(find.text('Due at handover'), findsOneWidget, reason: 'status at $size');
       expect(find.text('All'), findsOneWidget);
     }
   });

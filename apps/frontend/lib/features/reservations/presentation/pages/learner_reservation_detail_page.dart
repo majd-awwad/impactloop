@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -15,7 +14,6 @@ import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../../core/polling/lifecycle_polling_controller.dart';
 import '../../../../core/polling/lifecycle_polling_host.dart';
 import '../../../auth/application/auth_controller.dart';
-import '../../../auth/application/auth_route_helpers.dart';
 import '../../../deliveries/application/learner_deliveries_provider.dart';
 import '../../../deliveries/data/models/learner_delivery.dart';
 import '../../application/learner_reservation_provider.dart';
@@ -190,7 +188,6 @@ class _ReservationDetailContentState
 
   void _onCheckoutOrder(String orderId) {
     setState(() => _checkoutableOrderId = orderId);
-    context.push(learnerReservationCheckoutRoute(widget.reservationId));
   }
 
   void _scrollToPickupCode() {

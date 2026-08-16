@@ -181,15 +181,23 @@ String reservationNextStepMessage(
         summary.hasDeliveryFeeOutstanding) {
       return reservation.isDeliveryFulfillment
           ? l10n.reservationMoneyBothOutstanding
-          : l10n.reservationNextStepPayToConfirm;
+          : (summary.dueAtHandover
+              ? l10n.reservationPaymentCashAtHandover
+              : l10n.reservationNextStepPayToConfirm);
     }
     if (summary.hasMaterialPaymentOutstanding) {
       return reservation.isDeliveryFulfillment
-          ? l10n.reservationNextStepPayToConfirmDelivery
-          : l10n.reservationNextStepPayToConfirm;
+          ? (summary.dueAtHandover
+              ? l10n.reservationPaymentCashAtHandover
+              : l10n.reservationNextStepPayToConfirmDelivery)
+          : (summary.dueAtHandover
+              ? l10n.reservationPaymentCashAtHandover
+              : l10n.reservationNextStepPayToConfirm);
     }
     if (summary.hasDeliveryFeeOutstanding) {
-      return l10n.reservationNextStepDeliveryFeeRemaining;
+      return summary.dueAtHandover
+          ? l10n.reservationPaymentCashAtHandover
+          : l10n.reservationNextStepDeliveryFeeRemaining;
     }
     if (summary.isPaid &&
         reservation.isPickupFulfillment &&
@@ -250,6 +258,12 @@ LearnerReservationPrimaryAction resolvePrimaryAction(
   LearnerDelivery? delivery,
 }) {
   final summary = reservation.paymentSummary;
+
+  if (summary != null &&
+      !summary.isPaymentsDisabled &&
+      summary.dueAtHandover) {
+    return LearnerReservationPrimaryAction.viewDetails;
+  }
 
   if (summary != null &&
       !summary.isPaymentsDisabled &&

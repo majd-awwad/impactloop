@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 import { createServer, type Server } from 'node:http';
+import type { Express } from 'express';
 
-import { app } from '../../app.js';
 import { prisma } from '../../database/prisma.js';
 import { signAccessToken } from '../../utils/jwt.js';
 
@@ -20,6 +20,7 @@ import {
   createPayReservationFixture,
   createPayTestIds,
   createPayUser,
+  createPaymentsCheckoutTestApp,
   trackOrder,
 } from './payments.test-helpers.js';
 import { getPaymentProvider } from './providers/payment-provider.registry.js';
@@ -33,6 +34,7 @@ describe('PAY-01 checkout idempotency and events', () => {
   let otherLearnerId = '';
   let supplierId = '';
   let adminId = '';
+  let app: Express;
   let server: Server;
   let baseUrl = '';
 
@@ -58,6 +60,7 @@ describe('PAY-01 checkout idempotency and events', () => {
     supplierId = supplier.id;
     adminId = admin.id;
 
+    app = await createPaymentsCheckoutTestApp();
     server = createServer(app);
     await new Promise<void>((resolve) => {
       server.listen(0, '127.0.0.1', () => resolve());

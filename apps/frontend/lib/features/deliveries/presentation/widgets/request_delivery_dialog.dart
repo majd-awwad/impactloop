@@ -230,7 +230,12 @@ class _RequestDeliveryDialogState
         showInfoSnackBar(context, context.l10n.deliveryFeePaymentRequired);
         final router = GoRouter.of(context);
         widget.onSubmitted();
-        router.push(learnerReservationCheckoutRoute(widget.reservation.id));
+        router.push(
+          learnerReservationDetailRoute(
+            widget.reservation.id,
+            focus: 'payment',
+          ),
+        );
         return;
       }
 

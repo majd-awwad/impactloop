@@ -39,6 +39,7 @@ import {
   moneyDecimalToMinorUnits,
   moneyDecimalToString,
 } from './payments.money.js';
+import { assertCardCheckoutApiAvailable } from './payments.product-policy.js';
 import { getPaymentProvider } from './providers/payment-provider.registry.js';
 import { MockPaymentProvider } from './providers/mock/mock.provider.js';
 import {
@@ -535,6 +536,7 @@ export const startPaymentCheckout = async (input: {
       'CASH_PAYMENT_NOT_CHECKOUTABLE',
     );
   }
+  assertCardCheckoutApiAvailable();
   const key = validateIdempotencyKey(input.idempotencyKey);
   const requestHash = computeIdempotencyRequestHash({
     orderId: input.orderId,

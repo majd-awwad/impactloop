@@ -52,13 +52,19 @@ Map<String, dynamic> _paymentSummary({
   bool enforcementEnabled = true,
   bool hasMaterialPaymentOutstanding = true,
   bool hasDeliveryFeeOutstanding = false,
-  String? checkoutableOrderId = 'ord-1',
+  String? checkoutableOrderId,
   String? outstandingAmount = '16.00',
   bool pickupCodeAvailable = false,
   bool fulfillmentReady = false,
+  bool? dueAtHandover,
 }) {
+  final resolvedDueAtHandover = dueAtHandover ??
+      (overallStatus == 'REQUIRES_PAYMENT' &&
+          (hasMaterialPaymentOutstanding || hasDeliveryFeeOutstanding));
   return {
     'enforcementEnabled': enforcementEnabled,
+    'paymentMethod': 'CASH',
+    'dueAtHandover': resolvedDueAtHandover,
     'overallStatus': overallStatus,
     'outstandingOrderCount':
         (hasMaterialPaymentOutstanding ? 1 : 0) +
@@ -256,7 +262,7 @@ void main() {
     await _pumpRouted(tester, reservations: [reservation]);
 
     expect(find.byType(LearnerReservationListCard), findsOneWidget);
-    final detailsButton = find.byKey(const Key('reservation-view-details'));
+    final detailsButton = find.byKey(const Key('reservation-primary-action'));
     await tester.ensureVisible(detailsButton);
     await tester.tap(detailsButton);
     await tester.pumpAndSettle();
@@ -265,25 +271,25 @@ void main() {
     expect(find.byKey(const Key('reservation-view-details')), findsNothing);
   });
 
-  testWidgets('Pay CTA opens reservation checkout with checkoutable order', (
+  testWidgets('cash due at handover opens reservation details, not checkout', (
     tester,
   ) async {
     final reservation = LearnerReservation.fromJson(
       _baseReservation(
         id: 'res-pay',
         status: 'ACCEPTED',
-        paymentSummary: _paymentSummary(checkoutableOrderId: 'ord-99'),
+        paymentSummary: _paymentSummary(),
       ),
     );
 
     await _pumpRouted(tester, reservations: [reservation]);
-    final payButton = find.byKey(const Key('reservation-primary-action'));
-    await tester.ensureVisible(payButton);
-    await tester.tap(payButton);
+    final detailsButton = find.byKey(const Key('reservation-primary-action'));
+    await tester.ensureVisible(detailsButton);
+    await tester.tap(detailsButton);
     await tester.pumpAndSettle();
 
-    expect(find.text('checkout-reservation:res-pay'), findsOneWidget);
-    expect(find.byType(LearnerReservationDetailsBody), findsNothing);
+    expect(find.text('checkout-reservation:res-pay'), findsNothing);
+    expect(find.byType(LearnerReservationDetailsBody), findsOneWidget);
   });
 
   testWidgets('closed card has no error accent and no pay CTA', (tester) async {
@@ -406,7 +412,7 @@ void main() {
     for (final size in sizes) {
       await _pumpList(tester, reservations: [reservation], size: size);
       expect(tester.takeException(), isNull, reason: 'overflow at $size');
-      expect(find.text('Pay now'), findsOneWidget, reason: 'CTA at $size');
+      expect(find.text('View details'), findsOneWidget, reason: 'CTA at $size');
       expect(
         find.byKey(const Key('reservation-primary-action')),
         findsOneWidget,
@@ -431,7 +437,8 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
-    expect(find.text('Pay now'), findsOneWidget);
+    expect(find.text('View details'), findsOneWidget);
+    expect(find.text('Pay now'), findsNothing);
   });
 
   testWidgets('details still exposes operational controls for accepted pickup', (

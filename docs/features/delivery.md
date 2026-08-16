@@ -20,7 +20,7 @@ Role-scope boundary: driver is an operational support role for basic internal de
 | Flutter driver portal | **Partial** | `/driver/jobs` job board, `/driver/deliveries/:id` status updates, code prompts, incident reports, foreground auto-location sharing on the active delivery detail page, and manual location ping; no live route map or background pings |
 | Flutter admin operations | **Partial** | Responsive delivery monitoring overview with server-backed summary/filter/pagination data, a concise Delivery/Journey/Progress/Attention/Updated list, and `/admin/deliveries/:deliveryId`: a conditional overview/timeline/assignment/group/incident/tracking workspace. It renders only returned contract fields and exposes pre-pickup **Reopen to drivers** only when authorized; no selected-driver reassignment or general delivery cancel screen |
 | External partners | **Out of scope** | No external delivery partners |
-| Delivery fee payment | **Partial** | Fee metadata and `DELIVERY_FEE` PaymentOrders exist; CARD Mock checkout when enforcement on; CASH at handover where applicable; real PSP not configured |
+| Delivery fee payment | **Partial** | Fee metadata and `DELIVERY_FEE` PaymentOrders exist; **current MVP: CASH** at handover; dormant CARD checkout infrastructure retained; real PSP not configured |
 
 ## Data Model
 
@@ -57,9 +57,9 @@ Learner delivery request:
 Delivery payment readiness:
 
 - Delivery creation and driver new-job notifications require delivery-fee payment readiness when a positive fee applies.
-- `CARD` delivery fees use the same Mock checkout path as material obligations when electronic enforcement is on.
-- `CASH` material or fee obligations are collected at handover and are not checkoutable via Mock provider.
-- See [payments.md](payments.md) and [payment-flow.md](../flows/payment-flow.md) for provider boundaries.
+- **Current MVP:** CASH obligations are collected at handover and are not checkoutable electronically.
+- Dormant CARD/Mock checkout paths remain in `payments.checkout-routes.ts` for future reactivation.
+- See [payments.md](payments.md) and [payment-flow.md](../flows/payment-flow.md).
 
 Delivery reservation handoff:
 
@@ -202,4 +202,4 @@ Admin:
 - Post-pickup delivery failure retry/redelivery workflow.
 - ETA/route calculation and proof-of-delivery media/signature beyond handover codes/QR.
 - External delivery partners.
-- Real payment service provider (Mock CARD checkout and CASH handover semantics are implemented; production uses `PAYMENT_PROVIDER=disabled`).
+- Real payment service provider (dormant CARD/Mock checkout infrastructure retained; **current MVP: CASH** at handover; production uses `PAYMENT_PROVIDER=disabled` without an active PSP).

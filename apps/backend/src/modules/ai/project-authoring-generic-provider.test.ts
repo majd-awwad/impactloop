@@ -133,6 +133,38 @@ describe('generic authoring provider orchestration', () => {
               required: true,
               notes: 'Audio feedback',
             },
+            {
+              name: 'Arduino Uno',
+              quantity: 1,
+              unit: 'piece',
+              role: 'MATERIAL',
+              required: true,
+              notes: 'Microcontroller',
+            },
+            {
+              name: 'Breadboard',
+              quantity: 1,
+              unit: 'piece',
+              role: 'MATERIAL',
+              required: true,
+              notes: 'Wiring surface',
+            },
+            {
+              name: 'Jumper wires',
+              quantity: 1,
+              unit: 'set',
+              role: 'MATERIAL',
+              required: true,
+              notes: 'Connections',
+            },
+            {
+              name: 'LED',
+              quantity: 3,
+              unit: 'piece',
+              role: 'MATERIAL',
+              required: true,
+              notes: 'Visual feedback',
+            },
           ],
           explanation: 'Reaction game parts from provider.',
         }),
@@ -187,19 +219,89 @@ describe('generic authoring provider orchestration', () => {
         searchKeywords: ['buzzer'],
         notes: null,
       },
+      {
+        id: 'comp-led',
+        componentName: 'Green LED',
+        materialType: 'Output',
+        quantity: 3,
+        unit: 'piece',
+        componentRole: 'REQUIRED_MATERIAL' as const,
+        isRequired: true,
+        canBeSubstituted: true,
+        searchKeywords: ['led'],
+        notes: null,
+      },
     ];
 
     setAuthoringRealStepInvokerForTests(async ({ userPrompt }) => ({
       text: JSON.stringify({
         kind: 'STEP_PLAN',
-        steps: Array.from({ length: 8 }, (_, index) => ({
-          order: index + 1,
-          title: `Reaction step ${index + 1}`,
+        steps: [
+          {
+            order: 1,
+            title: 'Prepare and inspect components',
+            description:
+              'Lay out the push button and buzzer on a clean surface and inspect each part before placing anything on the breadboard.',
+            safetyNote: 'Disconnect power before rewiring.',
+            componentRefs: ['comp-button', 'comp-buzzer'],
+          },
+          {
+            order: 2,
+            title: 'Mount button on breadboard',
+            description:
+              'Place the push button on the breadboard and connect one side to the Arduino input pin with a pull-down resistor.',
+            safetyNote: null,
+            componentRefs: ['comp-button'],
+          },
+          {
+            order: 3,
+            title: 'Wire buzzer output',
+            description:
+              'Connect the buzzer to the output pin with correct polarity and verify a short test tone from a simple sketch.',
+            safetyNote: null,
+            componentRefs: ['comp-buzzer'],
+          },
+          {
+            order: 4,
+            title: 'Define code pin constants',
+            description:
+              'In the sketch, define INPUT_PIN and BUZZER_PIN constants that match the wiring before writing game logic.',
+            safetyNote: null,
+            componentRefs: ['comp-button', 'comp-buzzer'],
+          },
+          {
+            order: 5,
+            title: 'Read button state in loop',
           description:
-            `Reaction step ${index + 1} explains what to do on the breadboard, why it matters, and how to verify the game still works.`,
-          safetyNote: index === 0 ? 'Disconnect power before rewiring.' : null,
-          componentRefs: ['comp-button', 'comp-buzzer'],
-        })),
+            'Connect the push button to the Arduino input pin on the breadboard and verify the pin reads correctly when pressed.',
+            safetyNote: null,
+            componentRefs: ['comp-button'],
+          },
+          {
+            order: 6,
+            title: 'Threshold and buzzer control',
+          description:
+            'Compare reaction time against a threshold and trigger the buzzer output when the player reacts quickly enough, then verify the tone.',
+            safetyNote: null,
+            componentRefs: ['comp-buzzer'],
+          },
+          {
+            order: 7,
+            title: 'LED ready signal',
+          description:
+            'Connect the green LEDs to output pins and verify the ready-state blink pattern appears before each round.',
+            safetyNote: null,
+            componentRefs: ['comp-led'],
+          },
+          {
+            order: 8,
+            title: 'Final play test',
+          description:
+            'Run the full reaction game and verify the buzzer and LEDs respond correctly during normal play on the breadboard.',
+            safetyNote: null,
+            componentRefs: ['comp-button', 'comp-buzzer'],
+          },
+        ],
         explanation: 'Provider step plan.',
       }),
       model: 'test-openai',
@@ -214,7 +316,7 @@ describe('generic authoring provider orchestration', () => {
       estimatedMinutes: 90,
     });
     assert.ok(generated.steps.length >= 8);
-    assert.match(generated.steps[0]?.title ?? '', /Reaction step/i);
+    assert.match(generated.steps[0]?.title ?? '', /Prepare and inspect|Reaction step/i);
     setAuthoringRealStepInvokerForTests(null);
   });
 
@@ -303,7 +405,39 @@ describe('generic authoring provider orchestration', () => {
             unit: 'piece',
             role: 'MATERIAL',
             required: true,
-            notes: 'Allowed',
+            notes: 'Primary player input for reaction timing.',
+          },
+          {
+            name: 'Arduino Uno',
+            quantity: 1,
+            unit: 'piece',
+            role: 'MATERIAL',
+            required: true,
+            notes: 'Microcontroller',
+          },
+          {
+            name: 'Breadboard',
+            quantity: 1,
+            unit: 'piece',
+            role: 'MATERIAL',
+            required: true,
+            notes: 'Wiring surface',
+          },
+          {
+            name: 'Jumper wires',
+            quantity: 1,
+            unit: 'set',
+            role: 'MATERIAL',
+            required: true,
+            notes: 'Connections',
+          },
+          {
+            name: 'LED',
+            quantity: 1,
+            unit: 'piece',
+            role: 'MATERIAL',
+            required: true,
+            notes: 'Indicator',
           },
         ],
         explanation: 'Filtered list.',
@@ -340,27 +474,59 @@ describe('generic authoring provider orchestration', () => {
     process.env.AI_CHAT_PROVIDER = 'gemini';
 
     setAuthoringRealComponentInvokerForTests(async () => ({
-        text: JSON.stringify({
-          kind: 'COMPONENT_LIST',
-          components: [
-            {
-              name: 'Breadboard',
-              quantity: 1,
-              unit: 'piece',
-              role: 'TOOL',
-              required: true,
-              notes: 'Alternative wiring surface',
-            },
-            ...initial.components.slice(0, 2).map((component) => ({
-              name: component.componentName,
-              quantity: component.quantity,
-              unit: component.unit,
-              role: 'MATERIAL',
-              required: true,
-              notes: component.notes,
-            })),
-          ],
-          explanation: 'Alternative provider list.',
+      text: JSON.stringify({
+        kind: 'COMPONENT_LIST',
+        components: [
+          {
+            name: 'Mini breadboard',
+            quantity: 1,
+            unit: 'piece',
+            role: 'TOOL',
+            required: true,
+            notes: 'Alternative compact breadboard for rewiring.',
+          },
+          {
+            name: 'Tactile push button',
+            quantity: 1,
+            unit: 'piece',
+            role: 'MATERIAL',
+            required: true,
+            notes: 'Alternative tactile button for player input.',
+          },
+          {
+            name: 'Piezo buzzer',
+            quantity: 1,
+            unit: 'piece',
+            role: 'MATERIAL',
+            required: true,
+            notes: 'Alternative piezo buzzer for audio feedback.',
+          },
+          {
+            name: 'Arduino Uno',
+            quantity: 1,
+            unit: 'piece',
+            role: 'MATERIAL',
+            required: true,
+            notes: 'Main microcontroller for game logic.',
+          },
+          {
+            name: 'Jumper wire set',
+            quantity: 1,
+            unit: 'set',
+            role: 'MATERIAL',
+            required: true,
+            notes: 'Jumper wire set for breadboard connections.',
+          },
+          {
+            name: 'Green LED',
+            quantity: 3,
+            unit: 'piece',
+            role: 'MATERIAL',
+            required: true,
+            notes: 'LED indicators for reaction feedback.',
+          },
+        ],
+        explanation: 'Alternative provider list.',
       }),
       model: 'test-gemini',
       inputTokens: 1,
@@ -397,8 +563,20 @@ describe('generic authoring provider orchestration', () => {
         componentRole: 'REQUIRED_MATERIAL' as const,
         isRequired: true,
         canBeSubstituted: true,
-        searchKeywords: [],
-        notes: null,
+        searchKeywords: ['button'],
+        notes: 'Player input button for reaction timing.',
+      },
+      {
+        id: 'comp-b',
+        componentName: 'Buzzer',
+        materialType: 'Output',
+        quantity: 1,
+        unit: 'piece',
+        componentRole: 'REQUIRED_MATERIAL' as const,
+        isRequired: true,
+        canBeSubstituted: true,
+        searchKeywords: ['buzzer'],
+        notes: 'Audio feedback buzzer for successful reactions.',
       },
     ];
     const previousSteps = Array.from({ length: 8 }, (_, index) => ({
@@ -410,14 +588,72 @@ describe('generic authoring provider orchestration', () => {
     setAuthoringRealStepInvokerForTests(async () => ({
       text: JSON.stringify({
         kind: 'STEP_PLAN',
-        steps: Array.from({ length: 8 }, (_, index) => ({
-          order: index + 1,
-          title: `Alternative step ${index + 1}`,
-          description:
-            `Alternative step ${index + 1} explains what to do, where to do it, why it matters, and how to verify success.`,
-          safetyNote: null,
-          componentRefs: ['comp-a'],
-        })),
+        steps: [
+          {
+            order: 1,
+            title: 'Prepare and inspect push button',
+            description:
+              'Prepare the push button on the breadboard, inspect the pins, and verify the part is not damaged before wiring.',
+            safetyNote: null,
+            componentRefs: ['comp-a'],
+          },
+          {
+            order: 2,
+            title: 'Wire button to Arduino input',
+            description:
+              'Connect the push button to the Arduino digital input pin and verify the pin state changes when pressed.',
+            safetyNote: null,
+            componentRefs: ['comp-a'],
+          },
+          {
+            order: 3,
+            title: 'Define pin constants',
+            description:
+              'Write INPUT_PIN constants in the sketch and verify they match the breadboard wiring before coding game logic.',
+            safetyNote: null,
+            componentRefs: ['comp-a'],
+          },
+          {
+            order: 4,
+            title: 'Read button in loop',
+            description:
+              'Read the button state inside loop() and verify the pressed value updates correctly during each reaction window.',
+            safetyNote: null,
+            componentRefs: ['comp-a'],
+          },
+          {
+            order: 5,
+            title: 'Add reaction threshold logic',
+            description:
+              'Compare reaction timing against a threshold and verify the buzzer trigger condition behaves as expected.',
+            safetyNote: null,
+            componentRefs: ['comp-a'],
+          },
+          {
+            order: 6,
+            title: 'Test buzzer output',
+            description:
+              'Connect and test the buzzer output pin on comp-b, then verify the tone plays when the reaction threshold is met.',
+            safetyNote: null,
+            componentRefs: ['comp-b'],
+          },
+          {
+            order: 7,
+            title: 'Blink ready LEDs',
+            description:
+              'Connect LEDs to output pins and verify the ready-state blink pattern appears before each round.',
+            safetyNote: null,
+            componentRefs: ['comp-a'],
+          },
+          {
+            order: 8,
+            title: 'Final game verification',
+            description:
+              'Run the full reaction game flow and verify button, buzzer, and LED behavior during normal play.',
+            safetyNote: null,
+            componentRefs: ['comp-a'],
+          },
+        ],
         explanation: 'Alternative provider steps.',
       }),
       model: 'test-openai',
@@ -461,10 +697,12 @@ describe('generic authoring provider orchestration', () => {
       text: JSON.stringify({
         kind: 'COMPONENT_LIST',
         components: [
-          { name: 'Arduino Uno', quantity: 1, unit: 'piece', role: 'TOOL', required: true, notes: null },
-          { name: 'Magnetic reed switch', quantity: 1, unit: 'piece', role: 'MATERIAL', required: true, notes: null },
-          { name: 'Buzzer', quantity: 1, unit: 'piece', role: 'MATERIAL', required: true, notes: null },
-          { name: 'Red LED', quantity: 1, unit: 'piece', role: 'MATERIAL', required: true, notes: null },
+          { name: 'Arduino Uno', quantity: 1, unit: 'piece', role: 'TOOL', required: true, notes: 'Main microcontroller board for alarm logic.' },
+          { name: 'Magnetic reed switch', quantity: 1, unit: 'piece', role: 'MATERIAL', required: true, notes: 'Door contact sensor for open-close detection.' },
+          { name: 'Buzzer', quantity: 1, unit: 'piece', role: 'MATERIAL', required: true, notes: 'Audible alarm output when door opens.' },
+          { name: 'Red LED', quantity: 1, unit: 'piece', role: 'MATERIAL', required: true, notes: 'Visual alarm indicator for door status.' },
+          { name: 'Breadboard', quantity: 1, unit: 'piece', role: 'MATERIAL', required: true, notes: 'Breadboard for prototyping the alarm circuit.' },
+          { name: 'Jumper wires', quantity: 1, unit: 'set', role: 'MATERIAL', required: true, notes: 'Jumper wires for breadboard connections.' },
         ],
         explanation: 'Door alarm provider list.',
       }),

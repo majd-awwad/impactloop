@@ -37,10 +37,12 @@ import {
 } from './modules/recommendation-events/recommendation-event-origin.js';
 import { recommendationActionAttributionMiddleware } from './modules/recommendation-events/recommendation-events.service.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
+import { paymentsRouter } from './modules/payments/payments.routes.js';
 import {
+  paymentsCheckoutRouter,
   paymentsMockWebhookRouter,
-  paymentsRouter,
-} from './modules/payments/payments.routes.js';
+} from './modules/payments/payments.checkout-routes.js';
+import { isCardCheckoutProductEnabled } from './modules/payments/payments.product-policy.js';
 import { COMMUNITY_DEMO_MATERIALS_SOURCE_IMAGES_DIR } from './constants/community-demo-materials.js';
 import { COMMUNITY_DEMO_PROJECTS_SOURCE_IMAGES_DIR } from './constants/community-demo-projects.js';
 import { DEMO_VISUAL_ASSETS_DIR } from './constants/demo-visual-assets.js';
@@ -125,8 +127,8 @@ export const createApp = (options: CreateAppOptions): Express => {
   );
   // Supplier verification documents and build-completion photos are private —
   // never serve via anonymous express.static. Use authenticated download endpoints.
-  // Raw body required for mock payment webhook HMAC verification.
-  if (env.paymentMockRoutesEnabled) {
+  // Mock payment webhook requires raw body — mounted only when card checkout product policy is on.
+  if (env.paymentMockRoutesEnabled && isCardCheckoutProductEnabled()) {
     app.use(
       '/api/payments/webhooks/mock',
       express.raw({ type: 'application/json' }),
@@ -147,6 +149,9 @@ export const createApp = (options: CreateAppOptions): Express => {
   app.use('/api/materials', materialsRouter);
   app.use('/api/reservations', reservationsRouter);
   app.use('/api/payments', paymentsRouter);
+  if (isCardCheckoutProductEnabled()) {
+    app.use('/api/payments', paymentsCheckoutRouter);
+  }
   app.use('/api/deliveries', deliveriesRouter);
   app.use('/api/driver', driverRouter);
   app.use('/api/uploads', uploadsRouter);

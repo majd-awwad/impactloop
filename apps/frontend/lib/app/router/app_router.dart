@@ -65,8 +65,6 @@ import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/profile_security_page.dart';
 import '../../features/notifications/presentation/pages/user_notifications_page.dart';
 import '../../features/notifications/application/notifications_routes.dart';
-import '../../features/payments/presentation/pages/learner_checkout_page.dart';
-import '../../features/payments/presentation/pages/legacy_order_checkout_redirect_page.dart';
 import '../../features/reservations/presentation/pages/learner_reservation_detail_page.dart';
 import '../../features/reservations/presentation/pages/learner_reservations_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
@@ -219,7 +217,6 @@ _RouteAccessLevel _routeAccessForPath(String path) {
       (path.startsWith('/learning/') && path.endsWith('/build')) ||
       path == '/learner/reservations' ||
       path.startsWith('/learner/reservations/') ||
-      path.startsWith('/learner/checkout/') ||
       path.startsWith('/learner/deliveries/') ||
       path == '/learner/material-requests' ||
       path.startsWith('/learner/material-requests/') ||
@@ -698,18 +695,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-      GoRoute(
-        path: '/learner/checkout/reservation/:reservationId',
-        builder: (context, state) => LearnerCheckoutPage(
-          reservationId: state.pathParameters['reservationId']!,
-        ),
-      ),
-      GoRoute(
-        path: '/learner/checkout/:orderId',
-        builder: (context, state) => LegacyOrderCheckoutRedirectPage(
-          orderId: state.pathParameters['orderId']!,
-        ),
-      ),
+      // Card checkout routes removed from current MVP router — see
+      // features/payments/presentation/pages/learner_checkout_page.dart (dormant).
       GoRoute(
         path: '/learner/material-requests',
         builder: (context, state) => const LearnerMaterialRequestsPage(),

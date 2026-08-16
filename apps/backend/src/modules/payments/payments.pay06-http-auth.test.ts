@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { after, afterEach, before, beforeEach, describe, test } from 'node:test';
 import { createServer, type Server } from 'node:http';
+import type { Express } from 'express';
 
-import { app } from '../../app.js';
 import { prisma } from '../../database/prisma.js';
 import { signAccessToken } from '../../utils/jwt.js';
 
@@ -17,6 +17,7 @@ import {
   createPayReservationFixture,
   createPayTestIds,
   createPayUser,
+  createPaymentsCheckoutTestApp,
   trackOrder,
 } from './payments.test-helpers.js';
 
@@ -28,6 +29,7 @@ describe('PAY-06 HTTP authorization (enforcement ON)', () => {
   let learnerId = '';
   let otherLearnerId = '';
   let supplierId = '';
+  let app: Express;
   let server: Server;
   let baseUrl = '';
 
@@ -42,6 +44,7 @@ describe('PAY-06 HTTP authorization (enforcement ON)', () => {
       await createPayUser(ids, { role: 'SUPPLIER', emailSuffix: 'pay06h-s' })
     ).id;
 
+    app = await createPaymentsCheckoutTestApp();
     server = createServer(app);
     await new Promise<void>((resolve) => {
       server.listen(0, '127.0.0.1', () => resolve());

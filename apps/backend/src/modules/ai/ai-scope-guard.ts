@@ -17,7 +17,11 @@ const normalizeForMatch = (value: string) =>
     .replace(/[^\p{L}\p{N}\s]/gu, ' ');
 
 const OUT_OF_SCOPE_PATTERNS: Array<{ id: string; pattern: RegExp }> = [
-  { id: 'weather', pattern: /(weather|forecast|temperature today|how(?:'| i)s the weather|الطقس|طقس)/u },
+  {
+    id: 'weather',
+    pattern:
+      /(weather|forecast|temperature today|how(?:'| i)s the weather|الطقس|طقس|الجو|كيف الجو|how is the weather)/u,
+  },
   { id: 'news', pattern: /(news|headline|latest news|أخبار|خبر)/u },
   { id: 'sports', pattern: /(sports|match score|who won|football|soccer|مباراة|فاز)/u },
   { id: 'exchange', pattern: /(exchange rate|dollar price|currency rate|سعر الدولار|اسعار العملات|سعر دولار)/u },

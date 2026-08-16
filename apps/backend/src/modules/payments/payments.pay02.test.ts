@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { after, before, beforeEach, afterEach, describe, test } from 'node:test';
 import { createServer, type Server } from 'node:http';
+import type { Express } from 'express';
 
 import { Prisma } from '../../generated/prisma/client.js';
-import { app } from '../../app.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { deriveHandoverCode } from '../../utils/handover-codes.js';
@@ -33,6 +33,7 @@ import {
   createPayReservationFixture,
   createPayTestIds,
   createPayUser,
+  createPaymentsCheckoutTestApp,
   trackOrder,
 } from './payments.test-helpers.js';
 
@@ -42,6 +43,7 @@ describe('PAY-02 payment obligations and fulfillment gating', () => {
   let otherLearnerId = '';
   let supplierId = '';
   let adminId = '';
+  let app: Express;
   let server: Server;
   let baseUrl = '';
 
@@ -67,6 +69,7 @@ describe('PAY-02 payment obligations and fulfillment gating', () => {
     supplierId = supplier.id;
     adminId = admin.id;
 
+    app = await createPaymentsCheckoutTestApp();
     server = createServer(app);
     await new Promise<void>((resolve) => {
       server.listen(0, '127.0.0.1', () => resolve());

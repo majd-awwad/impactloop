@@ -41,7 +41,7 @@ This checklist tracks semantics, tooltips, text-scale stability, and RTL coverag
 | `/profile/account` | Merged destination rows | Theme selector | Yes | — | Yes | `account_settings_page_test.dart` |
 | `/profile/locations` | Location actions | Delete/edit icons | Yes | — | — | `saved_locations_page_test.dart` |
 | `/learner/reservations/:id` | Primary CTA semantics | Refresh | Yes | Yes | — | `learner_reservation_detail_pay05b_test.dart` |
-| `/learner/checkout/reservation/:id` | Payment summary | — | Yes | Yes | — | `learner_checkout_pay05c_test.dart` |
+| `/learner/checkout/reservation/:id` | *(dormant — not in current GoRouter)* | — | — | — | — | `learner_checkout_pay05c_test.dart` (dormant infrastructure) |
 
 ## Role portals
 

@@ -5,7 +5,7 @@ class CreateReservationRequest {
     required this.materialId,
     required this.quantityRequested,
     required this.fulfillmentMethod,
-    this.paymentMethod = 'CARD',
+    this.paymentMethod = 'CASH',
     this.message,
     this.buildItemId,
     this.materialRequestMatchId,

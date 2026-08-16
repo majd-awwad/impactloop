@@ -394,3 +394,17 @@ export async function trackOrder(ids: PayTestIds, orderId: string) {
     ids.orders.push(orderId);
   }
 }
+
+/**
+ * Creates an Express app with dormant card checkout routes mounted.
+ * Use for provider/checkout HTTP suites — must be called after
+ * setElectronicPaymentEnforcementForTests(true) and before createServer.
+ */
+export async function createPaymentsCheckoutTestApp() {
+  const { setElectronicPaymentEnforcementForTests } = await import(
+    './payments.policy.js'
+  );
+  setElectronicPaymentEnforcementForTests(true);
+  const { createApp } = await import('../../app.js');
+  return createApp({ recommendationEventOrigin: 'REAL' });
+}

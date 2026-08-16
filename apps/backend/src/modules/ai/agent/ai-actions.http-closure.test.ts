@@ -647,7 +647,7 @@ describe('ai actions http closure', () => {
     await sendMessage(
       token,
       conversationId,
-      'اعرضلي مشاريع Arduino',
+      `اعرضلي مشاريع ${SEED_TOKEN}`,
       clientId('project-search'),
     );
     const prepared = await sendMessage(

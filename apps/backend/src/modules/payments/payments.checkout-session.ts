@@ -40,6 +40,7 @@ import {
   toMoneyDecimal,
 } from './payments.money.js';
 import { isElectronicPaymentEnforced } from './payments.policy.js';
+import { assertCardCheckoutApiAvailable } from './payments.product-policy.js';
 import { evaluateDeliveryGroupPaymentReadiness } from './payments.readiness.js';
 import { getPaymentProvider } from './providers/payment-provider.registry.js';
 
@@ -1137,6 +1138,7 @@ export const startReservationCheckout = async (input: {
       'CASH_PAYMENT_NOT_CHECKOUTABLE',
     );
   }
+  assertCardCheckoutApiAvailable();
   if (!isElectronicPaymentEnforced()) {
     throw new AppError(
       'Electronic payment is not enforced in this environment.',

@@ -3,7 +3,7 @@
 class ReservationPaymentSummary {
   const ReservationPaymentSummary({
     required this.enforcementEnabled,
-    this.paymentMethod = 'CARD',
+    this.paymentMethod = 'CASH',
     this.paymentReady = false,
     this.dueAtHandover = false,
     required this.overallStatus,
@@ -69,7 +69,7 @@ class ReservationPaymentSummary {
 
     return ReservationPaymentSummary(
       enforcementEnabled: json['enforcementEnabled'] == true,
-      paymentMethod: json['paymentMethod'] as String? ?? 'CARD',
+      paymentMethod: json['paymentMethod'] as String? ?? 'CASH',
       paymentReady: json['paymentReady'] == true,
       dueAtHandover: json['dueAtHandover'] == true,
       overallStatus: json['overallStatus'] as String? ?? 'NOT_REQUIRED',

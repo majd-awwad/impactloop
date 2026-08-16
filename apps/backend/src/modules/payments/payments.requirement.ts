@@ -15,6 +15,7 @@ import {
 import { isPayablePaymentOrderStatus } from './payments.constants.js';
 import { moneyDecimalToString } from './payments.money.js';
 import { isElectronicPaymentEnforced } from './payments.policy.js';
+import { isCardCheckoutProductEnabled } from './payments.product-policy.js';
 import {
   classifyReservationPaymentLifecycle,
   isTerminalPaymentOrderForNewCycle,
@@ -155,7 +156,9 @@ const mapOrderRows = (
       cycleNumber: order.cycleNumber,
       isCurrent: order.cycleNumber === currentMaterialCycle,
       canStartCheckout:
-        order.paymentMethod === 'CARD' && isPayablePaymentOrderStatus(order.status),
+        isCardCheckoutProductEnabled() &&
+        order.paymentMethod === 'CARD' &&
+        isPayablePaymentOrderStatus(order.status),
       paidAt: order.paidAt?.toISOString() ?? null,
       createdAt: order.createdAt.toISOString(),
       updatedAt: order.updatedAt.toISOString(),
@@ -170,7 +173,9 @@ const mapOrderRows = (
       cycleNumber: order.cycleNumber,
       isCurrent: order.cycleNumber === currentFeeCycle,
       canStartCheckout:
-        order.paymentMethod === 'CARD' && isPayablePaymentOrderStatus(order.status),
+        isCardCheckoutProductEnabled() &&
+        order.paymentMethod === 'CARD' &&
+        isPayablePaymentOrderStatus(order.status),
       paidAt: order.paidAt?.toISOString() ?? null,
       createdAt: order.createdAt.toISOString(),
       updatedAt: order.updatedAt.toISOString(),
@@ -231,7 +236,10 @@ export const getReservationPaymentRequirement = async (
   const currentFee = feeOrders[0] ?? null;
   const mapCheckout = (
     order: { status: PaymentOrderStatus; paymentMethod: PaymentCollectionMethod } | null,
-  ) => order != null && order.paymentMethod === 'CARD' &&
+  ) =>
+    order != null &&
+    isCardCheckoutProductEnabled() &&
+    order.paymentMethod === 'CARD' &&
     isPayablePaymentOrderStatus(order.status);
 
   const delivery = reservation.deliveryGroupId

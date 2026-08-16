@@ -583,6 +583,13 @@ export const detectRecentProjectDetailsIntent = (userMessage: string): boolean =
   }
 
   const normalized = normalize(userMessage);
+  if (
+    /(شو|ما).*(محتاج|لازم|بده|بتحتاج).*(مشروع|project)/i.test(normalized) ||
+    /(شو|ما).*(مكونات|components|قطع|parts)/i.test(normalized)
+  ) {
+    return false;
+  }
+
   return /((?:اخر|آخر|last|recent|previous|السابق).*(?:مشروع|project))|((?:مشروع|project).*(?:اخر|آخر|last|recent|previous|السابق))|(?:اشرح|احكيلي|حكيلي|tell|explain).*(?:عن|about).*(?:اخر|آخر|last|recent|السابق).*(?:مشروع|project)/i.test(
     normalized,
   );
@@ -1046,8 +1053,31 @@ export const detectMaterialSearchIntent = (userMessage: string): {
     return { detected: false, confidence: 0.08 };
   }
 
+  const normalizedAction = normalize(userMessage);
+  if (
+    /(احفظ|احفظلي|احجز|احجزلي|اربط|ابدأ|ابدألي|الغي|إلغاء|الغ)/i.test(
+      normalizedAction,
+    ) ||
+    /\b(save|reserve|book|link|start|unlink|cancel)\b/i.test(normalizedAction)
+  ) {
+    return { detected: false, confidence: 0.08 };
+  }
+
   if (detectMaterialDetailsIntent(userMessage)) {
     return { detected: false, confidence: 0.1 };
+  }
+
+  const parsedComponentMessage = stripBenignListPrefixForParsing(userMessage);
+  const normalizedComponentMatch = normalize(parsedComponentMessage);
+  if (
+    /(لاقي|لاقيلي|find|match|suggest).*(مواد|materials).*(مكون|component|ناقص|missing)/i.test(
+      normalizedComponentMatch,
+    ) ||
+    /(مواد).*(مكون|ناقص|missing)/i.test(normalizedComponentMatch) ||
+    /(materials?).*(missing component|for the missing)/i.test(normalizedComponentMatch) ||
+    /^(.+?)\s*:\s*(?:لاقي|لاقيلي|find|match)/i.test(parsedComponentMessage)
+  ) {
+    return { detected: false, confidence: 0.12 };
   }
 
   if (
@@ -1099,6 +1129,21 @@ export const detectMaterialSearchIntent = (userMessage: string): {
   }
 
   if (hasSearchVerb && hasStructuredFilter) {
+    if (/(مشروع|مشاريع|project)/i.test(normalized) && !hasMaterialNoun) {
+      return { detected: false, confidence: 0.18 };
+    }
+    if (
+      !hasMaterialNoun &&
+      !hasRelationPhrase &&
+      Boolean(filters.query) &&
+      filters.nearLearner !== true &&
+      filters.deliveryAllowed !== true &&
+      filters.pickupAllowed !== true &&
+      filters.isFree == null &&
+      filters.maxPrice == null
+    ) {
+      return { detected: false, confidence: 0.2 };
+    }
     return { detected: true, confidence: 0.84 };
   }
 
@@ -1185,20 +1230,28 @@ export const shouldDeferMaterialSearchForOwnedMaterialsProjectUse = (
     return false;
   }
 
-  if (isExplicitMaterialSearchCommand(userMessage)) {
-    return false;
-  }
-
-  return (
+  if (
     detectOwnedMaterialsProjectIntent(userMessage) ||
     detectOwnedMaterialsSemanticParaphrase(userMessage) ||
     detectBareOwnedMaterialsPossession(userMessage) ||
     detectOwnedMaterialsBuildFollowUp(userMessage) ||
     isAffirmativeOwnedMaterialsContinuation(userMessage) ||
+    (/(?:حابب|بدي|بدّي|أحب|احب).*(?:أعمل|اعمل|اسوي).*(?:من\s+)?(?:ال)?مواد/i.test(
+      userMessage,
+    ) &&
+      /(?:عندي|معي|لدي|اللي\s+عندي)/i.test(userMessage)) ||
     /fit\s+(?:an?\s+)?(?:impactloop\s+)?projects?/i.test(userMessage) ||
     (/(?:leftover|remaining)\s+components?/i.test(userMessage) &&
       /project/i.test(userMessage))
-  );
+  ) {
+    return true;
+  }
+
+  if (isExplicitMaterialSearchCommand(userMessage)) {
+    return false;
+  }
+
+  return false;
 };
 
 export const detectBuildGapIntent = (userMessage: string): boolean => {
@@ -1207,6 +1260,10 @@ export const detectBuildGapIntent = (userMessage: string): boolean => {
   }
 
   const normalized = normalize(userMessage);
+  if (/(احفظ|احجز|اربط|ربط|link|ابدأ|الغي|إلغاء)/i.test(normalized)) {
+    return false;
+  }
+
   return /(ناقص|ناقصني|نقص|missing|what.?s left|gap|يلزمني|باقي|ظل علي|شو ظل)/i.test(
     normalized,
   );
@@ -1214,6 +1271,22 @@ export const detectBuildGapIntent = (userMessage: string): boolean => {
 
 export const detectProjectComponentsIntent = (userMessage: string): boolean => {
   if (detectBuildGapIntent(userMessage)) {
+    return false;
+  }
+
+  const normalized = normalize(userMessage);
+  const hasProjectNoun = /(مشروع|project)/i.test(normalized);
+  const hasMaterialNoun = includesAny(normalized, MATERIAL_NOUNS);
+  const hasMaterialSearchCue =
+    includesAny(normalized, SEARCH_VERBS) ||
+    includesAny(normalized, FREE_SYNONYMS) ||
+    includesAny(normalized, AVAILABILITY_TERMS);
+  if (
+    hasMaterialNoun &&
+    hasMaterialSearchCue &&
+    !hasProjectNoun &&
+    !/(مكونات|components|قطع|parts)/i.test(normalized)
+  ) {
     return false;
   }
 
@@ -1226,7 +1299,6 @@ export const detectProjectComponentsIntent = (userMessage: string): boolean => {
     return false;
   }
 
-  const normalized = normalize(userMessage);
   return (
     /(required components|components needed|components for|project components|what components|which parts)/i.test(
       userMessage,
@@ -1243,7 +1315,7 @@ export const detectProjectComponentsIntent = (userMessage: string): boolean => {
     ) ||
     /(أي|اي).*(قطع|مكونات).*(مطلوب|لازم|للمشروع|لمشروع)/i.test(normalized) ||
     /(شو|ما).*(بده|بتحتاج|محتاج).*(مشروع|project)/i.test(normalized) ||
-    /(شو|ما)\s*(بده|بتحتاج|محتاج|مكوناته|القطع|لازم)/i.test(normalized) ||
+    /(شو|ما)\s*(?:بده|بتحتاج|محتاج|مكوناته|القطع|لازم)(?:\s|$)/i.test(normalized) ||
     /(محتاج|لازم).*(عشان|ل).*(أعمل|انفذ|تنفيذ|بناء)/i.test(normalized) ||
     (/(عرضته|السابق|اللي\s+عرضته|فوق|obstacle|robot|روبوت|بوت)/i.test(userMessage) &&
       /(شو|ما)\s*(بده|محتاج|مكونات|لازم)/i.test(normalized))
@@ -2051,12 +2123,19 @@ const OWNED_MATERIALS_OWNERSHIP_CUES = [
 const OWNED_MATERIALS_BUILD_CUES = [
   'شو أقدر أعمل',
   'شو اقدر اعمل',
+  'بقدر أعمل',
+  'بقدر اعمل',
+  'في إشي بالمشاريع',
+  'في اشي بالمشاريع',
+  'بالمشاريع الموجودة',
   'شو مشروع مناسب',
   'شو بقدر أبني',
   'شو بقدر ابني',
   'شو مشاريع',
   'مشاريع باستخدام',
   'شو مشروع',
+  'بناسبوا مشروع',
+  'بناسب مشروع',
   'ايش أقدر أعمل',
   'إيش أقدر أعمل',
   'what can i build',

@@ -50,14 +50,20 @@ Map<String, dynamic> _paymentSummary({
   bool enforcementEnabled = true,
   bool hasMaterialPaymentOutstanding = true,
   bool hasDeliveryFeeOutstanding = false,
-  String? checkoutableOrderId = 'ord-1',
+  String? checkoutableOrderId,
   String? outstandingAmount = '16.00',
   int outstandingOrderCount = 1,
   bool pickupCodeAvailable = false,
   bool fulfillmentReady = false,
+  bool? dueAtHandover,
 }) {
+  final resolvedDueAtHandover = dueAtHandover ??
+      (overallStatus == 'REQUIRES_PAYMENT' &&
+          (hasMaterialPaymentOutstanding || hasDeliveryFeeOutstanding));
   return {
     'enforcementEnabled': enforcementEnabled,
+    'paymentMethod': 'CASH',
+    'dueAtHandover': resolvedDueAtHandover,
     'overallStatus': overallStatus,
     'outstandingOrderCount': outstandingOrderCount,
     'outstandingAmount': outstandingAmount,
@@ -150,7 +156,8 @@ void main() {
     expect(find.byKey(const Key('reservation-money-section')), findsOneWidget);
     expect(find.text('Amount due'), findsOneWidget);
     expect(find.textContaining('16.00'), findsOneWidget);
-    expect(find.text('Pay now'), findsOneWidget);
+    expect(find.text('Due at handover'), findsOneWidget);
+    expect(find.text('Pay now'), findsNothing);
   });
 
   testWidgets('partial payment shows remaining without inventing totals', (
@@ -164,7 +171,6 @@ void main() {
         paymentSummary: _paymentSummary(
           hasMaterialPaymentOutstanding: false,
           hasDeliveryFeeOutstanding: true,
-          checkoutableOrderId: 'fee-1',
           outstandingAmount: '20.00',
         ),
       ),
@@ -176,7 +182,8 @@ void main() {
     expect(find.textContaining('20.00'), findsOneWidget);
     expect(find.textContaining('من أصل'), findsNothing);
     expect(find.textContaining('of'), findsNothing);
-    expect(find.text('Complete payment'), findsOneWidget);
+    expect(find.text('Due at handover'), findsOneWidget);
+    expect(find.text('Complete payment'), findsNothing);
   });
 
   testWidgets('closed card has no danger rail and no pay CTA', (tester) async {
@@ -220,7 +227,7 @@ void main() {
 
     expect(find.byKey(const Key('reservation-next-step-panel')), findsOneWidget);
     expect(find.byKey(const Key('reservation-primary-action')), findsOneWidget);
-    expect(find.byKey(const Key('reservation-view-details')), findsOneWidget);
+    expect(find.byKey(const Key('reservation-view-details')), findsNothing);
   });
 
   testWidgets('empty filter action says View all reservations', (tester) async {
@@ -262,9 +269,9 @@ void main() {
     expect(find.text('المبلغ المطلوب'), findsOneWidget);
     expect(find.textContaining('16.00'), findsOneWidget);
     expect(find.text('قطعة واحدة'), findsOneWidget);
-    expect(find.text('ادفع الآن'), findsOneWidget);
-    expect(find.text('pieces'), findsNothing);
-    expect(find.text('Pay now'), findsNothing);
+    expect(find.text('مستحق عند التسليم'), findsOneWidget);
+    expect(find.text('عرض التفاصيل'), findsOneWidget);
+    expect(find.text('ادفع الآن'), findsNothing);
   });
 
   testWidgets('Arabic empty filter uses view all label', (tester) async {
@@ -317,7 +324,7 @@ void main() {
     for (final size in sizes) {
       await _pumpPage(tester, reservations: [reservation], size: size);
       expect(tester.takeException(), isNull, reason: 'overflow at $size');
-      expect(find.text('Pay now'), findsOneWidget, reason: 'CTA at $size');
+      expect(find.text('View details'), findsOneWidget, reason: 'CTA at $size');
       expect(
         find.byKey(const Key('reservations-summary-carousel')),
         findsOneWidget,
@@ -343,15 +350,18 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
-    expect(find.text('Pay now'), findsOneWidget);
+    expect(find.text('Due at handover'), findsOneWidget);
+    expect(find.text('Pay now'), findsNothing);
   });
 
-  testWidgets('Pay CTA opens reservation checkout', (tester) async {
+  testWidgets('cash due at handover opens reservation details, not checkout', (
+    tester,
+  ) async {
     final reservation = LearnerReservation.fromJson(
       _baseReservation(
         id: 'res-nav',
         status: 'ACCEPTED',
-        paymentSummary: _paymentSummary(checkoutableOrderId: 'ord-55'),
+        paymentSummary: _paymentSummary(),
       ),
     );
 
@@ -413,13 +423,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final pay = find.byKey(const Key('reservation-primary-action'));
-    await tester.ensureVisible(pay);
-    await tester.tap(pay);
+    final primary = find.byKey(const Key('reservation-primary-action'));
+    await tester.ensureVisible(primary);
+    await tester.tap(primary);
     await tester.pumpAndSettle();
 
     expect(find.text('checkout:ord-55'), findsNothing);
-    expect(find.text('checkout-reservation:res-nav'), findsOneWidget);
+    expect(find.text('checkout-reservation:res-nav'), findsNothing);
+    expect(find.text('details:res-nav:focus=null:order=null'), findsOneWidget);
   });
 
   testWidgets('money presentation does not double-count shared fees', (

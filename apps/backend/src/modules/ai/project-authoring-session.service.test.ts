@@ -84,13 +84,12 @@ async function createLearner(label: string) {
 
 async function createDraftPair(label: string) {
   const learner = await createLearner(label);
-  const category = await prisma.category.create({
-    data: {
-      nameEn: `${TEST_MARKER} cat`,
-      nameAr: `${TEST_MARKER} فئة`,
-      categoryType: 'PROJECT',
-      isActive: true,
-    },
+  const { createTaxonomyReadyProjectCategory } = await import(
+    '../../test-support/publishable-category.fixture.js'
+  );
+  const category = await createTaxonomyReadyProjectCategory({
+    nameEn: `${TEST_MARKER} cat ${label}`,
+    nameAr: `${TEST_MARKER} فئة ${label}`,
   });
   ids.categories.push(category.id);
 

@@ -5,9 +5,11 @@ import {
   createReservationSchema,
   reservationQuoteSchema,
 } from './reservations.validation.js';
+import { assertCardPaymentAcceptedForNewReservation } from '../payments/payments.product-policy.js';
+import { AppError } from '../../utils/app-error.js';
 
-describe('reservation cash validation', () => {
-  test('legacy create and quote payloads default to card', () => {
+describe('reservation cash-only product policy', () => {
+  test('create and quote payloads default to cash', () => {
     const create = createReservationSchema.parse({
       materialId: 'material-id',
       quantityRequested: 1,
@@ -19,8 +21,25 @@ describe('reservation cash validation', () => {
       fulfillmentMethod: 'PICKUP',
     });
 
-    assert.equal(create.paymentMethod, 'CARD');
-    assert.equal(quote.paymentMethod, 'CARD');
+    assert.equal(create.paymentMethod, 'CASH');
+    assert.equal(quote.paymentMethod, 'CASH');
+  });
+
+  test('explicit card selection is rejected with CARD_PAYMENT_DISABLED', () => {
+    assert.throws(
+      () => assertCardPaymentAcceptedForNewReservation('CARD'),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, 'CARD_PAYMENT_DISABLED');
+        return true;
+      },
+    );
+  });
+
+  test('cash selection is accepted', () => {
+    assert.doesNotThrow(() =>
+      assertCardPaymentAcceptedForNewReservation('CASH'),
+    );
   });
 
   test('cash delivery rejects safe drop-off', () => {
