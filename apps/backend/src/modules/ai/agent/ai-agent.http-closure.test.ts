@@ -3,6 +3,7 @@ import type { Server } from 'node:http';
 import { after, before, beforeEach, describe, test } from 'node:test';
 
 import { requireSemanticRouterV2 } from './ai-agent-semantic-test-harness.js';
+import { runWithTestRecommendationToggleContext } from '../../../test-support/recommendation-toggle-test-context.js';
 
 process.env.JWT_ACCESS_SECRET ??= 'agent-http-closure-access-secret';
 process.env.JWT_REFRESH_SECRET ??= 'agent-http-closure-refresh-secret';
@@ -116,6 +117,7 @@ let saveLearningProjectById: typeof import('../../learning-projects/learning-pro
 let startProjectBuildById: typeof import('../../learning-projects/learning-projects.service.js').startProjectBuildById;
 let updateProjectBuildItemById: typeof import('../../learning-projects/learning-projects.service.js').updateProjectBuildItemById;
 const hiddenObstacleProjectIds: string[] = [];
+const hiddenSimpleLedProjectIds: string[] = [];
 const hiddenFabricPencilProjectIds: string[] = [];
 
 async function createLearnerUser(
@@ -273,6 +275,51 @@ async function createComponentMaterial(input: {
   });
   ids.materials.push(material.id);
   return material;
+}
+
+async function ensureBudgetDemoMaterialsAvailable() {
+  const materialIds = [
+    ids.budgetArduinoCheapId,
+    ids.budgetArduinoExpensiveId,
+    ids.budgetUltrasonicFreeId,
+    ids.budgetUltrasonicPaidId,
+    ids.budgetMotorCheapId,
+    ids.budgetMotorExpensiveId,
+    ids.budgetJumperFreeId,
+    ids.budgetJumperPaidId,
+  ].filter((id) => id.length > 0);
+  if (materialIds.length === 0) {
+    return;
+  }
+  await prisma.material.updateMany({
+    where: { id: { in: materialIds } },
+    data: { status: 'AVAILABLE' },
+  });
+}
+
+async function prepareProjectsWithinBudgetFixtures() {
+  await ensureBudgetDemoMaterialsAvailable();
+  await prisma.learningProject.updateMany({
+    where: {
+      status: 'PUBLISHED',
+      hiddenAt: null,
+      OR: [
+        { title: { startsWith: `${SEED_TOKEN} Extra Published` } },
+        {
+          title: {
+            in: [
+              'Robot Car Explorer',
+              'Robot Car Racer',
+              'Mini Traffic Light',
+              'Electronic LED Dice',
+              'Simple LED Circuit',
+            ],
+          },
+        },
+      ],
+    },
+    data: { hiddenAt: new Date() },
+  });
 }
 
 function tokenFor(userId: string) {
@@ -477,6 +524,10 @@ before(async () => {
   resetRateLimitersForTests();
   setAiChatProviderForTests(new MockAiChatProviderClass());
 
+  await prisma.material.deleteMany({
+    where: { title: { contains: SEED_TOKEN } },
+  });
+
   const { getCategories } = await import('../../categories/categories.service.js');
 
   const discoveryCategories = await getCategories({
@@ -637,7 +688,7 @@ before(async () => {
   const publishedArduino = await prisma.learningProject.create({
     data: {
       categoryId: ids.projectCategoryId,
-      createdBy: ids.learnerAId,
+      createdBy: ids.learnerBId,
       title: `${SEED_TOKEN} Arduino LED Blink`,
       shortDescription: `${TEST_MARKER} Arduino starter`,
       description: `${TEST_MARKER} published Arduino project`,
@@ -690,7 +741,7 @@ before(async () => {
   const obstacleProject = await prisma.learningProject.create({
     data: {
       categoryId: ids.projectCategoryId,
-      createdBy: ids.learnerAId,
+      createdBy: ids.learnerBId,
       title: 'Obstacle Avoidance Robot',
       shortDescription: `${TEST_MARKER} obstacle robot starter`,
       description: `${TEST_MARKER} obstacle avoidance robot project`,
@@ -742,6 +793,88 @@ before(async () => {
   ids.obstacleProjectId = obstacleProject.id;
   ids.projects.push(obstacleProject.id);
 
+  const existingSimpleLedProjects = await prisma.learningProject.findMany({
+    where: {
+      title: 'Simple LED Circuit',
+      hiddenAt: null,
+    },
+    select: { id: true },
+  });
+  if (existingSimpleLedProjects.length > 0) {
+    const hiddenAt = new Date();
+    await prisma.learningProject.updateMany({
+      where: { id: { in: existingSimpleLedProjects.map((project) => project.id) } },
+      data: { hiddenAt },
+    });
+    hiddenSimpleLedProjectIds.push(...existingSimpleLedProjects.map((project) => project.id));
+  }
+
+  const simpleLedProject = await prisma.learningProject.create({
+    data: {
+      categoryId: ids.projectCategoryId,
+      createdBy: ids.learnerBId,
+      title: 'Simple LED Circuit',
+      shortDescription:
+        'Learn current flow by building a safe LED circuit on a breadboard.',
+      description:
+        'A beginner electronics project using a breadboard, LED, resistor, jumper wires, and battery holder.',
+      difficulty: 'BEGINNER',
+      estimatedDurationMinutes: 60,
+      status: 'PUBLISHED',
+      tags: { create: [{ tag: 'electronics' }, { tag: 'beginner' }, { tag: 'led' }] },
+      requiredComponents: {
+        create: [
+          {
+            componentName: 'Breadboard',
+            materialType: 'Breadboard',
+            quantity: 1,
+            unit: 'piece',
+            componentRole: 'REQUIRED_MATERIAL',
+            categoryId: ids.budgetMaterialCategoryId,
+            searchKeywords: ['breadboard', 'prototype board'],
+          },
+          {
+            componentName: 'LED',
+            materialType: 'LED Pack',
+            quantity: 1,
+            unit: 'pack',
+            componentRole: 'REQUIRED_MATERIAL',
+            categoryId: ids.budgetMaterialCategoryId,
+            searchKeywords: ['led', 'light emitting diode'],
+          },
+          {
+            componentName: 'Resistor',
+            materialType: 'Resistor Pack',
+            quantity: 1,
+            unit: 'box',
+            componentRole: 'REQUIRED_MATERIAL',
+            categoryId: ids.budgetMaterialCategoryId,
+            searchKeywords: ['resistor', '220 ohm'],
+          },
+          {
+            componentName: 'Jumper wires',
+            materialType: 'Jumper Wires',
+            quantity: 1,
+            unit: 'pack',
+            componentRole: 'REQUIRED_MATERIAL',
+            categoryId: ids.budgetMaterialCategoryId,
+            searchKeywords: ['jumper wires', 'dupont'],
+          },
+          {
+            componentName: 'Battery holder',
+            materialType: 'Battery Holder',
+            quantity: 1,
+            unit: 'piece',
+            componentRole: 'REQUIRED_MATERIAL',
+            categoryId: ids.budgetMaterialCategoryId,
+            searchKeywords: ['battery holder', 'battery clip'],
+          },
+        ],
+      },
+    },
+  });
+  ids.projects.push(simpleLedProject.id);
+
   const existingFabricPencilProjects = await prisma.learningProject.findMany({
     where: {
       title: 'Fabric Pencil Case',
@@ -763,7 +896,7 @@ before(async () => {
   const fabricPencilProject = await prisma.learningProject.create({
     data: {
       categoryId: ids.projectCategoryId,
-      createdBy: ids.learnerAId,
+      createdBy: ids.learnerBId,
       title: 'Fabric Pencil Case',
       shortDescription: `${TEST_MARKER} fabric pencil starter`,
       description: `${TEST_MARKER} beginner fabric pencil case project`,
@@ -788,7 +921,7 @@ before(async () => {
   ids.fabricPencilProjectId = fabricPencilProject.id;
   ids.projects.push(fabricPencilProject.id);
 
-  await createComponentMaterial({
+  const fabricZipper = await createComponentMaterial({
     locationId: nearLocation.id,
     title: `${SEED_TOKEN} Fabric Zipper`,
     materialType: 'Zipper',
@@ -894,6 +1027,19 @@ before(async () => {
   ids.budgetMotorExpensiveId = budgetMotorExpensive.id;
   ids.budgetJumperFreeId = budgetJumperFree.id;
   ids.budgetJumperPaidId = budgetJumperPaid.id;
+  for (const materialId of [
+    fabricZipper.id,
+    budgetArduinoCheap.id,
+    budgetArduinoExpensive.id,
+    budgetUltrasonicFree.id,
+    budgetUltrasonicPaid.id,
+    budgetMotorCheap.id,
+    budgetMotorExpensive.id,
+    budgetJumperFree.id,
+    budgetJumperPaid.id,
+  ]) {
+    ids.availableMaterialIds.add(materialId);
+  }
 
   const draftProject = await prisma.learningProject.create({
     data: {
@@ -909,7 +1055,9 @@ before(async () => {
   ids.draftProjectId = draftProject.id;
   ids.projects.push(draftProject.id);
 
-  await saveLearningProjectById(publishedArduino.id, ids.learnerAId);
+  await runWithTestRecommendationToggleContext('ai-agent-save-project', () =>
+    saveLearningProjectById(publishedArduino.id, ids.learnerAId),
+  );
 
   const build = await startProjectBuildById(publishedArduino.id, ids.learnerAId);
   ids.buildId = build.id;
@@ -1004,6 +1152,12 @@ after(async () => {
   if (hiddenFabricPencilProjectIds.length > 0) {
     await prisma.learningProject.updateMany({
       where: { id: { in: hiddenFabricPencilProjectIds } },
+      data: { hiddenAt: null },
+    });
+  }
+  if (hiddenSimpleLedProjectIds.length > 0) {
+    await prisma.learningProject.updateMany({
+      where: { id: { in: hiddenSimpleLedProjectIds } },
       data: { hiddenAt: null },
     });
   }
@@ -1278,7 +1432,7 @@ describe('ai agent http closure', () => {
       const extra = await prisma.learningProject.create({
         data: {
           categoryId: ids.projectCategoryId,
-          createdBy: ids.learnerAId,
+          createdBy: ids.learnerBId,
           title: `${SEED_TOKEN} Extra Published ${index + 1}`,
           shortDescription: `${TEST_MARKER} extra project ${index + 1}`,
           description: `${TEST_MARKER} extra project ${index + 1}`,
@@ -1314,7 +1468,7 @@ describe('ai agent http closure', () => {
 
   test('component matching with explicit project title is stable across 10 fresh conversations', async () => {
     const ledProject = await prisma.learningProject.findFirst({
-      where: { title: 'Simple LED Circuit', status: 'PUBLISHED' },
+      where: { title: 'Simple LED Circuit', status: 'PUBLISHED', hiddenAt: null },
       select: { id: true },
     });
     assert.ok(ledProject, 'Simple LED Circuit must exist in the database');
@@ -1393,7 +1547,7 @@ describe('ai agent http closure', () => {
 
   test('implicit component matching reuses trusted build_checklist across 5 fresh conversations', async () => {
     const ledProject = await prisma.learningProject.findFirst({
-      where: { title: 'Simple LED Circuit', status: 'PUBLISHED' },
+      where: { title: 'Simple LED Circuit', status: 'PUBLISHED', hiddenAt: null },
       select: { id: true },
     });
     assert.ok(ledProject, 'Simple LED Circuit must exist in the database');
@@ -1607,7 +1761,7 @@ describe('ai agent http closure', () => {
 
   test('component matching resolves Simple LED Circuit build without prior chat context', async () => {
     const ledProject = await prisma.learningProject.findFirst({
-      where: { title: 'Simple LED Circuit', status: 'PUBLISHED' },
+      where: { title: 'Simple LED Circuit', status: 'PUBLISHED', hiddenAt: null },
       select: { id: true },
     });
     assert.ok(ledProject, 'Simple LED Circuit must exist in the database');
@@ -2136,7 +2290,7 @@ describe('ai agent http closure', () => {
     const multiMaterialProject = await prisma.learningProject.create({
       data: {
         categoryId: ids.projectCategoryId,
-        createdBy: ids.learnerAId,
+        createdBy: ids.learnerBId,
         title: `${SEED_TOKEN} Mini Traffic Light`,
         shortDescription: `${TEST_MARKER} traffic light`,
         description: `${TEST_MARKER} traffic light project`,
@@ -2267,7 +2421,7 @@ describe('ai agent http closure', () => {
     const hidden = await prisma.learningProject.create({
       data: {
         categoryId: ids.projectCategoryId,
-        createdBy: ids.learnerAId,
+        createdBy: ids.learnerBId,
         title: `${SEED_TOKEN} Hidden Arduino`,
         shortDescription: `${TEST_MARKER} hidden`,
         description: `${TEST_MARKER} hidden`,
@@ -2291,7 +2445,7 @@ describe('ai agent http closure', () => {
     const archived = await prisma.learningProject.create({
       data: {
         categoryId: ids.projectCategoryId,
-        createdBy: ids.learnerAId,
+        createdBy: ids.learnerBId,
         title: `${SEED_TOKEN} Archived Arduino`,
         shortDescription: `${TEST_MARKER} archived`,
         description: `${TEST_MARKER} archived`,
@@ -2315,7 +2469,7 @@ describe('ai agent http closure', () => {
     const rejected = await prisma.learningProject.create({
       data: {
         categoryId: ids.projectCategoryId,
-        createdBy: ids.learnerAId,
+        createdBy: ids.learnerBId,
         title: `${SEED_TOKEN} Rejected Arduino`,
         shortDescription: `${TEST_MARKER} rejected`,
         description: `${TEST_MARKER} rejected`,
@@ -2495,7 +2649,7 @@ describe('ai agent http closure', () => {
     const robotCarA = await prisma.learningProject.create({
       data: {
         categoryId: ids.projectCategoryId,
-        createdBy: ids.learnerAId,
+        createdBy: ids.learnerBId,
         title: 'Robot Car Explorer',
         shortDescription: `${TEST_MARKER} robot car a`,
         description: `${TEST_MARKER} robot car a`,
@@ -2519,7 +2673,7 @@ describe('ai agent http closure', () => {
     const robotCarB = await prisma.learningProject.create({
       data: {
         categoryId: ids.projectCategoryId,
-        createdBy: ids.learnerAId,
+        createdBy: ids.learnerBId,
         title: 'Robot Car Racer',
         shortDescription: `${TEST_MARKER} robot car b`,
         description: `${TEST_MARKER} robot car b`,
@@ -2614,7 +2768,7 @@ describe('ai agent http closure', () => {
     const hiddenDuplicate = await prisma.learningProject.create({
       data: {
         categoryId: ids.projectCategoryId,
-        createdBy: ids.learnerAId,
+        createdBy: ids.learnerBId,
         title: 'Obstacle Avoidance Robot',
         shortDescription: `${TEST_MARKER} hidden duplicate obstacle`,
         description: `${TEST_MARKER} hidden duplicate obstacle`,
@@ -2680,7 +2834,7 @@ describe('ai agent http closure', () => {
       ledDice = await prisma.learningProject.create({
         data: {
           categoryId: ids.projectCategoryId,
-          createdBy: ids.learnerAId,
+          createdBy: ids.learnerBId,
           title: 'Electronic LED Dice',
           shortDescription: `${TEST_MARKER} led dice`,
           description: `${TEST_MARKER} led dice project`,
@@ -2755,7 +2909,7 @@ describe('ai agent http closure', () => {
     const lineFollower = await prisma.learningProject.create({
       data: {
         categoryId: ids.projectCategoryId,
-        createdBy: ids.learnerAId,
+        createdBy: ids.learnerBId,
         title: 'Line Follower Robot',
         shortDescription: `${TEST_MARKER} line follower robot`,
         description: `${TEST_MARKER} line follower robot`,
@@ -2855,7 +3009,7 @@ describe('ai agent http closure', () => {
     const robotCarA = await prisma.learningProject.create({
       data: {
         categoryId: ids.projectCategoryId,
-        createdBy: ids.learnerAId,
+        createdBy: ids.learnerBId,
         title: 'Robot Car Explorer',
         shortDescription: `${TEST_MARKER} robot car a`,
         description: `${TEST_MARKER} robot car a`,
@@ -2879,7 +3033,7 @@ describe('ai agent http closure', () => {
     const robotCarB = await prisma.learningProject.create({
       data: {
         categoryId: ids.projectCategoryId,
-        createdBy: ids.learnerAId,
+        createdBy: ids.learnerBId,
         title: 'Robot Car Racer',
         shortDescription: `${TEST_MARKER} robot car b`,
         description: `${TEST_MARKER} robot car b`,
@@ -3059,7 +3213,7 @@ describe('ai agent http closure', () => {
     const partialProject = await prisma.learningProject.create({
       data: {
         categoryId: ids.projectCategoryId,
-        createdBy: ids.learnerAId,
+        createdBy: ids.learnerBId,
         title: `${SEED_TOKEN} Partial Budget Robot`,
         shortDescription: `${TEST_MARKER} partial budget project`,
         description: `${TEST_MARKER} partial budget project`,
@@ -3167,6 +3321,7 @@ describe('ai agent http closure', () => {
   });
 
   test('projects within budget returns Obstacle Avoidance Robot at 60 NIS LTE', async () => {
+    await prepareProjectsWithinBudgetFixtures();
     const token = tokenFor(ids.learnerBId);
     const conversationId = await createConversation(token);
     const buildItemsBefore = await prisma.projectBuildItem.count({
@@ -3264,6 +3419,7 @@ describe('ai agent http closure', () => {
   });
 
   test('multi-project estimate matches individual Obstacle estimate and respects LT boundary', async () => {
+    await prepareProjectsWithinBudgetFixtures();
     const { estimateProjectMaterialBudget, findProjectsWithinBudget } = await import(
       '../../learning-projects/learning-projects.build-material-linking.js'
     );
@@ -3342,6 +3498,7 @@ describe('ai agent http closure', () => {
   });
 
   test('Arabic numeric budget follow-up preserves electronics filter after clarification', async () => {
+    await prepareProjectsWithinBudgetFixtures();
     const token = tokenFor(ids.learnerBId);
     const conversationId = await createConversation(token);
 

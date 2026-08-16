@@ -158,7 +158,7 @@ describe('admin reservations export HTTP auth', () => {
 
   test('invalid reservation status is rejected', async () => {
     const result = await request(
-      '/api/admin/reservations/export/preflight?status=AWAITING_RESOLUTION',
+      '/api/admin/reservations/export/preflight?status=NOT_A_RESERVATION_STATUS',
       { token: adminToken },
     );
     assert.ok(result.status === 400 || result.status === 422);

@@ -1202,6 +1202,10 @@ export const shouldDeferMaterialSearchForOwnedMaterialsProjectUse = (
 };
 
 export const detectBuildGapIntent = (userMessage: string): boolean => {
+  if (detectComponentMaterialMatchingIntent(userMessage)) {
+    return false;
+  }
+
   const normalized = normalize(userMessage);
   return /(ناقص|ناقصني|نقص|missing|what.?s left|gap|يلزمني|باقي|ظل علي|شو ظل)/i.test(
     normalized,

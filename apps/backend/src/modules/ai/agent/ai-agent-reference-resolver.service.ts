@@ -5,6 +5,7 @@ import { listMessagesForConversation } from '../ai.repository.js';
 import { isActiveReservationBehaviorStatus } from '../../reservations/reservations.quantity.js';
 import type { ReservationStatus } from '../../../generated/prisma/client.js';
 import {
+  detectBuildGapIntent,
   detectComponentMaterialMatchingIntent,
   detectCurrentInProgressProjectWording,
   detectProjectBudgetEstimationFollowUp,
@@ -1218,6 +1219,16 @@ export const resolveBuildIdForUserMessage = async (input: {
   // Only invent an active-build identity when the user clearly means
   // current/in-progress work and exactly one owned build exists.
   if (detectCurrentInProgressProjectWording(input.userMessage)) {
+    const activeBuilds = await listActiveProjectBuildsForLearner(input.userId);
+    if (activeBuilds.length === 1) {
+      return {
+        buildId: activeBuilds[0]!.id,
+        projectId: activeBuilds[0]!.projectId,
+      };
+    }
+  }
+
+  if (detectBuildGapIntent(input.userMessage)) {
     const activeBuilds = await listActiveProjectBuildsForLearner(input.userId);
     if (activeBuilds.length === 1) {
       return {
