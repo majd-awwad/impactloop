@@ -12,7 +12,6 @@ import '../../../../core/config/api_config.dart';
 import '../../../../shared/widgets/account_status_presentation.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/user_avatar.dart';
-import '../../../auth/application/auth_providers.dart';
 import '../../../auth/application/email_verification_actions.dart';
 import '../../../auth/data/models/user.dart';
 import '../../../project_help_sessions/application/project_help_sessions_providers.dart';
@@ -537,13 +536,9 @@ class CompactAccountVerificationNotice extends ConsumerStatefulWidget {
 class _CompactAccountVerificationNoticeState
     extends ConsumerState<CompactAccountVerificationNotice> {
   var _isSending = false;
-  String? _feedback;
 
   Future<void> _resendEmailVerification() async {
-    setState(() {
-      _isSending = true;
-      _feedback = null;
-    });
+    setState(() => _isSending = true);
 
     await resendEmailVerificationWithFeedback(context, ref);
 

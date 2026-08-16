@@ -1359,10 +1359,11 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     }
 
     setState(() => _isUploadingImages = true);
+    final uploadFailedMessage = context.s.imageUploadFailed;
     try {
       final uploaded = await uploadMaterialImages(ref, pending);
       if (uploaded.length != pending.length) {
-        throw ApiException(message: context.s.imageUploadFailed);
+        throw ApiException(message: uploadFailedMessage);
       }
 
       var uploadIndex = 0;

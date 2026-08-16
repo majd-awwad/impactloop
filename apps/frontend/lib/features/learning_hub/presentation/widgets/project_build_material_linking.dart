@@ -10,7 +10,6 @@ import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../material_discovery/presentation/reservation_dialog_copy.dart';
 import '../../domain/models/project_build.dart';
-import '../../domain/models/project_build_material_link.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../l10n/learning_project_build_l10n.dart';
 import '../project_build_material_link_error_message.dart';

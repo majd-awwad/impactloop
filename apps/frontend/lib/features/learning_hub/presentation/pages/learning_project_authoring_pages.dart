@@ -1514,6 +1514,7 @@ class _LearningProjectAuthoringAssistantPageState
     });
 
     try {
+      final locale = resolveAiLocale(context);
       final submission = await ref.read(
         myLearningProjectSubmissionProvider(widget.projectId).future,
       );
@@ -1529,7 +1530,7 @@ class _LearningProjectAuthoringAssistantPageState
           .read(learningHubRepositoryProvider)
           .getOrCreateAuthoringConversation(
             projectId: widget.projectId,
-            locale: resolveAiLocale(context),
+            locale: locale,
           );
 
       if (session.learningProjectId != widget.projectId ||

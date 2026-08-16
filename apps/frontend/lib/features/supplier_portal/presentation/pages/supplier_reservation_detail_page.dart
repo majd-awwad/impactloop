@@ -803,7 +803,7 @@ List<_StateFact> _terminalStateFacts(
   final facts = <_StateFact>[
     _StateFact(
       l.statusCompleted,
-      ui.terminalOutcome(reservation.status) ?? ui.emDash,
+      ui.terminalOutcome(reservation.status),
     ),
     _StateFact(
       l.supplierFulfillmentAndDelivery,
@@ -2066,18 +2066,6 @@ String _fulfillmentLabel(
   reservation,
 );
 
-String _stateFulfillmentLabel(
-  BuildContext context,
-  SupplierIncomingRequest reservation,
-) => SupplierReservationUiHelpers.of(context).fulfillmentMethodLabel(
-  reservation,
-);
-
-String _terminalOutcomeLabel(
-  BuildContext context,
-  SupplierIncomingRequest reservation,
-) => SupplierReservationUiHelpers.of(context).terminalOutcome(reservation.status);
-
 String _terminalScheduleOutcome(
   BuildContext context,
   SupplierIncomingRequest reservation,
@@ -2087,9 +2075,6 @@ String _terminalVerb(
   BuildContext context,
   SupplierIncomingRequest reservation,
 ) => SupplierReservationUiHelpers.of(context).terminalVerb(reservation.status);
-
-String _workflowLabel(BuildContext context, SupplierWorkflowPhase? phase) =>
-    SupplierReservationUiHelpers.of(context).workflowLabel(phase);
 
 String _attentionLabel(BuildContext context, SupplierAttentionState? attention) =>
     SupplierReservationUiHelpers.of(context).attentionLabel(attention);

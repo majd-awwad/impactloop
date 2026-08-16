@@ -68,14 +68,19 @@ class _SmartBuildPlanItemCardState extends ConsumerState<SmartBuildPlanItemCard>
       return;
     }
 
-    await context.push(
-      smartBuildPlanMaterialDetailUri(
-        materialId: candidate.materialId,
-        projectId: widget.projectId,
-        buildItemId: widget.item.buildItemId,
-        componentName: widget.item.componentName,
-      ),
-    );
+    final uri = linkBeforeNavigate
+        ? smartBuildPlanReserveMaterialUri(
+            materialId: candidate.materialId,
+            projectId: widget.projectId,
+            buildItemId: widget.item.buildItemId,
+            componentName: widget.item.componentName,
+          )
+        : smartBuildPlanBrowseMaterialUri(
+            materialId: candidate.materialId,
+            projectId: widget.projectId,
+          );
+
+    await context.push(uri);
   }
 
   @override
