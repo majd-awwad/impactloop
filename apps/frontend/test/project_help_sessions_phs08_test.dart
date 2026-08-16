@@ -15,7 +15,6 @@ import 'package:frontend/features/project_help_sessions/data/project_help_sessio
 import 'package:frontend/features/project_help_sessions/presentation/pages/creator_project_help_session_settings_page.dart';
 import 'package:frontend/features/project_help_sessions/presentation/widgets/build_help_session_section.dart';
 import 'package:frontend/features/project_help_sessions/presentation/widgets/help_session_request_form.dart';
-import 'package:frontend/features/project_help_sessions/presentation/widgets/submission_help_session_settings_entry.dart';
 
 ProjectBuild _testBuild() {
   return ProjectBuild(

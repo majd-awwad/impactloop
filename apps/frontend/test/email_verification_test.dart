@@ -45,9 +45,6 @@ class _NoopTokenStorage implements TokenStorage {
 
 class _NoopSessionRefresher implements AuthSessionRefresher {
   @override
-  String? get accessToken => null;
-
-  @override
   Future<void> clearSession() async {}
 
   @override

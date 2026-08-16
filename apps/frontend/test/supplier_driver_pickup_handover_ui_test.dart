@@ -12,7 +12,6 @@ import 'package:frontend/features/supplier_portal/data/models/supplier_incoming_
 import 'package:frontend/features/supplier_portal/presentation/controllers/supplier_requests_providers.dart';
 import 'package:frontend/features/supplier_portal/presentation/pages/supplier_reservation_detail_page.dart';
 import 'package:frontend/l10n/app_localizations.dart';
-import 'package:frontend/l10n/app_localizations_en.dart';
 
 class _HandoverDetailRepository implements SupplierRequestsRepository {
   int issueCalls = 0;

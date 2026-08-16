@@ -1,0 +1,3 @@
+tags:
+  golden:
+    description: Golden screenshot tests that compare rendered UI against reference images.

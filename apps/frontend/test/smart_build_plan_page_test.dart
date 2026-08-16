@@ -224,6 +224,7 @@ void main() {
 
       expect(find.text('Cheapest material'), findsOneWidget);
       expect(find.text('Best overall material'), findsNothing);
+      expect(loads, greaterThan(1));
     });
 
     testWidgets('transitions to no optimizable state after refresh', (tester) async {

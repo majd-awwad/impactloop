@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:frontend/core/errors/api_exception.dart';
 import 'package:frontend/features/auth/application/auth_controller.dart';
@@ -583,10 +584,31 @@ void main() {
     });
 
     testWidgets('settings save succeeds without inline error', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final router = GoRouter(
+        initialLocation: '/creator/projects/project-1/help-sessions/settings',
+        routes: [
+          GoRoute(
+            path: '/creator/projects/:projectId/help-sessions/settings',
+            builder: (context, state) => CreatorProjectHelpSessionSettingsPage(
+              projectId: state.pathParameters['projectId']!,
+            ),
+          ),
+          GoRoute(
+            path: '/learning/submissions/:projectId',
+            builder: (context, state) => Scaffold(
+              body: Text('Submission ${state.pathParameters['projectId']}'),
+            ),
+          ),
+        ],
+      );
+
       await tester.pumpWidget(
-        _wrap(
-          const CreatorProjectHelpSessionSettingsPage(projectId: 'project-1'),
+        ProviderScope(
           overrides: [
+            authControllerProvider.overrideWith(_AuthorAuth.new),
             projectHelpSessionSettingsProvider('project-1').overrideWith(
               (ref) async => const ProjectHelpSessionSettings(
                 projectId: 'project-1',
@@ -600,9 +622,19 @@ void main() {
               _FakeSettingsController.new,
             ),
           ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('en'), Locale('ar')],
+          ),
         ),
       );
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Save settings'));
       await tester.tap(find.text('Save settings'));
       await tester.pumpAndSettle();
 
@@ -611,6 +643,7 @@ void main() {
         findsNothing,
       );
       expect(find.text('Help session settings saved.'), findsOneWidget);
+      expect(router.state.uri.path, '/learning/submissions/project-1');
     });
   });
 }

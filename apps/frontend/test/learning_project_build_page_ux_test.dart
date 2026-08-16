@@ -49,8 +49,7 @@ void main() {
       viewport: const Size(1024, 900),
     );
 
-    await tester.tap(find.text('Build actions'));
-    await tester.pumpAndSettle();
+    await _tapBuildActionsMenu(tester);
 
     expect(find.text('Pause build'), findsOneWidget);
     expect(find.text('Archive'), findsOneWidget);
@@ -182,8 +181,7 @@ void main() {
       viewport: const Size(1024, 900),
     );
 
-    await tester.tap(find.text('Build actions'));
-    await tester.pumpAndSettle();
+    await _tapBuildActionsMenu(tester);
     await tester.tap(find.text('Pause build'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Confirm'));
@@ -245,8 +243,7 @@ void main() {
       viewport: const Size(1024, 900),
     );
 
-    await tester.tap(find.text('Build actions'));
-    await tester.pumpAndSettle();
+    await _tapBuildActionsMenu(tester);
     await tester.tap(find.text('Pause build'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Confirm'));
@@ -297,8 +294,7 @@ void main() {
       viewport: const Size(1024, 900),
     );
 
-    await tester.tap(find.text('Build actions'));
-    await tester.pumpAndSettle();
+    await _tapBuildActionsMenu(tester);
     await tester.tap(find.text('Archive'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Confirm'));
@@ -850,6 +846,13 @@ Future<void> _scrollToContinueFinalCheck(WidgetTester tester) async {
   );
 }
 
+Future<void> _tapBuildActionsMenu(WidgetTester tester) async {
+  final target = find.bySemanticsLabel('Build actions').first;
+  await tester.ensureVisible(target);
+  await tester.tap(target);
+  await tester.pumpAndSettle();
+}
+
 Future<void> _openContinueFinalCheck(WidgetTester tester) async {
   await _scrollToContinueFinalCheck(tester);
   final button = find.ancestor(
@@ -1377,10 +1380,10 @@ class _TestAuthController extends AuthController {
 }
 
 class _CompletingBuildRepository implements LearningProjectRepository {
-  _CompletingBuildRepository(this._inProgress, this._completed)
-    : _current = _inProgress;
+  _CompletingBuildRepository(ProjectBuild inProgress, ProjectBuild completed)
+    : _completed = completed,
+      _current = inProgress;
 
-  final ProjectBuild _inProgress;
   final ProjectBuild _completed;
   ProjectBuild _current;
 

@@ -13,7 +13,6 @@ import 'package:frontend/features/project_notebook/application/project_notebook_
 import 'package:frontend/features/project_notebook/domain/models/project_build_notebook.dart';
 import 'package:frontend/features/project_notebook/presentation/l10n/project_notebook_l10n.dart';
 import 'package:frontend/features/project_notebook/presentation/pages/project_notebook_page.dart';
-import 'package:frontend/features/project_notebook/presentation/utils/notebook_pdf_export.dart';
 import 'package:frontend/features/project_notebook/presentation/widgets/notebook_drawing_canvas.dart';
 import 'package:frontend/shared/models/localized_text.dart';
 

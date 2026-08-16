@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +10,6 @@ import 'package:frontend/features/deliveries/application/learner_deliveries_prov
 import 'package:frontend/features/notifications/application/notifications_provider.dart';
 import 'package:frontend/features/notifications/application/payment_notification_presentation.dart';
 import 'package:frontend/features/notifications/data/models/app_notification.dart';
-import 'package:frontend/features/notifications/data/notifications_api.dart';
 import 'package:frontend/features/notifications/presentation/pages/user_notifications_page.dart';
 import 'package:frontend/features/reservations/application/my_reservations_provider.dart';
 import 'package:frontend/features/reservations/data/models/learner_reservation.dart';
@@ -65,78 +63,6 @@ class _LearnerAuth extends AuthController {
       accessToken: 'token',
       hasBootstrapped: true,
     );
-  }
-}
-
-class _FakeApi extends NotificationsApi {
-  _FakeApi({List<AppNotification>? items, this.fail = false}) : super(Dio()) {
-    this.items = List<AppNotification>.from(items ?? const []);
-  }
-
-  late List<AppNotification> items;
-  final bool fail;
-  final List<String> markedRead = [];
-
-  @override
-  Future<AppNotificationsPage> fetchNotifications({
-    int page = 1,
-    int limit = 20,
-    bool? isRead,
-    String? category,
-  }) async {
-    if (fail) {
-      throw Exception('network down');
-    }
-    var filtered = items;
-    if (isRead != null) {
-      filtered = items.where((n) => n.isRead == isRead).toList();
-    }
-    if (category != null && category.isNotEmpty) {
-      final filter = switch (category) {
-        'payments' => PaymentNotificationCategoryFilter.payments,
-        'delivery' => PaymentNotificationCategoryFilter.delivery,
-        'refunds' => PaymentNotificationCategoryFilter.refunds,
-        _ => PaymentNotificationCategoryFilter.all,
-      };
-      filtered = filtered
-          .where((n) => notificationMatchesCategoryFilter(n, filter))
-          .toList();
-    }
-    return AppNotificationsPage(
-      items: filtered,
-      unreadCount: items.where((n) => !n.isRead).length,
-      page: 1,
-      limit: limit,
-      total: filtered.length,
-      totalPages: 1,
-    );
-  }
-
-  @override
-  Future<int> fetchUnreadCount() async =>
-      items.where((n) => !n.isRead).length;
-
-  @override
-  Future<AppNotification> markRead(String notificationId) async {
-    markedRead.add(notificationId);
-    final index = items.indexWhere((n) => n.id == notificationId);
-    if (index >= 0) {
-      items[index] = items[index].copyWith(isRead: true);
-      return items[index];
-    }
-    return AppNotification(
-      id: notificationId,
-      notificationType: 'PAYMENT_REQUIRED',
-      title: 'Title',
-      body: 'Body',
-      isRead: true,
-      createdAt: DateTime.utc(2026),
-    );
-  }
-
-  @override
-  Future<void> markAllRead() async {
-    items = items.map((n) => n.copyWith(isRead: true)).toList();
   }
 }
 

@@ -12,7 +12,6 @@ import 'package:frontend/features/learning_hub/domain/models/project_build.dart'
 import 'package:frontend/features/learning_hub/domain/models/project_build_material_link.dart';
 import 'package:frontend/features/learning_hub/domain/models/smart_build_plan.dart';
 import 'package:frontend/features/learning_hub/presentation/pages/smart_build_plan_page.dart';
-import 'package:frontend/features/learner_material_requests/application/learner_material_requests_providers.dart';
 import 'package:frontend/l10n/l10n.dart';
 
 void main() {
