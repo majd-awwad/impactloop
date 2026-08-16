@@ -15,6 +15,7 @@ import {
 import { prisma } from '../../database/prisma.js';
 import { shouldLazyExpire } from '../material-requests/material-requests.lifecycle.js';
 import { isElectronicPaymentEnforced } from '../payments/payments.policy.js';
+import { assertCardPaymentAcceptedForNewReservation } from '../payments/payments.product-policy.js';
 import {
   resolvePaymentSummariesByReservations,
   isPickupCodeVisibilityWindowOpen,
@@ -619,6 +620,7 @@ export const createReservation = async (
   input: CreateReservationInput,
 ) => {
   await assertEmailVerifiedForMarketplaceCommitment(requesterId);
+  assertCardPaymentAcceptedForNewReservation(input.paymentMethod);
 
   if (input.fulfillmentMethod === 'PICKUP') {
     for (const window of input.learnerPreferredPickupWindows ?? []) {
@@ -767,6 +769,8 @@ export const quoteReservation = async (
   requesterId: string,
   input: ReservationQuoteBody,
 ) => {
+  assertCardPaymentAcceptedForNewReservation(input.paymentMethod);
+
   const material = await reservationsRepository.findMaterialForReservationQuote(
     input.materialId,
   );

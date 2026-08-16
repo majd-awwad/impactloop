@@ -50,13 +50,19 @@ Map<String, dynamic> _paymentSummary({
   bool enforcementEnabled = true,
   bool hasMaterialPaymentOutstanding = true,
   bool hasDeliveryFeeOutstanding = false,
-  String? checkoutableOrderId = 'ord-1',
+  String? checkoutableOrderId,
   String? outstandingAmount = '16.00',
   bool pickupCodeAvailable = false,
   bool fulfillmentReady = false,
+  bool? dueAtHandover,
 }) {
+  final resolvedDueAtHandover = dueAtHandover ??
+      (overallStatus == 'REQUIRES_PAYMENT' &&
+          (hasMaterialPaymentOutstanding || hasDeliveryFeeOutstanding));
   return {
     'enforcementEnabled': enforcementEnabled,
+    'paymentMethod': 'CASH',
+    'dueAtHandover': resolvedDueAtHandover,
     'overallStatus': overallStatus,
     'outstandingOrderCount':
         (hasMaterialPaymentOutstanding ? 1 : 0) +
@@ -241,8 +247,9 @@ void main() {
       );
       expect(
         entries.any((e) => e.label.contains('Payment required')),
-        isTrue,
+        isFalse,
       );
+      expect(reservation.paymentSummary?.dueAtHandover, isTrue);
     });
 
     test('includes ready-for-pickup once fulfillment is ready', () {
@@ -274,7 +281,9 @@ void main() {
   });
 
   group('detail page layout', () {
-    testWidgets('shows payment required and locked pickup code', (tester) async {
+    testWidgets('shows cash due at handover and locked pickup code', (
+      tester,
+    ) async {
       final reservation = LearnerReservation.fromJson(
         _baseReservation(
           id: 'res-pay',
@@ -287,8 +296,12 @@ void main() {
 
       expect(find.byKey(const Key('reservation-details-layout')), findsOneWidget);
       expect(find.byKey(const Key('reservation-details-body')), findsOneWidget);
-      expect(find.text('Pay now'), findsWidgets);
-      expect(find.text('Complete payment to unlock your pickup code.'), findsOneWidget);
+      expect(find.text('Due at handover'), findsWidgets);
+      expect(find.text('Pay now'), findsNothing);
+      expect(
+        find.text('Complete payment to unlock your pickup code.'),
+        findsOneWidget,
+      );
       expect(find.text('View details'), findsNothing);
     });
 
@@ -386,7 +399,7 @@ void main() {
       expect(find.text('أكمل الدفع لفتح رمز الاستلام.'), findsOneWidget);
       expect(find.text('Complete payment to unlock your pickup code.'), findsNothing);
     });
-    testWidgets('mobile sticky action has no phantom bottom-nav gap', (
+    testWidgets('cash due at handover does not show checkout sticky action', (
       tester,
     ) async {
       final reservation = LearnerReservation.fromJson(
@@ -403,13 +416,10 @@ void main() {
         size: const Size(390, 844),
       );
 
-      final sticky = find.byKey(const Key('reservation-detail-sticky-action'));
-      expect(sticky, findsOneWidget);
-
-      final stickyBox = tester.getRect(sticky);
-      // Detail route has no bottom nav; sticky should sit near the bottom edge
-      // rather than 96px above an absent nav bar.
-      expect(stickyBox.bottom, greaterThan(844 - 80));
+      expect(
+        find.byKey(const Key('reservation-detail-sticky-action')),
+        findsNothing,
+      );
     });
   });
 }

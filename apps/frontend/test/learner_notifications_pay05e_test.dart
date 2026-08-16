@@ -275,7 +275,7 @@ void main() {
       expect(find.byKey(const Key('notification-unread-dot-pay-completed')), findsNothing);
     });
 
-    testWidgets('payment required opens detail then reservation checkout', (
+    testWidgets('payment required opens reservation payment details', (
       tester,
     ) async {
       await _pumpPage(
@@ -305,7 +305,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('checkout:res-1024'), findsOneWidget);
+      expect(find.text('details:res-1024:focus=payment'), findsOneWidget);
     });
 
     testWidgets('completed payment opens details payment section', (

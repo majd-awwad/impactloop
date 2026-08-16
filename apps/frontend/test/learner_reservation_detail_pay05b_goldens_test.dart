@@ -36,12 +36,17 @@ class _LearnerAuthController extends AuthController {
 Map<String, dynamic> _paymentSummary({
   String overallStatus = 'REQUIRES_PAYMENT',
   bool hasMaterialPaymentOutstanding = true,
-  String? checkoutableOrderId = 'ord-1',
+  String? checkoutableOrderId,
   String? outstandingAmount = '16.00',
   bool pickupCodeAvailable = false,
+  bool? dueAtHandover,
 }) {
+  final resolvedDueAtHandover = dueAtHandover ??
+      (overallStatus == 'REQUIRES_PAYMENT' && hasMaterialPaymentOutstanding);
   return {
     'enforcementEnabled': true,
+    'paymentMethod': 'CASH',
+    'dueAtHandover': resolvedDueAtHandover,
     'overallStatus': overallStatus,
     'outstandingOrderCount': hasMaterialPaymentOutstanding ? 1 : 0,
     'outstandingAmount': outstandingAmount,

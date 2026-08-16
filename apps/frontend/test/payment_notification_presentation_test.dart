@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:frontend/features/auth/application/auth_route_helpers.dart';
 import 'package:frontend/features/notifications/application/notification_display.dart';
 import 'package:frontend/features/notifications/application/payment_notification_presentation.dart';
 import 'package:frontend/features/notifications/data/models/app_notification.dart';
@@ -126,11 +125,15 @@ void main() {
   });
 
   group('payment notification deep links', () {
-    test('payment required opens reservation-scoped checkout when payable', () {
+    test('payment required opens reservation payment detail when payable', () {
       final notification = _paymentNotification(type: 'PAYMENT_REQUIRED');
       expect(
         paymentNotificationOpenRoute(notification),
-        learnerReservationCheckoutRoute('res-1024'),
+        contains('/learner/reservations/res-1024'),
+      );
+      expect(
+        paymentNotificationOpenRoute(notification),
+        contains('focus=payment'),
       );
       expect(
         notificationOpenRoute(
@@ -138,7 +141,7 @@ void main() {
           isSupplierMode: false,
           isDriverMode: false,
         ),
-        '/learner/checkout/reservation/res-1024',
+        contains('/learner/reservations/res-1024'),
       );
     });
 
@@ -168,28 +171,36 @@ void main() {
       expect(copyAr.title, ar.notificationPaymentAcceptedReadyTitle);
       expect(
         paymentNotificationActionLabel(notification, en),
-        en.completePayment,
+        en.checkoutViewReservationDetails,
       );
       expect(
         paymentNotificationOpenRoute(notification),
-        learnerReservationCheckoutRoute('res-1024'),
+        contains('/learner/reservations/res-1024'),
+      );
+      expect(
+        paymentNotificationOpenRoute(notification),
+        contains('focus=payment'),
       );
     });
 
-    test('stale payment-required metadata still opens reservation checkout', () {
+    test('stale payment-required metadata opens reservation payment detail', () {
       // Frozen metadata may say PAID while the notification type is still
-      // PAYMENT_REQUIRED — never trust that over reservation-scoped checkout.
+      // PAYMENT_REQUIRED — route to reservation payment detail, not checkout.
       final notification = _paymentNotification(
         type: 'PAYMENT_REQUIRED',
         paymentStatus: 'PAID',
       );
       expect(
         paymentNotificationOpenRoute(notification),
-        learnerReservationCheckoutRoute('res-1024'),
+        contains('/learner/reservations/res-1024'),
+      );
+      expect(
+        paymentNotificationOpenRoute(notification),
+        contains('focus=payment'),
       );
       expect(
         paymentNotificationActionLabel(notification, en),
-        en.notificationPaymentOpenCheckout,
+        en.checkoutViewReservationDetails,
       );
       expect(
         paymentNotificationStatusCaption(notification, en),
@@ -197,14 +208,18 @@ void main() {
       );
     });
 
-    test('new cycle required always opens reservation checkout', () {
+    test('new cycle required opens reservation payment detail', () {
       final notification = _paymentNotification(
         type: 'PAYMENT_NEW_CYCLE_REQUIRED',
         paymentStatus: 'REQUIRES_PAYMENT',
       );
       expect(
         paymentNotificationOpenRoute(notification),
-        learnerReservationCheckoutRoute('res-1024'),
+        contains('/learner/reservations/res-1024'),
+      );
+      expect(
+        paymentNotificationOpenRoute(notification),
+        contains('focus=payment'),
       );
     });
 
@@ -276,19 +291,14 @@ void main() {
       );
     });
 
-    test('never deep-links to stale per-order checkout', () {
+    test('never deep-links to checkout routes in current cash-only product', () {
       for (final type in kPaymentNotificationTypes) {
         final route = paymentNotificationOpenRoute(
           _paymentNotification(type: type, paymentStatus: 'REQUIRES_PAYMENT'),
         );
         expect(route, isNotNull);
-        expect(route, isNot(contains('/learner/checkout/ord-')));
-        expect(
-          route!.startsWith('/learner/checkout/reservation/') ||
-              route.startsWith('/learner/reservations/'),
-          isTrue,
-          reason: type,
-        );
+        expect(route, isNot(contains('/learner/checkout/')));
+        expect(route!.startsWith('/learner/reservations/'), isTrue, reason: type);
       }
     });
   });
@@ -383,7 +393,7 @@ void main() {
         localizedNotificationCopy(fee, en).title,
         en.notificationPaymentDeliveryFeeRequiredTitle,
       );
-      expect(paymentNotificationOpenRoute(fee), contains('/checkout/reservation/'));
+      expect(paymentNotificationOpenRoute(fee), contains('/learner/reservations/'));
 
       final more = _paymentNotification(
         type: 'PAYMENT_COMPLETED',
@@ -394,10 +404,10 @@ void main() {
         localizedNotificationCopy(more, en).title,
         en.notificationPaymentCompletedMoreRequiredTitle,
       );
-      expect(paymentNotificationOpenRoute(more), contains('/checkout/reservation/'));
+      expect(paymentNotificationOpenRoute(more), contains('/learner/reservations/'));
       expect(
         paymentNotificationActionLabel(more, en),
-        en.notificationPaymentOpenCheckout,
+        en.checkoutViewReservationDetails,
       );
 
       final cycle = _paymentNotification(
@@ -409,7 +419,7 @@ void main() {
         localizedNotificationCopy(cycle, en).title,
         en.notificationPaymentRefundedNewCycleTitle,
       );
-      expect(paymentNotificationOpenRoute(cycle), contains('/checkout/reservation/'));
+      expect(paymentNotificationOpenRoute(cycle), contains('/learner/reservations/'));
     });
 
     test('forged reservation id only builds a route — no auth bypass', () {

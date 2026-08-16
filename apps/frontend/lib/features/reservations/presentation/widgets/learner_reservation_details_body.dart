@@ -155,14 +155,10 @@ class _LearnerReservationDetailsBodyState
           sectionKey: _paymentSectionKey,
           onCheckoutOrder: widget.onCheckoutOrder,
         );
-        final checkoutOrderId =
-            reservation.paymentSummary?.checkoutableOrderId;
         final pickupCode = ReservationDetailPickupCodeCard(
           key: widget.pickupCodeSectionKey,
           reservation: reservation,
-          onPayNow: checkoutOrderId != null && widget.onCheckoutOrder != null
-              ? () => widget.onCheckoutOrder!(checkoutOrderId)
-              : null,
+          onPayNow: null,
         );
         final fulfillment = KeyedSubtree(
           key: _fulfillmentSectionKey,

@@ -494,21 +494,19 @@ String paymentNotificationActionLabel(
   // Soft CTA: do not hard-claim "Pay now" from frozen notification metadata.
   if (kind == PaymentNotificationKind.required) {
     if (paymentNotificationIsAggregatedCheckout(notification)) {
-      return l10n.completePayment;
+      return l10n.checkoutViewReservationDetails;
     }
-    return l10n.notificationPaymentOpenCheckout;
+    return l10n.checkoutViewReservationDetails;
   }
   if (paymentNotificationShouldOpenCheckout(notification)) {
-    return kind == PaymentNotificationKind.newCycleRequired
-        ? l10n.payNow
-        : l10n.notificationPaymentOpenCheckout;
+    return l10n.checkoutViewReservationDetails;
   }
 
   switch (kind) {
     case PaymentNotificationKind.required:
-      return l10n.notificationPaymentOpenCheckout;
+      return l10n.checkoutViewReservationDetails;
     case PaymentNotificationKind.newCycleRequired:
-      return l10n.payNow;
+      return l10n.checkoutViewReservationDetails;
     case PaymentNotificationKind.completed:
     case PaymentNotificationKind.refundRequested:
     case PaymentNotificationKind.refunded:
@@ -607,20 +605,18 @@ String? paymentNotificationOpenRoute(AppNotification notification) {
 
   switch (kind) {
     case PaymentNotificationKind.required:
-      if (paymentNotificationShouldOpenCheckout(notification)) {
-        return learnerReservationCheckoutRoute(reservationId);
-      }
       return learnerReservationDetailRoute(
         reservationId,
         focus: 'payment',
         checkoutableOrderId: orderId,
       );
     case PaymentNotificationKind.newCycleRequired:
-      return learnerReservationCheckoutRoute(reservationId);
+      return learnerReservationDetailRoute(
+        reservationId,
+        focus: 'payment',
+        checkoutableOrderId: orderId,
+      );
     case PaymentNotificationKind.completed:
-      if (paymentNotificationShouldOpenCheckout(notification)) {
-        return learnerReservationCheckoutRoute(reservationId);
-      }
       return learnerReservationDetailRoute(
         reservationId,
         focus: 'payment',
@@ -639,9 +635,6 @@ String? paymentNotificationOpenRoute(AppNotification notification) {
         checkoutableOrderId: orderId,
       );
     case PaymentNotificationKind.refunded:
-      if (paymentNotificationShouldOpenCheckout(notification)) {
-        return learnerReservationCheckoutRoute(reservationId);
-      }
       return learnerReservationDetailRoute(
         reservationId,
         focus: 'payment',

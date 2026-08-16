@@ -98,7 +98,7 @@ Details: [recommendation-system.md](recommendation-system.md). Configuration: `R
 | `material_discovery` | `/materials`, `/materials/:id` | Public discovery |
 | `learning_hub` | `/learning`, builds, submissions | Browse, engagement, checklists |
 | `reservations` | `/learner/reservations` | Learner reservation UX |
-| `payments` | reservation checkout | Mock CARD checkout when enforcement on |
+| `payments` | reservation payment read/requirement | CASH settlement active; dormant CARD checkout not mounted |
 | `deliveries` / `driver_portal` | learner + driver delivery surfaces | Partial — polling, not realtime stream |
 | `ai` | `/ai/assistant` | ImpactLoop Assistant |
 | `supplier_portal` | `/supplier/*` | Supplier materials and reservations |

@@ -5,6 +5,8 @@ import '../../../../../l10n/l10n.dart';
 import '../../../../../shared/widgets/materials/materials_ui_palette.dart';
 import 'reservation_form_theme.dart';
 
+/// Current MVP: cash settlement at handover. Card/electronic checkout is not
+/// offered in the reservation form — infrastructure remains dormant server-side.
 class ReservationPaymentSelector extends StatelessWidget {
   const ReservationPaymentSelector({
     super.key,
@@ -25,48 +27,14 @@ class ReservationPaymentSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final stackVertically = constraints.maxWidth < 420;
-
-            final cardOption = ReservationOptionCard(
-              key: const ValueKey('reservation-payment-card'),
-              title: l10n.reservationPaymentCard,
-              subtitle: l10n.reservationPaymentCardBeforeFulfillment,
-              icon: Icons.credit_card_outlined,
-              selected: selectedMethod == 'CARD',
-              enabled: enabled,
-              onTap: enabled ? () => onChanged('CARD') : null,
-            );
-
-            final cashOption = ReservationOptionCard(
-              key: const ValueKey('reservation-payment-cash'),
-              title: l10n.reservationPaymentCash,
-              subtitle: l10n.reservationPaymentCashAtHandover,
-              icon: Icons.payments_outlined,
-              selected: selectedMethod == 'CASH',
-              enabled: enabled,
-              onTap: enabled ? () => onChanged('CASH') : null,
-            );
-
-            if (stackVertically) {
-              return Column(
-                children: [
-                  cardOption,
-                  const SizedBox(height: AppSpacing.sm),
-                  cashOption,
-                ],
-              );
-            }
-
-            return Row(
-              children: [
-                Expanded(child: cardOption),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(child: cashOption),
-              ],
-            );
-          },
+        ReservationOptionCard(
+          key: const ValueKey('reservation-payment-cash'),
+          title: l10n.reservationPaymentCash,
+          subtitle: l10n.reservationPaymentCashAtHandover,
+          icon: Icons.payments_outlined,
+          selected: true,
+          enabled: false,
+          onTap: null,
         ),
         const SizedBox(height: AppSpacing.sm),
         Row(
@@ -80,7 +48,7 @@ class ReservationPaymentSelector extends StatelessWidget {
             const SizedBox(width: AppSpacing.xs),
             Expanded(
               child: Text(
-                l10n.reservationPaymentCardFasterHint,
+                l10n.reservationPaymentCashAtHandover,
                 style: ReservationFormTheme.helperStyle(context, palette),
               ),
             ),

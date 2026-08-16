@@ -216,12 +216,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.byKey(const ValueKey('reservation-payment-card')),
+      find.byKey(const ValueKey('reservation-payment-cash')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('reservation-payment-cash')),
-      findsOneWidget,
+      find.byKey(const ValueKey('reservation-payment-card')),
+      findsNothing,
     );
   });
 
@@ -229,12 +229,12 @@ void main() {
     await _pumpDialog(tester);
 
     expect(
-      find.byKey(const ValueKey('reservation-payment-card')),
+      find.byKey(const ValueKey('reservation-payment-cash')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('reservation-payment-cash')),
-      findsOneWidget,
+      find.byKey(const ValueKey('reservation-payment-card')),
+      findsNothing,
     );
   });
 
@@ -247,7 +247,9 @@ void main() {
     );
   });
 
-  testWidgets('cash selection disables safe drop-off for delivery', (tester) async {
+  testWidgets('cash payment method disables safe drop-off for delivery', (
+    tester,
+  ) async {
     await _pumpDialog(tester);
 
     await tester.ensureVisible(
@@ -258,11 +260,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(
+    expect(
       find.byKey(const ValueKey('reservation-payment-cash')),
+      findsOneWidget,
     );
-    await tester.tap(find.byKey(const ValueKey('reservation-payment-cash')));
-    await tester.pumpAndSettle();
 
     final switchFinder = find.byKey(
       const ValueKey('reservation-safe-dropoff-switch'),
@@ -402,6 +403,6 @@ void main() {
     expect(submitted, isNotNull);
     expect(submitted!.quantityRequested, 2);
     expect(submitted!.fulfillmentMethod, 'PICKUP');
-    expect(submitted!.paymentMethod, 'CARD');
+    expect(submitted!.paymentMethod, 'CASH');
   });
 }

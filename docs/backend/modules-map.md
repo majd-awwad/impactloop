@@ -256,23 +256,23 @@ Mount order: `apps/backend/src/app.ts`
 
 **Behavior:** `POST /api/reservations` requires a `LEARNER`, validates the material and requested quantity, prevents own-material reservations, enforces one open reservation per learner/material, creates a `PENDING` reservation hold, and recomputes material status from held/remaining quantity. `GET /api/reservations/my` returns the current learner's reservations newest first with safe material, supplier, status, delivery, pickup-window, and batched `paymentSummary` fields. `PATCH /api/reservations/:id/cancel` supports learner cancellation while `PENDING`.
 
-**Payments:** Electronic payment obligations and reservation-scoped checkout live in the `payments` module (see below). Reviews remain out of scope.
+**Payments:** CASH settlement and payment-order accounting live in the `payments` module (see below). Dormant electronic checkout routes are not mounted in the current product. Reviews remain out of scope.
 
 ---
 
 ## `payments`
 
-**Purpose:** Mock electronic payment for reservation material and delivery-fee obligations, reservation-scoped checkout sessions, fulfillment gating, refunds, and payment notifications.
+**Purpose:** Payment obligations for reservation material and delivery-fee accounting, CASH handover semantics, fulfillment gating, refunds, and payment notifications. Dormant CARD/Mock checkout infrastructure retained for future reactivation.
 
-**Mounted at:** `/api/payments` (+ Mock webhook router when enabled)
+**Mounted at:** `/api/payments` (read/requirement routes only in current CASH MVP; checkout routes in `payments.checkout-routes.ts` mounted only when card checkout product policy is enabled)
 
-**Key files:** `payments.routes.ts`, `payments.controller.ts`, `payments.checkout-session.ts`, `payments.service.ts`, `payments.ensure.ts`, `payments.fulfillment.ts`, `payments.lifecycle.ts`, `payments.requirement.ts`, `payments.list-summary.ts`, `payments.notifications.ts`, `payments.policy.ts`, `payments.env.ts`, `providers/mock/*`
+**Key files:** `payments.routes.ts`, `payments.checkout-routes.ts`, `payments.product-policy.ts`, `payments.controller.ts`, `payments.checkout-session.ts`, `payments.service.ts`, `payments.ensure.ts`, `payments.fulfillment.ts`, `payments.lifecycle.ts`, `payments.requirement.ts`, `payments.list-summary.ts`, `payments.notifications.ts`, `payments.policy.ts`, `payments.env.ts`, `providers/mock/*`
 
 **Prisma:** `PaymentOrder`, `PaymentCheckoutSession`, `PaymentCheckoutSessionItem`, `PaymentAttempt`, `PaymentProviderEvent`, `PaymentRefund`
 
-**Behavior:** Creates positive-amount obligations on accept / request-delivery; learner starts reservation-scoped checkout with Idempotency-Key; Mock success settles included orders atomically and unlocks pickup code or Delivery `WAITING_FOR_DRIVER`. Legacy `POST /orders/:id/checkout` remains for compatibility; Flutter uses reservation-scoped routes only.
+**Behavior:** Creates positive-amount obligations on accept / request-delivery. **Current MVP:** CASH settlement at handover; `GET /reservations/:id/requirement` and `GET /orders/:id` remain for read/audit. Dormant checkout routes (`POST /reservations/:id/checkout`, sessions, Mock act/webhook) are not mounted unless card checkout product policy is enabled.
 
-**Not implemented:** Real PSP, Admin Payment Center, payment cron/TTL worker.
+**Not implemented (active):** Real PSP, Admin Payment Center, payment cron/TTL worker.
 
 ---
 

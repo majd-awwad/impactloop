@@ -97,7 +97,7 @@ describe('cash payment foundation', () => {
     );
   });
 
-  test('reservation creation persists cash and free legacy input defaults to card', async () => {
+  test('reservation creation persists cash and free legacy input defaults to cash', async () => {
     const paidSeed = await createPayReservationFixture(ids, {
       learnerId,
       supplierId,
@@ -141,7 +141,7 @@ describe('cash payment foundation', () => {
     });
     const free = await createReservation(learnerId, freeInput);
     ids.reservations.push(free.id);
-    assert.equal(free.paymentMethod, 'CARD');
+    assert.equal(free.paymentMethod, 'CASH');
     assert.equal(free.totalAmount, 0);
   });
 

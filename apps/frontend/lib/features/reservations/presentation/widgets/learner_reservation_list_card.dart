@@ -974,7 +974,13 @@ class _ActionZone extends ConsumerWidget {
     switch (presentation.primaryAction) {
       case LearnerReservationPrimaryAction.payNow:
       case LearnerReservationPrimaryAction.completePayment:
-        context.push(learnerReservationCheckoutRoute(reservation.id));
+        context.push(
+          learnerReservationDetailRoute(
+            reservation.id,
+            focus: 'payment',
+            checkoutableOrderId: reservation.paymentSummary?.checkoutableOrderId,
+          ),
+        );
         return;
       case LearnerReservationPrimaryAction.viewPickupCode:
         context.push(learnerReservationDetailRoute(reservation.id));

@@ -21,7 +21,7 @@ Supplier lists material
 → Learner discovers material or learning project
 → Build planning, material requests, and matching aids
 → Reservation (pickup or delivery)
-→ Payment when required (CARD checkout or CASH at handover)
+→ Payment when required (CASH settlement at handover; card infrastructure retained but inactive)
 → Pickup or internal delivery
 → QR / confirmation-code handover
 → Reuse completion and learner impact tracking
@@ -55,7 +55,7 @@ Same account can hold multiple roles (e.g. learner + supplier) with portal switc
 | **Learning hub** | Published projects, saves/follows/likes/reviews, manual build checklists, learner submissions and admin moderation |
 | **Material requests** | Learners request missing materials; suppliers suggest or publish from requests |
 | **Reservations** | Partial-quantity holds, learner/supplier confirmation flows, scheduling proposals, incident reporting |
-| **Payments** | `CARD` (Mock checkout when enforcement is on) and `CASH` (collected at handover, not checkoutable) |
+| **Payments** | Current MVP: **CASH** settlement at handover. Electronic/card provider architecture (Mock PSP, checkout sessions, webhooks) retained in codebase but **not exposed** in the current product |
 | **Pickup & QR handover** | Learner/supplier/driver QR and confirmation codes with window timing rules |
 | **Delivery** | Learner request, driver jobs, grouped deliveries, admin reopen-to-drivers, pickup-recovery actions |
 | **Notifications** | Persisted learner inbox; supplier derived inbox; payment and delivery event types |
@@ -64,7 +64,7 @@ Same account can hold multiple roles (e.g. learner + supplier) with portal switc
 | **ImpactLoop AI assistant** | `/api/ai/v1` — general learning chat, build-guide tools, project authoring waves |
 | **Admin** | Approvals, moderation, people management, impact/audit views, CSV/XLSX/PDF exports (MVP) |
 
-**Not shipped:** AI material-matching agent (credits/auto-reservation), moderator portal, real payment service provider, realtime delivery tracking.
+**Not shipped:** AI material-matching agent (credits/auto-reservation), moderator portal, **active** real electronic/card PSP integration (infrastructure retained for future work), realtime delivery tracking.
 
 ---
 
@@ -199,7 +199,7 @@ Recommendation and baseline CI scripts are available from the root `package.json
 - **Reservation lifecycle** — partial-quantity holds, lazy expiry, no-driver and stale-pickup escalation, incident queues
 - **QR handover** — learner, supplier, and driver QR/confirmation flows with grace windows
 - **Delivery operations** — grouped deliveries, admin pre-pickup reopen, pickup-recovery actions (reschedule/cancel-release-hold)
-- **Payment semantics** — `CARD` Mock checkout vs `CASH` due at handover; fulfillment gates before codes and driver notify
+- **Payment semantics** — current MVP: **CASH** settlement at handover; electronic/card checkout infrastructure retained but not mounted in the active product
 - **ML_PRIMARY recommendations** — LightFM artifacts, feature-token contract, observability, deterministic fallback
 - **Role-aware access control** — JWT, role middleware, owner-scoped reads
 - **Admin exports** — reservations, materials, deliveries, people, incident reports (MVP)
@@ -212,7 +212,7 @@ Recommendation and baseline CI scripts are available from the root `package.json
 | Area | State |
 |------|--------|
 | Delivery | **Partial** — request/status/polling map; no realtime stream or post-pickup retry |
-| Payments | **Mock MVP** when `PAYMENT_PROVIDER=mock`; production intent uses `disabled` — no real PSP |
+| Payments | **CASH MVP** — settlement at handover; dormant card/PSP infrastructure in codebase, not active in current product |
 | AI material-matching agent | **Not implemented** (separate from ImpactLoop Assistant) |
 | Moderator portal | **Not implemented** |
 | Public supplier profile | **Deferred** — private supplier profile management exists |

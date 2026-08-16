@@ -12,6 +12,7 @@ import { isPayablePaymentOrderStatus } from './payments.constants.js';
 import { moneyDecimalToString, toMoneyDecimal } from './payments.money.js';
 import { classifyReservationPaymentLifecycle } from './payments.lifecycle.policy.js';
 import { isElectronicPaymentEnforced } from './payments.policy.js';
+import { isCardCheckoutProductEnabled } from './payments.product-policy.js';
 
 /**
  * Compact server-derived payment summary for learner reservation list cards.
@@ -316,11 +317,13 @@ export const resolvePaymentSummariesByReservations = async (
     if (feeOutstanding && !feeOrder && isFeePrimary) outstandingOrderCount += 1;
 
     const materialCheckoutable =
+      isCardCheckoutProductEnabled() &&
       reservation.status === 'ACCEPTED' &&
       materialOrder != null &&
       materialOrder.paymentMethod === 'CARD' &&
       isPayablePaymentOrderStatus(materialOrder.status);
     const feeCheckoutable =
+      isCardCheckoutProductEnabled() &&
       reservation.status === 'ACCEPTED' &&
       feeOrder != null &&
       feeOrder.paymentMethod === 'CARD' &&

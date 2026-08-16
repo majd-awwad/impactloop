@@ -76,10 +76,8 @@ class ReservationDetailPaymentCard extends StatelessWidget {
       l10n: l10n,
       delivery: delivery,
     );
-    final primaryAction = resolvePrimaryAction(reservation, delivery: delivery);
-    final canCheckout = summary.canStartCheckout;
-    final orderId = summary.checkoutableOrderId;
-    final requiresAction = summary.isPaymentActionRequired || canCheckout;
+    final requiresAction =
+        summary.isPaymentActionRequired || summary.dueAtHandover;
     final title = requiresAction
         ? l10n.reservationDetailPaymentRequiredTitle
         : l10n.reservationDetailPaymentTitle;
@@ -93,7 +91,7 @@ class ReservationDetailPaymentCard extends StatelessWidget {
       title: title,
       titleIcon: summary.dueAtHandover
           ? Icons.payments_outlined
-          : Icons.credit_card_rounded,
+          : Icons.payments_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -250,48 +248,6 @@ class ReservationDetailPaymentCard extends StatelessWidget {
                 ),
               ),
             ),
-          if (canCheckout &&
-              orderId != null &&
-              (primaryAction == LearnerReservationPrimaryAction.payNow ||
-                  primaryAction ==
-                      LearnerReservationPrimaryAction.completePayment)) ...[
-            const SizedBox(height: AppSpacing.md),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: FilledButton.icon(
-                onPressed: onCheckoutOrder != null
-                    ? () => onCheckoutOrder!(orderId)
-                    : null,
-                icon: const Icon(
-                  Icons.account_balance_wallet_outlined,
-                  size: 18,
-                ),
-                label: Text(primaryActionLabel(primaryAction, l10n: l10n)),
-                style: AppStatusButtonStyle.filled(
-                  context,
-                  AppStatusTone.primary,
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
-                Icon(Icons.lock_outline, size: 14, color: palette.textMuted),
-                const SizedBox(width: AppSpacing.xs),
-                Expanded(
-                  child: Text(
-                    reservation.isDeliveryFulfillment
-                        ? l10n.reservationNextStepPaySupportingDelivery
-                        : l10n.reservationNextStepPaySupporting,
-                    style: AppTextStyles.label(
-                      context,
-                    ).copyWith(color: palette.textMuted, fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-          ],
         ],
       ),
     );
