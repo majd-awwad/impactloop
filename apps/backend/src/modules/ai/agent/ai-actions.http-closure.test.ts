@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { runWithTestRecommendationToggleContext } from '../../../test-support/recommendation-toggle-test-context.js';
 import type { Server } from 'node:http';
 import { after, before, beforeEach, describe, test } from 'node:test';
 
@@ -36,6 +37,7 @@ type SeedIds = {
   builds: string[];
   learnerAId: string;
   learnerBId: string;
+  projectOwnerId: string;
   supplierId: string;
   materialCategoryId: string;
   projectCategoryId: string;
@@ -58,6 +60,7 @@ const ids: SeedIds = {
   builds: [],
   learnerAId: '',
   learnerBId: '',
+  projectOwnerId: '',
   supplierId: '',
   materialCategoryId: '',
   projectCategoryId: '',
@@ -363,8 +366,10 @@ before(async () => {
 
   const learnerA = await createLearnerUser('learner-a');
   const learnerB = await createLearnerUser('learner-b');
+  const projectOwner = await createLearnerUser('project-owner');
   ids.learnerAId = learnerA.id;
   ids.learnerBId = learnerB.id;
+  ids.projectOwnerId = projectOwner.id;
   await createSupplierUser();
 
   const available = await createMaterial({
@@ -394,7 +399,7 @@ before(async () => {
   const published = await prisma.learningProject.create({
     data: {
       categoryId: ids.projectCategoryId,
-      createdBy: ids.learnerAId,
+      createdBy: ids.projectOwnerId,
       title: `${SEED_TOKEN} Robot Car`,
       shortDescription: `${TEST_MARKER} starter`,
       description: `${TEST_MARKER} published project`,
@@ -422,7 +427,7 @@ before(async () => {
   const secondPublished = await prisma.learningProject.create({
     data: {
       categoryId: ids.projectCategoryId,
-      createdBy: ids.learnerAId,
+      createdBy: ids.projectOwnerId,
       title: `${SEED_TOKEN} Line Follower`,
       shortDescription: `${TEST_MARKER} second project`,
       description: `${TEST_MARKER} second published project`,
@@ -434,7 +439,9 @@ before(async () => {
   ids.secondPublishedProjectId = secondPublished.id;
   ids.projects.push(secondPublished.id);
 
-  await saveLearningProjectById(published.id, ids.learnerAId);
+  await runWithTestRecommendationToggleContext('ai-actions-save-project', () =>
+    saveLearningProjectById(published.id, ids.learnerAId),
+  );
 
   const build = await startProjectBuildById(published.id, ids.learnerAId);
   ids.buildId = build.id;

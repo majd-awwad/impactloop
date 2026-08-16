@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../l10n/l10n.dart';
 import 'auth_providers.dart';

@@ -357,7 +357,7 @@ class _OperationalState extends StatelessWidget {
             ),
           ),
         ),
-        if (supporting != null) ...[
+        ...[
           const SizedBox(height: 5),
           Text(
             supporting,

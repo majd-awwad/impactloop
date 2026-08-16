@@ -556,6 +556,11 @@ export const resolveAgentRoute = (input: {
     return externalKnowledge;
   }
 
+  const semanticPlatformRoute = matchSemanticPlatformRoute(routingMessage);
+  if (semanticPlatformRoute) {
+    return semanticPlatformRoute;
+  }
+
   if (detectEducationalLearningIntent(input.userMessage)) {
     return {
       route: 'GENERAL_LEARNING',

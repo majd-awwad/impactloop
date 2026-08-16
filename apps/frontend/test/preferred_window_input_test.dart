@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
 
 import 'package:frontend/features/material_discovery/presentation/widgets/preferred_window_input.dart';
-import 'package:frontend/features/material_discovery/presentation/widgets/reservation_form/reservation_preferred_windows_section.dart';
 import 'package:frontend/features/reservations/data/models/reservation_preferred_window.dart';
 import 'package:frontend/features/reservations/presentation/learner_reservation_ui_helpers.dart';
 import 'package:frontend/l10n/app_localizations.dart';

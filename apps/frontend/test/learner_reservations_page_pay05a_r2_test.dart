@@ -13,7 +13,6 @@ import 'package:frontend/features/reservations/presentation/learner_reservation_
 import 'package:frontend/features/reservations/presentation/pages/learner_reservations_page.dart';
 import 'package:frontend/features/reservations/presentation/widgets/learner_reservation_list_card.dart';
 import 'package:frontend/l10n/app_localizations.dart';
-import 'package:frontend/shared/widgets/app_status_badge.dart';
 
 Map<String, dynamic> _baseReservation({
   required String id,

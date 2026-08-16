@@ -3635,7 +3635,7 @@ class _AiSequentialAuthoringStageCardState
                 else ...[
                   if (stage == 'DIFFICULTY') ...[
                     DropdownButtonFormField<String>(
-                      value: _manualDifficulty,
+                      initialValue: _manualDifficulty,
                       decoration: InputDecoration(
                         labelText: AiL10n.authoringSequentialManualHint(stage)
                             .resolve(context),

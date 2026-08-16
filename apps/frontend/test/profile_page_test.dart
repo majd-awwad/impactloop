@@ -18,7 +18,6 @@ import 'package:frontend/l10n/app_localizations.dart';
 import 'package:frontend/features/notifications/application/notifications_provider.dart';
 import 'package:frontend/features/profile/presentation/pages/profile_page.dart';
 import 'package:frontend/features/profile/presentation/widgets/learner_profile_dashboard_widgets.dart';
-import 'package:frontend/shared/widgets/notification_bell_button.dart';
 
 void main() {
   testWidgets('renders the real dashboard contract and learning identity', (

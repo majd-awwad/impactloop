@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import type { Server } from 'node:http';
 import { after, before, describe, test } from 'node:test';
 
+import { createTaxonomyReadyProjectCategory } from '../../test-support/publishable-category.fixture.js';
+
 process.env.JWT_ACCESS_SECRET ??= 'ai-sequential-access-secret';
 process.env.JWT_REFRESH_SECRET ??= 'ai-sequential-refresh-secret';
 process.env.NODE_TEST_CONTEXT ??= '1';
@@ -59,13 +61,9 @@ async function createLearner(label: string) {
 }
 
 async function createProjectCategory() {
-  const category = await prisma.category.create({
-    data: {
-      nameEn: `${TEST_MARKER} Projects`,
-      nameAr: `${TEST_MARKER} مشاريع`,
-      categoryType: 'PROJECT',
-      isActive: true,
-    },
+  const category = await createTaxonomyReadyProjectCategory({
+    nameEn: `${TEST_MARKER} Projects`,
+    nameAr: `${TEST_MARKER} مشاريع`,
   });
   ids.categories.push(category.id);
   return category;

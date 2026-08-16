@@ -212,15 +212,12 @@ void main() {
 }
 
 class _ShotLocationService extends CurrentLocationService {
-  _ShotLocationService({
-    this.capture = const CurrentLocationCapture(
-      latitude: 31.5326,
-      longitude: 35.0998,
-    ),
-    this.pending,
-  });
+  _ShotLocationService({this.pending});
 
-  final CurrentLocationCapture capture;
+  final CurrentLocationCapture capture = const CurrentLocationCapture(
+    latitude: 31.5326,
+    longitude: 35.0998,
+  );
   final Future<CurrentLocationCapture>? pending;
 
   @override

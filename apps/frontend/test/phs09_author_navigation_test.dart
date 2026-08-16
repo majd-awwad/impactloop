@@ -341,6 +341,7 @@ void main() {
       await tester.tap(find.text('New help session request'));
       await tester.pumpAndSettle();
       expect(router.state.uri.path, '/creator/help-sessions/session-author-1');
+      expect(markReadCalls, 1);
     });
 
     testWidgets('no duplicate navigation occurs', (tester) async {

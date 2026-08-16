@@ -386,11 +386,14 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
       return;
     }
 
+    if (!mounted) return;
+
+    final successMessage = AdminL10n.of(context).accountSuspended;
     await _runAction(
       () => ref
           .read(adminPeopleApiProvider)
           .suspendPerson(userId: item.userId, reason: reason),
-      successMessage: AdminL10n.of(context).accountSuspended,
+      successMessage: successMessage,
     );
   }
 
@@ -422,11 +425,14 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
 
     if (confirmed != true) return;
 
+    if (!mounted) return;
+
+    final successMessage = AdminL10n.of(context).accountReactivated;
     await _runAction(
       () => ref
           .read(adminPeopleApiProvider)
           .reactivatePerson(userId: item.userId),
-      successMessage: AdminL10n.of(context).accountReactivated,
+      successMessage: successMessage,
     );
   }
 

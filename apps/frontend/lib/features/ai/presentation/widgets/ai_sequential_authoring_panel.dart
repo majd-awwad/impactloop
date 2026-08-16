@@ -1114,7 +1114,7 @@ class _ActiveStageCard extends ConsumerWidget {
                   ),
               ] else if (session.stage == 'DIFFICULTY')
                 DropdownButtonFormField<String>(
-                  value: isValidAuthoringDifficulty(manualDifficulty)
+                  initialValue: isValidAuthoringDifficulty(manualDifficulty)
                       ? manualDifficulty!.trim().toUpperCase()
                       : null,
                   items: const [
@@ -2544,7 +2544,7 @@ class _OverviewClarificationSectionState
               key: ValueKey(
                 '${widget.snapshot.session.projectId}:${widget.snapshot.session.sessionId}:${widget.snapshot.currentTurn?.turnId ?? ''}:${question.questionId}:dropdown',
               ),
-              value: _resolvedSingleSelectValue(question),
+              initialValue: _resolvedSingleSelectValue(question),
               decoration: InputDecoration(
                 labelText: locale == 'ar' ? 'اختر إجابة' : 'Select an answer',
               ),

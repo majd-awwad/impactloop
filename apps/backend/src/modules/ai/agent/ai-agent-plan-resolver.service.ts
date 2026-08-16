@@ -2358,6 +2358,37 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     }
   }
 
+  if (
+    detectProjectComponentsIntent(input.userMessage) &&
+    !detectBuildGapIntent(input.userMessage)
+  ) {
+    return buildDeterministicFallbackPlan({
+      userMessage: input.userMessage,
+      routeDecision: {
+        route: 'PROJECT_COMPONENTS',
+        confidence: 0.94,
+        source: 'deterministic',
+        suggestedTool: 'get_project_required_components',
+      },
+      locale: input.locale,
+      conversationContext,
+    });
+  }
+
+  if (detectBuildGapIntent(input.userMessage)) {
+    return buildDeterministicFallbackPlan({
+      userMessage: input.userMessage,
+      routeDecision: {
+        route: 'BUILD_GAP_ANALYSIS',
+        confidence: 0.93,
+        source: 'deterministic',
+        suggestedTool: 'analyze_build_gaps',
+      },
+      locale: input.locale,
+      conversationContext,
+    });
+  }
+
   if (detectRecentProjectDetailsIntent(input.userMessage)) {
     return buildDeterministicFallbackPlan({
       userMessage: input.userMessage,

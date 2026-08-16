@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../reservations/data/models/reservation_message.dart';
-import '../../../../l10n/l10n.dart';
 import '../../data/supplier_requests_api_repository.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'supplier_feedback.dart';

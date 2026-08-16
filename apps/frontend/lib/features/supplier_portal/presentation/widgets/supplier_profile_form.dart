@@ -726,7 +726,6 @@ class _PrivacyExplanation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l = context.s;
     final copy = switch (visibility) {
       'PUBLIC' when isApproximate => context.l10n.supplierVisibilityPublicApproximate,
       'PUBLIC' => context.l10n.supplierVisibilityPublicExact,

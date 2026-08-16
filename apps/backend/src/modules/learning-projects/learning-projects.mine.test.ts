@@ -14,6 +14,7 @@ import {
   resolveProjectConceptAssignments,
   toProjectTopicConceptIds,
 } from '../taxonomy/project-concept-assignment.js';
+import { runWithTestRecommendationToggleContext } from '../../test-support/recommendation-toggle-test-context.js';
 
 import * as learningProjectsRepository from './learning-projects.repository.js';
 import {
@@ -263,7 +264,9 @@ describe('learner learning project submissions', () => {
       featureCandidate,
     ]);
 
-    await saveLearningProjectById(project.id, learnerA.id);
+    await runWithTestRecommendationToggleContext('mine-save', () =>
+      saveLearningProjectById(project.id, learnerA.id),
+    );
     const sharedFeaturesAfter = getOrBuildMaterialFeaturePool([
       featureCandidate,
     ]);
@@ -273,40 +276,52 @@ describe('learner learning project submissions', () => {
     assert.strictEqual(sharedFeaturesAfter.features, sharedFeaturesBefore.features);
 
     learnerAHome = refreshedLearnerAHome;
-    await unsaveLearningProjectById(project.id, learnerA.id);
+    await runWithTestRecommendationToggleContext('mine-unsave', () =>
+      unsaveLearningProjectById(project.id, learnerA.id),
+    );
     refreshedLearnerAHome = await getLearnerHome(learnerA.id);
     assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
 
     learnerAHome = refreshedLearnerAHome;
-    await likeLearningProjectById(project.id, learnerA.id);
+    await runWithTestRecommendationToggleContext('mine-like', () =>
+      likeLearningProjectById(project.id, learnerA.id),
+    );
     refreshedLearnerAHome = await getLearnerHome(learnerA.id);
     assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
 
     learnerAHome = refreshedLearnerAHome;
-    await unlikeLearningProjectById(project.id, learnerA.id);
+    await runWithTestRecommendationToggleContext('mine-unlike', () =>
+      unlikeLearningProjectById(project.id, learnerA.id),
+    );
     refreshedLearnerAHome = await getLearnerHome(learnerA.id);
     assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
 
     learnerAHome = refreshedLearnerAHome;
-    await followLearningProjectById(project.id, learnerA.id);
+    await runWithTestRecommendationToggleContext('mine-follow', () =>
+      followLearningProjectById(project.id, learnerA.id),
+    );
     refreshedLearnerAHome = await getLearnerHome(learnerA.id);
     assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
 
     learnerAHome = refreshedLearnerAHome;
-    await unfollowLearningProjectById(project.id, learnerA.id);
+    await runWithTestRecommendationToggleContext('mine-unfollow', () =>
+      unfollowLearningProjectById(project.id, learnerA.id),
+    );
     refreshedLearnerAHome = await getLearnerHome(learnerA.id);
     assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
 
     const missingProjectId = `${TEST_MARKER}-missing-interaction-${Date.now()}`;
-    for (const operation of [
+    for (const [index, operation] of [
       () => saveLearningProjectById(missingProjectId, learnerA.id),
       () => unsaveLearningProjectById(missingProjectId, learnerA.id),
       () => likeLearningProjectById(missingProjectId, learnerA.id),
       () => unlikeLearningProjectById(missingProjectId, learnerA.id),
       () => followLearningProjectById(missingProjectId, learnerA.id),
       () => unfollowLearningProjectById(missingProjectId, learnerA.id),
-    ]) {
-      await assert.rejects(operation);
+    ].entries()) {
+      await assert.rejects(() =>
+        runWithTestRecommendationToggleContext(`mine-missing-${index}`, operation),
+      );
     }
 
     assert.strictEqual(await getLearnerHome(learnerA.id), refreshedLearnerAHome);
