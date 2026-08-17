@@ -1696,6 +1696,10 @@ class AiAssistantController extends Notifier<AiChatState> {
         text: trimmed,
         locale: locale,
         clientMessageId: pendingId,
+        buildGuideContext: ref
+            .read(aiAssistantShellProvider)
+            .buildGuideContext
+            ?.toModelRequestPayload(),
       );
 
       final mergedMessages = mergeTurnIntoMessages(

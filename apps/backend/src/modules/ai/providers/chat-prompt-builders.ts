@@ -30,12 +30,20 @@ export const buildAnswerUserPrompt = (input: AiChatGenerateAnswerInput) =>
     `Latest user message: ${JSON.stringify(input.userMessage)}`,
   ].join('\n\n');
 
-export const buildAnswerPrompt = (input: AiChatGenerateAnswerInput) => {
+export const composeGeneralLearningSystemInstruction = (
+  input: AiChatGenerateAnswerInput,
+): string => {
   const { policy } = resolveGeneralLearningSystemPolicy(input.userMessage);
+  const trusted = input.trustedSystemContext?.trim();
+  return trusted ? `${policy}\n\n${trusted}` : policy;
+};
+
+export const buildAnswerPrompt = (input: AiChatGenerateAnswerInput) => {
+  const systemInstruction = composeGeneralLearningSystemInstruction(input);
 
   if (isExternalRetrievalSynthesisInput(input.userMessage)) {
-    return [policy, input.userMessage].join('\n\n');
+    return [systemInstruction, input.userMessage].join('\n\n');
   }
 
-  return [policy, buildAnswerUserPrompt(input)].join('\n\n');
+  return [systemInstruction, buildAnswerUserPrompt(input)].join('\n\n');
 };

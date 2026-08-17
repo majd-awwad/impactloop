@@ -2,6 +2,8 @@ import type { AiContentBlock } from '../ai.content-blocks.js';
 import { parseStoredContentBlocks } from '../ai-context-builder.js';
 import { listMessagesForConversation } from '../ai.repository.js';
 import { prisma } from '../../../database/prisma.js';
+import { getOwnedProjectBuildByBuildId } from '../../learning-projects/learning-projects.service.js';
+import { buildBuildGuideModelContext } from '../ai-build-guide-model-context.js';
 import {
   loadRecentEntitiesForConversation,
   type RecentEntityRecord,
@@ -46,6 +48,12 @@ export type PlannerConversationContext = {
   entities: TrustedEntitySummary[];
   pendingAction?: PendingActionSummary | null;
   latestMaterialResultSet?: TrustedMaterialResultSetSummary | null;
+  activeBuildGuide?: {
+    projectTitle: string;
+    currentStepNumber: number | null;
+    currentStepTitle: string | null;
+    totalSteps: number;
+  } | null;
 };
 
 const CONTEXT_MESSAGE_WINDOW = 24;
@@ -322,12 +330,33 @@ export const buildPlannerConversationContext = async (
 
   const pendingAction = await loadPendingActionSummary(conversationId);
   const latestMaterialResultSet = await loadLatestMaterialResultSetSummary(conversationId);
+  const conversation = await prisma.aiConversation.findFirst({
+    where: { id: conversationId },
+    select: { projectBuildId: true, userId: true },
+  });
+  let activeBuildGuide: PlannerConversationContext['activeBuildGuide'] = null;
+  if (conversation?.projectBuildId) {
+    const build = await getOwnedProjectBuildByBuildId(
+      conversation.projectBuildId,
+      conversation.userId,
+    );
+    if (build) {
+      const modelContext = buildBuildGuideModelContext(build);
+      activeBuildGuide = {
+        projectTitle: modelContext.projectTitle,
+        currentStepNumber: modelContext.currentStepNumber,
+        currentStepTitle: modelContext.currentStepTitle,
+        totalSteps: modelContext.totalSteps,
+      };
+    }
+  }
 
   return {
     recentMessages: recentMessages.slice(-12),
     entities,
     pendingAction,
     latestMaterialResultSet,
+    activeBuildGuide,
   };
 };
 
@@ -348,6 +377,7 @@ export const summarizePlannerContextForPrompt = (
       })),
       latestMaterialResultSet: context.latestMaterialResultSet ?? null,
       pendingAction: context.pendingAction ?? null,
+      activeBuildGuide: context.activeBuildGuide ?? null,
     },
     null,
     2,

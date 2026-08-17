@@ -91,6 +91,7 @@ import {
 } from '../ai-external-knowledge.service.js';
 import { tryHandleBuildGuideMaterialTurn } from './ai-build-guide-material-turn.service.js';
 import { tryHandleBuildGuideStepTurn } from './ai-build-guide-step-turn.service.js';
+import { preferLinkedBuildGuideLearning } from './ai-build-guide-routing.js';
 
 const resolveActionFromMessage = (
   userMessage: string,
@@ -3036,6 +3037,26 @@ export const executeLearnerAgentPlatformTurn = async (input: {
     locale: responseLocale,
     conversationId: input.conversationId,
   });
+  const linkedBuildLearning =
+    Boolean(conversation?.projectBuildId) &&
+    preferLinkedBuildGuideLearning({
+      hasLinkedBuild: true,
+      route: executionPlan.route,
+      userMessage: input.userMessage,
+    });
+  if (linkedBuildLearning) {
+    return {
+      blocks: [],
+      usedProvider: false,
+      providerName: 'system',
+      model: null,
+      latencyMs: null,
+      inputTokens: null,
+      outputTokens: null,
+      route: 'GENERAL_LEARNING',
+      semanticRoute: 'GENERAL_LEARNING',
+    };
+  }
   const routeDecision = {
     route: executionPlan.route,
     confidence: executionPlan.diagnostics.deterministicConfidence,
@@ -3112,6 +3133,20 @@ export const executeLearnerAgentPlatformTurn = async (input: {
           };
         }
       }
+    }
+
+    if (conversation?.projectBuildId) {
+      return {
+        blocks: [],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'GENERAL_LEARNING',
+        semanticRoute: 'GENERAL_LEARNING',
+      };
     }
 
     return {
@@ -3258,6 +3293,19 @@ export const executeLearnerAgentPlatformTurn = async (input: {
       }
 
       if (error.code === 'AI_ROUTE_UNCLEAR') {
+        if (conversation?.projectBuildId) {
+          return {
+            blocks: [],
+            usedProvider: false,
+            providerName: 'system',
+            model: null,
+            latencyMs: null,
+            inputTokens: null,
+            outputTokens: null,
+            route: 'GENERAL_LEARNING',
+            semanticRoute: 'GENERAL_LEARNING',
+          };
+        }
         return {
           blocks: [textBlock(CLARIFICATION_COPY[responseLocale], 'clarification')],
           usedProvider: false,

@@ -120,6 +120,25 @@ describe('semantic v2 harness-level contract', () => {
     assert.match(summary, /PREPARE_MATERIAL_RESERVATION/);
     assert.match(summary, /Arduino Uno/);
   });
+
+  test('active build-guide context is included in planner summary', async () => {
+    const { summarizePlannerContextForPrompt } = await import(
+      './ai-agent-planner-context.service.js'
+    );
+    const summary = summarizePlannerContextForPrompt({
+      recentMessages: [{ role: 'USER', text: 'مش فاهم' }],
+      entities: [],
+      activeBuildGuide: {
+        projectTitle: 'PVC Plant Stand',
+        currentStepNumber: 3,
+        currentStepTitle: 'Assemble and connect',
+        totalSteps: 4,
+      },
+    });
+    assert.match(summary, /PVC Plant Stand/);
+    assert.match(summary, /Assemble and connect/);
+    assert.match(summary, /"currentStepNumber": 3/);
+  });
 });
 
 describe('semantic v2 Gemini response normalization', () => {

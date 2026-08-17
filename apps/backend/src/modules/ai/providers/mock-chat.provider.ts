@@ -177,6 +177,12 @@ export class MockAiChatProvider implements AiChatProvider {
       };
     }
 
+    const trusted = input.trustedSystemContext?.trim();
+    const baseAnswer = isArabic
+      ? `إجابة تعليمية تجريبية (${seed}) حول "${input.userMessage.slice(0, 80)}".`
+      : `Mock educational answer (${seed}) about "${input.userMessage.slice(0, 80)}".`;
+    const answerText = trusted ? `${trusted}\n\n${baseAnswer}` : baseAnswer;
+
     return {
       provider: this.name,
       model: 'mock-general-learning',
@@ -185,9 +191,7 @@ export class MockAiChatProvider implements AiChatProvider {
           {
             type: 'text',
             purpose: 'answer',
-            text: isArabic
-              ? `إجابة تعليمية تجريبية (${seed}) حول "${input.userMessage.slice(0, 80)}".`
-              : `Mock educational answer (${seed}) about "${input.userMessage.slice(0, 80)}".`,
+            text: answerText,
           },
         ],
       }),

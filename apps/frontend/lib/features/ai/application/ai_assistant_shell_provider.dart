@@ -110,6 +110,17 @@ class AiAssistantShellNotifier extends Notifier<AiAssistantShellState> {
     state = state.copyWith(clearBuildGuideContext: true);
   }
 
+  void syncBuildGuideContextFromBuild(ProjectBuild build) {
+    final current = state.buildGuideContext;
+    if (current == null || current.projectId != build.projectId) {
+      return;
+    }
+
+    state = state.copyWith(
+      buildGuideContext: BuildGuideContext.fromProjectBuild(build),
+    );
+  }
+
   Future<void> refreshBuildGuideContext() async {
     final current = state.buildGuideContext;
     if (current == null) {
@@ -123,20 +134,6 @@ class AiAssistantShellNotifier extends Notifier<AiAssistantShellState> {
       return;
     }
 
-    state = state.copyWith(
-      buildGuideContext: BuildGuideContext(
-        buildId: build.id,
-        projectId: build.projectId,
-        projectTitle: build.project.title,
-        buildStatus: build.status,
-        materialReadiness: build.materialReadiness,
-        currentStep: build.stepProgress.currentStep,
-        stepProgress: ProjectBuildStepProgressSummary(
-          completed: build.stepProgress.completed,
-          total: build.stepProgress.total,
-          percent: build.stepProgress.percent,
-        ),
-      ),
-    );
+    syncBuildGuideContextFromBuild(build);
   }
 }

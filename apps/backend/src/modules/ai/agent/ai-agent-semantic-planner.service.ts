@@ -795,6 +795,8 @@ export const buildSemanticPlannerPrompt = (input: {
     '- "هل عندي حجوزات معلقة؟" -> SYSTEM_DATA_QUERY, topic LEARNER_RESERVATION_STATUS, toolCall null (learner reservation read, not platform how-to guidance)',
     '- "ورجيني مشاريع تعلم مناسبة للمبتدئين في الإلكترونيات" -> SYSTEM_DATA_QUERY, topic PROJECT_SEARCH, toolCall.name search_learning_projects',
     '- When latestMaterialResultSet exists in trusted context and the user narrows those results (e.g. free only, "from them"), use SYSTEM_DATA_QUERY + MATERIAL_SEARCH with filters on the prior result set — never GENERAL_LEARNING',
+    '- When activeBuildGuide exists, questions about the current step, parts, what to do next, or where to put something refer to that live build — use GENERAL_LEARNING, not CLARIFICATION_REQUIRED and not PROJECT_COMPONENTS',
+    '- When activeBuildGuide exists, do not ask which project the learner means',
     '- "بس ورجيني المجاني منهم" after material results -> SYSTEM_DATA_QUERY, topic MATERIAL_SEARCH, filters.isFree true (continuation on latestMaterialResultSet, not a fresh unrelated search)',
     '- "Only show me the free ones." after material results -> SYSTEM_DATA_QUERY, topic MATERIAL_SEARCH, filters.isFree true',
     '- Arduino/ESP32/robotics mentioned only as intended use for materials is MATERIAL_SEARCH, not PROJECT_MATERIAL_AVAILABILITY, unless the user names a specific published learning project or build',

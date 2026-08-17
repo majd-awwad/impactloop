@@ -1146,6 +1146,7 @@ class _RecordingAiRepository implements AiRepository {
     required String text,
     required String locale,
     required String clientMessageId,
+    Map<String, Object?>? buildGuideContext,
   }) async {
     throw UnimplementedError();
   }
@@ -2201,6 +2202,7 @@ class _StaleReloadLinkRepository implements AiRepository {
     required String text,
     required String locale,
     required String clientMessageId,
+    Map<String, Object?>? buildGuideContext,
   }) async {
     return AiTurnResponse(
       conversationId: conversationId,

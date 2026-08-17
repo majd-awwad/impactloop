@@ -49,6 +49,11 @@ import {
 } from './ai.repository.js';
 import { getAiChatProvider } from './providers/ai-chat-provider.factory.js';
 import type { AiLocale, AiTurnResponse, BoundedHistoryMessage } from './ai.types.js';
+import {
+  buildBuildGuideModelContext,
+  formatBuildGuideTrustedSystemContext,
+} from './ai-build-guide-model-context.js';
+import { getOwnedProjectBuildByBuildId } from '../learning-projects/learning-projects.service.js';
 
 const textBlock = (
   text: string,
@@ -69,6 +74,29 @@ const errorBlock = (
   message,
   retryable,
 });
+
+const loadTrustedBuildGuideSystemContext = async (input: {
+  projectBuildId: string | null;
+  userId: string;
+  explanationLocale?: 'en' | 'ar';
+}): Promise<string | null> => {
+  if (!input.projectBuildId) {
+    return null;
+  }
+
+  const build = await getOwnedProjectBuildByBuildId(
+    input.projectBuildId,
+    input.userId,
+  );
+  if (!build) {
+    return null;
+  }
+
+  return formatBuildGuideTrustedSystemContext(
+    buildBuildGuideModelContext(build),
+    { explanationLocale: input.explanationLocale },
+  );
+};
 
 const assertProviderOperational = (responseLocale: AiLocale): void => {
   if (!isAiChatProviderOperational()) {
@@ -303,6 +331,12 @@ export const processGeneralLearningTurn = async (input: {
         userMessage: input.text,
         history,
         scopeClassification: providerScopeClassification,
+        trustedSystemContext:
+          (await loadTrustedBuildGuideSystemContext({
+            projectBuildId: input.conversation.projectBuildId,
+            userId: input.conversation.userId,
+            explanationLocale: responseLocale,
+          })) ?? undefined,
       });
 
       blocks = answer.data.blocks;

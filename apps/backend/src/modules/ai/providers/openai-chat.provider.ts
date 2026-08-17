@@ -23,6 +23,7 @@ import type {
 import {
   buildAnswerPrompt,
   buildClassifierPrompt,
+  composeGeneralLearningSystemInstruction,
 } from './chat-prompt-builders.js';
 import {
   parseSemanticPlannerResponseText,
@@ -262,8 +263,7 @@ export class OpenAiAiChatProvider implements AiChatProvider {
             temperature: 0.4,
             maxTokens: runtime.maxOutputTokens,
             content: buildAnswerPrompt(input),
-            systemInstruction:
-              'You are the ImpactLoop learning assistant. Respond with valid JSON only.',
+            systemInstruction: composeGeneralLearningSystemInstruction(input),
           }),
         ),
         runtime.timeoutMs,

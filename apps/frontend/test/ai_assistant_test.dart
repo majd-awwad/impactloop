@@ -603,7 +603,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(hubRepository.fetchMyBuildCalls, greaterThanOrEqualTo(1));
-      expect(find.text('Already owned'), findsWidgets);
       expect(find.byType(AiBuildGuideSidePanel), findsOneWidget);
       expect(find.textContaining('Materials: 1/1 ready'), findsOneWidget);
     });
@@ -622,6 +621,7 @@ void main() {
             missing: 0,
             total: 1,
           ),
+          items: const [_readyOwnedItem],
           stepProgress: const ProjectBuildStepProgress(
             completed: 0,
             total: 1,
@@ -655,7 +655,6 @@ void main() {
 
       await tester.tap(find.text('Ask AI'));
       await tester.pumpAndSettle();
-      expect(find.text('Locked'), findsOneWidget);
 
       await tester.tap(find.text('Confirm'));
       await tester.pumpAndSettle();
@@ -683,19 +682,18 @@ void main() {
         aiRepository: aiRepository,
       );
 
-      await tester.tap(find.text('Ask AI'));
-      await tester.pumpAndSettle();
+      await _tapOpenBuildGuide(tester);
 
       expect(find.text('Current'), findsOneWidget);
-      expect(find.text('Locked'), findsOneWidget);
+      expect(find.text('Later'), findsOneWidget);
 
       await tester.tap(find.text('Yes, I finished it'));
       await tester.pumpAndSettle();
 
       expect(hubRepository.fetchMyBuildCalls, greaterThanOrEqualTo(1));
-      expect(find.text('Completed'), findsOneWidget);
+      expect(find.text('Done'), findsOneWidget);
       expect(find.textContaining('Step 2: Attach panel'), findsOneWidget);
-      expect(find.textContaining('50%'), findsWidgets);
+      expect(find.textContaining('Step 2 of 2'), findsOneWidget);
       expect(find.byType(AiBuildGuideSidePanel), findsOneWidget);
       expect(find.text('Step completed'), findsOneWidget);
     });
@@ -718,8 +716,7 @@ void main() {
         aiRepository: aiRepository,
       );
 
-      await tester.tap(find.text('Ask AI'));
-      await tester.pumpAndSettle();
+      await _tapOpenBuildGuide(tester);
 
       await tester.tap(find.text('Yes, I finished it'));
       await tester.pumpAndSettle();
@@ -761,8 +758,7 @@ void main() {
       // focuses on the assistant confirmation panel.
       while (tester.takeException() != null) {}
 
-      await tester.tap(find.text('Ask AI'));
-      await tester.pumpAndSettle();
+      await _tapOpenBuildGuide(tester, locale: const Locale('ar'));
 
       expect(find.text('نعم، أنهيتها'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -894,7 +890,7 @@ void main() {
         locale: const Locale('ar'),
       );
 
-      await tester.tap(find.text('Ask AI'));
+      await tester.tap(find.text('اسأل المساعد'));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
@@ -1093,6 +1089,27 @@ GoRouter _buildGuideNavigationRouter({String? initialLocation}) {
   );
 }
 
+Future<void> _tapOpenBuildGuide(
+  WidgetTester tester, {
+  Locale locale = const Locale('en'),
+}) async {
+  final isArabic = locale.languageCode == 'ar';
+  final needHelp = isArabic ? 'تحتاج مساعدة؟' : 'Need help?';
+  final askAi = isArabic ? 'اسأل المساعد' : 'Ask AI';
+  final tools = isArabic ? 'أدوات البناء' : 'Build tools';
+
+  if (find.text(needHelp).evaluate().isNotEmpty) {
+    await tester.tap(find.text(needHelp).first);
+  } else if (find.text(askAi).evaluate().isNotEmpty) {
+    await tester.tap(find.text(askAi).first);
+  } else {
+    await tester.tap(find.text(tools));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(askAi));
+  }
+  await tester.pumpAndSettle();
+}
+
 ProjectBuild _sampleProjectBuild({
   String? guideConversationId,
   ProjectBuildMaterialReadiness? materialReadiness,
@@ -1151,9 +1168,11 @@ ProjectBuild _sampleProjectBuild({
 ProjectBuild _sampleProjectBuildWithSteps({
   ProjectBuildMaterialReadiness? materialReadiness,
   ProjectBuildStepProgress? stepProgress,
+  List<ProjectBuildItem>? items,
 }) {
   return _sampleProjectBuild(
     materialReadiness: materialReadiness,
+    items: items,
     stepProgress: stepProgress ??
         const ProjectBuildStepProgress(
           completed: 0,
@@ -1873,6 +1892,7 @@ class _FakeAiRepository implements AiRepository {
   String? lastSentText;
   String? lastClientMessageId;
   String? firstClientMessageId;
+  Map<String, Object?>? lastSentBuildGuideContext;
 
   @override
   Future<void> archiveConversation({required String conversationId}) async {}
@@ -1943,11 +1963,13 @@ class _FakeAiRepository implements AiRepository {
     required String text,
     required String locale,
     required String clientMessageId,
+    Map<String, Object?>? buildGuideContext,
   }) async {
     sendCalls += 1;
     lastSentText = text;
     lastClientMessageId = clientMessageId;
     firstClientMessageId ??= clientMessageId;
+    lastSentBuildGuideContext = buildGuideContext;
 
     if (sendDelay > Duration.zero) {
       await Future<void>.delayed(sendDelay);
@@ -2166,11 +2188,13 @@ class _RetryOnceAiRepository extends _FakeAiRepository {
     required String text,
     required String locale,
     required String clientMessageId,
+    Map<String, Object?>? buildGuideContext,
   }) async {
     sendCalls += 1;
     lastSentText = text;
     lastClientMessageId = clientMessageId;
     firstClientMessageId ??= clientMessageId;
+    lastSentBuildGuideContext = buildGuideContext;
 
     if (!_failedOnce) {
       _failedOnce = true;

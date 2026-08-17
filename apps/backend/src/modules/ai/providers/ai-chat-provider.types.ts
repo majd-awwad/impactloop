@@ -31,6 +31,7 @@ export type AiChatGenerateAnswerInput = {
   history: BoundedHistoryMessage[];
   scopeClassification: string;
   imageInputs?: AiChatImageInput[];
+  trustedSystemContext?: string;
 };
 
 export type AiChatClassifyScopeInput = {

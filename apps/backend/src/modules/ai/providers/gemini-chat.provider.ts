@@ -13,11 +13,11 @@ import {
   aiProviderAnswerSchema,
   aiScopeClassifierSchema,
 } from '../ai.content-blocks.js';
-import { resolveGeneralLearningSystemPolicy } from '../ai.policy.js';
 import { extractJsonObject } from '../../../services/gemini-price-suggestion.provider.js';
 import {
   buildAnswerUserPrompt,
   buildClassifierPrompt,
+  composeGeneralLearningSystemInstruction,
 } from './chat-prompt-builders.js';
 import { isExternalRetrievalSynthesisInput } from '../ai-external-knowledge.service.js';
 import type {
@@ -799,9 +799,7 @@ export class GeminiAiChatProvider implements AiChatProvider {
     const ai = this.getClient();
 
     try {
-      const { policy: systemInstruction } = resolveGeneralLearningSystemPolicy(
-        input.userMessage,
-      );
+      const systemInstruction = composeGeneralLearningSystemInstruction(input);
 
       const { response, model } = await withTimeout(
         generateContentWithModelFallback(

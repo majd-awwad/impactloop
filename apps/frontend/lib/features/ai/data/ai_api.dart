@@ -66,6 +66,7 @@ class AiApi {
     required String text,
     required String locale,
     required String clientMessageId,
+    Map<String, Object?>? buildGuideContext,
   }) {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
@@ -74,6 +75,7 @@ class AiApi {
           'text': text,
           'locale': locale,
           'clientMessageId': clientMessageId,
+          if (buildGuideContext != null) 'buildGuideContext': buildGuideContext,
         },
       ),
       AiTurnResponse.fromJson,

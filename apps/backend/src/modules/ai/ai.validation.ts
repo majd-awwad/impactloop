@@ -41,6 +41,30 @@ export const sendAiMessageSchema = z.object({
   text: z.string().trim().min(1).max(4000),
   locale: aiLocaleSchema,
   clientMessageId: aiClientMessageIdSchema,
+  buildGuideContext: z
+    .object({
+      projectTitle: z.string().trim().min(1).max(200),
+      buildStatus: z.string().trim().max(40).optional(),
+      currentStepNumber: z.number().int().min(0).max(50).optional(),
+      totalSteps: z.number().int().min(0).max(50).optional(),
+      currentStepTitle: z.string().trim().max(300).optional(),
+      currentStepInstructions: z.string().trim().max(5000).optional(),
+      completedSteps: z
+        .array(
+          z.object({
+            stepNumber: z.number().int().min(0).max(50),
+            title: z.string().trim().max(300),
+          }),
+        )
+        .max(30)
+        .optional(),
+      upcomingStepTitle: z.string().trim().max(300).optional(),
+      materialsReady: z.number().int().min(0).max(999).optional(),
+      materialsTotal: z.number().int().min(0).max(999).optional(),
+      materialNames: z.array(z.string().trim().max(200)).max(40).optional(),
+    })
+    .strict()
+    .optional(),
 });
 
 export type CreateAiConversationInput = z.infer<

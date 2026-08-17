@@ -71,6 +71,7 @@ import {
   type AgentPlannerOutput,
   type SemanticUnderstanding,
 } from './ai-agent-semantic-planner.service.js';
+import { applyLinkedBuildGuideLearningOverride, isExplicitMarketplaceCatalogRequest } from './ai-build-guide-routing.js';
 import { resolveAgentRoute, assessHardSafetyRoute } from './ai-agent-router.service.js';
 import { resolveProjectFromRecentEntities } from './ai-agent-reference-resolver.service.js';
 import { assessDangerousRequest } from './ai-agent-safety-guard.service.js';
@@ -510,28 +511,33 @@ const buildDeterministicFallbackPlan = (input: {
   }
 
   if (route === 'CLARIFICATION' || route === 'GENERAL_LEARNING') {
-    const ownedFallback = buildOwnedMaterialsSemanticFallbackPlan({
-      userMessage: input.userMessage,
-      routeDecision: input.routeDecision,
-      locale: input.locale,
-      conversationContext: input.conversationContext,
-    });
-    if (ownedFallback) {
-      return ownedFallback;
-    }
-
-    if (detectEducationalLearningIntent(input.userMessage)) {
+    if (input.conversationContext?.activeBuildGuide) {
       route = 'GENERAL_LEARNING';
       toolInput = {};
-    } else if (detectMaterialSearchIntent(input.userMessage).detected) {
-      route = 'MATERIAL_SEARCH';
-      toolInput = mergeMaterialSearchPlan(input.userMessage);
-    } else if (detectProjectComponentsIntent(input.userMessage)) {
-      route = 'PROJECT_COMPONENTS';
-      toolInput = buildToolInputForRoute(route, input.userMessage);
-    } else if (detectComponentMaterialMatchingIntent(input.userMessage)) {
-      route = 'COMPONENT_MATERIAL_MATCHING';
-      toolInput = {};
+    } else {
+      const ownedFallback = buildOwnedMaterialsSemanticFallbackPlan({
+        userMessage: input.userMessage,
+        routeDecision: input.routeDecision,
+        locale: input.locale,
+        conversationContext: input.conversationContext,
+      });
+      if (ownedFallback) {
+        return ownedFallback;
+      }
+
+      if (detectEducationalLearningIntent(input.userMessage)) {
+        route = 'GENERAL_LEARNING';
+        toolInput = {};
+      } else if (detectMaterialSearchIntent(input.userMessage).detected) {
+        route = 'MATERIAL_SEARCH';
+        toolInput = mergeMaterialSearchPlan(input.userMessage);
+      } else if (detectProjectComponentsIntent(input.userMessage)) {
+        route = 'PROJECT_COMPONENTS';
+        toolInput = buildToolInputForRoute(route, input.userMessage);
+      } else if (detectComponentMaterialMatchingIntent(input.userMessage)) {
+        route = 'COMPONENT_MATERIAL_MATCHING';
+        toolInput = {};
+      }
     }
   }
 
@@ -1526,7 +1532,9 @@ const reconcilePlannerWithPlatformIntent = (input: {
     }
   }
 
-  if (detectProjectComponentsIntent(input.userMessage) &&
+  if (
+    !input.conversationContext?.activeBuildGuide &&
+    detectProjectComponentsIntent(input.userMessage) &&
     !detectBuildGapIntent(input.userMessage) &&
     (input.plan.route === 'GENERAL_LEARNING' ||
       input.plan.route === 'CLARIFICATION' ||
@@ -1755,7 +1763,10 @@ const reconcilePlannerWithPlatformIntent = (input: {
     return fallback;
   }
 
-  if (detectProjectComponentsIntent(input.userMessage)) {
+  if (
+    !input.conversationContext?.activeBuildGuide &&
+    detectProjectComponentsIntent(input.userMessage)
+  ) {
     const fallback = buildDeterministicFallbackPlan({
       userMessage: input.userMessage,
       routeDecision: {
@@ -2482,6 +2493,7 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
   }
 
   if (
+    !conversationContext?.activeBuildGuide &&
     detectProjectComponentsIntent(input.userMessage) &&
     !detectBuildGapIntent(input.userMessage)
   ) {
@@ -2498,7 +2510,10 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     });
   }
 
-  if (detectComponentMaterialMatchingIntent(input.userMessage)) {
+  if (
+    detectComponentMaterialMatchingIntent(input.userMessage) &&
+    !conversationContext?.activeBuildGuide
+  ) {
     return buildDeterministicFallbackPlan({
       userMessage: input.userMessage,
       routeDecision: {
@@ -2526,7 +2541,13 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     });
   }
 
-  if (detectMaterialSearchIntent(input.userMessage).detected) {
+  if (
+    detectMaterialSearchIntent(input.userMessage).detected &&
+    !(
+      conversationContext?.activeBuildGuide &&
+      !isExplicitMarketplaceCatalogRequest(input.userMessage)
+    )
+  ) {
     return buildDeterministicFallbackPlan({
       userMessage: input.userMessage,
       routeDecision: {
@@ -2540,7 +2561,10 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     });
   }
 
-  if (detectRecentProjectDetailsIntent(input.userMessage)) {
+  if (
+    detectRecentProjectDetailsIntent(input.userMessage) &&
+    !conversationContext?.activeBuildGuide
+  ) {
     return buildDeterministicFallbackPlan({
       userMessage: input.userMessage,
       routeDecision: {
@@ -2591,7 +2615,12 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
         conversationContext,
       });
     }
-    return markSemanticRoutingDiagnostics(reconciled.plan);
+    return markSemanticRoutingDiagnostics(
+      applyLinkedBuildGuideLearningOverride(reconciled.plan, {
+        hasLinkedBuild: Boolean(conversationContext?.activeBuildGuide),
+        userMessage: input.userMessage,
+      }),
+    );
   };
 
   if (understanding) {
@@ -2616,23 +2645,31 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
       });
     }
     if (mapped.route === 'GENERAL_LEARNING') {
-      return markSemanticRoutingDiagnostics({
-        route: 'GENERAL_LEARNING',
-        toolName: null,
-        toolInput: {},
-        semanticUnderstandingRoute: 'GENERAL_LEARNING',
-        diagnostics: {
-          deterministicRoute: 'GENERAL_LEARNING',
-          deterministicConfidence: understanding.confidence,
-          semanticPlannerUsed: true,
-          semanticRoute: null,
-          validatedRoute: 'GENERAL_LEARNING',
-          normalizedFilters: null,
-          toolName: null,
-          plannerConfidence: understanding.confidence,
-          resolvedEntityTitle: null,
-        },
-      });
+      return markSemanticRoutingDiagnostics(
+        applyLinkedBuildGuideLearningOverride(
+          {
+            route: 'GENERAL_LEARNING',
+            toolName: null,
+            toolInput: {},
+            semanticUnderstandingRoute: 'GENERAL_LEARNING',
+            diagnostics: {
+              deterministicRoute: 'GENERAL_LEARNING',
+              deterministicConfidence: understanding.confidence,
+              semanticPlannerUsed: true,
+              semanticRoute: null,
+              validatedRoute: 'GENERAL_LEARNING',
+              normalizedFilters: null,
+              toolName: null,
+              plannerConfidence: understanding.confidence,
+              resolvedEntityTitle: null,
+            },
+          },
+          {
+            hasLinkedBuild: Boolean(conversationContext?.activeBuildGuide),
+            userMessage: input.userMessage,
+          },
+        ),
+      );
     }
     if (mapped.route === 'OUT_OF_SCOPE') {
       return markSemanticRoutingDiagnostics({
@@ -2921,6 +2958,10 @@ export const resolveAgentExecutionPlan = async (input: {
     plan,
     locale: input.locale,
     conversationContext,
+  });
+  plan = applyLinkedBuildGuideLearningOverride(plan, {
+    hasLinkedBuild: Boolean(conversationContext?.activeBuildGuide),
+    userMessage: input.userMessage,
   });
 
   if (envIsDevelopment()) {

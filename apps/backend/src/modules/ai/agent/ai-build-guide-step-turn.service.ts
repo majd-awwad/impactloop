@@ -10,6 +10,10 @@ import { loadRecentConversationMessages } from '../ai.repository.js';
 import type { AiLocale } from '../ai.types.js';
 import { getAiChatProvider } from '../providers/ai-chat-provider.factory.js';
 import { getOwnedProjectBuildByBuildId } from '../../learning-projects/learning-projects.service.js';
+import {
+  buildBuildGuideModelContext,
+  formatBuildGuideTrustedSystemContext,
+} from '../ai-build-guide-model-context.js';
 import type { AiAgentRouteType } from './ai-agent.types.js';
 import {
   mergeAgentBlocks,
@@ -72,12 +76,17 @@ const detectStepProgressIntent = (message: string): boolean => {
 };
 
 const detectStepBeginIntent = (message: string): boolean =>
-  /(ابدأ معي|يلا نبدأ|ساعدني أبدأ|كملني من وين وقفت|نرجع نكمل|شو أعمل هلا|start with me|let'?s begin|continue from where|what should i do now)/i.test(
+  /(ابدأ معي|يلا نبدأ|ساعدني أبدأ|كملني من وين وقفت|نرجع نكمل|شو أعمل هلا|شو أعمل هسا|شو اعمل هسا|شو أعمل الآن|start with me|let'?s begin|continue from where|what should i do now)/i.test(
     message,
   );
 
 const detectStepExplainIntent = (message: string): boolean =>
   /(اشرحلي|اشرح|كيف أنفذ|شو المطلوب|شو لازم أعمل|explain the current step|explain this step|how do i do this step|what should i do in this step)/i.test(
+    message,
+  );
+
+const detectCurrentStepHelpIntent = (message: string): boolean =>
+  /(مش عارف|مش فاهم|ما بعرف|ما بفهم|شو أعمل|شو اعمل|كيف أوصل|كيف اوصل|وين أوصل|وين اوصل|help me with this|i don'?t (?:know|understand)|i'?m stuck|what (?:do|should) i do)/i.test(
     message,
   );
 
@@ -353,6 +362,10 @@ const generateStepExplanation = async (input: {
     userMessage: buildStepExplanationPrompt(input),
     history: [],
     scopeClassification: 'DOMAIN_KNOWLEDGE',
+    trustedSystemContext: formatBuildGuideTrustedSystemContext(
+      buildBuildGuideModelContext(input.build),
+      { explanationLocale: input.locale },
+    ),
   });
   const text =
     answer.data.blocks.find((block) => block.type === 'text')?.text?.trim() ??
@@ -428,13 +441,15 @@ export const tryHandleBuildGuideStepTurn = async (input: {
   const beginIntent = detectStepBeginIntent(input.userMessage);
   const explainIntent = detectStepExplainIntent(input.userMessage);
   const followUpIntent = detectStepFollowUpIntent(input.userMessage);
+  const currentStepHelpIntent = detectCurrentStepHelpIntent(input.userMessage);
 
   if (
     !completeIntent &&
     !progressIntent &&
     !beginIntent &&
     !explainIntent &&
-    !followUpIntent
+    !followUpIntent &&
+    !currentStepHelpIntent
   ) {
     return null;
   }
@@ -491,7 +506,7 @@ export const tryHandleBuildGuideStepTurn = async (input: {
     if (completeIntent) {
       return buildCompletedResponse(build, input.locale);
     }
-    if (progressIntent || beginIntent || explainIntent || followUpIntent) {
+    if (progressIntent || beginIntent || explainIntent || followUpIntent || currentStepHelpIntent) {
       return buildCompletedResponse(build, input.locale);
     }
   }
@@ -541,7 +556,7 @@ export const tryHandleBuildGuideStepTurn = async (input: {
     return buildProgressResponse(build, input.locale, input.userMessage);
   }
 
-  if (beginIntent || explainIntent) {
+  if (beginIntent || explainIntent || currentStepHelpIntent) {
     if (!materialsReady || !currentStep) {
       return buildMaterialsNotReadyResponse(build, input.locale);
     }

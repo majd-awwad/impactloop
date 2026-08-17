@@ -43,13 +43,17 @@ class _LearningProjectBuildGuidePageState
 
   Future<void> _initializeGuide() async {
     BuildGuideContext? guideContext = widget.buildContext;
-    if (guideContext == null) {
-      final build = await ref.read(projectBuildProvider(widget.projectId).future);
-      if (!mounted || build == null) {
-        return;
-      }
-
+    final build = await ref.read(
+      projectBuildProvider(widget.projectId).future,
+    );
+    if (!mounted) {
+      return;
+    }
+    if (build != null) {
       guideContext = BuildGuideContext.fromProjectBuild(build);
+    }
+    if (guideContext == null) {
+      return;
     }
 
     _shellNotifier!.open(
@@ -79,9 +83,7 @@ class _LearningProjectBuildGuidePageState
           title: Text(title),
           leading: AppBackAction.compact(onBack: _leaveGuide),
         ),
-        body: const SafeArea(
-          child: AiEmbeddedAssistantChat(),
-        ),
+        body: const SafeArea(child: AiEmbeddedAssistantChat()),
       ),
     );
   }

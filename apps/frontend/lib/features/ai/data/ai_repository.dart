@@ -28,6 +28,7 @@ abstract class AiRepository {
     required String text,
     required String locale,
     required String clientMessageId,
+    Map<String, Object?>? buildGuideContext,
   });
 
   Future<AiTurnResponse> startAuthoring({required String conversationId});
@@ -172,12 +173,14 @@ class ApiAiRepository implements AiRepository {
     required String text,
     required String locale,
     required String clientMessageId,
+    Map<String, Object?>? buildGuideContext,
   }) {
     return _api.sendMessage(
       conversationId: conversationId,
       text: text,
       locale: locale,
       clientMessageId: clientMessageId,
+      buildGuideContext: buildGuideContext,
     );
   }
 
