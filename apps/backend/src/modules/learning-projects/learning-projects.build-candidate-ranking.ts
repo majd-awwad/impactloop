@@ -65,6 +65,37 @@ const isGeneralMaterialType = (value: string) => {
   );
 };
 
+/** Broad type labels that must not qualify a candidate by themselves. */
+const BROAD_MATERIAL_TYPE_LABELS = new Set([
+  'electronics',
+  'electronic',
+  'mechanical',
+  'motors',
+  'motor',
+  'components',
+  'component',
+  'general',
+  'unspecified',
+  'hardware',
+  'mixed',
+  'other',
+  'parts',
+  'part',
+  'material',
+  'materials',
+  'accessory',
+  'accessories',
+  'item',
+  'items',
+  'kit',
+  'kits',
+  'supplies',
+  'supply',
+]);
+
+const isBroadMaterialTypeLabel = (value: string) =>
+  BROAD_MATERIAL_TYPE_LABELS.has(normalizeText(value));
+
 const haystackForMaterial = (material: BuildCandidateMaterialInput) =>
   normalizeText(
     [
@@ -75,7 +106,14 @@ const haystackForMaterial = (material: BuildCandidateMaterialInput) =>
     ].join(' '),
   );
 
+const isModelLikeToken = (token: string) =>
+  token.length >= 2 && /\d/.test(token);
+
 const normalizeToken = (token: string) => {
+  if (isModelLikeToken(token)) {
+    return token;
+  }
+
   if (token.length > 4 && token.endsWith('s')) {
     return token.slice(0, -1);
   }
@@ -85,8 +123,11 @@ const normalizeToken = (token: string) => {
 
 const tokenize = (value: string) =>
   normalizeText(value)
+    .replace(/[^a-z0-9]+/g, ' ')
     .split(/\s+/)
-    .filter((token) => token.length >= 3)
+    .filter(
+      (token) => token.length >= 3 || isModelLikeToken(token),
+    )
     .map(normalizeToken);
 
 /** Tokens that alone must not create strong motor/sensor family collisions. */
@@ -105,6 +146,34 @@ const BROAD_LEXICAL_TOKENS = new Set([
   'cable',
   'with',
   'and',
+  'the',
+  'for',
+  'from',
+  'electronics',
+  'electronic',
+  'mechanical',
+  'component',
+  'components',
+  'hardware',
+  'material',
+  'materials',
+  'parts',
+  'part',
+  'item',
+  'items',
+  'set',
+  'sets',
+  'small',
+  'mixed',
+  'reclaimed',
+  'bundle',
+  'bundles',
+  'pair',
+  'pairs',
+  'generic',
+  'various',
+  'unused',
+  'used',
 ]);
 
 const hasStrongTokenOverlap = (left: string, right: string) => {
@@ -123,6 +192,161 @@ const hasStrongTokenOverlap = (left: string, right: string) => {
       : [rightTokens, leftTokens];
 
   return shorter.every((token) => longer.includes(token));
+};
+
+const identityHaystackForMaterial = (material: BuildCandidateMaterialInput) =>
+  normalizeText(
+    [material.title, material.materialType, ...material.tags].join(' '),
+  );
+
+const listingTypesConflict = (
+  material: BuildCandidateMaterialInput,
+  component: BuildCandidateComponentInput,
+  taxonomyEvidence: TaxonomyMatchEvidence | null,
+) => {
+  const componentTypeNorm = normalizeText(component.materialType);
+  const materialTypeNorm = normalizeText(material.materialType);
+  return (
+    !taxonomyEvidence &&
+    !isGeneralMaterialType(component.materialType) &&
+    !isGeneralMaterialType(material.materialType) &&
+    componentTypeNorm !== materialTypeNorm &&
+    !materialTypeNorm.includes(componentTypeNorm) &&
+    !componentTypeNorm.includes(materialTypeNorm)
+  );
+};
+
+const hasTitleSemanticOverlap = (
+  material: BuildCandidateMaterialInput,
+  component: BuildCandidateComponentInput,
+) => {
+  const taxonomyEvidence = resolveTaxonomyMatchEvidence(material, component);
+  const typesConflict = listingTypesConflict(
+    material,
+    component,
+    taxonomyEvidence,
+  );
+  const normalizedName = normalizeText(component.componentName);
+  const normalizedTitle = normalizeText(material.title);
+  if (normalizedName.length === 0) {
+    return false;
+  }
+
+  if (normalizedTitle === normalizedName) {
+    return true;
+  }
+
+  if (typesConflict) {
+    return false;
+  }
+
+  return (
+    normalizedTitle.includes(normalizedName) ||
+    hasStrongTokenOverlap(normalizedName, normalizedTitle)
+  );
+};
+
+const hasSpecificTypeCompatibility = (
+  material: BuildCandidateMaterialInput,
+  component: BuildCandidateComponentInput,
+) => {
+  if (
+    isGeneralMaterialType(component.materialType) ||
+    isGeneralMaterialType(material.materialType) ||
+    isBroadMaterialTypeLabel(component.materialType) ||
+    isBroadMaterialTypeLabel(material.materialType)
+  ) {
+    return false;
+  }
+
+  const componentType = normalizeText(component.materialType);
+  const materialType = normalizeText(material.materialType);
+  if (componentType === materialType) {
+    return true;
+  }
+
+  if (
+    !materialType.includes(componentType) &&
+    !componentType.includes(materialType)
+  ) {
+    return false;
+  }
+
+  const componentTokens = tokenize(component.materialType).filter(
+    (token) => !BROAD_LEXICAL_TOKENS.has(token),
+  );
+  const materialTokens = tokenize(material.materialType);
+  if (componentTokens.length === 0 || materialTokens.length === 0) {
+    return false;
+  }
+
+  return componentTokens.some((token) => materialTokens.includes(token));
+};
+
+const isSpecificKeywordTerm = (term: string, componentName: string) => {
+  if (term.length < 2) {
+    return false;
+  }
+
+  if (term === normalizeText(componentName)) {
+    return false;
+  }
+
+  if (isGeneralMaterialType(term) || isBroadMaterialTypeLabel(term)) {
+    return false;
+  }
+
+  if (!term.includes(' ') && BROAD_LEXICAL_TOKENS.has(term)) {
+    return false;
+  }
+
+  return true;
+};
+
+const hasIdentityKeywordEvidence = (
+  material: BuildCandidateMaterialInput,
+  component: BuildCandidateComponentInput,
+) => {
+  const identityHaystack = identityHaystackForMaterial(material);
+  const terms = [
+    ...component.searchKeywords,
+    ...component.alternativeKeywords,
+  ]
+    .map(normalizeText)
+    .filter((term) => isSpecificKeywordTerm(term, component.componentName));
+
+  return [...new Set(terms)].some((term) => identityHaystack.includes(term));
+};
+
+const SEMANTIC_TAXONOMY_KINDS = new Set([
+  'CONCEPT_EXACT',
+  'CONCEPT_COMPATIBLE',
+  'TYPE_EXACT',
+  'TYPE_ALIAS',
+]);
+
+/**
+ * Relevance gate for Build Project matching candidates.
+ * Convenience / category-only / description-only evidence cannot pass this.
+ */
+export const isBuildCandidateSemanticallyEligible = (
+  material: BuildCandidateMaterialInput,
+  component: BuildCandidateComponentInput,
+) => {
+  const taxonomyEvidence = resolveTaxonomyMatchEvidence(material, component);
+  if (taxonomyEvidence && SEMANTIC_TAXONOMY_KINDS.has(taxonomyEvidence.kind)) {
+    return true;
+  }
+
+  if (hasTitleSemanticOverlap(material, component)) {
+    return true;
+  }
+
+  if (hasSpecificTypeCompatibility(material, component)) {
+    return true;
+  }
+
+  return hasIdentityKeywordEvidence(material, component);
 };
 
 export type MaterialComponentMatchReasonCode =
@@ -511,6 +735,9 @@ export const rankBuildMaterialCandidates = <T extends BuildCandidateMaterialInpu
   limit: number,
 ) =>
   [...materials]
+    .filter((material) =>
+      isBuildCandidateSemanticallyEligible(material, component),
+    )
     .map((material) => ({
       material,
       score: scoreBuildMaterialCandidate(material, component, learner),
@@ -518,7 +745,7 @@ export const rankBuildMaterialCandidates = <T extends BuildCandidateMaterialInpu
     .sort((left, right) =>
       compareBuildMaterialCandidateScores(left.score, right.score),
     )
-    .slice(0, limit);
+    .slice(0, Math.max(0, limit));
 
 export const buildCandidateMatchHints = (input: {
   material: BuildCandidateMaterialInput;
@@ -592,8 +819,22 @@ export const buildCandidateMatchHints = (input: {
     hints.add('Material type match');
   }
 
+  if (hints.size === 0) {
+    hints.add('Possible option');
+  }
+
+  return [...hints];
+};
+
+/** Logistics signals for ranking after a candidate has already passed the relevance gate. */
+export const buildCandidateConvenienceHints = (input: {
+  material: BuildCandidateMaterialInput;
+  learner: BuildCandidateLearnerContext;
+}) => {
+  const hints: string[] = [];
+
   if (input.material.isFree) {
-    hints.add('Free');
+    hints.push('Free');
   }
 
   const learnerCity = normalizeText(input.learner.city ?? '');
@@ -601,20 +842,16 @@ export const buildCandidateMatchHints = (input: {
     learnerCity.length > 0 &&
     normalizeText(input.material.city) === learnerCity
   ) {
-    hints.add('Same city');
+    hints.push('Same city');
   }
 
   if (input.material.pickupAllowed) {
-    hints.add('Pickup available');
+    hints.push('Pickup available');
   }
 
   if (input.material.deliveryAllowed) {
-    hints.add('Delivery available');
+    hints.push('Delivery available');
   }
 
-  if (hints.size === 0) {
-    hints.add('Possible option');
-  }
-
-  return [...hints];
+  return hints;
 };

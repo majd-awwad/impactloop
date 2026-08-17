@@ -3,6 +3,7 @@ import { describe, test } from 'node:test';
 
 import {
   deriveMaterialComponentMatchReasonCodes,
+  isBuildCandidateSemanticallyEligible,
   primaryMaterialComponentMatchReasonCode,
   rankBuildMaterialCandidates,
   scoreMaterialComponentRelevance,
@@ -94,8 +95,8 @@ describe('learning project build candidate ranking', () => {
       2,
     );
 
+    assert.equal(ranked.length, 1);
     assert.equal(ranked[0]?.material.id, 'paid-exact');
-    assert.equal(ranked[1]?.material.id, 'free-weak');
   });
 
   test('nearby relevant option ranks above distant similar option', () => {
@@ -222,6 +223,7 @@ describe('learning project build candidate ranking', () => {
       2,
     );
 
+    assert.equal(ranked.length, 1);
     assert.equal(ranked[0]?.material.id, 'new-strong');
   });
 });
@@ -268,6 +270,11 @@ describe('material component match reason codes', () => {
       relevance,
     });
     assert.equal(primaryMaterialComponentMatchReasonCode(codes), 'CATEGORY_MATCH');
+    assert.equal(isBuildCandidateSemanticallyEligible(material, component), false);
+    assert.equal(
+      rankBuildMaterialCandidates([material], component, learnerRamallah, 10).length,
+      0,
+    );
   });
 
   test('keyword-only match yields KEYWORD_MATCH', () => {

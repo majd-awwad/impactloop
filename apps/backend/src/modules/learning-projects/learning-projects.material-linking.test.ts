@@ -325,7 +325,7 @@ describe('learning project build material linking', () => {
       title: `${TEST_MARKER} Arduino Uno`,
     });
     const project = await createPublishedProject({
-      authorId: learner.id,
+      authorId: supplier.id,
       projectCategoryId: projectCategory.id,
       materialCategoryId: materialCategory.id,
       componentName: 'Arduino Uno board',
@@ -404,7 +404,7 @@ describe('learning project build material linking', () => {
       title: `${TEST_MARKER} cache material`,
     });
     const project = await createPublishedProject({
-      authorId: learner.id,
+      authorId: supplier.id,
       projectCategoryId: projectCategory.id,
       materialCategoryId: materialCategory.id,
       componentName: 'Arduino cache board',
@@ -536,7 +536,7 @@ describe('learning project build material linking', () => {
       title: `${TEST_MARKER} reserved material`,
     });
     const project = await createPublishedProject({
-      authorId: learner.id,
+      authorId: supplier.id,
       projectCategoryId: projectCategory.id,
       materialCategoryId: materialCategory.id,
       componentName: 'Motor',
@@ -608,7 +608,7 @@ describe('learning project build material linking', () => {
     });
 
     const project = await createPublishedProject({
-      authorId: learner.id,
+      authorId: supplier.id,
       projectCategoryId: projectCategory.id,
       materialCategoryId: materialCategory.id,
       componentName: 'Arduino Uno board',
@@ -627,8 +627,19 @@ describe('learning project build material linking', () => {
     assert.ok(candidates.items.length >= 2);
     assert.equal(candidates.items[0]!.id, freeMaterial.id);
     assert.ok(candidates.items.some((item) => item.id === paidMaterial.id));
-    assert.ok(candidates.items[0]!.matchHints.includes('Free'));
-    assert.ok(candidates.items[0]!.matchHints.includes('Same city'));
+    assert.equal(
+      candidates.items[0]!.matchHints.includes('Free'),
+      false,
+    );
+    assert.equal(
+      candidates.items[0]!.matchHints.includes('Same city'),
+      false,
+    );
+    assert.ok(
+      candidates.items[0]!.matchHints.some((hint) =>
+        /name match|strong match|material type match/i.test(hint),
+      ),
+    );
   });
 
   test('ranks exact paid match above weak free mismatch', async () => {
@@ -660,7 +671,7 @@ describe('learning project build material linking', () => {
     });
 
     const project = await createPublishedProject({
-      authorId: learner.id,
+      authorId: supplier.id,
       projectCategoryId: projectCategory.id,
       materialCategoryId: materialCategory.id,
       componentName: 'Arduino Uno board',
@@ -677,15 +688,19 @@ describe('learning project build material linking', () => {
     );
 
     assert.equal(candidates.items[0]!.id, exactPaid.id);
-    assert.ok(candidates.items.some((item) => item.id === weakFree.id));
+    assert.equal(
+      candidates.items.some((item) => item.id === weakFree.id),
+      false,
+    );
   });
 
   test('TOOL components return empty candidates', async () => {
     const learner = await createLearnerUser('tool');
+    const author = await createLearnerUser('tool-author');
     const materialCategory = await createMaterialCategory();
     const projectCategory = await createProjectCategory();
     const project = await createPublishedProject({
-      authorId: learner.id,
+      authorId: author.id,
       projectCategoryId: projectCategory.id,
       materialCategoryId: materialCategory.id,
       componentName: 'Soldering iron',
