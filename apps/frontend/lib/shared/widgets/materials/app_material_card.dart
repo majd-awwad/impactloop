@@ -893,11 +893,18 @@ class _GridCardMediaState extends State<_GridCardMedia> {
             PositionedDirectional(
               top: AppSpacing.sm,
               end: AppSpacing.sm,
-              child: _EngagementCountBadge(
-                viewsCount: widget.viewsCount,
-                likesCount: widget.likesCount,
-                isLiked: widget.isLiked,
-                isDark: isDark,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 168),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: _EngagementCountBadge(
+                    viewsCount: widget.viewsCount,
+                    likesCount: widget.likesCount,
+                    isLiked: widget.isLiked,
+                    isDark: isDark,
+                  ),
+                ),
               ),
             ),
             PositionedDirectional(
@@ -1019,22 +1026,33 @@ class _GridCardContent extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              Text(
-                const LocalizedText(
-                  en: 'Details',
-                  ar: 'التفاصيل',
-                ).resolve(context),
-                style: textTheme.labelMedium?.copyWith(
-                  color: palette.mint,
-                  fontSize: compact ? 12 : 13,
-                  fontWeight: FontWeight.w800,
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        const LocalizedText(
+                          en: 'Details',
+                          ar: 'التفاصيل',
+                        ).resolve(context),
+                        style: textTheme.labelMedium?.copyWith(
+                          color: palette.mint,
+                          fontSize: compact ? 12 : 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        color: palette.mint,
+                        size: compact ? 16 : 18,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Icon(
-                Icons.arrow_forward_rounded,
-                color: palette.mint,
-                size: compact ? 16 : 18,
               ),
             ],
           ),

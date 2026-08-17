@@ -18207,6 +18207,600 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'By {name}'**
   String phsByCreator(String name);
+
+  /// No description provided for @landingImpactFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Impact first'**
+  String get landingImpactFirst;
+
+  /// No description provided for @landingMakeAnImpact.
+  ///
+  /// In en, this message translates to:
+  /// **'Make an impact'**
+  String get landingMakeAnImpact;
+
+  /// No description provided for @landingImpactBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Every successful reuse turns overlooked materials into projects, prototypes, and practical learning.'**
+  String get landingImpactBody;
+
+  /// No description provided for @landingSavedKg.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved kg'**
+  String get landingSavedKg;
+
+  /// No description provided for @landingMonthlyLift.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly lift'**
+  String get landingMonthlyLift;
+
+  /// No description provided for @landingMonthlyLiftBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Momentum from workshop and campus reuse activity.'**
+  String get landingMonthlyLiftBody;
+
+  /// No description provided for @landingReuseTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Reuse trend'**
+  String get landingReuseTrend;
+
+  /// No description provided for @landingSteadyGrowth.
+  ///
+  /// In en, this message translates to:
+  /// **'Steady growth'**
+  String get landingSteadyGrowth;
+
+  /// No description provided for @authShareLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get authShareLabel;
+
+  /// No description provided for @authFindUsableParts.
+  ///
+  /// In en, this message translates to:
+  /// **'Find usable parts'**
+  String get authFindUsableParts;
+
+  /// No description provided for @authEntryLoginEyebrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to your workspace'**
+  String get authEntryLoginEyebrow;
+
+  /// No description provided for @authEntryRegisterEyebrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Start your ImpactLoop profile'**
+  String get authEntryRegisterEyebrow;
+
+  /// No description provided for @authEntryLoginDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to pick up where your materials, projects, and community activity left off.'**
+  String get authEntryLoginDescription;
+
+  /// No description provided for @authEntryRegisterDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Create one account to source components, list surplus materials, or do both in one streamlined flow.'**
+  String get authEntryRegisterDescription;
+
+  /// No description provided for @authLiveImpactTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Live impact trend'**
+  String get authLiveImpactTrend;
+
+  /// No description provided for @authPlus18ThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'+18% this month'**
+  String get authPlus18ThisMonth;
+
+  /// No description provided for @authPlus18Month.
+  ///
+  /// In en, this message translates to:
+  /// **'+18% month'**
+  String get authPlus18Month;
+
+  /// No description provided for @authEntryLoginMission.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick up your materials, project ideas, and reuse activity with a clearer, faster workspace.'**
+  String get authEntryLoginMission;
+
+  /// No description provided for @authEntryRegisterMission.
+  ///
+  /// In en, this message translates to:
+  /// **'Join students, suppliers, and makers turning overlooked materials into practical opportunities.'**
+  String get authEntryRegisterMission;
+
+  /// No description provided for @authBrandingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'An eco-tech platform where learners discover surplus materials, find project parts, and build with less waste.'**
+  String get authBrandingSubtitle;
+
+  /// No description provided for @authFeatureFindNearbyLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Find reusable materials nearby'**
+  String get authFeatureFindNearbyLong;
+
+  /// No description provided for @authFeatureBuildSmarter.
+  ///
+  /// In en, this message translates to:
+  /// **'Build projects smarter'**
+  String get authFeatureBuildSmarter;
+
+  /// No description provided for @authFeatureReduceWasteReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduce waste with every reservation'**
+  String get authFeatureReduceWasteReservation;
+
+  /// No description provided for @authFeatureFindMaterialsShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Find materials'**
+  String get authFeatureFindMaterialsShort;
+
+  /// No description provided for @authFeatureBuildSmarterShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Build smarter'**
+  String get authFeatureBuildSmarterShort;
+
+  /// No description provided for @authFeatureReduceWasteShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduce waste'**
+  String get authFeatureReduceWasteShort;
+
+  /// No description provided for @registerStepAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your account type and create your sign-in details.'**
+  String get registerStepAccountSubtitle;
+
+  /// No description provided for @registerStepInterestsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose broad topics you care about. These help shape project and material suggestions.'**
+  String get registerStepInterestsSubtitle;
+
+  /// No description provided for @registerStepInterestsBothSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the topics you want to learn, build, repair, or reuse around.'**
+  String get registerStepInterestsBothSubtitle;
+
+  /// No description provided for @registerStepGoalsLearnerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What do you want to get out of ImpactLoop?'**
+  String get registerStepGoalsLearnerSubtitle;
+
+  /// No description provided for @registerStepGoalsBothSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What do you want to accomplish as both a learner and supplier?'**
+  String get registerStepGoalsBothSubtitle;
+
+  /// No description provided for @registerStepLocationLearnerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional for learners. Accurate pickup or delivery details are only requested during reservations.'**
+  String get registerStepLocationLearnerSubtitle;
+
+  /// No description provided for @registerStepLearnerBasicsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us your learning context so suggestions match your experience.'**
+  String get registerStepLearnerBasicsSubtitle;
+
+  /// No description provided for @registerStepReviewLearnerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review your learner details before creating the account.'**
+  String get registerStepReviewLearnerSubtitle;
+
+  /// No description provided for @registerStepReviewAddLearnerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review your learner details before adding access to your account.'**
+  String get registerStepReviewAddLearnerSubtitle;
+
+  /// No description provided for @registerLearnerSetupIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner setup is incomplete. Please review your answers.'**
+  String get registerLearnerSetupIncomplete;
+
+  /// No description provided for @registerLearnerAccessAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner access added to your account.'**
+  String get registerLearnerAccessAdded;
+
+  /// No description provided for @registerAddLearnerAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Add learner access'**
+  String get registerAddLearnerAccess;
+
+  /// No description provided for @registerAddLearnerIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Add learner access to your current account and personalize your learning interests.'**
+  String get registerAddLearnerIntro;
+
+  /// No description provided for @registerCityOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'City (optional)'**
+  String get registerCityOptional;
+
+  /// No description provided for @registerAreaNeighborhood.
+  ///
+  /// In en, this message translates to:
+  /// **'Area / neighborhood'**
+  String get registerAreaNeighborhood;
+
+  /// No description provided for @registerAreaNeighborhoodOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Area / neighborhood (optional)'**
+  String get registerAreaNeighborhoodOptional;
+
+  /// No description provided for @registerCityRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'City is required'**
+  String get registerCityRequired;
+
+  /// No description provided for @registerAreaRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Area is required'**
+  String get registerAreaRequired;
+
+  /// No description provided for @registerCityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Nablus'**
+  String get registerCityHint;
+
+  /// No description provided for @registerAreaHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Rafidia'**
+  String get registerAreaHint;
+
+  /// No description provided for @registerLocationSkipHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'You can skip this for now. Reservation pickup or delivery details are collected only when they are needed.'**
+  String get registerLocationSkipHelper;
+
+  /// No description provided for @registerLearnerReviewHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Goals stay in onboarding only. The server receives your account and learner profile.'**
+  String get registerLearnerReviewHelper;
+
+  /// No description provided for @registerAddLearnerReviewHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Goals stay in onboarding only. Learner access will be added to your existing account with the learner profile shown above.'**
+  String get registerAddLearnerReviewHelper;
+
+  /// No description provided for @registerLearnerSetupDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'You will set learner interests, goals, optional location, and learning level.'**
+  String get registerLearnerSetupDescription;
+
+  /// No description provided for @registerGoalsHelperLearner.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose anything that describes why you are joining. You can change this later.'**
+  String get registerGoalsHelperLearner;
+
+  /// No description provided for @registerGoalsHelperSupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'These goals tune the supplier setup language. They are not required to list materials.'**
+  String get registerGoalsHelperSupplier;
+
+  /// No description provided for @registerGoalsHelperBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose goals for both sides of your account. You can update your profile later.'**
+  String get registerGoalsHelperBoth;
+
+  /// No description provided for @registerIntentFindMaterials.
+  ///
+  /// In en, this message translates to:
+  /// **'Find materials'**
+  String get registerIntentFindMaterials;
+
+  /// No description provided for @registerIntentDoBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Do both'**
+  String get registerIntentDoBoth;
+
+  /// No description provided for @registerGoalBuildProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Build projects'**
+  String get registerGoalBuildProjects;
+
+  /// No description provided for @registerGoalFindComponents.
+  ///
+  /// In en, this message translates to:
+  /// **'Find components'**
+  String get registerGoalFindComponents;
+
+  /// No description provided for @registerGoalLearnNewSkills.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn new skills'**
+  String get registerGoalLearnNewSkills;
+
+  /// No description provided for @registerGoalRepairSomething.
+  ///
+  /// In en, this message translates to:
+  /// **'Repair something'**
+  String get registerGoalRepairSomething;
+
+  /// No description provided for @registerGoalReuseMaterials.
+  ///
+  /// In en, this message translates to:
+  /// **'Reuse materials'**
+  String get registerGoalReuseMaterials;
+
+  /// No description provided for @registerGoalSaveMoney.
+  ///
+  /// In en, this message translates to:
+  /// **'Save money'**
+  String get registerGoalSaveMoney;
+
+  /// No description provided for @registerGoalExploreProjectIdeas.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore project ideas'**
+  String get registerGoalExploreProjectIdeas;
+
+  /// No description provided for @registerGoalHelpMyCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Help my community'**
+  String get registerGoalHelpMyCommunity;
+
+  /// No description provided for @registerGoalShareSurplusMaterials.
+  ///
+  /// In en, this message translates to:
+  /// **'Share surplus materials'**
+  String get registerGoalShareSurplusMaterials;
+
+  /// No description provided for @registerGoalReduceWaste.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduce waste'**
+  String get registerGoalReduceWaste;
+
+  /// No description provided for @registerGoalClearStorageSpace.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear storage space'**
+  String get registerGoalClearStorageSpace;
+
+  /// No description provided for @registerGoalSupportLearners.
+  ///
+  /// In en, this message translates to:
+  /// **'Support learners'**
+  String get registerGoalSupportLearners;
+
+  /// No description provided for @registerGoalFindPeopleWhoCanReuse.
+  ///
+  /// In en, this message translates to:
+  /// **'Find people who can reuse items'**
+  String get registerGoalFindPeopleWhoCanReuse;
+
+  /// No description provided for @registerGoalManagePickupRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage pickup requests'**
+  String get registerGoalManagePickupRequests;
+
+  /// No description provided for @registerGoalTrackMaterialImpact.
+  ///
+  /// In en, this message translates to:
+  /// **'Track material impact'**
+  String get registerGoalTrackMaterialImpact;
+
+  /// No description provided for @registerGoalListMaterialsFaster.
+  ///
+  /// In en, this message translates to:
+  /// **'List materials faster'**
+  String get registerGoalListMaterialsFaster;
+
+  /// No description provided for @registerLearnerTypeUniversity.
+  ///
+  /// In en, this message translates to:
+  /// **'University student'**
+  String get registerLearnerTypeUniversity;
+
+  /// No description provided for @registerLearnerTypeSchool.
+  ///
+  /// In en, this message translates to:
+  /// **'School student'**
+  String get registerLearnerTypeSchool;
+
+  /// No description provided for @registerLearnerTypeSelf.
+  ///
+  /// In en, this message translates to:
+  /// **'Self learner'**
+  String get registerLearnerTypeSelf;
+
+  /// No description provided for @registerLearnerTypeMaker.
+  ///
+  /// In en, this message translates to:
+  /// **'Maker / hobbyist'**
+  String get registerLearnerTypeMaker;
+
+  /// No description provided for @registerLearnerTypeUniversityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'You are learning through a university program.'**
+  String get registerLearnerTypeUniversityDescription;
+
+  /// No description provided for @registerLearnerTypeSchoolDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'You are learning through school or a club.'**
+  String get registerLearnerTypeSchoolDescription;
+
+  /// No description provided for @registerLearnerTypeSelfDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'You learn independently outside a formal program.'**
+  String get registerLearnerTypeSelfDescription;
+
+  /// No description provided for @registerLearnerTypeMakerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'You build projects for practice or personal use.'**
+  String get registerLearnerTypeMakerDescription;
+
+  /// No description provided for @registerLearnerTypeFallbackDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the option that best describes you.'**
+  String get registerLearnerTypeFallbackDescription;
+
+  /// No description provided for @registerSkillBeginner.
+  ///
+  /// In en, this message translates to:
+  /// **'Beginner'**
+  String get registerSkillBeginner;
+
+  /// No description provided for @registerSkillIntermediate.
+  ///
+  /// In en, this message translates to:
+  /// **'Intermediate'**
+  String get registerSkillIntermediate;
+
+  /// No description provided for @registerSkillAdvanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced'**
+  String get registerSkillAdvanced;
+
+  /// No description provided for @registerSkillExpert.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert'**
+  String get registerSkillExpert;
+
+  /// No description provided for @registerSkillBeginnerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'I am new and want simple, guided project ideas.'**
+  String get registerSkillBeginnerDescription;
+
+  /// No description provided for @registerSkillIntermediateDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'I can build with guidance and basic troubleshooting.'**
+  String get registerSkillIntermediateDescription;
+
+  /// No description provided for @registerSkillAdvancedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'I can design, adapt, and troubleshoot projects myself.'**
+  String get registerSkillAdvancedDescription;
+
+  /// No description provided for @registerSkillExpertDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'I can mentor others or handle complex builds.'**
+  String get registerSkillExpertDescription;
+
+  /// No description provided for @registerSkillFallbackDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how comfortable you are with building projects.'**
+  String get registerSkillFallbackDescription;
+
+  /// No description provided for @registerChooseYourPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your path'**
+  String get registerChooseYourPath;
+
+  /// No description provided for @registerStartYourSetup.
+  ///
+  /// In en, this message translates to:
+  /// **'Start your setup'**
+  String get registerStartYourSetup;
+
+  /// No description provided for @registerChooseHowYouUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how you want to use ImpactLoop. The setup steps will adapt after that.'**
+  String get registerChooseHowYouUse;
+
+  /// No description provided for @registerHowDoYouWantToUse.
+  ///
+  /// In en, this message translates to:
+  /// **'How do you want to use ImpactLoop?'**
+  String get registerHowDoYouWantToUse;
+
+  /// No description provided for @registerStepOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {step} of {total}'**
+  String registerStepOf(int step, int total);
+
+  /// No description provided for @registerNextStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {title}'**
+  String registerNextStep(String title);
+
+  /// No description provided for @registerProgressSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration progress, step {step} of {total}'**
+  String registerProgressSemantic(int step, int total);
+
+  /// No description provided for @registerVerificationUploadFailedFix.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account was created, but verification upload failed. Fix the issue below and try again.'**
+  String get registerVerificationUploadFailedFix;
+
+  /// No description provided for @registerVerificationUploadFailedRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account was created, but verification upload failed. Please try uploading again.'**
+  String get registerVerificationUploadFailedRetry;
+
+  /// No description provided for @registerPickupAreaHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Nablus, Rafidia'**
+  String get registerPickupAreaHint;
 }
 
 class _AppLocalizationsDelegate

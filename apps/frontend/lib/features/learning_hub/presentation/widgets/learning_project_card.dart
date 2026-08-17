@@ -380,6 +380,7 @@ class LearningProjectCompactCard extends StatelessWidget {
         constraints: const BoxConstraints(
           minHeight: LearningProjectCardLayout.compactCardHeight,
         ),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: palette.cardSurface,
           borderRadius: AppRadius.lgAll,
@@ -392,23 +393,30 @@ class LearningProjectCompactCard extends StatelessWidget {
             ),
           ],
         ),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Image on the start edge (right in Arabic RTL).
-              _CompactCardImage(project: project),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(
-                    AppSpacing.sm + 2,
-                    AppSpacing.sm + 2,
-                    AppSpacing.sm + 2,
-                    AppSpacing.sm,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+        child: Stack(
+          children: [
+            PositionedDirectional(
+              start: 0,
+              top: 0,
+              bottom: 0,
+              width: LearningProjectCardLayout.compactImageWidth,
+              child: _CompactCardImage(project: project),
+            ),
+            Padding(
+              padding: const EdgeInsetsDirectional.only(
+                start: LearningProjectCardLayout.compactImageWidth,
+              ),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(
+                  AppSpacing.sm + 2,
+                  AppSpacing.sm + 2,
+                  AppSpacing.sm + 2,
+                  AppSpacing.sm,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                       Text(
                         project.title.resolve(context),
                         style: textTheme.titleSmall?.copyWith(
@@ -483,7 +491,6 @@ class LearningProjectCompactCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
     );
   }
 }
@@ -527,28 +534,17 @@ class _CompactCardImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasImage = project.imageUrl != null && project.imageUrl!.isNotEmpty;
 
-    return SizedBox(
-      width: LearningProjectCardLayout.compactImageWidth,
-      child: ClipRRect(
-        borderRadius: const BorderRadiusDirectional.only(
-          topStart: Radius.circular(AppRadius.lg),
-          bottomStart: Radius.circular(AppRadius.lg),
-        ),
-        child: ColoredBox(
-          color: projectImagePlaceholderColor(context),
-          child: hasImage
-              ? Image.network(
-                  project.imageUrl!,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
-                  alignment: Alignment.center,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const _PlaceholderIcon(),
-                )
-              : const _PlaceholderIcon(),
-        ),
-      ),
+    return ColoredBox(
+      color: projectImagePlaceholderColor(context),
+      child: hasImage
+          ? Image.network(
+              project.imageUrl!,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              errorBuilder: (context, error, stackTrace) =>
+                  const _PlaceholderIcon(),
+            )
+          : const _PlaceholderIcon(),
     );
   }
 }

@@ -33,7 +33,7 @@ class SupplierDashboardStatCard extends StatelessWidget {
     final statusStyle = AppStatusStyle.of(context, tone);
 
     return AppSectionCard(
-      height: mobile ? 108 : 136,
+      height: mobile ? 120 : 136,
       padding: EdgeInsets.all(mobile ? AppSpacing.md : AppSpacing.lg),
       tone: tone,
       emphasized: highlight,
@@ -65,10 +65,16 @@ class SupplierDashboardStatCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         value,
-                        style: textTheme.headlineMedium?.copyWith(
-                          color: colors.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: (mobile
+                                ? textTheme.titleLarge
+                                : textTheme.headlineMedium)
+                            ?.copyWith(
+                              color: colors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                              height: 1.1,
+                            ),
                       ),
                     ),
                     if (highlight)
@@ -91,22 +97,25 @@ class SupplierDashboardStatCard extends StatelessWidget {
                       ),
                   ],
                 ),
-                Text(
-                  label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.labelLarge?.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w600,
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.labelLarge?.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      height: 1.25,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 2),
                 Text(
                   helperText,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: textTheme.bodySmall?.copyWith(
                     color: colors.textSecondary,
+                    height: 1.25,
                   ),
                 ),
               ],
@@ -353,19 +362,25 @@ class _SecondaryMetricItem extends StatelessWidget {
               children: [
                 Text(
                   metric.value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     color: colors.textPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
+                    height: 1.2,
                   ),
                 ),
-                Text(
-                  metric.label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelSmall?.copyWith(color: colors.textSecondary),
+                Flexible(
+                  child: Text(
+                    metric.label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colors.textSecondary,
+                      height: 1.2,
+                    ),
+                  ),
                 ),
               ],
             ),

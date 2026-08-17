@@ -13,11 +13,13 @@ import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../profile/application/profile_providers.dart';
 import '../../../profile/data/models/learner_interest_options.dart';
+import '../../../profile/presentation/l10n/learner_profile_l10n.dart';
 import '../../../profile/presentation/widgets/learner_interest_chip_picker.dart';
 import '../../application/auth_controller.dart';
 import '../../application/auth_navigation.dart';
 import '../../application/registration_draft_notifier.dart';
 import '../../data/models/registration_draft.dart';
+import '../utils/registration_option_l10n.dart';
 import '../models/registration_intent.dart';
 
 class CompleteLearnerProfileForm extends ConsumerStatefulWidget {
@@ -147,7 +149,7 @@ class _CompleteLearnerProfileFormState
 
       setState(() => _isSubmitting = false);
       setState(() {
-        _formError = 'Registration details are incomplete. Please start again.';
+        _formError = context.l10n.registrationDetailsIncomplete;
       });
       context.go('/register');
       return;
@@ -183,6 +185,28 @@ class _CompleteLearnerProfileFormState
     }
   }
 
+  Widget _interestPicker(LearnerInterestOptionsResponse options) {
+    final l10n = context.l10n;
+    final profileL10n = LearnerProfileL10n.of(context);
+    return LearnerInterestChipPicker(
+      options: options,
+      selectedKeys: _selectedInterestKeys,
+      onChanged: (value) {
+        if (_interestsError != null || _formError != null) {
+          _clearErrors();
+        }
+        setState(() => _selectedInterestKeys = value);
+      },
+      customInterestController: _customInterestController,
+      label: l10n.registerInterestsOptionalLabel,
+      errorText: _interestsError,
+      interestLabelBuilder: (key, fallbackLabel) =>
+          localizedInterestLabel(context, key, fallbackLabel: fallbackLabel),
+      customInterestLabel: profileL10n.addAnotherInterest,
+      customInterestHint: profileL10n.customInterestHint,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -191,19 +215,7 @@ class _CompleteLearnerProfileFormState
 
     return optionsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => LearnerInterestChipPicker(
-        options: fallbackLearnerInterestOptions,
-        selectedKeys: _selectedInterestKeys,
-        onChanged: (value) {
-          if (_interestsError != null || _formError != null) {
-            _clearErrors();
-          }
-          setState(() => _selectedInterestKeys = value);
-        },
-        customInterestController: _customInterestController,
-        label: l10n.registerInterestsOptionalLabel,
-        errorText: _interestsError,
-      ),
+      error: (_, _) => _interestPicker(fallbackLearnerInterestOptions),
       data: (options) {
         if (_selectedInterestKeys.isEmpty) {
           final fromDraft = draft.onboardingInterests.isNotEmpty
@@ -235,7 +247,10 @@ class _CompleteLearnerProfileFormState
                 errorText: _learnerTypeError,
                 items: [
                   for (final type in _learnerTypes)
-                    DropdownMenuItem(value: type, child: Text(type)),
+                    DropdownMenuItem(
+                      value: type,
+                      child: Text(localizedLearnerType(l10n, type)),
+                    ),
                 ],
                 onChanged: (value) {
                   if (_learnerTypeError != null || _formError != null) {
@@ -258,7 +273,10 @@ class _CompleteLearnerProfileFormState
                 errorText: _skillLevelError,
                 items: [
                   for (final level in _skillLevels)
-                    DropdownMenuItem(value: level, child: Text(level)),
+                    DropdownMenuItem(
+                      value: level,
+                      child: Text(localizedSkillLevel(l10n, level)),
+                    ),
                 ],
                 onChanged: (value) {
                   if (_skillLevelError != null || _formError != null) {
@@ -274,19 +292,7 @@ class _CompleteLearnerProfileFormState
                 },
               ),
               const AppFieldGap(),
-              LearnerInterestChipPicker(
-                options: options,
-                selectedKeys: _selectedInterestKeys,
-                onChanged: (value) {
-                  if (_interestsError != null || _formError != null) {
-                    _clearErrors();
-                  }
-                  setState(() => _selectedInterestKeys = value);
-                },
-                customInterestController: _customInterestController,
-                label: l10n.registerInterestsOptionalLabel,
-                errorText: _interestsError,
-              ),
+              _interestPicker(options),
               const AppFieldGap(),
               AppTextArea(
                 controller: _bioController,

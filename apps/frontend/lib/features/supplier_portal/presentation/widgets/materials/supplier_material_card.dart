@@ -110,92 +110,101 @@ class _SupplierMaterialCardState extends State<SupplierMaterialCard> {
                         AppSpacing.md,
                         AppSpacing.sm,
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.categoryLabel,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.labelSmall?.copyWith(
-                              color: colors.textMuted,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Tooltip(
-                            message: widget.title,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final meta = [
+                            if (widget.createdAtLabel?.isNotEmpty ?? false)
+                              widget.createdAtLabel!,
+                            if (widget.engagementLabel?.isNotEmpty ?? false)
+                              widget.engagementLabel!,
+                          ].join(' · ');
+                          return FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: AlignmentDirectional.topStart,
                             child: SizedBox(
-                              height: 42,
-                              child: Text(
-                                widget.title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: textTheme.titleMedium?.copyWith(
-                                  color: colors.textPrimary,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.2,
-                                ),
+                              width: constraints.maxWidth,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.categoryLabel,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: textTheme.labelSmall?.copyWith(
+                                      color: colors.textMuted,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Tooltip(
+                                    message: widget.title,
+                                    child: Text(
+                                      widget.title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: textTheme.titleMedium?.copyWith(
+                                        color: colors.textPrimary,
+                                        fontWeight: FontWeight.w800,
+                                        height: 1.2,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Wrap(
+                                    spacing: AppSpacing.xs,
+                                    runSpacing: AppSpacing.xs,
+                                    children: [
+                                      MaterialStatusBadge(
+                                        label: widget.statusLabel,
+                                        tone: widget.statusTone,
+                                      ),
+                                      MaterialConditionBadge(
+                                        label: widget.conditionLabel,
+                                        tone: widget.conditionTone,
+                                      ),
+                                      MaterialPriceBadge(
+                                        label: widget.priceLabel,
+                                        isFree: widget.isFree,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Text(
+                                    widget.quantityLabel,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: textTheme.bodyMedium?.copyWith(
+                                      color: colors.textSecondary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  _MetadataLine(
+                                    icon: Icons.location_on_outlined,
+                                    label: widget.locationLabel,
+                                  ),
+                                  const SizedBox(height: 3),
+                                  _MetadataLine(
+                                    icon: Icons.local_shipping_outlined,
+                                    label: widget.availabilityLabel,
+                                  ),
+                                  if (meta.isNotEmpty) ...[
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Text(
+                                      meta,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: textTheme.labelSmall?.copyWith(
+                                        color: colors.textMuted,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          SizedBox(
-                            height: 44,
-                            child: Wrap(
-                              spacing: AppSpacing.xs,
-                              runSpacing: AppSpacing.xs,
-                              children: [
-                                MaterialStatusBadge(
-                                  label: widget.statusLabel,
-                                  tone: widget.statusTone,
-                                ),
-                                MaterialConditionBadge(
-                                  label: widget.conditionLabel,
-                                  tone: widget.conditionTone,
-                                ),
-                                MaterialPriceBadge(
-                                  label: widget.priceLabel,
-                                  isFree: widget.isFree,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
-                            widget.quantityLabel,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: colors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          _MetadataLine(
-                            icon: Icons.location_on_outlined,
-                            label: widget.locationLabel,
-                          ),
-                          const SizedBox(height: 3),
-                          _MetadataLine(
-                            icon: Icons.local_shipping_outlined,
-                            label: widget.availabilityLabel,
-                          ),
-                          const Spacer(),
-                          Text(
-                            [
-                              if (widget.createdAtLabel?.isNotEmpty ?? false)
-                                widget.createdAtLabel!,
-                              if (widget.engagementLabel?.isNotEmpty ?? false)
-                                widget.engagementLabel!,
-                            ].join(' · '),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.labelSmall?.copyWith(
-                              color: colors.textMuted,
-                            ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
                     ),
                   ),

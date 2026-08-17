@@ -79,7 +79,6 @@ class SupplierDashboardQuickActionsPanel extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final columns = constraints.maxWidth >= 420 ? 2 : 1;
-              const tileHeight = 108.0;
               const spacing = AppSpacing.md;
               final tileWidth = columns == 2
                   ? (constraints.maxWidth - spacing) / 2
@@ -92,7 +91,6 @@ class SupplierDashboardQuickActionsPanel extends StatelessWidget {
                     .map(
                       (action) => SizedBox(
                         width: tileWidth,
-                        height: tileHeight,
                         child: _DashboardQuickActionTile(action: action),
                       ),
                     )
@@ -138,6 +136,7 @@ class _DashboardQuickActionTile extends StatelessWidget {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
@@ -159,7 +158,7 @@ class _DashboardQuickActionTile extends StatelessWidget {
                   ),
                 ],
               ),
-              const Spacer(),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 action.label,
                 maxLines: 1,
@@ -168,6 +167,7 @@ class _DashboardQuickActionTile extends StatelessWidget {
                   color: colors.textPrimary,
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
+                  height: 1.2,
                 ),
               ),
               const SizedBox(height: 2),
@@ -177,6 +177,7 @@ class _DashboardQuickActionTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: context.supplierBody().copyWith(
                   fontSize: 12,
+                  height: 1.2,
                   color: colors.textSecondary,
                 ),
               ),

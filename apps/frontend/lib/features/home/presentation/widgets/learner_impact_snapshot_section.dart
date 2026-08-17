@@ -234,9 +234,10 @@ class _ImpactMetricTile extends StatelessWidget {
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(metric.icon, color: palette.mint, size: 20),
-                const Spacer(),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   count,
                   style: AppTextStyles.title(context).copyWith(

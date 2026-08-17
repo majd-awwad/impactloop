@@ -10711,4 +10711,348 @@ class AppLocalizationsAr extends AppLocalizations {
   String phsByCreator(String name) {
     return 'بواسطة $name';
   }
+
+  @override
+  String get landingImpactFirst => 'الأثر أولاً';
+
+  @override
+  String get landingMakeAnImpact => 'اصنع أثرًا';
+
+  @override
+  String get landingImpactBody =>
+      'كل عملية إعادة استخدام ناجحة تحوّل المواد المهملة إلى مشاريع ونماذج وتعلّم عملي.';
+
+  @override
+  String get landingSavedKg => 'كيلوغرامات موفّرة';
+
+  @override
+  String get landingMonthlyLift => 'الارتفاع الشهري';
+
+  @override
+  String get landingMonthlyLiftBody =>
+      'زخم من نشاط إعادة الاستخدام في الورش والحرم الجامعي.';
+
+  @override
+  String get landingReuseTrend => 'اتجاه إعادة الاستخدام';
+
+  @override
+  String get landingSteadyGrowth => 'نمو ثابت';
+
+  @override
+  String get authShareLabel => 'شارك';
+
+  @override
+  String get authFindUsableParts => 'اعثر على قطع قابلة للاستخدام';
+
+  @override
+  String get authEntryLoginEyebrow => 'عد إلى مساحة عملك';
+
+  @override
+  String get authEntryRegisterEyebrow => 'ابدأ ملفك في ImpactLoop';
+
+  @override
+  String get authEntryLoginDescription =>
+      'سجّل الدخول لتكمل من حيث توقفت مع موادك ومشاريعك ونشاط مجتمعك.';
+
+  @override
+  String get authEntryRegisterDescription =>
+      'أنشئ حسابًا واحدًا للحصول على المكوّنات أو عرض المواد الفائضة أو الاثنين معًا.';
+
+  @override
+  String get authLiveImpactTrend => 'اتجاه الأثر المباشر';
+
+  @override
+  String get authPlus18ThisMonth => '+18% هذا الشهر';
+
+  @override
+  String get authPlus18Month => '+18% شهريًا';
+
+  @override
+  String get authEntryLoginMission =>
+      'تابع موادك وأفكار مشاريعك ونشاط إعادة الاستخدام من مساحة عمل أوضح وأسرع.';
+
+  @override
+  String get authEntryRegisterMission =>
+      'انضم إلى طلبة ومورّدين وصنّاع يحوّلون المواد المهملة إلى فرص عملية.';
+
+  @override
+  String get authBrandingSubtitle =>
+      'منصة تقنية بيئية يكتشف فيها المتعلمون المواد الفائضة ويجدون قطع المشاريع وينفّذون بأقل هدر.';
+
+  @override
+  String get authFeatureFindNearbyLong =>
+      'اعثر على مواد قابلة لإعادة الاستخدام بالقرب منك';
+
+  @override
+  String get authFeatureBuildSmarter => 'نفّذ المشاريع بذكاء أكبر';
+
+  @override
+  String get authFeatureReduceWasteReservation => 'قلّل الهدر مع كل حجز';
+
+  @override
+  String get authFeatureFindMaterialsShort => 'اعثر على مواد';
+
+  @override
+  String get authFeatureBuildSmarterShort => 'نفّذ بذكاء';
+
+  @override
+  String get authFeatureReduceWasteShort => 'قلّل الهدر';
+
+  @override
+  String get registerStepAccountSubtitle =>
+      'اختر نوع حسابك وأنشئ بيانات تسجيل الدخول.';
+
+  @override
+  String get registerStepInterestsSubtitle =>
+      'اختر المواضيع التي تهمك. تساعد في تخصيص اقتراحات المشاريع والمواد.';
+
+  @override
+  String get registerStepInterestsBothSubtitle =>
+      'اختر المواضيع التي تريد التعلّم أو البناء أو الإصلاح أو إعادة الاستخدام حولها.';
+
+  @override
+  String get registerStepGoalsLearnerSubtitle =>
+      'ماذا تريد أن تحقّق من ImpactLoop؟';
+
+  @override
+  String get registerStepGoalsBothSubtitle =>
+      'ماذا تريد أن تحقّق كمتعلم ومورّد معًا؟';
+
+  @override
+  String get registerStepLocationLearnerSubtitle =>
+      'اختياري للمتعلمين. تفاصيل الاستلام أو التوصيل تُطلب فقط عند الحجز.';
+
+  @override
+  String get registerStepLearnerBasicsSubtitle =>
+      'أخبرنا عن سياقك التعليمي حتى تناسبك الاقتراحات.';
+
+  @override
+  String get registerStepReviewLearnerSubtitle =>
+      'راجع تفاصيل المتعلم قبل إنشاء الحساب.';
+
+  @override
+  String get registerStepReviewAddLearnerSubtitle =>
+      'راجع تفاصيل المتعلم قبل إضافة الصلاحية إلى حسابك.';
+
+  @override
+  String get registerLearnerSetupIncomplete =>
+      'إعداد المتعلم غير مكتمل. راجع إجاباتك.';
+
+  @override
+  String get registerLearnerAccessAdded =>
+      'تمت إضافة صلاحية المتعلم إلى حسابك.';
+
+  @override
+  String get registerAddLearnerAccess => 'إضافة صلاحية متعلم';
+
+  @override
+  String get registerAddLearnerIntro =>
+      'أضف صلاحية المتعلم إلى حسابك الحالي وخصّص اهتماماتك التعليمية.';
+
+  @override
+  String get registerCityOptional => 'المدينة (اختياري)';
+
+  @override
+  String get registerAreaNeighborhood => 'المنطقة / الحي';
+
+  @override
+  String get registerAreaNeighborhoodOptional => 'المنطقة / الحي (اختياري)';
+
+  @override
+  String get registerCityRequired => 'المدينة مطلوبة';
+
+  @override
+  String get registerAreaRequired => 'المنطقة مطلوبة';
+
+  @override
+  String get registerCityHint => 'نابلس';
+
+  @override
+  String get registerAreaHint => 'رفيديا';
+
+  @override
+  String get registerLocationSkipHelper =>
+      'يمكنك تخطي هذا الآن. تفاصيل الاستلام أو التوصيل تُجمع فقط عند الحاجة.';
+
+  @override
+  String get registerLearnerReviewHelper =>
+      'تبقى الأهداف في مرحلة الإعداد فقط. يصل إلى الخادم حسابك وملف المتعلم.';
+
+  @override
+  String get registerAddLearnerReviewHelper =>
+      'تبقى الأهداف في مرحلة الإعداد فقط. ستُضاف صلاحية المتعلم إلى حسابك الحالي مع الملف الظاهر أعلاه.';
+
+  @override
+  String get registerLearnerSetupDescription =>
+      'ستحدد اهتمامات المتعلم والأهداف والموقع الاختياري ومستوى التعلّم.';
+
+  @override
+  String get registerGoalsHelperLearner =>
+      'اختر ما يصف سبب انضمامك. يمكنك تغيير ذلك لاحقًا.';
+
+  @override
+  String get registerGoalsHelperSupplier =>
+      'تضبط هذه الأهداف لغة إعداد المورّد. ليست مطلوبة لعرض المواد.';
+
+  @override
+  String get registerGoalsHelperBoth =>
+      'اختر أهدافًا لجانبي الحساب. يمكنك تحديث ملفك لاحقًا.';
+
+  @override
+  String get registerIntentFindMaterials => 'العثور على مواد';
+
+  @override
+  String get registerIntentDoBoth => 'الاثنان معًا';
+
+  @override
+  String get registerGoalBuildProjects => 'تنفيذ مشاريع';
+
+  @override
+  String get registerGoalFindComponents => 'العثور على مكوّنات';
+
+  @override
+  String get registerGoalLearnNewSkills => 'تعلّم مهارات جديدة';
+
+  @override
+  String get registerGoalRepairSomething => 'إصلاح شيء';
+
+  @override
+  String get registerGoalReuseMaterials => 'إعادة استخدام المواد';
+
+  @override
+  String get registerGoalSaveMoney => 'توفير المال';
+
+  @override
+  String get registerGoalExploreProjectIdeas => 'استكشاف أفكار مشاريع';
+
+  @override
+  String get registerGoalHelpMyCommunity => 'مساعدة مجتمعي';
+
+  @override
+  String get registerGoalShareSurplusMaterials => 'مشاركة المواد الفائضة';
+
+  @override
+  String get registerGoalReduceWaste => 'تقليل الهدر';
+
+  @override
+  String get registerGoalClearStorageSpace => 'تفريغ مساحة التخزين';
+
+  @override
+  String get registerGoalSupportLearners => 'دعم المتعلمين';
+
+  @override
+  String get registerGoalFindPeopleWhoCanReuse =>
+      'العثور على من يعيد استخدام المواد';
+
+  @override
+  String get registerGoalManagePickupRequests => 'إدارة طلبات الاستلام';
+
+  @override
+  String get registerGoalTrackMaterialImpact => 'تتبّع أثر المواد';
+
+  @override
+  String get registerGoalListMaterialsFaster => 'عرض المواد بشكل أسرع';
+
+  @override
+  String get registerLearnerTypeUniversity => 'طالب جامعي';
+
+  @override
+  String get registerLearnerTypeSchool => 'طالب مدرسة';
+
+  @override
+  String get registerLearnerTypeSelf => 'متعلم ذاتي';
+
+  @override
+  String get registerLearnerTypeMaker => 'صنّاع / هواة';
+
+  @override
+  String get registerLearnerTypeUniversityDescription =>
+      'تتعلم ضمن برنامج جامعي.';
+
+  @override
+  String get registerLearnerTypeSchoolDescription =>
+      'تتعلم عبر المدرسة أو نادٍ.';
+
+  @override
+  String get registerLearnerTypeSelfDescription =>
+      'تتعلم بشكل مستقل خارج برنامج رسمي.';
+
+  @override
+  String get registerLearnerTypeMakerDescription =>
+      'تنفّذ مشاريع للتدريب أو للاستخدام الشخصي.';
+
+  @override
+  String get registerLearnerTypeFallbackDescription =>
+      'اختر الخيار الذي يصفك بشكل أفضل.';
+
+  @override
+  String get registerSkillBeginner => 'مبتدئ';
+
+  @override
+  String get registerSkillIntermediate => 'متوسط';
+
+  @override
+  String get registerSkillAdvanced => 'متقدم';
+
+  @override
+  String get registerSkillExpert => 'خبير';
+
+  @override
+  String get registerSkillBeginnerDescription =>
+      'أنا جديد وأريد أفكار مشاريع بسيطة وموجّهة.';
+
+  @override
+  String get registerSkillIntermediateDescription =>
+      'أستطيع التنفيذ مع إرشاد واستكشاف أخطاء أساسي.';
+
+  @override
+  String get registerSkillAdvancedDescription =>
+      'أستطيع تصميم المشاريع وتعديلها وحل مشكلاتها بنفسي.';
+
+  @override
+  String get registerSkillExpertDescription =>
+      'أستطيع توجيه الآخرين أو التعامل مع تنفيذ معقّد.';
+
+  @override
+  String get registerSkillFallbackDescription =>
+      'اختر مدى راحتك في تنفيذ المشاريع.';
+
+  @override
+  String get registerChooseYourPath => 'اختر مسارك';
+
+  @override
+  String get registerStartYourSetup => 'ابدأ إعدادك';
+
+  @override
+  String get registerChooseHowYouUse =>
+      'اختر كيف تريد استخدام ImpactLoop. ستتكيّف خطوات الإعداد بعد ذلك.';
+
+  @override
+  String get registerHowDoYouWantToUse => 'كيف تريد استخدام ImpactLoop؟';
+
+  @override
+  String registerStepOf(int step, int total) {
+    return 'الخطوة $step من $total';
+  }
+
+  @override
+  String registerNextStep(String title) {
+    return 'التالي: $title';
+  }
+
+  @override
+  String registerProgressSemantic(int step, int total) {
+    return 'تقدم التسجيل، الخطوة $step من $total';
+  }
+
+  @override
+  String get registerVerificationUploadFailedFix =>
+      'تم إنشاء حسابك، لكن رفع مستند التحقق فشل. عالج المشكلة أدناه ثم حاول مرة أخرى.';
+
+  @override
+  String get registerVerificationUploadFailedRetry =>
+      'تم إنشاء حسابك، لكن رفع مستند التحقق فشل. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get registerPickupAreaHint => 'نابلس، رفيديا';
 }

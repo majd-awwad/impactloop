@@ -391,7 +391,7 @@ class _CompleteSupplierProfileFormState
           AppTextField(
             controller: _pickupAreaController,
             label: l10n.pickupAreaLocationLabel,
-            hint: 'Nablus, Rafidia',
+            hint: l10n.registerPickupAreaHint,
             textInputAction: TextInputAction.done,
             onFieldSubmitted: (_) => _handleSubmit(),
             errorText: _pickupAreaError,

@@ -4728,5 +4728,131 @@
   "phsChooseProject": "Choose a project",
   "phsSearchEligibleProjects": "Search by project title or creator",
   "phsByCreator": "By {name}",
-  "@phsByCreator": {"placeholders": {"name": {"type": "String"}}}
+  "@phsByCreator": {"placeholders": {"name": {"type": "String"}}},
+  "landingImpactFirst": "Impact first",
+  "landingMakeAnImpact": "Make an impact",
+  "landingImpactBody": "Every successful reuse turns overlooked materials into projects, prototypes, and practical learning.",
+  "landingSavedKg": "Saved kg",
+  "landingMonthlyLift": "Monthly lift",
+  "landingMonthlyLiftBody": "Momentum from workshop and campus reuse activity.",
+  "landingReuseTrend": "Reuse trend",
+  "landingSteadyGrowth": "Steady growth",
+  "authShareLabel": "Share",
+  "authFindUsableParts": "Find usable parts",
+  "authEntryLoginEyebrow": "Return to your workspace",
+  "authEntryRegisterEyebrow": "Start your ImpactLoop profile",
+  "authEntryLoginDescription": "Sign in to pick up where your materials, projects, and community activity left off.",
+  "authEntryRegisterDescription": "Create one account to source components, list surplus materials, or do both in one streamlined flow.",
+  "authLiveImpactTrend": "Live impact trend",
+  "authPlus18ThisMonth": "+18% this month",
+  "authPlus18Month": "+18% month",
+  "authEntryLoginMission": "Pick up your materials, project ideas, and reuse activity with a clearer, faster workspace.",
+  "authEntryRegisterMission": "Join students, suppliers, and makers turning overlooked materials into practical opportunities.",
+  "authBrandingSubtitle": "An eco-tech platform where learners discover surplus materials, find project parts, and build with less waste.",
+  "authFeatureFindNearbyLong": "Find reusable materials nearby",
+  "authFeatureBuildSmarter": "Build projects smarter",
+  "authFeatureReduceWasteReservation": "Reduce waste with every reservation",
+  "authFeatureFindMaterialsShort": "Find materials",
+  "authFeatureBuildSmarterShort": "Build smarter",
+  "authFeatureReduceWasteShort": "Reduce waste",
+  "registerStepAccountSubtitle": "Choose your account type and create your sign-in details.",
+  "registerStepInterestsSubtitle": "Choose broad topics you care about. These help shape project and material suggestions.",
+  "registerStepInterestsBothSubtitle": "Choose the topics you want to learn, build, repair, or reuse around.",
+  "registerStepGoalsLearnerSubtitle": "What do you want to get out of ImpactLoop?",
+  "registerStepGoalsBothSubtitle": "What do you want to accomplish as both a learner and supplier?",
+  "registerStepLocationLearnerSubtitle": "Optional for learners. Accurate pickup or delivery details are only requested during reservations.",
+  "registerStepLearnerBasicsSubtitle": "Tell us your learning context so suggestions match your experience.",
+  "registerStepReviewLearnerSubtitle": "Review your learner details before creating the account.",
+  "registerStepReviewAddLearnerSubtitle": "Review your learner details before adding access to your account.",
+  "registerLearnerSetupIncomplete": "Learner setup is incomplete. Please review your answers.",
+  "registerLearnerAccessAdded": "Learner access added to your account.",
+  "registerAddLearnerAccess": "Add learner access",
+  "registerAddLearnerIntro": "Add learner access to your current account and personalize your learning interests.",
+  "registerCityOptional": "City (optional)",
+  "registerAreaNeighborhood": "Area / neighborhood",
+  "registerAreaNeighborhoodOptional": "Area / neighborhood (optional)",
+  "registerCityRequired": "City is required",
+  "registerAreaRequired": "Area is required",
+  "registerCityHint": "Nablus",
+  "registerAreaHint": "Rafidia",
+  "registerLocationSkipHelper": "You can skip this for now. Reservation pickup or delivery details are collected only when they are needed.",
+  "registerLearnerReviewHelper": "Goals stay in onboarding only. The server receives your account and learner profile.",
+  "registerAddLearnerReviewHelper": "Goals stay in onboarding only. Learner access will be added to your existing account with the learner profile shown above.",
+  "registerLearnerSetupDescription": "You will set learner interests, goals, optional location, and learning level.",
+  "registerGoalsHelperLearner": "Choose anything that describes why you are joining. You can change this later.",
+  "registerGoalsHelperSupplier": "These goals tune the supplier setup language. They are not required to list materials.",
+  "registerGoalsHelperBoth": "Choose goals for both sides of your account. You can update your profile later.",
+  "registerIntentFindMaterials": "Find materials",
+  "registerIntentDoBoth": "Do both",
+  "registerGoalBuildProjects": "Build projects",
+  "registerGoalFindComponents": "Find components",
+  "registerGoalLearnNewSkills": "Learn new skills",
+  "registerGoalRepairSomething": "Repair something",
+  "registerGoalReuseMaterials": "Reuse materials",
+  "registerGoalSaveMoney": "Save money",
+  "registerGoalExploreProjectIdeas": "Explore project ideas",
+  "registerGoalHelpMyCommunity": "Help my community",
+  "registerGoalShareSurplusMaterials": "Share surplus materials",
+  "registerGoalReduceWaste": "Reduce waste",
+  "registerGoalClearStorageSpace": "Clear storage space",
+  "registerGoalSupportLearners": "Support learners",
+  "registerGoalFindPeopleWhoCanReuse": "Find people who can reuse items",
+  "registerGoalManagePickupRequests": "Manage pickup requests",
+  "registerGoalTrackMaterialImpact": "Track material impact",
+  "registerGoalListMaterialsFaster": "List materials faster",
+  "registerLearnerTypeUniversity": "University student",
+  "registerLearnerTypeSchool": "School student",
+  "registerLearnerTypeSelf": "Self learner",
+  "registerLearnerTypeMaker": "Maker / hobbyist",
+  "registerLearnerTypeUniversityDescription": "You are learning through a university program.",
+  "registerLearnerTypeSchoolDescription": "You are learning through school or a club.",
+  "registerLearnerTypeSelfDescription": "You learn independently outside a formal program.",
+  "registerLearnerTypeMakerDescription": "You build projects for practice or personal use.",
+  "registerLearnerTypeFallbackDescription": "Choose the option that best describes you.",
+  "registerSkillBeginner": "Beginner",
+  "registerSkillIntermediate": "Intermediate",
+  "registerSkillAdvanced": "Advanced",
+  "registerSkillExpert": "Expert",
+  "registerSkillBeginnerDescription": "I am new and want simple, guided project ideas.",
+  "registerSkillIntermediateDescription": "I can build with guidance and basic troubleshooting.",
+  "registerSkillAdvancedDescription": "I can design, adapt, and troubleshoot projects myself.",
+  "registerSkillExpertDescription": "I can mentor others or handle complex builds.",
+  "registerSkillFallbackDescription": "Choose how comfortable you are with building projects.",
+  "registerChooseYourPath": "Choose your path",
+  "registerStartYourSetup": "Start your setup",
+  "registerChooseHowYouUse": "Choose how you want to use ImpactLoop. The setup steps will adapt after that.",
+  "registerHowDoYouWantToUse": "How do you want to use ImpactLoop?",
+  "registerStepOf": "Step {step} of {total}",
+  "@registerStepOf": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "registerNextStep": "Next: {title}",
+  "@registerNextStep": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "registerProgressSemantic": "Registration progress, step {step} of {total}",
+  "@registerProgressSemantic": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "registerVerificationUploadFailedFix": "Your account was created, but verification upload failed. Fix the issue below and try again.",
+  "registerVerificationUploadFailedRetry": "Your account was created, but verification upload failed. Please try uploading again.",
+  "registerPickupAreaHint": "Nablus, Rafidia"
 }

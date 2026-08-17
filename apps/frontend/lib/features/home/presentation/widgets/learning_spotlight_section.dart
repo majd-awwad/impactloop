@@ -203,27 +203,27 @@ class HomeLearningProjectCard extends StatelessWidget {
           extra: project.recommendationImpressionId,
         ),
         borderRadius: AppRadius.lgAll,
-        child: SizedBox(
-          height: 374,
-          child: Container(
-            decoration: BoxDecoration(
-              color: palette.cardSurface,
-              borderRadius: AppRadius.lgAll,
-              border: Border.all(color: palette.borderStrong),
-              boxShadow: [
-                BoxShadow(
-                  color: palette.cardShadow,
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(
-                  height: 132,
-                  child: ClipRRect(
+        child: Container(
+          decoration: BoxDecoration(
+            color: palette.cardSurface,
+            borderRadius: AppRadius.lgAll,
+            border: Border.all(color: palette.borderStrong),
+            boxShadow: [
+              BoxShadow(
+                color: palette.cardShadow,
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 132,
+                child: ClipRRect(
                     borderRadius: const BorderRadiusDirectional.only(
                       topStart: Radius.circular(AppRadius.lg),
                       topEnd: Radius.circular(AppRadius.lg),
@@ -283,6 +283,8 @@ class HomeLearningProjectCard extends StatelessWidget {
                                     ),
                                     child: Text(
                                       project.category.resolve(context),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: AppTextStyles.label(context)
                                           .copyWith(
                                             color: palette.textPrimary,
@@ -322,83 +324,84 @@ class HomeLearningProjectCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          project.title.resolve(context),
-                          style: AppTextStyles.title(context).copyWith(
-                            color: palette.textPrimary,
-                            letterSpacing: 0,
+                Padding(
+                  padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        project.title.resolve(context),
+                        style: AppTextStyles.title(context).copyWith(
+                          color: palette.textPrimary,
+                          letterSpacing: 0,
+                        ),
+                        textAlign: TextAlign.start,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        project.summary.resolve(context),
+                        style: AppTextStyles.body(context).copyWith(
+                          color: palette.textSecondary,
+                          height: 1.45,
+                          letterSpacing: 0,
+                        ),
+                        textAlign: TextAlign.start,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.sm,
+                        children: [
+                          _LearningMetaChip(
+                            label: project.duration.resolve(context),
                           ),
-                          textAlign: TextAlign.start,
+                          _LearningMetaChip(
+                            label: project.difficulty.resolve(context),
+                          ),
+                          if (project.hasRatings)
+                            _LearningMetaChip(
+                              label:
+                                  '${project.ratingValue.toStringAsFixed(1)} (${project.ratingCount})',
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      ProjectMaterialCoverageChip(
+                        project: project,
+                        compact: true,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      if (reason != null && reason!.trim().isNotEmpty) ...[
+                        Text(
+                          reason!.trim(),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.label(context).copyWith(
+                            color: palette.mint,
+                            fontSize: 12,
+                            height: 1.25,
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          project.summary.resolve(context),
-                          style: AppTextStyles.body(context).copyWith(
-                            color: palette.textSecondary,
-                            height: 1.45,
-                            letterSpacing: 0,
-                          ),
-                          textAlign: TextAlign.start,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const Spacer(),
-                        Wrap(
-                          spacing: AppSpacing.sm,
-                          runSpacing: AppSpacing.sm,
-                          children: [
-                            _LearningMetaChip(
-                              label: project.duration.resolve(context),
-                            ),
-                            _LearningMetaChip(
-                              label: project.difficulty.resolve(context),
-                            ),
-                            if (project.hasRatings)
-                              _LearningMetaChip(
-                                label:
-                                    '${project.ratingValue.toStringAsFixed(1)} (${project.ratingCount})',
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        ProjectMaterialCoverageChip(project: project, compact: true),
-                        const SizedBox(height: AppSpacing.xs),
-                        if (reason != null && reason!.trim().isNotEmpty) ...[
-                          Text(
-                            reason!.trim(),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.label(context).copyWith(
-                              color: palette.mint,
-                              fontSize: 12,
-                              height: 1.25,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                        ],
-                        ProjectEngagementStrip(
-                          project: project,
-                          recommendationImpressionId:
-                              project.recommendationImpressionId,
-                          density: ProjectEngagementDensity.compact,
-                        ),
                       ],
-                    ),
+                      ProjectEngagementStrip(
+                        project: project,
+                        recommendationImpressionId:
+                            project.recommendationImpressionId,
+                        density: ProjectEngagementDensity.compact,
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
         ),
-      ),
     );
   }
 }

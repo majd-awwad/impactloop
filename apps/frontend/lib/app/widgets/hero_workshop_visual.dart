@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/auth_dark_text_styles.dart';
@@ -44,14 +45,14 @@ class HeroWorkshopVisual extends StatelessWidget {
                 ),
               ),
             ),
-            const Positioned(
+            PositionedDirectional(
               top: AppSpacing.lg,
-              right: AppSpacing.lg,
-              child: _ImpactBadge(),
+              end: AppSpacing.lg,
+              child: const _ImpactBadge(),
             ),
-            Positioned(
-              left: AppSpacing.lg,
-              right: AppSpacing.lg,
+            PositionedDirectional(
+              start: AppSpacing.lg,
+              end: AppSpacing.lg,
               bottom: AppSpacing.lg,
               child: _ImpactCard(),
             ),
@@ -113,7 +114,7 @@ class _ImpactBadge extends StatelessWidget {
           Icon(Icons.auto_awesome, size: 16, color: colors.accentAmber),
           const SizedBox(width: AppSpacing.xs),
           Text(
-            'Impact first',
+            context.l10n.landingImpactFirst,
             style: AuthDarkTextStyles.body(
               context,
             ).copyWith(color: colors.textPrimary, fontWeight: FontWeight.w700),
@@ -165,15 +166,14 @@ class _ImpactCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Make an impact',
+                      context.l10n.landingMakeAnImpact,
                       style: AuthDarkTextStyles.title(
                         context,
                       ).copyWith(color: colors.textPrimary, fontSize: 22),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      'Every successful reuse turns overlooked materials into '
-                      'projects, prototypes, and practical learning.',
+                      context.l10n.landingImpactBody,
                       style: AuthDarkTextStyles.body(
                         context,
                       ).copyWith(color: colors.textSecondary),
@@ -216,10 +216,10 @@ class _ImpactCard extends StatelessWidget {
           Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
-            children: const [
-              _MiniStatPill(label: 'Learners', value: '1.8k'),
-              _MiniStatPill(label: 'Suppliers', value: '320'),
-              _MiniStatPill(label: 'Saved kg', value: '46t'),
+            children: [
+              _MiniStatPill(label: context.l10n.learner, value: '1.8k'),
+              _MiniStatPill(label: context.l10n.supplier, value: '320'),
+              _MiniStatPill(label: context.l10n.landingSavedKg, value: '46t'),
             ],
           ),
         ],
@@ -241,7 +241,7 @@ class _PrimaryMetric extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Materials reused',
+          context.l10n.materialsReused,
           style: AuthDarkTextStyles.label(
             context,
           ).copyWith(color: colors.textMuted),
@@ -280,7 +280,7 @@ class _ImpactTrendCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Monthly lift',
+            context.l10n.landingMonthlyLift,
             style: AuthDarkTextStyles.label(
               context,
             ).copyWith(color: colors.textMuted),
@@ -294,7 +294,7 @@ class _ImpactTrendCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Momentum from workshop and campus reuse activity.',
+            context.l10n.landingMonthlyLiftBody,
             style: AuthDarkTextStyles.body(
               context,
             ).copyWith(color: colors.textSecondary),
@@ -329,7 +329,7 @@ class _ImpactBar extends StatelessWidget {
           children: [
             constraints.maxWidth < 220
                 ? Text(
-                    'Reuse trend',
+                    context.l10n.landingReuseTrend,
                     style: AuthDarkTextStyles.label(
                       context,
                     ).copyWith(color: colors.accentMint),
@@ -337,7 +337,7 @@ class _ImpactBar extends StatelessWidget {
                 : Row(
                     children: [
                       Text(
-                        'Reuse trend',
+                        context.l10n.landingReuseTrend,
                         style: AuthDarkTextStyles.label(
                           context,
                         ).copyWith(color: colors.textMuted),
@@ -345,7 +345,7 @@ class _ImpactBar extends StatelessWidget {
                       const Spacer(),
                       Flexible(
                         child: Text(
-                          'Steady growth',
+                          context.l10n.landingSteadyGrowth,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.end,

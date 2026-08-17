@@ -15,10 +15,10 @@ class AuthBrandingPanel extends StatelessWidget {
 
   final AuthBrandingVariant variant;
 
-  static const _features = [
-    (Icons.inventory_2, 'Find reusable materials nearby'),
-    (Icons.lightbulb, 'Build projects smarter'),
-    (Icons.recycling, 'Reduce waste with every reservation'),
+  static List<(IconData, String)> _features(AppLocalizations l10n) => [
+    (Icons.inventory_2, l10n.authFeatureFindNearbyLong),
+    (Icons.lightbulb, l10n.authFeatureBuildSmarter),
+    (Icons.recycling, l10n.authFeatureReduceWasteReservation),
   ];
 
   @override
@@ -78,17 +78,16 @@ class _FullContent extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             Text(
-              'Learn. Reuse. Build.',
+              context.l10n.learnReuseBuild,
               style: AppTextStyles.brandingHeadline(context),
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'An eco-tech platform where learners discover surplus materials, '
-              'find project parts, and build with less waste.',
+              context.l10n.authBrandingSubtitle,
               style: AppTextStyles.brandingSubtitle(context),
             ),
             const SizedBox(height: AppSpacing.xl),
-            for (final feature in AuthBrandingPanel._features) ...[
+            for (final feature in AuthBrandingPanel._features(context.l10n)) ...[
               AuthFeatureBadge(icon: feature.$1, label: feature.$2),
               const SizedBox(height: AppSpacing.sm),
             ],
@@ -136,12 +135,12 @@ class _CompactContent extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              for (var i = 0; i < AuthBrandingPanel._features.length; i++) ...[
+              for (var i = 0; i < AuthBrandingPanel._features(context.l10n).length; i++) ...[
                 if (i > 0) const SizedBox(width: AppSpacing.sm),
                 AuthFeatureBadge(
                   compact: true,
-                  icon: AuthBrandingPanel._features[i].$1,
-                  label: _shortLabel(AuthBrandingPanel._features[i].$2),
+                  icon: AuthBrandingPanel._features(context.l10n)[i].$1,
+                  label: _shortLabel(context.l10n, i),
                 ),
               ],
             ],
@@ -151,9 +150,11 @@ class _CompactContent extends StatelessWidget {
     );
   }
 
-  String _shortLabel(String label) {
-    if (label.startsWith('Find reusable')) return 'Find materials';
-    if (label.startsWith('Build projects')) return 'Build smarter';
-    return 'Reduce waste';
+  String _shortLabel(AppLocalizations l10n, int index) {
+    return switch (index) {
+      0 => l10n.authFeatureFindMaterialsShort,
+      1 => l10n.authFeatureBuildSmarterShort,
+      _ => l10n.authFeatureReduceWasteShort,
+    };
   }
 }

@@ -35,7 +35,7 @@ class AuthFormCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: Container(
                 height: 4,
                 width: isCompact ? 56 : 72,

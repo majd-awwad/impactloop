@@ -195,7 +195,7 @@ class _InsightTile extends StatelessWidget {
     final colors = context.supplierColors;
 
     return Container(
-      height: 176,
+      width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: spec.accent.withValues(alpha: colors.isDark ? 0.14 : 0.07),
@@ -204,6 +204,7 @@ class _InsightTile extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             width: 34,
@@ -215,21 +216,22 @@ class _InsightTile extends StatelessWidget {
             ),
             child: Icon(spec.icon, size: 18, color: spec.accent),
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             spec.title,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: context.supplierLabel().copyWith(
               color: colors.textPrimary,
               fontSize: 13,
               fontWeight: FontWeight.w700,
+              height: 1.2,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             spec.message,
-            maxLines: 2,
+            maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: context.supplierBody().copyWith(
               color: colors.textSecondary,
@@ -237,7 +239,7 @@ class _InsightTile extends StatelessWidget {
               height: 1.25,
             ),
           ),
-          const Spacer(),
+          const SizedBox(height: AppSpacing.sm),
           TextButton.icon(
             onPressed: () => context.push(spec.route),
             style: TextButton.styleFrom(
@@ -245,6 +247,7 @@ class _InsightTile extends StatelessWidget {
               padding: EdgeInsets.zero,
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
             ),
             icon: const Icon(
               Icons.arrow_forward_rounded,
@@ -252,6 +255,8 @@ class _InsightTile extends StatelessWidget {
             ),
             label: Text(
               spec.actionLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ),

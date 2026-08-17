@@ -12,6 +12,7 @@ import '../../../supplier_portal/application/supplier_verification_access.dart';
 import '../../../supplier_portal/data/supplier_verification_api.dart';
 import '../../../profile/application/profile_providers.dart';
 import '../../../profile/data/models/learner_interest_options.dart';
+import '../../../profile/presentation/l10n/learner_profile_l10n.dart';
 import '../../../profile/presentation/widgets/learner_interest_chip_picker.dart';
 import '../../application/auth_controller.dart';
 import '../../application/auth_navigation.dart';
@@ -22,6 +23,7 @@ import '../models/registration_intent.dart';
 import '../models/registration_wizard_step.dart';
 import '../utils/auth_supplier_l10n.dart';
 import '../utils/registration_onboarding_helpers.dart';
+import '../utils/registration_option_l10n.dart';
 import 'auth_buttons.dart';
 import 'auth_form_fields.dart';
 import 'auth_password_field.dart';
@@ -76,12 +78,6 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   String? _verificationDocumentError;
   String? _cityError;
   String? _areaError;
-
-  static const _intentOptions = [
-    (RegistrationIntent.learner, 'Find materials'),
-    (RegistrationIntent.supplier, 'Share materials'),
-    (RegistrationIntent.both, 'Do both'),
-  ];
 
   bool get _isAddToExistingAccount =>
       widget.mode == LearnerSetupMode.addToExistingAccount;
@@ -243,7 +239,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
       case RegistrationWizardStep.account:
         if (_intent == null) {
           setState(() {
-            _intentError = 'Please choose how you want to use ImpactLoop.';
+            _intentError = context.l10n.registerHowDoYouWantToUse;
           });
           return false;
         }
@@ -529,8 +525,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         if (request == null) {
           setState(() {
             _isSubmitting = false;
-            _formError =
-                'Registration details are incomplete. Please review your answers.';
+            _formError = context.l10n.registrationDetailsIncomplete;
           });
           return;
         }
@@ -569,8 +564,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           _isSubmitting = false;
           _verificationPendingRetry = true;
           _formError =
-              'Your account was created, but verification upload failed. '
-              'Fix the issue below and try again.';
+              context.l10n.registerVerificationUploadFailedFix;
           _stepIndex = _steps.indexOf(RegistrationWizardStep.verification);
           if (_stepIndex < 0) {
             _stepIndex = _steps.length - 1;
@@ -590,8 +584,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         if (_accountCreated && _needsVerification) {
           _verificationPendingRetry = true;
           _formError =
-              'Your account was created, but verification upload failed. '
-              'Please try uploading again.';
+              context.l10n.registerVerificationUploadFailedRetry;
           _stepIndex = _steps.indexOf(RegistrationWizardStep.verification);
           if (_stepIndex < 0) {
             _stepIndex = _steps.length - 1;
@@ -622,7 +615,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         setState(() {
           _isSubmitting = false;
           _formError =
-              'Learner setup is incomplete. Please review your answers.';
+              context.l10n.registerLearnerSetupIncomplete;
         });
         return;
       }
@@ -634,7 +627,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         return;
       }
 
-      showInfoSnackBar(context, 'Learner access added to your account.');
+      showInfoSnackBar(context, context.l10n.registerLearnerAccessAdded);
 
       final user = ref.read(authControllerProvider).user;
       context.go(user == null ? homeRoute : postAuthRouteForUser(user));
@@ -652,7 +645,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
 
       setState(() {
         _isSubmitting = false;
-        _formError = 'Something went wrong. Please try again.';
+        _formError = context.l10n.somethingWentWrong;
       });
     }
   }
@@ -669,61 +662,61 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   }
 
   String _stepSubtitle(RegistrationWizardStep step) {
+    final l10n = context.l10n;
     if (step == RegistrationWizardStep.interests) {
       return _intent == RegistrationIntent.both
-          ? 'Choose the topics you want to learn, build, repair, or reuse around.'
-          : 'Choose broad topics you care about. These help shape project and material suggestions.';
+          ? l10n.registerStepInterestsBothSubtitle
+          : l10n.registerStepInterestsSubtitle;
     }
 
     if (step == RegistrationWizardStep.goals) {
       return switch (_intent) {
         RegistrationIntent.supplier =>
-          context.l10n.registerSupplierShareMaterialsGoals,
-        RegistrationIntent.both =>
-          'What do you want to accomplish as both a learner and supplier?',
+          l10n.registerSupplierShareMaterialsGoals,
+        RegistrationIntent.both => l10n.registerStepGoalsBothSubtitle,
         RegistrationIntent.learner ||
-        null => 'What do you want to get out of ImpactLoop?',
+        null => l10n.registerStepGoalsLearnerSubtitle,
       };
     }
 
     if (step == RegistrationWizardStep.location) {
       if (_needsSupplierProfile) {
         return _intent == RegistrationIntent.both
-            ? context.l10n.registerSupplierLocationBothSubtitle
-            : context.l10n.registerSupplierLocationSubtitle;
+            ? l10n.registerSupplierLocationBothSubtitle
+            : l10n.registerSupplierLocationSubtitle;
       }
 
-      return 'Optional for learners. Accurate pickup or delivery details are only requested during reservations.';
+      return l10n.registerStepLocationLearnerSubtitle;
     }
 
     if (step == RegistrationWizardStep.supplierBasics) {
-      return context.l10n.registerSupplierBasicsSubtitle;
+      return l10n.registerSupplierBasicsSubtitle;
     }
 
     if (step == RegistrationWizardStep.learnerBasics) {
-      return 'Tell us your learning context so suggestions match your experience.';
+      return l10n.registerStepLearnerBasicsSubtitle;
     }
 
     if (step == RegistrationWizardStep.verification) {
-      return context.l10n.registerSupplierVerificationSubtitle;
+      return l10n.registerSupplierVerificationSubtitle;
     }
 
     if (step == RegistrationWizardStep.review) {
       if (_isAddToExistingAccount) {
-        return 'Review your learner details before adding access to your account.';
+        return l10n.registerStepReviewAddLearnerSubtitle;
       }
 
       return switch (_intent) {
         RegistrationIntent.supplier =>
-          context.l10n.registerSupplierReviewSupplierSubtitle,
+          l10n.registerSupplierReviewSupplierSubtitle,
         RegistrationIntent.both =>
-          context.l10n.registerSupplierReviewBothSubtitle,
+          l10n.registerSupplierReviewBothSubtitle,
         RegistrationIntent.learner ||
-        null => 'Review your learner details before creating the account.',
+        null => l10n.registerStepReviewLearnerSubtitle,
       };
     }
 
-    return step.subtitle;
+    return l10n.registerStepAccountSubtitle;
   }
 
   Widget _buildStepHeader(BuildContext context) {
@@ -739,7 +732,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Align(
-            alignment: Alignment.centerLeft,
+            alignment: AlignmentDirectional.centerStart,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: colors.primarySoft,
@@ -751,7 +744,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
                   vertical: 6,
                 ),
                 child: Text(
-                  'Choose your path',
+                  context.l10n.registerChooseYourPath,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
@@ -763,7 +756,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Start your setup',
+            context.l10n.registerStartYourSetup,
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
@@ -772,7 +765,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Choose how you want to use ImpactLoop. The setup steps will adapt after that.',
+            context.l10n.registerChooseHowYouUse,
             style: TextStyle(
               fontSize: 14,
               height: 1.5,
@@ -789,7 +782,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
       children: [
         if (_isAddToExistingAccount) ...[
           Text(
-            'Become a learner',
+            context.l10n.becomeLearner,
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w800,
@@ -798,7 +791,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Add learner access to your current account and personalize your learning interests.',
+            context.l10n.registerAddLearnerIntro,
             style: TextStyle(
               fontSize: 14,
               height: 1.5,
@@ -820,7 +813,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
                   vertical: 6,
                 ),
                 child: Text(
-                  'Step $stepNumber of $totalSteps',
+                  context.l10n.registerStepOf(stepNumber, totalSteps),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
@@ -833,8 +826,8 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
             if (nextStep != null)
               Flexible(
                 child: Text(
-                  'Next: ${nextStep.title}',
-                  textAlign: TextAlign.right,
+                  context.l10n.registerNextStep(_localizedStepTitle(nextStep)),
+                  textAlign: TextAlign.end,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
@@ -875,7 +868,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'How do you want to use ImpactLoop?',
+          context.l10n.registerHowDoYouWantToUse,
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w700,
@@ -888,7 +881,11 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           spacing: AppSpacing.sm,
           runSpacing: AppSpacing.sm,
           children: [
-            for (final option in _intentOptions)
+            for (final option in [
+              (RegistrationIntent.learner, context.l10n.registerIntentFindMaterials),
+              (RegistrationIntent.supplier, context.l10n.shareMaterials),
+              (RegistrationIntent.both, context.l10n.registerIntentDoBoth),
+            ])
               AuthIntentChip(
                 label: option.$2,
                 isSelected: _intent == option.$1,
@@ -1021,30 +1018,28 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
 
     return optionsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => LearnerInterestChipPicker(
-        options: fallbackLearnerInterestOptions,
-        selectedKeys: _selectedInterests,
-        onChanged: (value) => setState(() {
-          _selectedInterests
-            ..clear()
-            ..addAll(value);
-        }),
-        customInterestController: _customInterestController,
-        useAuthFields: true,
-        errorText: _formError,
-      ),
-      data: (options) => LearnerInterestChipPicker(
-        options: options,
-        selectedKeys: _selectedInterests,
-        onChanged: (value) => setState(() {
-          _selectedInterests
-            ..clear()
-            ..addAll(value);
-        }),
-        customInterestController: _customInterestController,
-        useAuthFields: true,
-        errorText: _formError,
-      ),
+      error: (_, _) => _interestChipPicker(fallbackLearnerInterestOptions),
+      data: _interestChipPicker,
+    );
+  }
+
+  Widget _interestChipPicker(LearnerInterestOptionsResponse options) {
+    final profileL10n = LearnerProfileL10n.of(context);
+    return LearnerInterestChipPicker(
+      options: options,
+      selectedKeys: _selectedInterests,
+      onChanged: (value) => setState(() {
+        _selectedInterests
+          ..clear()
+          ..addAll(value);
+      }),
+      customInterestController: _customInterestController,
+      useAuthFields: true,
+      errorText: _formError,
+      interestLabelBuilder: (key, fallbackLabel) =>
+          localizedInterestLabel(context, key, fallbackLabel: fallbackLabel),
+      customInterestLabel: profileL10n.addAnotherInterest,
+      customInterestHint: profileL10n.customInterestHint,
     );
   }
 
@@ -1052,12 +1047,10 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
     final colors = AuthUiPalette.of(context);
     final goals = registrationGoalOptionsForIntent(_intent);
     final helper = switch (_intent) {
-      RegistrationIntent.supplier =>
-        'These goals tune the supplier setup language. They are not required to list materials.',
-      RegistrationIntent.both =>
-        'Choose goals for both sides of your account. You can update your profile later.',
+      RegistrationIntent.supplier => context.l10n.registerGoalsHelperSupplier,
+      RegistrationIntent.both => context.l10n.registerGoalsHelperBoth,
       RegistrationIntent.learner || null =>
-        'Choose anything that describes why you are joining. You can change this later.',
+        context.l10n.registerGoalsHelperLearner,
     };
 
     return Column(
@@ -1078,7 +1071,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           children: [
             for (final goal in goals)
               AuthIntentChip(
-                label: goal,
+                label: localizedRegistrationGoal(context.l10n, goal),
                 isSelected: _selectedGoals.contains(goal),
                 onTap: () => _toggleGoal(goal),
               ),
@@ -1106,14 +1099,14 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         const SizedBox(height: AppSpacing.md),
         AuthTextField(
           controller: _cityController,
-          label: isRequired ? 'City' : 'City (optional)',
-          hint: 'Nablus',
+          label: isRequired ? context.l10n.city : context.l10n.registerCityOptional,
+          hint: context.l10n.registerCityHint,
           textInputAction: TextInputAction.next,
           errorText: _cityError,
           onChanged: (_) => _clearErrors(),
           validator: (value) {
             if (isRequired && (value == null || value.trim().isEmpty)) {
-              return 'City is required';
+              return context.l10n.registerCityRequired;
             }
             return null;
           },
@@ -1122,15 +1115,15 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         AuthTextField(
           controller: _areaController,
           label: isRequired
-              ? 'Area / neighborhood'
-              : 'Area / neighborhood (optional)',
-          hint: 'Rafidia',
+              ? context.l10n.registerAreaNeighborhood
+              : context.l10n.registerAreaNeighborhoodOptional,
+          hint: context.l10n.registerAreaHint,
           textInputAction: TextInputAction.done,
           errorText: _areaError,
           onChanged: (_) => _clearErrors(),
           validator: (value) {
             if (isRequired && (value == null || value.trim().isEmpty)) {
-              return 'Area is required';
+              return context.l10n.registerAreaRequired;
             }
             return null;
           },
@@ -1148,8 +1141,8 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         const SizedBox(height: AppSpacing.sm),
         for (final type in registrationLearnerTypes) ...[
           AuthSelectCard(
-            label: type,
-            description: learnerTypeDescription(type),
+            label: localizedLearnerType(l10n, type),
+            description: localizedLearnerTypeDescription(l10n, type),
             isSelected: _learnerType == type,
             onTap: () {
               _clearErrors();
@@ -1173,8 +1166,8 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         const SizedBox(height: AppSpacing.sm),
         for (final level in registrationSkillLevels) ...[
           AuthSelectCard(
-            label: level,
-            description: skillLevelDescription(level),
+            label: localizedSkillLevel(l10n, level),
+            description: localizedSkillLevelDescription(l10n, level),
             isSelected: _skillLevel == level,
             onTap: () {
               _clearErrors();
@@ -1397,10 +1390,17 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         if (interests.isNotEmpty)
           _ReviewRow(
             label: l10n.registerReviewInterests,
-            value: interests.map(learnerInterestLabel).join(', '),
+            value: interests
+                .map(
+                  (interest) => localizedInterestLabel(context, interest),
+                )
+                .join(', '),
           ),
         if (goals.isNotEmpty)
-          _ReviewRow(label: l10n.registerReviewGoals, value: goals.join(', ')),
+          _ReviewRow(
+            label: l10n.registerReviewGoals,
+            value: goals.map((goal) => localizedRegistrationGoal(l10n, goal)).join(', '),
+          ),
         if (_isAddToExistingAccount && learnerLocation != null)
           _ReviewRow(label: l10n.registerReviewLocation, value: learnerLocation),
         if (!_isAddToExistingAccount && pickupArea != null)
@@ -1408,11 +1408,11 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         if (draft.learnerProfile != null) ...[
           _ReviewRow(
             label: l10n.registerReviewLearnerType,
-            value: draft.learnerProfile!.learnerType,
+            value: localizedLearnerType(l10n, draft.learnerProfile!.learnerType),
           ),
           _ReviewRow(
             label: l10n.registerReviewSkillLevel,
-            value: draft.learnerProfile!.skillLevel,
+            value: localizedSkillLevel(l10n, draft.learnerProfile!.skillLevel),
           ),
         ],
         if (draft.supplierProfile != null) ...[
@@ -1448,10 +1448,11 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   }
 
   String _intentLabel(RegistrationIntent? intent) {
+    final l10n = context.l10n;
     return switch (intent) {
-      RegistrationIntent.learner => 'Find materials',
-      RegistrationIntent.supplier => 'Share materials',
-      RegistrationIntent.both => 'Do both',
+      RegistrationIntent.learner => l10n.registerIntentFindMaterials,
+      RegistrationIntent.supplier => l10n.shareMaterials,
+      RegistrationIntent.both => l10n.registerIntentDoBoth,
       null => '',
     };
   }
@@ -1459,8 +1460,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   String _intentSetupDescription(RegistrationIntent intent) {
     final l10n = context.l10n;
     return switch (intent) {
-      RegistrationIntent.learner =>
-        'You will set learner interests, goals, optional location, and learning level.',
+      RegistrationIntent.learner => l10n.registerLearnerSetupDescription,
       RegistrationIntent.supplier => l10n.registerSupplierSetupDescription,
       RegistrationIntent.both => l10n.registerBothSupplierSetupDescription,
     };
@@ -1469,7 +1469,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   String _locationStepHelperText(bool isRequired) {
     final l10n = context.l10n;
     if (!isRequired) {
-      return 'You can skip this for now. Reservation pickup or delivery details are collected only when they are needed.';
+      return l10n.registerLocationSkipHelper;
     }
 
     if (_intent == RegistrationIntent.both) {
@@ -1482,24 +1482,27 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   String _reviewHelperText() {
     final l10n = context.l10n;
     if (_isAddToExistingAccount) {
-      return 'Goals stay in onboarding only. Learner access will be added to your existing account with the learner profile shown above.';
+      return l10n.registerAddLearnerReviewHelper;
     }
 
     return switch (_intent) {
       RegistrationIntent.supplier => l10n.registerSupplierReviewHelper,
       RegistrationIntent.both => l10n.registerBothReviewHelper,
-      RegistrationIntent.learner || null =>
-        'Goals stay in onboarding only. The server receives your account and learner profile.',
+      RegistrationIntent.learner || null => l10n.registerLearnerReviewHelper,
     };
   }
 
   String _localizedStepTitle(RegistrationWizardStep step) {
     final l10n = context.l10n;
     return switch (step) {
+      RegistrationWizardStep.account => l10n.account,
+      RegistrationWizardStep.interests => l10n.registerReviewInterests,
+      RegistrationWizardStep.goals => l10n.registerReviewGoals,
+      RegistrationWizardStep.location => l10n.registerReviewLocation,
+      RegistrationWizardStep.learnerBasics => l10n.registerLearnerProfileTitle,
       RegistrationWizardStep.supplierBasics => l10n.supplierProfile,
       RegistrationWizardStep.verification => l10n.supplierVerification,
       RegistrationWizardStep.review => l10n.review,
-      _ => step.title,
     };
   }
 
@@ -1534,10 +1537,10 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         _verificationPendingRetry;
     final primaryLabel = isReview
         ? (_isAddToExistingAccount
-              ? 'Add learner access'
+              ? l10n.registerAddLearnerAccess
               : (_accountCreated && _verificationPendingRetry
                     ? l10n.retryVerification
-                    : 'Create account'))
+                    : l10n.createAccount))
         : isVerificationRetry
         ? l10n.retryVerification
         : l10n.actionContinue;
@@ -1586,9 +1589,10 @@ class _StepProgressSegments extends StatelessWidget {
     final colors = AuthUiPalette.of(context);
 
     return Semantics(
-      label:
-          'Registration progress, step ${currentIndex + 1} of '
-          '${steps.length}',
+      label: context.l10n.registerProgressSemantic(
+        currentIndex + 1,
+        steps.length,
+      ),
       child: Row(
         children: [
           for (var index = 0; index < steps.length; index++) ...[

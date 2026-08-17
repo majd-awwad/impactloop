@@ -164,89 +164,112 @@ class _ProfileMaterialPreviewCardState
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.md),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            categoryLabel,
-                            style: context.supplierChip().copyWith(
-                              color: colors.accent,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            material.title,
-                            style: context.supplierSectionTitle().copyWith(
-                              color: colors.textPrimary,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              height: 1.2,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Wrap(
-                            spacing: AppSpacing.xs,
-                            runSpacing: AppSpacing.xs,
-                            children: [
-                              _ProfilePreviewStatusBadge(
-                                status: material.status,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: AlignmentDirectional.topStart,
+                            child: SizedBox(
+                              width: constraints.maxWidth,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    categoryLabel,
+                                    style: context.supplierChip().copyWith(
+                                      color: colors.accent,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    material.title,
+                                    style: context.supplierSectionTitle()
+                                        .copyWith(
+                                          color: colors.textPrimary,
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w800,
+                                          height: 1.2,
+                                        ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Wrap(
+                                    spacing: AppSpacing.xs,
+                                    runSpacing: AppSpacing.xs,
+                                    children: [
+                                      _ProfilePreviewStatusBadge(
+                                        status: material.status,
+                                      ),
+                                      MaterialConditionBadge(
+                                        label:
+                                            SupplierMaterialLabelHelper.resolveText(
+                                              condition.label,
+                                              isArabic,
+                                            ),
+                                        tone: condition.tone,
+                                      ),
+                                      MaterialPriceBadge(
+                                        label: priceLabel,
+                                        isFree: material.isFree,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Text(
+                                    quantityLabel,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: context.supplierBody().copyWith(
+                                      color: colors.textSecondary,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    locationLabel,
+                                    style: context.supplierBody().copyWith(
+                                      color: colors.textMuted,
+                                      fontSize: 12.5,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    availabilityLabel,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: context.supplierBody().copyWith(
+                                      color: colors.textMuted,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  if (footerParts.isNotEmpty) ...[
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Text(
+                                      footerParts.join(' · '),
+                                      style: context.supplierBody().copyWith(
+                                        color: colors.textMuted,
+                                        fontSize: 11.5,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ],
                               ),
-                              MaterialConditionBadge(
-                                label: SupplierMaterialLabelHelper.resolveText(
-                                  condition.label,
-                                  isArabic,
-                                ),
-                                tone: condition.tone,
-                              ),
-                              MaterialPriceBadge(
-                                label: priceLabel,
-                                isFree: material.isFree,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
-                            quantityLabel,
-                            style: context.supplierBody().copyWith(
-                              color: colors.textSecondary,
-                              fontSize: 13,
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            locationLabel,
-                            style: context.supplierBody().copyWith(
-                              color: colors.textMuted,
-                              fontSize: 12.5,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            availabilityLabel,
-                            style: context.supplierBody().copyWith(
-                              color: colors.textMuted,
-                              fontSize: 12,
-                            ),
-                          ),
-                          const Spacer(),
-                          if (footerParts.isNotEmpty)
-                            Text(
-                              footerParts.join(' · '),
-                              style: context.supplierBody().copyWith(
-                                color: colors.textMuted,
-                                fontSize: 11.5,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                         ],
                       ),
                     ),

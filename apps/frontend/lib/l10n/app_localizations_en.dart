@@ -10764,4 +10764,349 @@ class AppLocalizationsEn extends AppLocalizations {
   String phsByCreator(String name) {
     return 'By $name';
   }
+
+  @override
+  String get landingImpactFirst => 'Impact first';
+
+  @override
+  String get landingMakeAnImpact => 'Make an impact';
+
+  @override
+  String get landingImpactBody =>
+      'Every successful reuse turns overlooked materials into projects, prototypes, and practical learning.';
+
+  @override
+  String get landingSavedKg => 'Saved kg';
+
+  @override
+  String get landingMonthlyLift => 'Monthly lift';
+
+  @override
+  String get landingMonthlyLiftBody =>
+      'Momentum from workshop and campus reuse activity.';
+
+  @override
+  String get landingReuseTrend => 'Reuse trend';
+
+  @override
+  String get landingSteadyGrowth => 'Steady growth';
+
+  @override
+  String get authShareLabel => 'Share';
+
+  @override
+  String get authFindUsableParts => 'Find usable parts';
+
+  @override
+  String get authEntryLoginEyebrow => 'Return to your workspace';
+
+  @override
+  String get authEntryRegisterEyebrow => 'Start your ImpactLoop profile';
+
+  @override
+  String get authEntryLoginDescription =>
+      'Sign in to pick up where your materials, projects, and community activity left off.';
+
+  @override
+  String get authEntryRegisterDescription =>
+      'Create one account to source components, list surplus materials, or do both in one streamlined flow.';
+
+  @override
+  String get authLiveImpactTrend => 'Live impact trend';
+
+  @override
+  String get authPlus18ThisMonth => '+18% this month';
+
+  @override
+  String get authPlus18Month => '+18% month';
+
+  @override
+  String get authEntryLoginMission =>
+      'Pick up your materials, project ideas, and reuse activity with a clearer, faster workspace.';
+
+  @override
+  String get authEntryRegisterMission =>
+      'Join students, suppliers, and makers turning overlooked materials into practical opportunities.';
+
+  @override
+  String get authBrandingSubtitle =>
+      'An eco-tech platform where learners discover surplus materials, find project parts, and build with less waste.';
+
+  @override
+  String get authFeatureFindNearbyLong => 'Find reusable materials nearby';
+
+  @override
+  String get authFeatureBuildSmarter => 'Build projects smarter';
+
+  @override
+  String get authFeatureReduceWasteReservation =>
+      'Reduce waste with every reservation';
+
+  @override
+  String get authFeatureFindMaterialsShort => 'Find materials';
+
+  @override
+  String get authFeatureBuildSmarterShort => 'Build smarter';
+
+  @override
+  String get authFeatureReduceWasteShort => 'Reduce waste';
+
+  @override
+  String get registerStepAccountSubtitle =>
+      'Choose your account type and create your sign-in details.';
+
+  @override
+  String get registerStepInterestsSubtitle =>
+      'Choose broad topics you care about. These help shape project and material suggestions.';
+
+  @override
+  String get registerStepInterestsBothSubtitle =>
+      'Choose the topics you want to learn, build, repair, or reuse around.';
+
+  @override
+  String get registerStepGoalsLearnerSubtitle =>
+      'What do you want to get out of ImpactLoop?';
+
+  @override
+  String get registerStepGoalsBothSubtitle =>
+      'What do you want to accomplish as both a learner and supplier?';
+
+  @override
+  String get registerStepLocationLearnerSubtitle =>
+      'Optional for learners. Accurate pickup or delivery details are only requested during reservations.';
+
+  @override
+  String get registerStepLearnerBasicsSubtitle =>
+      'Tell us your learning context so suggestions match your experience.';
+
+  @override
+  String get registerStepReviewLearnerSubtitle =>
+      'Review your learner details before creating the account.';
+
+  @override
+  String get registerStepReviewAddLearnerSubtitle =>
+      'Review your learner details before adding access to your account.';
+
+  @override
+  String get registerLearnerSetupIncomplete =>
+      'Learner setup is incomplete. Please review your answers.';
+
+  @override
+  String get registerLearnerAccessAdded =>
+      'Learner access added to your account.';
+
+  @override
+  String get registerAddLearnerAccess => 'Add learner access';
+
+  @override
+  String get registerAddLearnerIntro =>
+      'Add learner access to your current account and personalize your learning interests.';
+
+  @override
+  String get registerCityOptional => 'City (optional)';
+
+  @override
+  String get registerAreaNeighborhood => 'Area / neighborhood';
+
+  @override
+  String get registerAreaNeighborhoodOptional =>
+      'Area / neighborhood (optional)';
+
+  @override
+  String get registerCityRequired => 'City is required';
+
+  @override
+  String get registerAreaRequired => 'Area is required';
+
+  @override
+  String get registerCityHint => 'Nablus';
+
+  @override
+  String get registerAreaHint => 'Rafidia';
+
+  @override
+  String get registerLocationSkipHelper =>
+      'You can skip this for now. Reservation pickup or delivery details are collected only when they are needed.';
+
+  @override
+  String get registerLearnerReviewHelper =>
+      'Goals stay in onboarding only. The server receives your account and learner profile.';
+
+  @override
+  String get registerAddLearnerReviewHelper =>
+      'Goals stay in onboarding only. Learner access will be added to your existing account with the learner profile shown above.';
+
+  @override
+  String get registerLearnerSetupDescription =>
+      'You will set learner interests, goals, optional location, and learning level.';
+
+  @override
+  String get registerGoalsHelperLearner =>
+      'Choose anything that describes why you are joining. You can change this later.';
+
+  @override
+  String get registerGoalsHelperSupplier =>
+      'These goals tune the supplier setup language. They are not required to list materials.';
+
+  @override
+  String get registerGoalsHelperBoth =>
+      'Choose goals for both sides of your account. You can update your profile later.';
+
+  @override
+  String get registerIntentFindMaterials => 'Find materials';
+
+  @override
+  String get registerIntentDoBoth => 'Do both';
+
+  @override
+  String get registerGoalBuildProjects => 'Build projects';
+
+  @override
+  String get registerGoalFindComponents => 'Find components';
+
+  @override
+  String get registerGoalLearnNewSkills => 'Learn new skills';
+
+  @override
+  String get registerGoalRepairSomething => 'Repair something';
+
+  @override
+  String get registerGoalReuseMaterials => 'Reuse materials';
+
+  @override
+  String get registerGoalSaveMoney => 'Save money';
+
+  @override
+  String get registerGoalExploreProjectIdeas => 'Explore project ideas';
+
+  @override
+  String get registerGoalHelpMyCommunity => 'Help my community';
+
+  @override
+  String get registerGoalShareSurplusMaterials => 'Share surplus materials';
+
+  @override
+  String get registerGoalReduceWaste => 'Reduce waste';
+
+  @override
+  String get registerGoalClearStorageSpace => 'Clear storage space';
+
+  @override
+  String get registerGoalSupportLearners => 'Support learners';
+
+  @override
+  String get registerGoalFindPeopleWhoCanReuse =>
+      'Find people who can reuse items';
+
+  @override
+  String get registerGoalManagePickupRequests => 'Manage pickup requests';
+
+  @override
+  String get registerGoalTrackMaterialImpact => 'Track material impact';
+
+  @override
+  String get registerGoalListMaterialsFaster => 'List materials faster';
+
+  @override
+  String get registerLearnerTypeUniversity => 'University student';
+
+  @override
+  String get registerLearnerTypeSchool => 'School student';
+
+  @override
+  String get registerLearnerTypeSelf => 'Self learner';
+
+  @override
+  String get registerLearnerTypeMaker => 'Maker / hobbyist';
+
+  @override
+  String get registerLearnerTypeUniversityDescription =>
+      'You are learning through a university program.';
+
+  @override
+  String get registerLearnerTypeSchoolDescription =>
+      'You are learning through school or a club.';
+
+  @override
+  String get registerLearnerTypeSelfDescription =>
+      'You learn independently outside a formal program.';
+
+  @override
+  String get registerLearnerTypeMakerDescription =>
+      'You build projects for practice or personal use.';
+
+  @override
+  String get registerLearnerTypeFallbackDescription =>
+      'Choose the option that best describes you.';
+
+  @override
+  String get registerSkillBeginner => 'Beginner';
+
+  @override
+  String get registerSkillIntermediate => 'Intermediate';
+
+  @override
+  String get registerSkillAdvanced => 'Advanced';
+
+  @override
+  String get registerSkillExpert => 'Expert';
+
+  @override
+  String get registerSkillBeginnerDescription =>
+      'I am new and want simple, guided project ideas.';
+
+  @override
+  String get registerSkillIntermediateDescription =>
+      'I can build with guidance and basic troubleshooting.';
+
+  @override
+  String get registerSkillAdvancedDescription =>
+      'I can design, adapt, and troubleshoot projects myself.';
+
+  @override
+  String get registerSkillExpertDescription =>
+      'I can mentor others or handle complex builds.';
+
+  @override
+  String get registerSkillFallbackDescription =>
+      'Choose how comfortable you are with building projects.';
+
+  @override
+  String get registerChooseYourPath => 'Choose your path';
+
+  @override
+  String get registerStartYourSetup => 'Start your setup';
+
+  @override
+  String get registerChooseHowYouUse =>
+      'Choose how you want to use ImpactLoop. The setup steps will adapt after that.';
+
+  @override
+  String get registerHowDoYouWantToUse => 'How do you want to use ImpactLoop?';
+
+  @override
+  String registerStepOf(int step, int total) {
+    return 'Step $step of $total';
+  }
+
+  @override
+  String registerNextStep(String title) {
+    return 'Next: $title';
+  }
+
+  @override
+  String registerProgressSemantic(int step, int total) {
+    return 'Registration progress, step $step of $total';
+  }
+
+  @override
+  String get registerVerificationUploadFailedFix =>
+      'Your account was created, but verification upload failed. Fix the issue below and try again.';
+
+  @override
+  String get registerVerificationUploadFailedRetry =>
+      'Your account was created, but verification upload failed. Please try uploading again.';
+
+  @override
+  String get registerPickupAreaHint => 'Nablus, Rafidia';
 }

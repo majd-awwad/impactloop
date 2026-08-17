@@ -45,6 +45,34 @@ void main() {
       });
     }
 
+    testWidgets(
+      'compact card lays out in an unbounded vertical scroll view',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(390, 700));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(
+          _app(
+            locale: const Locale('ar'),
+            child: Scaffold(
+              body: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: LearningProjectCompactCard(
+                  project: _project(
+                    imageUrl: 'https://example.com/cover.png',
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(LearningProjectCompactCard), findsOneWidget);
+      },
+    );
+
     testWidgets('long English title ellipsizes without overflow', (tester) async {
       // Arabic UI with English project title (mixed-direction production data).
       await _pumpCompactCard(

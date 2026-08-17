@@ -45,11 +45,10 @@ class HomeMaterialRecommendationGrid extends StatelessWidget {
         final includesReason = preview.any(
           (item) => item.reasons.isNotEmpty || item.reasonDetails.isNotEmpty,
         );
-        final tileHeight =
-            cardHeight +
-            (includesReason
-                ? ImpactMaterialGridCard.recommendationReasonBandHeight
-                : 0);
+        final reasonBandHeight = includesReason
+            ? AppSpacing.xs + MediaQuery.textScalerOf(context).scale(20)
+            : 0.0;
+        final tileHeight = cardHeight + reasonBandHeight;
 
         return GridView.builder(
           shrinkWrap: true,
@@ -65,7 +64,6 @@ class HomeMaterialRecommendationGrid extends StatelessWidget {
             final item = preview[index];
             return _HomeMaterialRecommendationTile(
               item: item,
-              cardHeight: cardHeight,
               index: index,
             );
           },
@@ -78,12 +76,10 @@ class HomeMaterialRecommendationGrid extends StatelessWidget {
 class _HomeMaterialRecommendationTile extends StatelessWidget {
   const _HomeMaterialRecommendationTile({
     required this.item,
-    required this.cardHeight,
     required this.index,
   });
 
   final LearnerHomeMaterialRecommendation item;
-  final double cardHeight;
   final int index;
 
   @override
@@ -94,8 +90,7 @@ class _HomeMaterialRecommendationTile extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          height: cardHeight,
+        Expanded(
           child: ImpactMaterialGridCard(
             title: material.title.resolve(context),
             description: material.description.resolve(context),
@@ -125,18 +120,19 @@ class _HomeMaterialRecommendationTile extends StatelessWidget {
           ),
         ),
         if (localizedLearnerHomeReason(item, context.l10n)
-            case final reason?) ...[
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            reason,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              height: 1.25,
+            case final reason?)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: Text(
+              reason,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                height: 1.2,
+              ),
             ),
           ),
-        ],
       ],
     );
   }

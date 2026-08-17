@@ -98,7 +98,7 @@ class _SummaryTile extends StatelessWidget {
     final style = AppStatusStyle.of(context, tone);
     final textTheme = Theme.of(context).textTheme;
     return Container(
-      height: 90,
+      constraints: const BoxConstraints(minHeight: 90),
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: colors.surfaceSolid,
@@ -119,15 +119,18 @@ class _SummaryTile extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '$value',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: textTheme.titleLarge?.copyWith(
                     color: colors.textPrimary,
                     fontWeight: FontWeight.w800,
-                    height: 1,
+                    height: 1.1,
                   ),
                 ),
                 const SizedBox(height: 4),

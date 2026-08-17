@@ -20,36 +20,36 @@ class AuthEntryBrandingPanel extends StatelessWidget {
   final bool compact;
   final bool minimal;
 
-  static const _features = [
-    (Icons.search_rounded, 'Find usable parts'),
-    (Icons.inventory_2_outlined, 'Share surplus materials'),
-    (Icons.eco_outlined, 'Build with less waste'),
+  List<(IconData, String)> _features(AppLocalizations l10n) => [
+    (Icons.search_rounded, l10n.authFindUsableParts),
+    (Icons.inventory_2_outlined, l10n.landingFeatureShareTitle),
+    (Icons.eco_outlined, l10n.landingFeatureBuildTitle),
   ];
 
-  String get _headlineMiddle => switch (variant) {
-    AuthEntryBrandingVariant.login => 'Reuse',
-    AuthEntryBrandingVariant.register => 'Share',
+  String _headlineMiddle(AppLocalizations l10n) => switch (variant) {
+    AuthEntryBrandingVariant.login => l10n.authReuseLabel,
+    AuthEntryBrandingVariant.register => l10n.authShareLabel,
   };
 
-  String get _description => switch (variant) {
-    AuthEntryBrandingVariant.login =>
-      'Sign in to pick up where your materials, projects, and community activity left off.',
-    AuthEntryBrandingVariant.register =>
-      'Create one account to source components, list surplus materials, or do both in one streamlined flow.',
+  String _description(AppLocalizations l10n) => switch (variant) {
+    AuthEntryBrandingVariant.login => l10n.authEntryLoginDescription,
+    AuthEntryBrandingVariant.register => l10n.authEntryRegisterDescription,
   };
 
-  String get _spotlightLabel => switch (variant) {
-    AuthEntryBrandingVariant.login => 'Return to your workspace',
-    AuthEntryBrandingVariant.register => 'Start your ImpactLoop profile',
+  String _spotlightLabel(AppLocalizations l10n) => switch (variant) {
+    AuthEntryBrandingVariant.login => l10n.authEntryLoginEyebrow,
+    AuthEntryBrandingVariant.register => l10n.authEntryRegisterEyebrow,
   };
 
   @override
   Widget build(BuildContext context) {
     final colors = AuthUiPalette.of(context);
+    final l10n = context.l10n;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final onPanel = _panelTextColor(context);
     final onPanelMuted = _panelMutedColor(context);
     final accent = _panelAccentColor(context);
+    final features = _features(l10n);
     final padding = minimal
         ? AppSpacing.md
         : compact
@@ -94,11 +94,11 @@ class AuthEntryBrandingPanel extends StatelessWidget {
                     : AppSpacing.xl,
               ),
               if (!minimal) ...[
-                _Eyebrow(label: _spotlightLabel),
+                _Eyebrow(label: _spotlightLabel(l10n)),
                 const SizedBox(height: AppSpacing.md),
               ],
               _Headline(
-                middle: _headlineMiddle,
+                middle: _headlineMiddle(l10n),
                 compact: compact,
                 minimal: minimal,
               ),
@@ -106,7 +106,7 @@ class AuthEntryBrandingPanel extends StatelessWidget {
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 520),
                 child: Text(
-                  _description,
+                  _description(l10n),
                   maxLines: minimal ? 2 : null,
                   overflow: minimal
                       ? TextOverflow.ellipsis
@@ -119,8 +119,8 @@ class AuthEntryBrandingPanel extends StatelessWidget {
               if (minimal) ...[
                 const SizedBox(height: AppSpacing.md),
                 _FeatureChip(
-                  icon: _features.first.$1,
-                  label: _features.first.$2,
+                  icon: features.first.$1,
+                  label: features.first.$2,
                   compact: true,
                   textColor: onPanel,
                   accentColor: accent,
@@ -132,7 +132,7 @@ class AuthEntryBrandingPanel extends StatelessWidget {
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        for (final feature in _features) ...[
+                        for (final feature in features) ...[
                           _FeatureChip(
                             icon: feature.$1,
                             label: feature.$2,
@@ -149,7 +149,7 @@ class AuthEntryBrandingPanel extends StatelessWidget {
                     spacing: AppSpacing.sm,
                     runSpacing: AppSpacing.sm,
                     children: [
-                      for (final feature in _features)
+                      for (final feature in features)
                         _FeatureChip(
                           icon: feature.$1,
                           label: feature.$2,
@@ -232,12 +232,12 @@ class _Headline extends StatelessWidget {
               : -1.2,
         ),
         children: [
-          const TextSpan(text: 'Learn. '),
+          TextSpan(text: '${context.l10n.authLearnLabel}. '),
           TextSpan(
             text: '$middle. ',
             style: TextStyle(color: highlight),
           ),
-          const TextSpan(text: 'Build.'),
+          TextSpan(text: '${context.l10n.authBuildLabel}.'),
         ],
       ),
     );
@@ -372,7 +372,7 @@ class _SignalStage extends StatelessWidget {
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
-                          'Live impact trend',
+                          context.l10n.authLiveImpactTrend,
                           style: _labelStyle(
                             context,
                             color: _panelMutedColor(context),
@@ -388,7 +388,7 @@ class _SignalStage extends StatelessWidget {
                             borderRadius: AppRadius.pillAll,
                           ),
                           child: Text(
-                            '+18% this month',
+                            context.l10n.authPlus18ThisMonth,
                             style: _labelStyle(
                               context,
                               color: _panelAccentColor(context),
@@ -457,28 +457,28 @@ class _CompactSignalCard extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _SignalMetric(
-                  label: 'Materials reused',
+                _SignalMetric(
+                  label: context.l10n.materialsReused,
                   value: '12.5k+',
                   highlight: true,
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                _TrendPill(label: '+18% month'),
+                _TrendPill(label: context.l10n.authPlus18Month),
               ],
             );
           }
 
           return Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: _SignalMetric(
-                  label: 'Materials reused',
+                  label: context.l10n.materialsReused,
                   value: '12.5k+',
                   highlight: true,
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
-              _TrendPill(label: '+18% month'),
+              _TrendPill(label: context.l10n.authPlus18Month),
             ],
           );
         },
@@ -555,10 +555,9 @@ class _MissionStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final message = switch (variant) {
-      AuthEntryBrandingVariant.login =>
-        'Pick up your materials, project ideas, and reuse activity with a clearer, faster workspace.',
+      AuthEntryBrandingVariant.login => context.l10n.authEntryLoginMission,
       AuthEntryBrandingVariant.register =>
-        'Join students, suppliers, and makers turning overlooked materials into practical opportunities.',
+        context.l10n.authEntryRegisterMission,
     };
 
     return Container(
