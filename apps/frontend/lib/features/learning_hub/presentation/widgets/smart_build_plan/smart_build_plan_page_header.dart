@@ -33,9 +33,7 @@ class SmartBuildPlanPageHeader extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: palette.cardSurface,
-        border: Border(
-          bottom: BorderSide(color: palette.borderSubtle),
-        ),
+        border: Border(bottom: BorderSide(color: palette.borderSubtle)),
       ),
       padding: const EdgeInsetsDirectional.fromSTEB(
         AppSpacing.xs,
@@ -70,9 +68,9 @@ class SmartBuildPlanPageHeader extends StatelessWidget {
                           projectTitle!,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.label(context).copyWith(
-                            color: palette.textSecondary,
-                          ),
+                          style: AppTextStyles.label(
+                            context,
+                          ).copyWith(color: palette.textSecondary),
                         ),
                       ],
                     ],
@@ -92,9 +90,9 @@ class SmartBuildPlanPageHeader extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.end,
-                    style: AppTextStyles.label(context).copyWith(
-                      color: palette.textSecondary,
-                    ),
+                    style: AppTextStyles.label(
+                      context,
+                    ).copyWith(color: palette.textSecondary),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.xs),
@@ -102,20 +100,22 @@ class SmartBuildPlanPageHeader extends StatelessWidget {
                   message: SmartBuildPlanL10n.refreshPlan.resolve(context),
                   child: OutlinedButton.icon(
                     onPressed: isRefreshing ? null : onRefresh,
-                  icon: isRefreshing
-                      ? const SizedBox.square(
-                          dimension: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.refresh_rounded, size: 18),
-                  label: Text(SmartBuildPlanL10n.refreshPlan.resolve(context)),
-                  style: OutlinedButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
+                    icon: isRefreshing
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(
+                      SmartBuildPlanL10n.refreshPlan.resolve(context),
                     ),
-                  ),
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsetsDirectional.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.sm,
+                      ),
+                    ),
                   ),
                 ),
               ],

@@ -285,9 +285,7 @@ class _ProjectEngagementStripState
       return '$_followersCount';
     }
     return LocalizedText(
-      en: _followersCount == 1
-          ? '1 follower'
-          : '$_followersCount followers',
+      en: _followersCount == 1 ? '1 follower' : '$_followersCount followers',
       ar: '$_followersCount متابع',
     ).resolve(context);
   }
@@ -454,9 +452,9 @@ class _EngagementPill extends StatelessWidget {
                     style:
                         (compact ? textTheme.labelSmall : textTheme.labelMedium)
                             ?.copyWith(
-                      color: foreground,
-                      fontWeight: FontWeight.w700,
-                    ),
+                              color: foreground,
+                              fontWeight: FontWeight.w700,
+                            ),
                   ),
                 ],
               ],

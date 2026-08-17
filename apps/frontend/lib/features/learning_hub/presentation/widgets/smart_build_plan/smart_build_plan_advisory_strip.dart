@@ -33,10 +33,9 @@ class SmartBuildPlanAdvisoryStrip extends StatelessWidget {
           Expanded(
             child: Text(
               SmartBuildPlanL10n.advisoryStrip.resolve(context),
-              style: AppTextStyles.body(context).copyWith(
-                color: style.foreground,
-                height: 1.45,
-              ),
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: style.foreground, height: 1.45),
             ),
           ),
         ],

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../presentation/theme/learning_project_visuals.dart';
 import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
@@ -124,10 +125,10 @@ class _FeaturedContent extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         Text(
           project.title.resolve(context),
-          style: textTheme.headlineMedium?.copyWith(
+          style: AppTextStyles.title(context).copyWith(
             color: palette.textPrimary,
-            fontWeight: FontWeight.w700,
-            height: 1.16,
+            fontWeight: FontWeight.w800,
+            height: 1.2,
           ),
           textAlign: TextAlign.start,
           maxLines: 2,
@@ -136,7 +137,9 @@ class _FeaturedContent extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         Text(
           project.summary.resolve(context),
-          style: textTheme.bodyLarge?.copyWith(color: palette.textSecondary),
+          style: AppTextStyles.body(
+            context,
+          ).copyWith(color: palette.textSecondary),
           textAlign: TextAlign.start,
           maxLines: compact ? 3 : 2,
           overflow: TextOverflow.ellipsis,

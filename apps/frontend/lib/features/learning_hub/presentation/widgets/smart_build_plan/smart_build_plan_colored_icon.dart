@@ -65,11 +65,7 @@ class SmartBuildPlanIconBadge extends StatelessWidget {
         color: colors.background,
         borderRadius: AppRadius.mdAll,
       ),
-      child: Icon(
-        icon,
-        size: iconSize,
-        color: colors.foreground,
-      ),
+      child: Icon(icon, size: iconSize, color: colors.foreground),
     );
   }
 }
@@ -88,10 +84,6 @@ class SmartBuildPlanColoredIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(
-      icon,
-      size: size,
-      color: colors.foreground,
-    );
+    return Icon(icon, size: size, color: colors.foreground);
   }
 }

@@ -1,10 +1,6 @@
 enum SmartBuildPlanPolicyKey { recommended, cheapest, fewestPickups }
 
-enum SmartBuildPlanLabel {
-  bestOverall,
-  cheapest,
-  fewestPickupLocations,
-}
+enum SmartBuildPlanLabel { bestOverall, cheapest, fewestPickupLocations }
 
 enum SmartBuildPlannerState {
   alreadySatisfied,

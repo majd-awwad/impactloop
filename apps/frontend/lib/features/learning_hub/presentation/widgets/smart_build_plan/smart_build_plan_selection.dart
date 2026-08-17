@@ -42,10 +42,7 @@ int resolveSelectedPlanIndex({
 }
 
 class SmartBuildPlanSelection {
-  const SmartBuildPlanSelection({
-    required this.policyKey,
-    this.primaryLabel,
-  });
+  const SmartBuildPlanSelection({required this.policyKey, this.primaryLabel});
 
   final SmartBuildPlanPolicyKey policyKey;
   final SmartBuildPlanLabel? primaryLabel;

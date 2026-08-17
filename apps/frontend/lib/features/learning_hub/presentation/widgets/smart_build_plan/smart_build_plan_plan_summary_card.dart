@@ -13,10 +13,7 @@ import '../../theme/learning_ui_palette.dart';
 import 'smart_build_plan_colored_icon.dart';
 
 class SmartBuildPlanPlanSummaryCard extends StatelessWidget {
-  const SmartBuildPlanPlanSummaryCard({
-    super.key,
-    required this.plan,
-  });
+  const SmartBuildPlanPlanSummaryCard({super.key, required this.plan});
 
   final SmartBuildPlan plan;
 
@@ -28,7 +25,8 @@ class SmartBuildPlanPlanSummaryCard extends StatelessWidget {
     final primaryLabel = plan.labels.isNotEmpty
         ? plan.labels.first
         : SmartBuildPlanLabel.bestOverall;
-    final subtotalValue = summary.hasUnknownPrices && summary.materialSubtotal <= 0
+    final subtotalValue =
+        summary.hasUnknownPrices && summary.materialSubtotal <= 0
         ? SmartBuildPlanL10n.priceUnknown.resolve(context)
         : formatters.nis(summary.materialSubtotal, decimalDigits: 2);
 
@@ -36,7 +34,8 @@ class SmartBuildPlanPlanSummaryCard extends StatelessWidget {
       _HeroMetricData(
         icon: Icons.view_module_outlined,
         colors: SmartBuildPlanIconColors.green,
-        value: '${summary.totalCoveredComponents}/${summary.totalRequiredComponents}',
+        value:
+            '${summary.totalCoveredComponents}/${summary.totalRequiredComponents}',
         label: SmartBuildPlanL10n.componentsCoveredMetric.resolve(context),
       ),
       _HeroMetricData(
@@ -90,32 +89,34 @@ class SmartBuildPlanPlanSummaryCard extends StatelessWidget {
               ),
               if (primaryLabel == SmartBuildPlanLabel.bestOverall)
                 AppStatusBadge(
-                  label: SmartBuildPlanL10n.recommendedPlanBadge.resolve(context),
+                  label: SmartBuildPlanL10n.recommendedPlanBadge.resolve(
+                    context,
+                  ),
                   tone: AppStatusTone.primary,
                 ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth >= 480) {
-              return Row(
-                children: [
-                  for (var index = 0; index < metrics.length; index++) ...[
-                    if (index > 0)
-                      Container(
-                        width: 1,
-                        height: 48,
-                        margin: const EdgeInsetsDirectional.symmetric(
-                          horizontal: AppSpacing.sm,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth >= 480) {
+                return Row(
+                  children: [
+                    for (var index = 0; index < metrics.length; index++) ...[
+                      if (index > 0)
+                        Container(
+                          width: 1,
+                          height: 48,
+                          margin: const EdgeInsetsDirectional.symmetric(
+                            horizontal: AppSpacing.sm,
+                          ),
+                          color: palette.borderSubtle,
                         ),
-                        color: palette.borderSubtle,
-                      ),
-                    Expanded(child: _HeroMetric(data: metrics[index])),
+                      Expanded(child: _HeroMetric(data: metrics[index])),
+                    ],
                   ],
-                ],
-              );
-            }
+                );
+              }
 
               return SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -144,7 +145,11 @@ class SmartBuildPlanPlanSummaryCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline_rounded, size: 16, color: palette.textSecondary),
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 16,
+                  color: palette.textSecondary,
+                ),
                 const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Text(
@@ -153,10 +158,9 @@ class SmartBuildPlanPlanSummaryCard extends StatelessWidget {
                       if (!summary.deliveryFeeIncluded)
                         SmartBuildPlanL10n.deliveryFeeNote.resolve(context),
                     ].join(' '),
-                    style: AppTextStyles.label(context).copyWith(
-                      color: palette.textSecondary,
-                      height: 1.45,
-                    ),
+                    style: AppTextStyles.label(
+                      context,
+                    ).copyWith(color: palette.textSecondary, height: 1.45),
                   ),
                 ),
               ],
@@ -213,11 +217,9 @@ class _HeroMetric extends StatelessWidget {
           data.label,
           textAlign: TextAlign.center,
           maxLines: 2,
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textSecondary,
-            height: 1.2,
-            fontSize: 11,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textSecondary, height: 1.2, fontSize: 11),
         ),
       ],
     );

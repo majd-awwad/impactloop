@@ -62,11 +62,13 @@ class _SmartBuildPlanRecommendedCardState
 
     setState(() => _isLinking = true);
     try {
-      await ref.read(learningHubRepositoryProvider).linkMaterial(
-        widget.projectId,
-        widget.item.buildItemId,
-        materialId: candidate.materialId,
-      );
+      await ref
+          .read(learningHubRepositoryProvider)
+          .linkMaterial(
+            widget.projectId,
+            widget.item.buildItemId,
+            materialId: candidate.materialId,
+          );
       ref.refreshLinkedProjectBuild(widget.projectId);
     } catch (error) {
       if (mounted) {
@@ -116,10 +118,9 @@ class _SmartBuildPlanRecommendedCardState
 
     if (linkedMaterialId == materialId && !hasActiveReservation) {
       try {
-        await ref.read(learningHubRepositoryProvider).unlinkMaterial(
-          widget.projectId,
-          widget.item.buildItemId,
-        );
+        await ref
+            .read(learningHubRepositoryProvider)
+            .unlinkMaterial(widget.projectId, widget.item.buildItemId);
       } catch (error) {
         if (mounted) {
           showErrorSnackBar(context, error);
@@ -152,9 +153,10 @@ class _SmartBuildPlanRecommendedCardState
 
     final priceLabel = candidate.priceKnown
         ? (candidate.isFree
-            ? SmartBuildPlanL10n.reasonTag(SmartBuildReasonTag.free)
-                .resolve(context)
-            : formatters.nis(candidate.lineSubtotal ?? 0, decimalDigits: 2))
+              ? SmartBuildPlanL10n.reasonTag(
+                  SmartBuildReasonTag.free,
+                ).resolve(context)
+              : formatters.nis(candidate.lineSubtotal ?? 0, decimalDigits: 2))
         : SmartBuildPlanL10n.priceUnknown.resolve(context);
 
     final availabilityParts = <String>[
@@ -182,14 +184,18 @@ class _SmartBuildPlanRecommendedCardState
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _CompactField(
-                label: SmartBuildPlanL10n.requiredComponentLabel.resolve(context),
+                label: SmartBuildPlanL10n.requiredComponentLabel.resolve(
+                  context,
+                ),
                 value: widget.item.componentName,
                 trailing:
                     '${SmartBuildPlanL10n.requiredQuantity.resolve(context)}: ${formatters.quantity(widget.item.requiredQuantity, widget.item.requiredUnit)}',
               ),
               const SizedBox(height: AppSpacing.xs),
               _CompactField(
-                label: SmartBuildPlanL10n.recommendedMaterialLabel.resolve(context),
+                label: SmartBuildPlanL10n.recommendedMaterialLabel.resolve(
+                  context,
+                ),
                 value: candidate.title,
                 emphasized: true,
               ),
@@ -200,15 +206,16 @@ class _SmartBuildPlanRecommendedCardState
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   AppStatusBadge(
-                    label: SmartBuildPlanL10n.matchTypeLabel(candidate.matchType)
-                        .resolve(context),
+                    label: SmartBuildPlanL10n.matchTypeLabel(
+                      candidate.matchType,
+                    ).resolve(context),
                     tone: AppStatusTone.primary,
                   ),
                   Text(
                     availabilityParts.join(' • '),
-                    style: AppTextStyles.label(context).copyWith(
-                      color: palette.textSecondary,
-                    ),
+                    style: AppTextStyles.label(
+                      context,
+                    ).copyWith(color: palette.textSecondary),
                   ),
                 ],
               ),
@@ -223,8 +230,9 @@ class _SmartBuildPlanRecommendedCardState
           );
 
           final actions = Column(
-            crossAxisAlignment:
-                useWide ? CrossAxisAlignment.end : CrossAxisAlignment.stretch,
+            crossAxisAlignment: useWide
+                ? CrossAxisAlignment.end
+                : CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
@@ -252,7 +260,9 @@ class _SmartBuildPlanRecommendedCardState
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.shopping_cart_outlined, size: 18),
-                label: Text(SmartBuildPlanL10n.reserveMaterial.resolve(context)),
+                label: Text(
+                  SmartBuildPlanL10n.reserveMaterial.resolve(context),
+                ),
               ),
               const SizedBox(height: AppSpacing.xs),
               OutlinedButton.icon(
@@ -326,10 +336,9 @@ class _CompactField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textSecondary,
-            fontSize: 11,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textSecondary, fontSize: 11),
         ),
         const SizedBox(height: 1),
         Row(
@@ -340,23 +349,25 @@ class _CompactField extends StatelessWidget {
                 value,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: (emphasized
-                        ? AppTextStyles.body(context)
-                        : AppTextStyles.label(context))
-                    .copyWith(
-                  color: palette.textPrimary,
-                  fontWeight: emphasized ? FontWeight.w600 : FontWeight.w500,
-                ),
+                style:
+                    (emphasized
+                            ? AppTextStyles.body(context)
+                            : AppTextStyles.label(context))
+                        .copyWith(
+                          color: palette.textPrimary,
+                          fontWeight: emphasized
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                        ),
               ),
             ),
             if (trailing != null) ...[
               const SizedBox(width: AppSpacing.xs),
               Text(
                 trailing!,
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textSecondary,
-                  fontSize: 11,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary, fontSize: 11),
               ),
             ],
           ],

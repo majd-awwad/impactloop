@@ -88,9 +88,7 @@ void _showSubmissionIncompleteFeedback(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Project is not ready to submit'),
-        content: SingleChildScrollView(
-          child: Text(message),
-        ),
+        content: SingleChildScrollView(child: Text(message)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
@@ -144,11 +142,9 @@ class _LearningProjectSubmissionsPageState
     final submissionsAsync = ref.watch(
       myLearningProjectSubmissionsProvider(_query),
     );
-    final showHelpRequestsEntry =
-        ref.watch(hasAuthoredProjectSubmissionsProvider).maybeWhen(
-              data: (value) => value,
-              orElse: () => false,
-            );
+    final showHelpRequestsEntry = ref
+        .watch(hasAuthoredProjectSubmissionsProvider)
+        .maybeWhen(data: (value) => value, orElse: () => false);
 
     return Scaffold(
       backgroundColor: palette.pageBackground,
@@ -378,7 +374,8 @@ class _SubmissionDetailContent extends ConsumerStatefulWidget {
       _SubmissionDetailContentState();
 }
 
-class _SubmissionDetailContentState extends ConsumerState<_SubmissionDetailContent> {
+class _SubmissionDetailContentState
+    extends ConsumerState<_SubmissionDetailContent> {
   final _imagesSectionKey = GlobalKey();
   bool _isSubmitting = false;
   bool _isUploadingImage = false;
@@ -627,7 +624,8 @@ class _SubmissionDetailContentState extends ConsumerState<_SubmissionDetailConte
               _ProjectImagesSection(
                 key: _imagesSectionKey,
                 coverImageUrl: submission.coverImageUrl,
-                canManageImages: _canSubmitDraft ||
+                canManageImages:
+                    _canSubmitDraft ||
                     submission.status ==
                         LearningProjectSubmissionStatus.changesRequested,
                 isUploading: _isUploadingImage,
@@ -824,8 +822,7 @@ class _LearningProjectSubmissionEditPageState
       _descriptionController.text = snapshot.description;
       _durationController.text = snapshot.estimatedMinutes?.toString() ?? '';
       if (isValidAuthoringDifficulty(snapshot.difficulty)) {
-        _selectedDifficulty =
-            snapshot.difficulty.trim().toUpperCase();
+        _selectedDifficulty = snapshot.difficulty.trim().toUpperCase();
       }
       _components = snapshot.components.isEmpty
           ? [LearningProjectDraftComponent.empty()]
@@ -849,11 +846,18 @@ class _LearningProjectSubmissionEditPageState
       snapshot: _mirrorSnapshotFromEditor(snapshot),
     );
     ref.read(authoringEditorAppliedSnapshotProvider.notifier).setMirror(mirror);
-    ref.read(aiAssistantControllerProvider.notifier).acknowledgeEditorSynchronized(mirror);
-    ref.read(authoringWorkspaceControllerProvider.notifier).acknowledgeEditorSynchronized(mirror);
+    ref
+        .read(aiAssistantControllerProvider.notifier)
+        .acknowledgeEditorSynchronized(mirror);
+    ref
+        .read(authoringWorkspaceControllerProvider.notifier)
+        .acknowledgeEditorSynchronized(mirror);
     if (widget.embeddedInAuthoringWorkspace) {
-      final authoringStage =
-          ref.read(authoringWorkspaceControllerProvider).snapshot?.session.stage;
+      final authoringStage = ref
+          .read(authoringWorkspaceControllerProvider)
+          .snapshot
+          ?.session
+          .stage;
       if (authoringStage != null && authoringStage != 'OVERVIEW') {
         _setSaveState(AuthoringWorkspaceSaveState.saved);
       } else {
@@ -888,7 +892,8 @@ class _LearningProjectSubmissionEditPageState
       shortDescription: _summaryController.text,
       description: _descriptionController.text,
       difficulty: _selectedDifficulty,
-      estimatedMinutes: int.tryParse(_durationController.text.trim()) ??
+      estimatedMinutes:
+          int.tryParse(_durationController.text.trim()) ??
           source.estimatedMinutes,
       components: [
         for (var index = 0; index < _components.length; index += 1)
@@ -897,14 +902,16 @@ class _LearningProjectSubmissionEditPageState
               id: index < _componentIds.length
                   ? _componentIds[index]
                   : index < source.components.length
-                      ? source.components[index].id
-                      : null,
+                  ? source.components[index].id
+                  : null,
               componentName: _components[index].name.trim(),
               materialType: _components[index].materialTypeHint,
               quantity: _components[index].quantity,
               unit: _components[index].unit,
               componentRole: _components[index].role.apiValue,
-              isRequired: _components[index].role == LearningProjectComponentRole.material,
+              isRequired:
+                  _components[index].role ==
+                  LearningProjectComponentRole.material,
               canBeSubstituted: _components[index].canBeSubstituted,
               searchKeywords: _components[index].keywords,
               notes: _components[index].notes.trim().isEmpty
@@ -936,8 +943,9 @@ class _LearningProjectSubmissionEditPageState
     bool force = false,
   }) {
     if (widget.embeddedInAuthoringWorkspace) {
-      final workspaceLifecycle =
-          ref.read(authoringWorkspaceControllerProvider).lifecycle;
+      final workspaceLifecycle = ref
+          .read(authoringWorkspaceControllerProvider)
+          .lifecycle;
       if (!force &&
           (workspaceLifecycle == AuthoringWorkspaceLifecycle.activating ||
               workspaceLifecycle == AuthoringWorkspaceLifecycle.loading)) {
@@ -969,7 +977,10 @@ class _LearningProjectSubmissionEditPageState
     });
   }
 
-  void _loadSubmission(LearningProjectSubmission submission, {bool force = false}) {
+  void _loadSubmission(
+    LearningProjectSubmission submission, {
+    bool force = false,
+  }) {
     final remoteStamp = submission.updatedAt?.toUtc().toIso8601String();
     if (!force &&
         _loadedId == submission.id &&
@@ -987,8 +998,9 @@ class _LearningProjectSubmissionEditPageState
     _loadedId = submission.id;
     _loadedUpdatedAt = remoteStamp;
     _titleController.text = maskAuthoringDraftFieldTitle(submission.title);
-    _summaryController.text =
-        maskAuthoringDraftFieldShortDescription(submission.shortDescription);
+    _summaryController.text = maskAuthoringDraftFieldShortDescription(
+      submission.shortDescription,
+    );
     _descriptionController.text = maskAuthoringDraftFieldDescription(
       submission.description ?? '',
     );
@@ -1017,8 +1029,11 @@ class _LearningProjectSubmissionEditPageState
     _dirty = false;
     _suppressDirtyTracking = false;
     if (widget.embeddedInAuthoringWorkspace) {
-      final authoringStage =
-          ref.read(authoringWorkspaceControllerProvider).snapshot?.session.stage;
+      final authoringStage = ref
+          .read(authoringWorkspaceControllerProvider)
+          .snapshot
+          ?.session
+          .stage;
       if (authoringStage != null && authoringStage != 'OVERVIEW') {
         _setSaveState(AuthoringWorkspaceSaveState.saved);
       } else {
@@ -1037,14 +1052,19 @@ class _LearningProjectSubmissionEditPageState
     final materialCategoriesAsync = ref.watch(materialCategoriesProvider);
 
     ref.listen<ScopedAuthoringCanonicalUpdate?>(
-        authoringCanonicalProjectUpdateProvider, (previous, next) {
-      if (next == null) {
-        return;
-      }
-      _applyAuthoringDraftSnapshot(next);
-    });
+      authoringCanonicalProjectUpdateProvider,
+      (previous, next) {
+        if (next == null) {
+          return;
+        }
+        _applyAuthoringDraftSnapshot(next);
+      },
+    );
 
-    ref.listen<Set<String>>(authoringHighlightedFieldsProvider, (previous, next) {
+    ref.listen<Set<String>>(authoringHighlightedFieldsProvider, (
+      previous,
+      next,
+    ) {
       if (next.isEmpty) {
         return;
       }
@@ -1093,7 +1113,8 @@ class _LearningProjectSubmissionEditPageState
             actionLabel: 'View submission',
             actionTone: AppStatusTone.neutral,
             actionProminent: false,
-            onAction: () => context.go('/learning/submissions/${submission.id}'),
+            onAction: () =>
+                context.go('/learning/submissions/${submission.id}'),
           );
         }
 
@@ -1110,55 +1131,54 @@ class _LearningProjectSubmissionEditPageState
           embeddedInAuthoringWorkspace: widget.embeddedInAuthoringWorkspace,
           highlightedFields: _highlightedFields,
           titleController: _titleController,
-                    summaryController: _summaryController,
-                    descriptionController: _descriptionController,
-                    durationController: _durationController,
-                    stepsController: _stepsController,
-                    linksController: _linksController,
-                    projectCategories: projectCategories,
-                    materialCategories: materialCategories,
-                    selectedCategoryId: _resolveSelectedCategoryId(
-                      projectCategories,
-                      submission,
-                    ),
-                    selectedDifficulty: _selectedDifficulty,
-                    components: _components,
-                    componentValidationMessage: _componentValidationMessage,
-                    isSaving: _isSaving,
-                    onCategoryChanged: (value) =>
-                        setState(() => _selectedCategoryId = value),
-                    onDifficultyChanged: (value) {
-                      setState(() => _selectedDifficulty = value);
-                    },
-                    onComponentsChanged: (components) =>
-                        setState(() => _components = components),
-                    onAddComponent: () {
-                      setState(() {
-                        _components = [
-                          ..._components,
-                          LearningProjectDraftComponent.empty(),
-                        ];
-                        _componentIds = [..._componentIds, null];
-                      });
-                    },
-                    onRemoveComponent: (index) {
-                      setState(() {
-                        _components = [
-                          for (var i = 0; i < _components.length; i++)
-                            if (i != index) _components[i],
-                        ];
-                        _componentIds = [
-                          for (var i = 0; i < _componentIds.length; i++)
-                            if (i != index) _componentIds[i],
-                        ];
-                      });
-                    },
-                    onCancel: () => context.popOrGo(
-                      '/learning/submissions/${submission.id}',
-                    ),
-                    onSave: () => _save(submission, resubmit: false),
-                    onSaveAndResubmit: () => _save(submission, resubmit: true),
-                  );
+          summaryController: _summaryController,
+          descriptionController: _descriptionController,
+          durationController: _durationController,
+          stepsController: _stepsController,
+          linksController: _linksController,
+          projectCategories: projectCategories,
+          materialCategories: materialCategories,
+          selectedCategoryId: _resolveSelectedCategoryId(
+            projectCategories,
+            submission,
+          ),
+          selectedDifficulty: _selectedDifficulty,
+          components: _components,
+          componentValidationMessage: _componentValidationMessage,
+          isSaving: _isSaving,
+          onCategoryChanged: (value) =>
+              setState(() => _selectedCategoryId = value),
+          onDifficultyChanged: (value) {
+            setState(() => _selectedDifficulty = value);
+          },
+          onComponentsChanged: (components) =>
+              setState(() => _components = components),
+          onAddComponent: () {
+            setState(() {
+              _components = [
+                ..._components,
+                LearningProjectDraftComponent.empty(),
+              ];
+              _componentIds = [..._componentIds, null];
+            });
+          },
+          onRemoveComponent: (index) {
+            setState(() {
+              _components = [
+                for (var i = 0; i < _components.length; i++)
+                  if (i != index) _components[i],
+              ];
+              _componentIds = [
+                for (var i = 0; i < _componentIds.length; i++)
+                  if (i != index) _componentIds[i],
+              ];
+            });
+          },
+          onCancel: () =>
+              context.popOrGo('/learning/submissions/${submission.id}'),
+          onSave: () => _save(submission, resubmit: false),
+          onSaveAndResubmit: () => _save(submission, resubmit: true),
+        );
       },
     );
 
@@ -1248,10 +1268,7 @@ class _LearningProjectSubmissionEditPageState
       _dirty = false;
       if (widget.embeddedInAuthoringWorkspace) {
         _setSaveState(AuthoringWorkspaceSaveState.saved);
-        showInfoSnackBar(
-          context,
-          'Project draft saved.',
-        );
+        showInfoSnackBar(context, 'Project draft saved.');
       } else {
         showInfoSnackBar(
           context,
@@ -1280,14 +1297,17 @@ class _LearningProjectSubmissionEditPageState
     return {
       'title': _titleController.text.trim(),
       'shortDescription': shortDescription,
-      'description':
-          fullDescription.isNotEmpty ? fullDescription : shortDescription,
+      'description': fullDescription.isNotEmpty
+          ? fullDescription
+          : shortDescription,
       'categoryId': categoryId,
       'difficulty': _selectedDifficulty,
       if (duration != null && duration > 0)
         'estimatedDurationMinutes': duration,
       'requiredComponents': _buildComponentsPayload(),
-      'steps': LearningProjectStepText.parseStepsFromText(_stepsController.text),
+      'steps': LearningProjectStepText.parseStepsFromText(
+        _stepsController.text,
+      ),
       'links': _parseLinks(_linksController.text),
     };
   }
@@ -1517,7 +1537,9 @@ class _EditContent extends StatelessWidget {
                           },
                         );
                         final durationField = _AuthoringFieldHighlight(
-                          active: highlightedFields.contains('estimatedMinutes'),
+                          active: highlightedFields.contains(
+                            'estimatedMinutes',
+                          ),
                           child: AppTextField(
                             controller: durationController,
                             label: 'Estimated minutes',
@@ -1781,9 +1803,8 @@ class _SubmissionActionsState extends ConsumerState<_SubmissionActions> {
       ),
       if (_isDraft)
         OutlinedButton.icon(
-          onPressed: () => context.go(
-            '/learning/submissions/${submission.id}/author',
-          ),
+          onPressed: () =>
+              context.go('/learning/submissions/${submission.id}/author'),
           style: AppStatusButtonStyle.outlined(context, AppStatusTone.primary),
           icon: const Icon(Icons.auto_awesome_outlined),
           label: Text(_continueWithAiLabel.resolve(context)),
@@ -2124,11 +2145,13 @@ class _StatePanel extends StatelessWidget {
   }
 }
 
-Color _toneColor(BuildContext context, LearningProjectSubmissionStatus status) =>
-    AppStatusStyle.of(
-      context,
-      learningProjectStatusTone(status.apiValue),
-    ).foreground;
+Color _toneColor(
+  BuildContext context,
+  LearningProjectSubmissionStatus status,
+) => AppStatusStyle.of(
+  context,
+  learningProjectStatusTone(status.apiValue),
+).foreground;
 
 String _formatDateLabel(DateTime? date, String prefix) {
   if (date == null) {
@@ -2204,10 +2227,7 @@ List<Map<String, dynamic>> _parseLinks(String raw) {
 }
 
 class _AuthoringFieldHighlight extends StatelessWidget {
-  const _AuthoringFieldHighlight({
-    required this.active,
-    required this.child,
-  });
+  const _AuthoringFieldHighlight({required this.active, required this.child});
 
   final bool active;
   final Widget child;
@@ -2288,7 +2308,10 @@ class _ProjectImagesSection extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           OutlinedButton.icon(
             onPressed: isUploading ? null : onAddImage,
-            style: AppStatusButtonStyle.outlined(context, AppStatusTone.primary),
+            style: AppStatusButtonStyle.outlined(
+              context,
+              AppStatusTone.primary,
+            ),
             icon: isUploading
                 ? const SizedBox(
                     width: 18,
@@ -2296,7 +2319,9 @@ class _ProjectImagesSection extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.add_photo_alternate_outlined),
-            label: Text(hasImage ? 'Replace project image' : 'Add project image'),
+            label: Text(
+              hasImage ? 'Replace project image' : 'Add project image',
+            ),
           ),
         ],
       ],
@@ -2337,10 +2362,7 @@ class _ReviewStateBanner extends StatelessWidget {
             style: AppTextStyles.label(context).copyWith(color: color),
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            message,
-            style: AppTextStyles.body(context),
-          ),
+          Text(message, style: AppTextStyles.body(context)),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppSpacing.sm),
             TextButton(

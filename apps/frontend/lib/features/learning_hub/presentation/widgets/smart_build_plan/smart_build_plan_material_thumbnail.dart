@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../app/theme/app_radius.dart';
 import '../../../../../core/config/api_config.dart';
+import '../../../../../shared/widgets/app_network_image.dart';
 import '../../../application/smart_build_plan_material_images.dart';
 import '../../theme/learning_ui_palette.dart';
 
@@ -23,10 +24,12 @@ class SmartBuildPlanMaterialThumbnail extends ConsumerWidget {
     final palette = LearningUiPalette.of(context);
     final directUrl = _normalizeUrl(imageUrl);
     final fetchedUrl = directUrl == null
-        ? ref.watch(smartBuildPlanMaterialImageProvider(materialId)).maybeWhen(
-              data: (value) => _normalizeUrl(value),
-              orElse: () => null,
-            )
+        ? ref
+              .watch(smartBuildPlanMaterialImageProvider(materialId))
+              .maybeWhen(
+                data: (value) => _normalizeUrl(value),
+                orElse: () => null,
+              )
         : null;
     final resolvedUrl = directUrl ?? fetchedUrl;
 
@@ -42,10 +45,11 @@ class SmartBuildPlanMaterialThumbnail extends ConsumerWidget {
                 color: palette.textSecondary,
                 size: size * 0.38,
               )
-            : Image.network(
-                resolvedUrl,
+            : AppNetworkImage(
+                url: resolvedUrl,
                 fit: BoxFit.cover,
-                cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).round(),
+                cacheWidth: (size * MediaQuery.devicePixelRatioOf(context))
+                    .round(),
                 loadingBuilder: (context, child, progress) {
                   if (progress == null) {
                     return child;
@@ -75,6 +79,6 @@ class SmartBuildPlanMaterialThumbnail extends ConsumerWidget {
     if (trimmed == null || trimmed.isEmpty) {
       return null;
     }
-    return ApiConfig.resolveMediaUrl(trimmed);
+    return ApiConfig.resolveApiAssetUrl(trimmed);
   }
 }

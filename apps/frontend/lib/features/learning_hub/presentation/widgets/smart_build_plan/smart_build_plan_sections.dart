@@ -42,7 +42,9 @@ class SmartBuildPlanRecommendedSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          SmartBuildPlanL10n.recommendedMaterials(items.length).resolve(context),
+          SmartBuildPlanL10n.recommendedMaterials(
+            items.length,
+          ).resolve(context),
           style: AppTextStyles.title(context).copyWith(
             color: palette.textPrimary,
             fontWeight: FontWeight.w700,
@@ -52,17 +54,13 @@ class SmartBuildPlanRecommendedSection extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           SmartBuildPlanL10n.reserveSectionHelper.resolve(context),
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textSecondary,
-            height: 1.35,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textSecondary, height: 1.35),
         ),
         const SizedBox(height: AppSpacing.sm),
         for (final item in items) ...[
-          SmartBuildPlanRecommendedCard(
-            projectId: projectId,
-            item: item,
-          ),
+          SmartBuildPlanRecommendedCard(projectId: projectId, item: item),
           const SizedBox(height: AppSpacing.sm),
         ],
       ],
@@ -100,8 +98,9 @@ class SmartBuildPlanSidebarSections extends StatelessWidget {
       children: [
         if (groups.inProgress.isNotEmpty) ...[
           SmartBuildPlanAccordionSection(
-            title: SmartBuildPlanL10n.inProgressSection(groups.inProgress.length)
-                .resolve(context),
+            title: SmartBuildPlanL10n.inProgressSection(
+              groups.inProgress.length,
+            ).resolve(context),
             icon: Icons.schedule_rounded,
             iconColors: SmartBuildPlanIconColors.blue,
             initiallyExpanded: !compact,
@@ -125,8 +124,9 @@ class SmartBuildPlanSidebarSections extends StatelessWidget {
         ],
         if (groups.attention.isNotEmpty) ...[
           SmartBuildPlanAccordionSection(
-            title: SmartBuildPlanL10n.needsAttentionSection(groups.attention.length)
-                .resolve(context),
+            title: SmartBuildPlanL10n.needsAttentionSection(
+              groups.attention.length,
+            ).resolve(context),
             icon: Icons.warning_amber_rounded,
             iconColors: SmartBuildPlanIconColors.orange,
             tone: AppStatusTone.warning,
@@ -203,7 +203,9 @@ class _SmartBuildPlanAccordionSectionState
             : palette.cardSurface,
         borderRadius: AppRadius.mdAll,
         border: Border.all(
-          color: isWarning ? toneStyle!.border.withValues(alpha: 0.45) : palette.borderSubtle,
+          color: isWarning
+              ? toneStyle!.border.withValues(alpha: 0.45)
+              : palette.borderSubtle,
         ),
       ),
       child: Column(
@@ -221,7 +223,8 @@ class _SmartBuildPlanAccordionSectionState
                   if (widget.icon != null) ...[
                     SmartBuildPlanColoredIcon(
                       icon: widget.icon!,
-                      colors: widget.iconColors ?? SmartBuildPlanIconColors.blue,
+                      colors:
+                          widget.iconColors ?? SmartBuildPlanIconColors.blue,
                       size: 18,
                     ),
                     const SizedBox(width: AppSpacing.xs),
@@ -306,10 +309,9 @@ class _SidebarItemList extends StatelessWidget {
                           items[index].requiredQuantity,
                           items[index].requiredUnit,
                         ),
-                        style: AppTextStyles.label(context).copyWith(
-                          color: palette.textSecondary,
-                          fontSize: 11,
-                        ),
+                        style: AppTextStyles.label(
+                          context,
+                        ).copyWith(color: palette.textSecondary, fontSize: 11),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -330,10 +332,9 @@ class _SidebarItemList extends StatelessWidget {
                     items[index].requiredQuantity,
                     items[index].requiredUnit,
                   ),
-                  style: AppTextStyles.label(context).copyWith(
-                    color: palette.textSecondary,
-                    fontSize: 11,
-                  ),
+                  style: AppTextStyles.label(
+                    context,
+                  ).copyWith(color: palette.textSecondary, fontSize: 11),
                 ),
               if (actionLabel != null && onAction != null && !compact)
                 TextButton(
@@ -380,8 +381,9 @@ class _SmartBuildPlanAlreadyCoveredSectionState
     final hiddenCount = widget.items.length - visibleItems.length;
 
     return SmartBuildPlanAccordionSection(
-      title: SmartBuildPlanL10n.alreadyCoveredSection(widget.items.length)
-          .resolve(context),
+      title: SmartBuildPlanL10n.alreadyCoveredSection(
+        widget.items.length,
+      ).resolve(context),
       icon: Icons.check_circle_outline_rounded,
       iconColors: SmartBuildPlanIconColors.green,
       initiallyExpanded: widget.items.isNotEmpty && widget.items.length <= 2,
@@ -391,7 +393,8 @@ class _SmartBuildPlanAlreadyCoveredSectionState
           _SidebarItemList(
             items: visibleItems,
             compact: widget.compact,
-            subtitleBuilder: (item) => _satisfiedSubtitle(item).resolve(context),
+            subtitleBuilder: (item) =>
+                _satisfiedSubtitle(item).resolve(context),
           ),
           if (hiddenCount > 0 || _expanded)
             Align(
@@ -405,8 +408,9 @@ class _SmartBuildPlanAlreadyCoveredSectionState
                 child: Text(
                   _expanded
                       ? SmartBuildPlanL10n.showLessMissing.resolve(context)
-                      : SmartBuildPlanL10n.showAllCovered(widget.items.length)
-                          .resolve(context),
+                      : SmartBuildPlanL10n.showAllCovered(
+                          widget.items.length,
+                        ).resolve(context),
                 ),
               ),
             ),
@@ -471,7 +475,10 @@ class _SmartBuildPlanMissingSectionState
     final formatters = LocalizedFormatters(context.l10n);
     final openRequests = ref
         .watch(openMaterialRequestsByBuildItemProvider(widget.buildId))
-        .maybeWhen(data: (value) => value, orElse: () => const <String, String>{});
+        .maybeWhen(
+          data: (value) => value,
+          orElse: () => const <String, String>{},
+        );
 
     if (_collapsed) {
       return Align(
@@ -479,8 +486,9 @@ class _SmartBuildPlanMissingSectionState
         child: TextButton(
           onPressed: () => setState(() => _collapsed = false),
           child: Text(
-            SmartBuildPlanL10n.viewMissingComponents(widget.items.length)
-                .resolve(context),
+            SmartBuildPlanL10n.viewMissingComponents(
+              widget.items.length,
+            ).resolve(context),
           ),
         ),
       );
@@ -529,8 +537,9 @@ class _SmartBuildPlanMissingSectionState
               child: Text(
                 _expanded
                     ? SmartBuildPlanL10n.showLessMissing.resolve(context)
-                    : SmartBuildPlanL10n.showAllMissing(widget.items.length)
-                        .resolve(context),
+                    : SmartBuildPlanL10n.showAllMissing(
+                        widget.items.length,
+                      ).resolve(context),
               ),
             ),
           ),
@@ -543,8 +552,9 @@ class _SmartBuildPlanMissingSectionState
     }
 
     return SmartBuildPlanAccordionSection(
-      title: SmartBuildPlanL10n.stillMissingSection(widget.items.length)
-          .resolve(context),
+      title: SmartBuildPlanL10n.stillMissingSection(
+        widget.items.length,
+      ).resolve(context),
       icon: Icons.search_off_outlined,
       iconColors: SmartBuildPlanIconColors.orange,
       tone: AppStatusTone.warning,
@@ -632,10 +642,9 @@ class _UncoveredItemRow extends StatelessWidget {
             if (compact)
               Text(
                 formatters.quantity(item.requiredQuantity, item.requiredUnit),
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textSecondary,
-                  fontSize: 11,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary, fontSize: 11),
               ),
           ],
         ),
@@ -643,20 +652,17 @@ class _UncoveredItemRow extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             quantityLabel,
-            style: AppTextStyles.label(context).copyWith(
-              color: palette.textSecondary,
-              fontSize: 11,
-            ),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textSecondary, fontSize: 11),
           ),
         ],
         const SizedBox(height: 2),
         Text(
           SmartBuildPlanL10n.notCurrentlyAvailableOnPlatform.resolve(context),
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textSecondary,
-            height: 1.3,
-            fontSize: 11,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textSecondary, height: 1.3, fontSize: 11),
         ),
         const SizedBox(height: AppSpacing.xs),
         if (openRequestId != null) ...[
@@ -691,7 +697,9 @@ class _UncoveredItemRow extends StatelessWidget {
                   vertical: AppSpacing.xs,
                 ),
               ),
-              child: Text(SmartBuildPlanL10n.requestThisMaterial.resolve(context)),
+              child: Text(
+                SmartBuildPlanL10n.requestThisMaterial.resolve(context),
+              ),
             ),
           ),
       ],
@@ -728,15 +736,18 @@ class SmartBuildPlanNoRecommendationsState extends StatelessWidget {
         children: [
           Text(
             SmartBuildPlanL10n.noMaterialsAvailableTitle.resolve(context),
-            style: AppTextStyles.title(context).copyWith(color: palette.textPrimary),
+            style: AppTextStyles.title(
+              context,
+            ).copyWith(color: palette.textPrimary),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            SmartBuildPlanL10n.noMaterialsAvailableBody(missingCount).resolve(context),
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textSecondary,
-              height: 1.45,
-            ),
+            SmartBuildPlanL10n.noMaterialsAvailableBody(
+              missingCount,
+            ).resolve(context),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary, height: 1.45),
           ),
           const SizedBox(height: AppSpacing.md),
           Wrap(

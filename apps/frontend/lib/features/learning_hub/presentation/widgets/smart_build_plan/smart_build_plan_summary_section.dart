@@ -10,10 +10,7 @@ import '../../theme/learning_ui_palette.dart';
 import 'smart_build_plan_colored_icon.dart';
 
 class SmartBuildPlanSummarySection extends StatelessWidget {
-  const SmartBuildPlanSummarySection({
-    super.key,
-    required this.summary,
-  });
+  const SmartBuildPlanSummarySection({super.key, required this.summary});
 
   final SmartBuildPlanBuildSummary summary;
 
@@ -59,10 +56,9 @@ class SmartBuildPlanSummarySection extends StatelessWidget {
       children: [
         Text(
           SmartBuildPlanL10n.buildSummaryTitle.resolve(context),
-          style: AppTextStyles.title(context).copyWith(
-            color: palette.textPrimary,
-            fontWeight: FontWeight.w700,
-          ),
+          style: AppTextStyles.title(
+            context,
+          ).copyWith(color: palette.textPrimary, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: AppSpacing.sm),
         LayoutBuilder(
@@ -161,11 +157,9 @@ class _SummaryStatCard extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: AppTextStyles.label(context).copyWith(
-              color: palette.textSecondary,
-              height: 1.2,
-              fontSize: 12,
-            ),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textSecondary, height: 1.2, fontSize: 12),
           ),
           const SizedBox(height: 2),
           Text(

@@ -1,6 +1,1 @@
-enum AuthoringWorkspaceSaveState {
-  saved,
-  unsaved,
-  saving,
-  failed,
-}
+enum AuthoringWorkspaceSaveState { saved, unsaved, saving, failed }

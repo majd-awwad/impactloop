@@ -33,7 +33,8 @@ class SmartBuildPlanItemCard extends ConsumerStatefulWidget {
       _SmartBuildPlanItemCardState();
 }
 
-class _SmartBuildPlanItemCardState extends ConsumerState<SmartBuildPlanItemCard> {
+class _SmartBuildPlanItemCardState
+    extends ConsumerState<SmartBuildPlanItemCard> {
   bool _isLinking = false;
 
   Future<void> _openMaterial({required bool linkBeforeNavigate}) async {
@@ -45,11 +46,13 @@ class _SmartBuildPlanItemCardState extends ConsumerState<SmartBuildPlanItemCard>
     if (linkBeforeNavigate) {
       setState(() => _isLinking = true);
       try {
-        await ref.read(learningHubRepositoryProvider).linkMaterial(
-          widget.projectId,
-          widget.item.buildItemId,
-          materialId: candidate.materialId,
-        );
+        await ref
+            .read(learningHubRepositoryProvider)
+            .linkMaterial(
+              widget.projectId,
+              widget.item.buildItemId,
+              materialId: candidate.materialId,
+            );
         ref.refreshLinkedProjectBuild(widget.projectId);
         ref.refreshSmartBuildPlan(widget.projectId);
       } catch (error) {
@@ -103,23 +106,24 @@ class _SmartBuildPlanItemCardState extends ConsumerState<SmartBuildPlanItemCard>
                   children: [
                     Text(
                       widget.item.componentName,
-                      style: AppTextStyles.title(context).copyWith(
-                        color: palette.textPrimary,
-                      ),
+                      style: AppTextStyles.title(
+                        context,
+                      ).copyWith(color: palette.textPrimary),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       '${SmartBuildPlanL10n.requiredQuantity.resolve(context)}: ${formatters.quantity(widget.item.requiredQuantity, widget.item.requiredUnit)}',
-                      style: AppTextStyles.body(context).copyWith(
-                        color: palette.textSecondary,
-                      ),
+                      style: AppTextStyles.body(
+                        context,
+                      ).copyWith(color: palette.textSecondary),
                     ),
                   ],
                 ),
               ),
               AppStatusBadge(
-                label: SmartBuildPlanL10n.plannerStateLabel(widget.item.plannerState)
-                    .resolve(context),
+                label: SmartBuildPlanL10n.plannerStateLabel(
+                  widget.item.plannerState,
+                ).resolve(context),
                 tone: tone,
               ),
             ],
@@ -165,9 +169,7 @@ class _Body extends StatelessWidget {
       SmartBuildPlannerState.inProgress => Text(
         SmartBuildPlanL10n.inProgressBody.resolve(context),
       ),
-      SmartBuildPlannerState.attention => _AttentionBody(
-        projectId: projectId,
-      ),
+      SmartBuildPlannerState.attention => _AttentionBody(projectId: projectId),
       SmartBuildPlannerState.uncovered => _UncoveredBody(item: item),
       SmartBuildPlannerState.planned => _PlannedBody(
         item: item,
@@ -190,9 +192,7 @@ class _AttentionBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          SmartBuildPlanL10n.attentionBody.resolve(context),
-        ),
+        Text(SmartBuildPlanL10n.attentionBody.resolve(context)),
         const SizedBox(height: AppSpacing.md),
         OutlinedButton(
           onPressed: () => context.push('/learning/$projectId/build'),
@@ -218,13 +218,17 @@ class _UncoveredBody extends StatelessWidget {
       children: [
         Text(
           SmartBuildPlanL10n.uncoveredBody.resolve(context),
-          style: AppTextStyles.body(context).copyWith(color: palette.textSecondary),
+          style: AppTextStyles.body(
+            context,
+          ).copyWith(color: palette.textSecondary),
         ),
         if (reason != null) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(
             SmartBuildPlanL10n.uncoveredReason(reason).resolve(context),
-            style: AppTextStyles.label(context).copyWith(color: palette.textSecondary),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textSecondary),
           ),
         ],
       ],
@@ -257,9 +261,10 @@ class _PlannedBody extends StatelessWidget {
 
     final priceLabel = candidate.priceKnown
         ? (candidate.isFree
-            ? SmartBuildPlanL10n.reasonTag(SmartBuildReasonTag.free)
-                .resolve(context)
-            : formatters.nis(candidate.lineSubtotal ?? 0, decimalDigits: 2))
+              ? SmartBuildPlanL10n.reasonTag(
+                  SmartBuildReasonTag.free,
+                ).resolve(context)
+              : formatters.nis(candidate.lineSubtotal ?? 0, decimalDigits: 2))
         : SmartBuildPlanL10n.priceUnknown.resolve(context);
 
     return Column(
@@ -267,10 +272,9 @@ class _PlannedBody extends StatelessWidget {
       children: [
         Text(
           candidate.title,
-          style: AppTextStyles.body(context).copyWith(
-            color: palette.textPrimary,
-            fontWeight: FontWeight.w600,
-          ),
+          style: AppTextStyles.body(
+            context,
+          ).copyWith(color: palette.textPrimary, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: AppSpacing.xs),
         Wrap(
@@ -278,29 +282,32 @@ class _PlannedBody extends StatelessWidget {
           runSpacing: AppSpacing.xs,
           children: [
             AppStatusBadge(
-              label: SmartBuildPlanL10n.matchTypeLabel(candidate.matchType)
-                  .resolve(context),
+              label: SmartBuildPlanL10n.matchTypeLabel(
+                candidate.matchType,
+              ).resolve(context),
               tone: AppStatusTone.primary,
             ),
             Text(
               '${SmartBuildPlanL10n.availableQuantity.resolve(context)}: ${formatters.quantity(candidate.availableQuantity, candidate.unit)}',
-              style: AppTextStyles.label(context).copyWith(
-                color: palette.textSecondary,
-              ),
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textSecondary),
             ),
             if (candidate.city.isNotEmpty)
               Text(
                 candidate.city,
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textSecondary,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary),
               ),
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
           priceLabel,
-          style: AppTextStyles.title(context).copyWith(color: palette.textPrimary),
+          style: AppTextStyles.title(
+            context,
+          ).copyWith(color: palette.textPrimary),
         ),
         if (item.reasonTags.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.sm),
@@ -332,10 +339,9 @@ class _PlannedBody extends StatelessWidget {
         const SizedBox(height: AppSpacing.xs),
         Text(
           SmartBuildPlanL10n.reserveHelper.resolve(context),
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textSecondary,
-            height: 1.4,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textSecondary, height: 1.4),
         ),
       ],
     );

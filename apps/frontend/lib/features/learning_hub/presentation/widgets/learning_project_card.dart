@@ -417,80 +417,80 @@ class LearningProjectCompactCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                      Text(
-                        project.title.resolve(context),
-                        style: textTheme.titleSmall?.copyWith(
-                          color: palette.textPrimary,
-                          fontWeight: FontWeight.w800,
-                          height: 1.22,
-                          fontSize: 14.5,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.start,
+                    Text(
+                      project.title.resolve(context),
+                      style: textTheme.titleSmall?.copyWith(
+                        color: palette.textPrimary,
+                        fontWeight: FontWeight.w800,
+                        height: 1.22,
+                        fontSize: 14.5,
                       ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Wrap(
-                        spacing: AppSpacing.xs,
-                        runSpacing: AppSpacing.xs,
-                        crossAxisAlignment: WrapCrossAlignment.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.start,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xs,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _ProjectMetaChip(
+                          label: project.category.resolve(context),
+                        ),
+                        _CompactDifficultyBadge(
+                          label: project.difficulty.resolve(context),
+                        ),
+                      ],
+                    ),
+                    if (progress != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
                         children: [
-                          _ProjectMetaChip(
-                            label: project.category.resolve(context),
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: AppRadius.pillAll,
+                              child: LinearProgressIndicator(
+                                value: progress.clamp(0.0, 1.0),
+                                minHeight: 4,
+                                backgroundColor: palette.borderSubtle,
+                                color: palette.lime,
+                              ),
+                            ),
                           ),
-                          _CompactDifficultyBadge(
-                            label: project.difficulty.resolve(context),
+                          const SizedBox(width: AppSpacing.sm),
+                          Text(
+                            '${(progress * 100).round()}%',
+                            style: textTheme.labelSmall?.copyWith(
+                              color: palette.textSecondary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                            ),
                           ),
                         ],
                       ),
-                      if (progress != null) ...[
-                        const SizedBox(height: AppSpacing.sm),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: AppRadius.pillAll,
-                                child: LinearProgressIndicator(
-                                  value: progress.clamp(0.0, 1.0),
-                                  minHeight: 4,
-                                  backgroundColor: palette.borderSubtle,
-                                  color: palette.lime,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Text(
-                              '${(progress * 100).round()}%',
-                              style: textTheme.labelSmall?.copyWith(
-                                color: palette.textSecondary,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: AppSpacing.sm),
-                      const Divider(height: 1),
-                      const SizedBox(height: AppSpacing.sm),
-                      ProjectEngagementStrip(
-                        project: project,
-                        density: ProjectEngagementDensity.compact,
-                      ),
-                      if (project.creator case final creator?) ...[
-                        const SizedBox(height: AppSpacing.sm),
-                        LearningProjectCreatorFooter(
-                          creator: creator,
-                          compact: true,
-                        ),
-                      ],
                     ],
-                  ),
+                    const SizedBox(height: AppSpacing.sm),
+                    const Divider(height: 1),
+                    const SizedBox(height: AppSpacing.sm),
+                    ProjectEngagementStrip(
+                      project: project,
+                      density: ProjectEngagementDensity.compact,
+                    ),
+                    if (project.creator case final creator?) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      LearningProjectCreatorFooter(
+                        creator: creator,
+                        compact: true,
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
     );
   }
 }

@@ -1,11 +1,6 @@
 enum ProjectMaterialCoverageLevel { full, most, some, none, unknown }
 
-enum ComponentPublicAvailabilityStatus {
-  available,
-  partial,
-  missing,
-  unknown,
-}
+enum ComponentPublicAvailabilityStatus { available, partial, missing, unknown }
 
 class ProjectMaterialCoverageSummary {
   const ProjectMaterialCoverageSummary({
@@ -20,8 +15,7 @@ class ProjectMaterialCoverageSummary {
 
   factory ProjectMaterialCoverageSummary.fromJson(Map<String, dynamic> json) {
     return ProjectMaterialCoverageSummary(
-      totalRequiredComponents:
-          _int(json['totalRequiredComponents']) ?? 0,
+      totalRequiredComponents: _int(json['totalRequiredComponents']) ?? 0,
       availableComponents: _int(json['availableComponents']) ?? 0,
       partialComponents: _int(json['partialComponents']) ?? 0,
       missingComponents: _int(json['missingComponents']) ?? 0,
@@ -82,7 +76,8 @@ class ProjectComponentCoverageItem {
     return ProjectComponentCoverageItem(
       componentId: json['componentId'] as String? ?? '',
       componentName: json['componentName'] as String? ?? '',
-      availabilityStatus: _availabilityStatus(json['publicAvailabilityStatus']) ??
+      availabilityStatus:
+          _availabilityStatus(json['publicAvailabilityStatus']) ??
           _availabilityStatus(json['availabilityStatus']),
     );
   }

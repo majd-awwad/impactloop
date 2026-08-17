@@ -21,22 +21,17 @@ class SmartBuildPlanL10n {
   );
 
   static const advisoryBanner = LocalizedText(
-    en:
-        'These are advisory recommendations only. Availability must be rechecked before reserving materials.',
-    ar:
-        'هذه توصيات إرشادية فقط. يجب إعادة التحقق من التوفر قبل حجز المواد.',
+    en: 'These are advisory recommendations only. Availability must be rechecked before reserving materials.',
+    ar: 'هذه توصيات إرشادية فقط. يجب إعادة التحقق من التوفر قبل حجز المواد.',
   );
 
   static const advisoryStrip = LocalizedText(
-    en:
-        'Smart recommendations only. Availability is checked again when you reserve.',
+    en: 'Smart recommendations only. Availability is checked again when you reserve.',
     ar: 'توصيات ذكية فقط. يتم التحقق من التوفر مجدداً عند الحجز.',
   );
 
-  static LocalizedText updatedAt(String formatted) => LocalizedText(
-    en: 'Updated $formatted',
-    ar: 'التحديث: $formatted',
-  );
+  static LocalizedText updatedAt(String formatted) =>
+      LocalizedText(en: 'Updated $formatted', ar: 'التحديث: $formatted');
 
   static const deliveryFeeNote = LocalizedText(
     en: 'Material subtotal excludes delivery fees.',
@@ -58,10 +53,7 @@ class SmartBuildPlanL10n {
     ar: 'تحديث الخطة',
   );
 
-  static const retry = LocalizedText(
-    en: 'Try again',
-    ar: 'أعد المحاولة',
-  );
+  static const retry = LocalizedText(en: 'Try again', ar: 'أعد المحاولة');
 
   static const backToBuild = LocalizedText(
     en: 'Back to build',
@@ -74,10 +66,8 @@ class SmartBuildPlanL10n {
   );
 
   static const noOptimizableBody = LocalizedText(
-    en:
-        'Your build items are already satisfied, in progress, or need your attention. Smart planning will be available when new items need materials.',
-    ar:
-        'عناصر البناء لديك مكتملة أو قيد المتابعة أو تحتاج انتباهك. ستتوفر الخطة الذكية عندما تحتاج عناصر جديدة إلى مواد.',
+    en: 'Your build items are already satisfied, in progress, or need your attention. Smart planning will be available when new items need materials.',
+    ar: 'عناصر البناء لديك مكتملة أو قيد المتابعة أو تحتاج انتباهك. ستتوفر الخطة الذكية عندما تحتاج عناصر جديدة إلى مواد.',
   );
 
   static const generatedAt = LocalizedText(
@@ -91,21 +81,13 @@ class SmartBuildPlanL10n {
   );
 
   static const reserveHelper = LocalizedText(
-    en:
-        'Reserve links this material to your build checklist, then opens the existing reservation flow. Availability is rechecked before booking.',
-    ar:
-        'الحجز يربط هذه المادة بقائمة البناء ثم يفتح مسار الحجز الحالي. يتم إعادة التحقق من التوفر قبل الإتمام.',
+    en: 'Reserve links this material to your build checklist, then opens the existing reservation flow. Availability is rechecked before booking.',
+    ar: 'الحجز يربط هذه المادة بقائمة البناء ثم يفتح مسار الحجز الحالي. يتم إعادة التحقق من التوفر قبل الإتمام.',
   );
 
-  static const summaryRequired = LocalizedText(
-    en: 'Required',
-    ar: 'المطلوبة',
-  );
+  static const summaryRequired = LocalizedText(en: 'Required', ar: 'المطلوبة');
 
-  static const summarySatisfied = LocalizedText(
-    en: 'Satisfied',
-    ar: 'مكتملة',
-  );
+  static const summarySatisfied = LocalizedText(en: 'Satisfied', ar: 'مكتملة');
 
   static const summaryInProgress = LocalizedText(
     en: 'In progress',
@@ -122,10 +104,7 @@ class SmartBuildPlanL10n {
     ar: 'قابلة للتحسين',
   );
 
-  static const summaryRemaining = LocalizedText(
-    en: 'Remaining',
-    ar: 'المتبقي',
-  );
+  static const summaryRemaining = LocalizedText(en: 'Remaining', ar: 'المتبقي');
 
   static const planSelectorTitle = LocalizedText(
     en: 'Choose plan type',
@@ -147,10 +126,11 @@ class SmartBuildPlanL10n {
     ar: 'يقلل عدد محطات الاستلام.',
   );
 
-  static LocalizedText planAlsoLabel(SmartBuildPlanLabel label) => LocalizedText(
-    en: 'Also: ${planLabel(label).en}',
-    ar: 'أيضاً: ${planLabel(label).ar}',
-  );
+  static LocalizedText planAlsoLabel(SmartBuildPlanLabel label) =>
+      LocalizedText(
+        en: 'Also: ${planLabel(label).en}',
+        ar: 'أيضاً: ${planLabel(label).ar}',
+      );
 
   static const recommendedPlanBadge = LocalizedText(
     en: 'Recommended plan',
@@ -182,10 +162,7 @@ class SmartBuildPlanL10n {
     ar: 'مجموع المواد',
   );
 
-  static const suppliers = LocalizedText(
-    en: 'Suppliers',
-    ar: 'الموردون',
-  );
+  static const suppliers = LocalizedText(en: 'Suppliers', ar: 'الموردون');
 
   static const pickupLocations = LocalizedText(
     en: 'Pickup locations',
@@ -222,20 +199,16 @@ class SmartBuildPlanL10n {
     ar: 'المادة المقترحة',
   );
 
-  static LocalizedText inProgressSection(int count) => LocalizedText(
-    en: 'In progress ($count)',
-    ar: 'قيد التوريد ($count)',
-  );
+  static LocalizedText inProgressSection(int count) =>
+      LocalizedText(en: 'In progress ($count)', ar: 'قيد التوريد ($count)');
 
   static const inProgressCompact = LocalizedText(
     en: 'Active reservation',
     ar: 'حجز نشط',
   );
 
-  static LocalizedText alreadyCoveredSection(int count) => LocalizedText(
-    en: 'Already covered ($count)',
-    ar: 'مغطى بالفعل ($count)',
-  );
+  static LocalizedText alreadyCoveredSection(int count) =>
+      LocalizedText(en: 'Already covered ($count)', ar: 'مغطى بالفعل ($count)');
 
   static const alreadyOwned = LocalizedText(
     en: 'Already owned',
@@ -258,10 +231,8 @@ class SmartBuildPlanL10n {
   );
 
   static const stillMissingSubtext = LocalizedText(
-    en:
-        "We couldn't find an eligible compatible material on ImpactLoop for these components right now.",
-    ar:
-        'لم نجد حاليًا مواد متوافقة ومؤهلة على ImpactLoop لهذه المكوّنات.',
+    en: "We couldn't find an eligible compatible material on ImpactLoop for these components right now.",
+    ar: 'لم نجد حاليًا مواد متوافقة ومؤهلة على ImpactLoop لهذه المكوّنات.',
   );
 
   static const notCurrentlyAvailableOnPlatform = LocalizedText(
@@ -279,25 +250,17 @@ class SmartBuildPlanL10n {
     ar: 'الطلب نشط',
   );
 
-  static const viewRequest = LocalizedText(
-    en: 'View request',
-    ar: 'عرض الطلب',
-  );
+  static const viewRequest = LocalizedText(en: 'View request', ar: 'عرض الطلب');
 
   static LocalizedText showAllMissing(int count) => LocalizedText(
     en: 'Show all $count missing components',
     ar: 'عرض كل $count المكونات الناقصة',
   );
 
-  static const showLessMissing = LocalizedText(
-    en: 'Show less',
-    ar: 'عرض أقل',
-  );
+  static const showLessMissing = LocalizedText(en: 'Show less', ar: 'عرض أقل');
 
-  static LocalizedText showAllCovered(int count) => LocalizedText(
-    en: 'Show all $count',
-    ar: 'عرض الكل ($count)',
-  );
+  static LocalizedText showAllCovered(int count) =>
+      LocalizedText(en: 'Show all $count', ar: 'عرض الكل ($count)');
 
   static const noMaterialsAvailableTitle = LocalizedText(
     en: 'No new material recommendations right now',
@@ -305,10 +268,8 @@ class SmartBuildPlanL10n {
   );
 
   static LocalizedText noMaterialsAvailableBody(int count) => LocalizedText(
-    en:
-        'The remaining components do not currently have eligible materials available on ImpactLoop.',
-    ar:
-        'لا تتوفر حاليًا مواد مؤهلة على ImpactLoop للمكوّنات المتبقية.',
+    en: 'The remaining components do not currently have eligible materials available on ImpactLoop.',
+    ar: 'لا تتوفر حاليًا مواد مؤهلة على ImpactLoop للمكوّنات المتبقية.',
   );
 
   static LocalizedText viewMissingComponents(int count) => LocalizedText(
@@ -316,35 +277,26 @@ class SmartBuildPlanL10n {
     ar: 'عرض المكونات الناقصة ($count)',
   );
 
-  static LocalizedText moreReasons(int count) => LocalizedText(
-    en: '+$count reasons',
-    ar: '+$count أسباب',
-  );
+  static LocalizedText moreReasons(int count) =>
+      LocalizedText(en: '+$count reasons', ar: '+$count أسباب');
 
-  static LocalizedText planCoveredMetric(int covered, int total) => LocalizedText(
-    en: '$covered / $total covered',
-    ar: '$covered / $total مغطاة',
-  );
+  static LocalizedText planCoveredMetric(int covered, int total) =>
+      LocalizedText(
+        en: '$covered / $total covered',
+        ar: '$covered / $total مغطاة',
+      );
 
-  static LocalizedText planPickupMetric(int count) => LocalizedText(
-    en: '$count locations',
-    ar: '$count مواقع',
-  );
+  static LocalizedText planPickupMetric(int count) =>
+      LocalizedText(en: '$count locations', ar: '$count مواقع');
 
   static const viewMaterial = LocalizedText(
     en: 'View material',
     ar: 'عرض المادة',
   );
 
-  static const reserveMaterial = LocalizedText(
-    en: 'Reserve',
-    ar: 'احجز',
-  );
+  static const reserveMaterial = LocalizedText(en: 'Reserve', ar: 'احجز');
 
-  static const requiredQuantity = LocalizedText(
-    en: 'Required',
-    ar: 'المطلوب',
-  );
+  static const requiredQuantity = LocalizedText(en: 'Required', ar: 'المطلوب');
 
   static const availableQuantity = LocalizedText(
     en: 'Available',
@@ -441,11 +393,15 @@ class SmartBuildPlanL10n {
 
   static LocalizedText reasonTag(SmartBuildReasonTag tag) {
     return switch (tag) {
-      SmartBuildReasonTag.exactMatch => matchTypeLabel(SmartBuildMatchType.exact),
-      SmartBuildReasonTag.compatibleMatch =>
-        matchTypeLabel(SmartBuildMatchType.compatible),
-      SmartBuildReasonTag.approvedAlternative =>
-        matchTypeLabel(SmartBuildMatchType.alternative),
+      SmartBuildReasonTag.exactMatch => matchTypeLabel(
+        SmartBuildMatchType.exact,
+      ),
+      SmartBuildReasonTag.compatibleMatch => matchTypeLabel(
+        SmartBuildMatchType.compatible,
+      ),
+      SmartBuildReasonTag.approvedAlternative => matchTypeLabel(
+        SmartBuildMatchType.alternative,
+      ),
       SmartBuildReasonTag.free => const LocalizedText(en: 'Free', ar: 'مجاني'),
       SmartBuildReasonTag.sameCity => const LocalizedText(
         en: 'Same city',

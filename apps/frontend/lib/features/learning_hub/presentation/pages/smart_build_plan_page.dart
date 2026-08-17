@@ -69,7 +69,8 @@ class _SmartBuildPlanPageState extends ConsumerState<SmartBuildPlanPage> {
               projectTitle: projectTitle,
               generatedAt: DateTime.now(),
               isRefreshing: false,
-              onBack: () => context.popOrGo('/learning/${widget.projectId}/build'),
+              onBack: () =>
+                  context.popOrGo('/learning/${widget.projectId}/build'),
               onRefresh: _refresh,
             ),
             const Expanded(child: Center(child: CircularProgressIndicator())),
@@ -81,12 +82,15 @@ class _SmartBuildPlanPageState extends ConsumerState<SmartBuildPlanPage> {
               projectTitle: projectTitle,
               generatedAt: DateTime.now(),
               isRefreshing: false,
-              onBack: () => context.popOrGo('/learning/${widget.projectId}/build'),
+              onBack: () =>
+                  context.popOrGo('/learning/${widget.projectId}/build'),
               onRefresh: _refresh,
             ),
             Expanded(
               child: _ErrorState(
-                message: error is ApiException ? error.message : error.toString(),
+                message: error is ApiException
+                    ? error.message
+                    : error.toString(),
                 onRetry: _refresh,
               ),
             ),
@@ -116,7 +120,8 @@ class _SmartBuildPlanPageState extends ConsumerState<SmartBuildPlanPage> {
                 projectTitle: projectTitle,
                 generatedAt: result.generatedAt,
                 isRefreshing: planAsync.isLoading,
-                onBack: () => context.popOrGo('/learning/${widget.projectId}/build'),
+                onBack: () =>
+                    context.popOrGo('/learning/${widget.projectId}/build'),
                 onRefresh: _refresh,
               ),
               Expanded(
@@ -133,17 +138,27 @@ class _SmartBuildPlanPageState extends ConsumerState<SmartBuildPlanPage> {
                             children: [
                               const SmartBuildPlanAdvisoryStrip(),
                               const SizedBox(height: AppSpacing.md),
-                              SmartBuildPlanSummarySection(summary: result.summary),
+                              SmartBuildPlanSummarySection(
+                                summary: result.summary,
+                              ),
                               const SizedBox(height: AppSpacing.md),
                               if (!result.hasOptimizableItems &&
                                   result.summary.optimizable == 0)
-                                _NoOptimizableState(onBack: () {
-                                  context.popOrGo('/learning/${widget.projectId}/build');
-                                })
+                                _NoOptimizableState(
+                                  onBack: () {
+                                    context.popOrGo(
+                                      '/learning/${widget.projectId}/build',
+                                    );
+                                  },
+                                )
                               else if (result.plans.isEmpty)
-                                _NoOptimizableState(onBack: () {
-                                  context.popOrGo('/learning/${widget.projectId}/build');
-                                })
+                                _NoOptimizableState(
+                                  onBack: () {
+                                    context.popOrGo(
+                                      '/learning/${widget.projectId}/build',
+                                    );
+                                  },
+                                )
                               else if (selectedPlan != null) ...[
                                 SmartBuildPlanSelector(
                                   plans: result.plans,
@@ -160,7 +175,9 @@ class _SmartBuildPlanPageState extends ConsumerState<SmartBuildPlanPage> {
                                   groups: groups,
                                   onRefresh: _refresh,
                                   onBack: () {
-                                    context.popOrGo('/learning/${widget.projectId}/build');
+                                    context.popOrGo(
+                                      '/learning/${widget.projectId}/build',
+                                    );
                                   },
                                 ),
                               ],
@@ -201,9 +218,9 @@ class _ErrorState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: AppTextStyles.body(context).copyWith(
-                color: palette.textSecondary,
-              ),
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textSecondary),
             ),
             const SizedBox(height: AppSpacing.lg),
             FilledButton(
@@ -232,15 +249,16 @@ class _NoOptimizableState extends StatelessWidget {
         children: [
           Text(
             SmartBuildPlanL10n.noOptimizableTitle.resolve(context),
-            style: AppTextStyles.title(context).copyWith(color: palette.textPrimary),
+            style: AppTextStyles.title(
+              context,
+            ).copyWith(color: palette.textPrimary),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             SmartBuildPlanL10n.noOptimizableBody.resolve(context),
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textSecondary,
-              height: 1.45,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary, height: 1.45),
           ),
           const SizedBox(height: AppSpacing.lg),
           OutlinedButton(

@@ -15,18 +15,25 @@ class SmartBuildPlanItemGroups {
           .where((item) => item.plannerState == SmartBuildPlannerState.planned)
           .toList(growable: false),
       inProgress: items
-          .where((item) => item.plannerState == SmartBuildPlannerState.inProgress)
+          .where(
+            (item) => item.plannerState == SmartBuildPlannerState.inProgress,
+          )
           .toList(growable: false),
       alreadySatisfied: items
           .where(
-            (item) => item.plannerState == SmartBuildPlannerState.alreadySatisfied,
+            (item) =>
+                item.plannerState == SmartBuildPlannerState.alreadySatisfied,
           )
           .toList(growable: false),
       attention: items
-          .where((item) => item.plannerState == SmartBuildPlannerState.attention)
+          .where(
+            (item) => item.plannerState == SmartBuildPlannerState.attention,
+          )
           .toList(growable: false),
       uncovered: items
-          .where((item) => item.plannerState == SmartBuildPlannerState.uncovered)
+          .where(
+            (item) => item.plannerState == SmartBuildPlannerState.uncovered,
+          )
           .toList(growable: false),
     );
   }
@@ -57,15 +64,16 @@ List<SmartBuildReasonTag> prioritizedReasonTags({
     SmartBuildReasonTag.approvedAlternative,
   ];
 
-  final filtered = tags.where((tag) {
-    return switch (tag) {
-      SmartBuildReasonTag.exactMatch ||
-      SmartBuildReasonTag.compatibleMatch ||
-      SmartBuildReasonTag.approvedAlternative =>
-        false,
-      _ => true,
-    };
-  }).toList(growable: false);
+  final filtered = tags
+      .where((tag) {
+        return switch (tag) {
+          SmartBuildReasonTag.exactMatch ||
+          SmartBuildReasonTag.compatibleMatch ||
+          SmartBuildReasonTag.approvedAlternative => false,
+          _ => true,
+        };
+      })
+      .toList(growable: false);
 
   filtered.sort((a, b) {
     final aIndex = priority.indexOf(a);
@@ -85,8 +93,7 @@ int hiddenReasonTagCount({
     return switch (tag) {
       SmartBuildReasonTag.exactMatch ||
       SmartBuildReasonTag.compatibleMatch ||
-      SmartBuildReasonTag.approvedAlternative =>
-        false,
+      SmartBuildReasonTag.approvedAlternative => false,
       _ => true,
     };
   }).length;

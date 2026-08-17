@@ -37,10 +37,9 @@ class SmartBuildPlanSelector extends StatelessWidget {
       children: [
         Text(
           SmartBuildPlanL10n.planSelectorTitle.resolve(context),
-          style: AppTextStyles.title(context).copyWith(
-            color: palette.textPrimary,
-            fontWeight: FontWeight.w700,
-          ),
+          style: AppTextStyles.title(
+            context,
+          ).copyWith(color: palette.textPrimary, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: AppSpacing.md),
         LayoutBuilder(
@@ -114,13 +113,17 @@ class _PlanOptionCard extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: labels.map((label) => SmartBuildPlanL10n.planLabel(label).en).join(', '),
+      label: labels
+          .map((label) => SmartBuildPlanL10n.planLabel(label).en)
+          .join(', '),
       child: GestureDetector(
         key: ValueKey(plan.key),
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Material(
-          color: selected ? primaryStyle.selectedBackground : palette.cardSurface,
+          color: selected
+              ? primaryStyle.selectedBackground
+              : palette.cardSurface,
           borderRadius: AppRadius.lgAll,
           elevation: selected ? 2 : 0,
           shadowColor: primaryStyle.selectedBorder.withValues(alpha: 0.15),
@@ -130,7 +133,9 @@ class _PlanOptionCard extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: AppRadius.lgAll,
               border: Border.all(
-                color: selected ? primaryStyle.selectedBorder : palette.borderSubtle,
+                color: selected
+                    ? primaryStyle.selectedBorder
+                    : palette.borderSubtle,
                 width: selected ? 2 : 1,
               ),
             ),
@@ -150,7 +155,9 @@ class _PlanOptionCard extends StatelessWidget {
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
-                        SmartBuildPlanL10n.planLabel(primaryLabel).resolve(context),
+                        SmartBuildPlanL10n.planLabel(
+                          primaryLabel,
+                        ).resolve(context),
                         style: AppTextStyles.body(context).copyWith(
                           color: palette.textPrimary,
                           fontWeight: FontWeight.w700,
@@ -158,9 +165,12 @@ class _PlanOptionCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (selected && primaryLabel == SmartBuildPlanLabel.bestOverall)
+                    if (selected &&
+                        primaryLabel == SmartBuildPlanLabel.bestOverall)
                       AppStatusBadge(
-                        label: SmartBuildPlanL10n.recommendedPlanBadge.resolve(context),
+                        label: SmartBuildPlanL10n.recommendedPlanBadge.resolve(
+                          context,
+                        ),
                         tone: AppStatusTone.primary,
                       ),
                   ],
@@ -168,18 +178,21 @@ class _PlanOptionCard extends StatelessWidget {
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   SmartBuildPlanL10n.planHelper(primaryLabel).resolve(context),
-                  style: AppTextStyles.label(context).copyWith(
-                    color: palette.textSecondary,
-                    height: 1.45,
-                  ),
+                  style: AppTextStyles.label(
+                    context,
+                  ).copyWith(color: palette.textSecondary, height: 1.45),
                 ),
                 if (secondaryLabels.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.sm),
                   ...secondaryLabels.map(
                     (label) => Padding(
-                      padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
+                      padding: const EdgeInsetsDirectional.only(
+                        bottom: AppSpacing.xs,
+                      ),
                       child: Text(
-                        SmartBuildPlanL10n.planAlsoLabel(label).resolve(context),
+                        SmartBuildPlanL10n.planAlsoLabel(
+                          label,
+                        ).resolve(context),
                         style: AppTextStyles.label(context).copyWith(
                           color: primaryStyle.foreground,
                           fontWeight: FontWeight.w600,
@@ -202,13 +215,17 @@ class _PlanOptionCard extends StatelessWidget {
                           : palette.pageBackground,
                       borderRadius: AppRadius.mdAll,
                       border: Border.all(
-                        color: selected ? primaryStyle.border : palette.borderSubtle,
+                        color: selected
+                            ? primaryStyle.border
+                            : palette.borderSubtle,
                       ),
                     ),
                     child: Text(
                       metricText,
                       style: AppTextStyles.label(context).copyWith(
-                        color: selected ? primaryStyle.foreground : palette.textPrimary,
+                        color: selected
+                            ? primaryStyle.foreground
+                            : palette.textPrimary,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -247,28 +264,24 @@ class _PlanOptionCard extends StatelessWidget {
   ) {
     final summary = plan.summary;
     return switch (label) {
-      SmartBuildPlanLabel.bestOverall =>
-        SmartBuildPlanL10n.planCoveredMetric(
-          summary.totalCoveredComponents,
-          summary.totalRequiredComponents,
-        ).resolve(context),
-      SmartBuildPlanLabel.cheapest => summary.hasUnknownPrices && summary.materialSubtotal <= 0
-          ? SmartBuildPlanL10n.priceUnknown.resolve(context)
-          : formatters.nis(
-              summary.materialSubtotal,
-              decimalDigits: 2,
-            ),
+      SmartBuildPlanLabel.bestOverall => SmartBuildPlanL10n.planCoveredMetric(
+        summary.totalCoveredComponents,
+        summary.totalRequiredComponents,
+      ).resolve(context),
+      SmartBuildPlanLabel.cheapest =>
+        summary.hasUnknownPrices && summary.materialSubtotal <= 0
+            ? SmartBuildPlanL10n.priceUnknown.resolve(context)
+            : formatters.nis(summary.materialSubtotal, decimalDigits: 2),
       SmartBuildPlanLabel.fewestPickupLocations =>
-        SmartBuildPlanL10n.planPickupMetric(summary.pickupLocationCount).resolve(context),
+        SmartBuildPlanL10n.planPickupMetric(
+          summary.pickupLocationCount,
+        ).resolve(context),
     };
   }
 }
 
 class _PlanIconSpec {
-  const _PlanIconSpec({
-    required this.icon,
-    required this.colors,
-  });
+  const _PlanIconSpec({required this.icon, required this.colors});
 
   final IconData icon;
   final SmartBuildPlanIconColors colors;
