@@ -55,7 +55,7 @@ class MaterialsHeroSection extends StatelessWidget {
                   style: AppTextStyles.title(context).copyWith(
                     color: palette.textPrimary,
                     fontWeight: FontWeight.w800,
-                    fontSize: 28,
+                    fontSize: 22,
                     letterSpacing: 0,
                   ),
                   textAlign: TextAlign.start,

@@ -379,6 +379,35 @@ void main() {
     expect(find.text('Create account'), findsWidgets);
   });
 
+  testWidgets('restored learner session skips landing and opens home', (
+    tester,
+  ) async {
+    final router = await pumpAuthenticatedRouter(tester, _testUser());
+
+    expect(router.routeInformationProvider.value.uri.path, '/home');
+    expect(find.text('Create account'), findsNothing);
+    expect(find.text('Sign in'), findsNothing);
+  });
+
+  testWidgets(
+    'restored supplier session skips landing and opens supplier overview',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1400, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final router = await pumpAuthenticatedRouter(
+        tester,
+        _testUser(roles: const ['SUPPLIER'], activeRole: 'SUPPLIER'),
+      );
+
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        '/supplier/overview',
+      );
+      expect(find.text('Create account'), findsNothing);
+    },
+  );
+
   testWidgets('logged out users are redirected from /home to /login', (
     tester,
   ) async {
@@ -458,9 +487,8 @@ void main() {
     );
     final router = container.read(appRouterProvider);
 
-    GoRouter.of(
-      tester.element(find.text('Build a better future')),
-    ).go('/login');
+    expect(router.routeInformationProvider.value.uri.path, '/home');
+    router.go('/login');
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/home');
@@ -503,9 +531,8 @@ void main() {
     );
     final router = container.read(appRouterProvider);
 
-    GoRouter.of(
-      tester.element(find.text('Build a better future')),
-    ).go('/register');
+    expect(router.routeInformationProvider.value.uri.path, '/home');
+    router.go('/register');
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/home');
@@ -725,9 +752,8 @@ void main() {
     );
     final router = container.read(appRouterProvider);
 
-    GoRouter.of(
-      tester.element(find.text('Build a better future')),
-    ).go('/login');
+    expect(router.routeInformationProvider.value.uri.path, '/supplier/overview');
+    router.go('/login');
     await tester.pumpAndSettle();
 
     expect(
@@ -785,9 +811,8 @@ void main() {
     );
     final router = container.read(appRouterProvider);
 
-    GoRouter.of(
-      tester.element(find.text('Build a better future')),
-    ).go('/register');
+    expect(router.routeInformationProvider.value.uri.path, '/supplier/overview');
+    router.go('/register');
     await tester.pumpAndSettle();
 
     expect(
@@ -877,9 +902,8 @@ void main() {
     );
     final router = container.read(appRouterProvider);
 
-    GoRouter.of(
-      tester.element(find.text('Build a better future')),
-    ).go('/supplier');
+    expect(router.routeInformationProvider.value.uri.path, '/home');
+    router.go('/supplier');
     await tester.pumpAndSettle();
 
     expect(

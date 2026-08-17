@@ -32,6 +32,8 @@ class LearnerFilterChip extends StatelessWidget {
   final LearnerFilterChipStyle style;
   final bool dense;
 
+  static const double _borderWidth = 1;
+
   @override
   Widget build(BuildContext context) {
     final primary = LearnerDiscoveryStyle.primary(context);
@@ -56,53 +58,73 @@ class LearnerFilterChip extends StatelessWidget {
       foreground = LearnerDiscoveryStyle.textSecondary(context);
     }
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onSelected,
-        borderRadius: AppRadius.pillAll,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          curve: Curves.easeOut,
-          constraints: BoxConstraints(
-            minHeight: dense
-                ? 34
-                : LearnerDiscoveryLayout.chipMinHeight,
-          ),
-          padding: EdgeInsetsDirectional.symmetric(
-            horizontal: dense ? AppSpacing.sm + 2 : AppSpacing.md,
-            vertical: dense ? 6 : AppSpacing.xs + 2,
-          ),
-          decoration: BoxDecoration(
-            color: background,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+        final horizontalPadding =
+            (dense ? AppSpacing.sm + 2 : AppSpacing.md) * 2;
+        final iconWidth = icon == null ? 0.0 : ((dense ? 15.0 : 16.0) + 6);
+        // Wrap gives children a bounded max width equal to the wrap itself.
+        // Border is painted without insetting the child, so reserve it.
+        final textMaxWidth =
+            (availableWidth - horizontalPadding - iconWidth - _borderWidth * 2)
+                .clamp(24.0, double.infinity);
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onSelected,
             borderRadius: AppRadius.pillAll,
-            border: Border.all(color: border),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: dense ? 15 : 16, color: foreground),
-                const SizedBox(width: 6),
-              ],
-              // Intrinsic width only — Flexible breaks inside horizontal
-              // scroll rows (unbounded max width) and clipped chips.
-              Text(
-                label,
-                style: AppTextStyles.label(context).copyWith(
-                  color: foreground,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                  fontSize: dense ? 12.5 : 13,
-                  letterSpacing: 0,
-                ),
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOut,
+              clipBehavior: Clip.antiAlias,
+              constraints: BoxConstraints(
+                minHeight: dense ? 34 : LearnerDiscoveryLayout.chipMinHeight,
+                maxWidth: availableWidth,
               ),
-            ],
+              padding: EdgeInsetsDirectional.symmetric(
+                horizontal: dense ? AppSpacing.sm + 2 : AppSpacing.md,
+                vertical: dense ? 6 : AppSpacing.xs + 2,
+              ),
+              decoration: BoxDecoration(
+                color: background,
+                borderRadius: AppRadius.pillAll,
+                border: Border.all(color: border, width: _borderWidth),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, size: dense ? 15 : 16, color: foreground),
+                    const SizedBox(width: 6),
+                  ],
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: textMaxWidth),
+                    child: Text(
+                      label,
+                      style: AppTextStyles.label(context).copyWith(
+                        color: foreground,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        fontSize: dense ? 12.5 : 13,
+                        letterSpacing: 0,
+                        height: 1.2,
+                      ),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -160,10 +182,9 @@ class LearnerFilterActionButton extends StatelessWidget {
               const SizedBox(width: AppSpacing.xs),
               Text(
                 label,
-                style: AppTextStyles.label(context).copyWith(
-                  color: foreground,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: foreground, fontWeight: FontWeight.w700),
               ),
             ],
           ),

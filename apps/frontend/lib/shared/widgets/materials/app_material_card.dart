@@ -4,6 +4,7 @@ import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../models/localized_text.dart';
 import '../entity_attribution_footer.dart';
+import '../app_network_image.dart';
 import 'material_condition_badge.dart';
 import 'material_price_badge.dart';
 import 'material_status_badge.dart';
@@ -521,8 +522,8 @@ class _CompactCardMediaState extends State<_CompactCardMedia> {
             fit: StackFit.expand,
             children: [
               if (_showNetworkImage)
-                Image.network(
-                  widget.imageUrl!.trim(),
+                AppNetworkImage(
+                  url: widget.imageUrl,
                   fit: BoxFit.cover,
                   cacheWidth: 480,
                   filterQuality: FilterQuality.low,
@@ -836,8 +837,8 @@ class _GridCardMediaState extends State<_GridCardMedia> {
                 scale: widget.hovered ? 1.04 : 1,
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOutCubic,
-                child: Image.network(
-                  widget.imageUrl!.trim(),
+                child: AppNetworkImage(
+                  url: widget.imageUrl,
                   fit: BoxFit.cover,
                   cacheWidth: 720,
                   filterQuality: FilterQuality.low,

@@ -209,18 +209,20 @@ class _WelcomeHero extends StatelessWidget {
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     context.l10n.homeHeroTitle,
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    style: AppTextStyles.display(context).copyWith(
                       color: palette.textPrimary,
                       fontWeight: FontWeight.w800,
-                      height: 1.08,
+                      height: 1.15,
                       letterSpacing: 0,
                     ),
                     textAlign: TextAlign.start,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.sm),
                   Text(
                     context.l10n.homeHeroSubtitle,
-                    style: AppTextStyles.subtitle(
+                    style: AppTextStyles.body(
                       context,
                     ).copyWith(color: palette.textSecondary, letterSpacing: 0),
                     textAlign: TextAlign.start,

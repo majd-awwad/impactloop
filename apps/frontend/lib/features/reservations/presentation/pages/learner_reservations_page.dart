@@ -407,16 +407,13 @@ class _PageHeader extends StatelessWidget {
             children: [
               Text(
                 l10n.myReservations,
-                style:
-                    (compact
-                            ? AppTextStyles.title(context).copyWith(fontSize: 24)
-                            : AppTextStyles.display(context).copyWith(
-                                fontSize: 30,
-                              ))
-                        .copyWith(
-                          color: palette.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
+                style: (compact
+                        ? AppTextStyles.title(context)
+                        : AppTextStyles.display(context))
+                    .copyWith(
+                      color: palette.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(

@@ -31,13 +31,7 @@ class LearnerMaterialRequestMatchCard extends StatelessWidget {
   final bool isMutating;
   final VoidCallback onDismiss;
 
-  String? _resolveImageUrl(String? value) {
-    if (value == null || value.trim().isEmpty) return null;
-    if (value.startsWith('http://') || value.startsWith('https://')) {
-      return value;
-    }
-    return '${ApiConfig.baseUrl}$value';
-  }
+  String? _resolveImageUrl(String? value) => ApiConfig.resolveApiAssetUrl(value);
 
   void _openMaterial(BuildContext context, {required bool forReserve}) {
     final materialId = match.materialId;

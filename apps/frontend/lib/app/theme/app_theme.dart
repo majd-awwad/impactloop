@@ -7,6 +7,17 @@ import 'app_theme_colors.dart';
 class AppTheme {
   const AppTheme._();
 
+  static TextScaler textScalerFor({
+    required TextScaler incoming,
+    required String languageCode,
+  }) {
+    final clamped = incoming.clamp(minScaleFactor: 0.85, maxScaleFactor: 1.2);
+    if (languageCode != 'ar') {
+      return clamped;
+    }
+    return TextScaler.linear(clamped.scale(1) * 0.94);
+  }
+
   static ThemeData get light => lightFor('en');
 
   static ThemeData lightFor(String languageCode) {
@@ -19,7 +30,7 @@ class AppTheme {
       useMaterial3: true,
       extensions: const [colors],
       scaffoldBackgroundColor: colors.pageBackground,
-      textTheme: _textTheme.apply(
+      textTheme: _textTheme(languageCode).apply(
         bodyColor: colors.textPrimary,
         displayColor: colors.textPrimary,
       ),
@@ -47,7 +58,7 @@ class AppTheme {
       useMaterial3: true,
       extensions: const [colors],
       scaffoldBackgroundColor: colors.pageBackground,
-      textTheme: _textTheme.apply(
+      textTheme: _textTheme(languageCode).apply(
         bodyColor: colors.textPrimary,
         displayColor: colors.textPrimary,
       ),
@@ -267,7 +278,7 @@ class AppTheme {
   static SnackBarThemeData _snackBarTheme(AppThemeColors colors) {
     return SnackBarThemeData(
       backgroundColor: colors.textPrimary,
-      contentTextStyle: _textTheme.bodyMedium?.copyWith(
+      contentTextStyle: _textTheme('en').bodyMedium?.copyWith(
         color: colors.surfaceElevated,
         fontWeight: FontWeight.w600,
       ),
@@ -285,13 +296,44 @@ class AppTheme {
     );
   }
 
-  static const TextTheme _textTheme = TextTheme(
-    headlineLarge: TextStyle(fontSize: 34, height: 1.15),
-    headlineMedium: TextStyle(fontSize: 28, height: 1.2),
-    titleLarge: TextStyle(fontSize: 22, height: 1.25),
-    titleMedium: TextStyle(fontSize: 18, height: 1.35),
-    bodyLarge: TextStyle(fontSize: 16, height: 1.5),
-    bodyMedium: TextStyle(fontSize: 14, height: 1.5),
-    labelLarge: TextStyle(fontSize: 14, height: 1.4),
-  );
+  static TextTheme _textTheme(String languageCode) {
+    final arabic = languageCode == 'ar';
+    return TextTheme(
+      headlineLarge: TextStyle(
+        fontSize: arabic ? 30 : 34,
+        height: arabic ? 1.2 : 1.15,
+        letterSpacing: 0,
+      ),
+      headlineMedium: TextStyle(
+        fontSize: arabic ? 24 : 28,
+        height: 1.2,
+        letterSpacing: 0,
+      ),
+      titleLarge: TextStyle(
+        fontSize: arabic ? 20 : 22,
+        height: 1.25,
+        letterSpacing: 0,
+      ),
+      titleMedium: TextStyle(
+        fontSize: arabic ? 16 : 18,
+        height: 1.3,
+        letterSpacing: 0,
+      ),
+      bodyLarge: TextStyle(
+        fontSize: arabic ? 15 : 16,
+        height: arabic ? 1.35 : 1.45,
+        letterSpacing: 0,
+      ),
+      bodyMedium: TextStyle(
+        fontSize: 14,
+        height: arabic ? 1.35 : 1.45,
+        letterSpacing: 0,
+      ),
+      labelLarge: TextStyle(
+        fontSize: 13,
+        height: 1.3,
+        letterSpacing: 0,
+      ),
+    );
+  }
 }

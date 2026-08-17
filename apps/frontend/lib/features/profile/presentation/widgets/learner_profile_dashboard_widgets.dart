@@ -406,9 +406,8 @@ class _HeroIdentity extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: AppTextStyles.title(context).copyWith(
             color: colors.textPrimary,
-            fontSize: 25,
             fontWeight: FontWeight.w800,
-            height: 1.12,
+            height: 1.15,
           ),
         ),
         const SizedBox(height: AppSpacing.xs),

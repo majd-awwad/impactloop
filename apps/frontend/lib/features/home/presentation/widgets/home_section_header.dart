@@ -32,10 +32,14 @@ class HomeSectionHeader extends StatelessWidget {
           children: [
             Text(
               title,
-              style: AppTextStyles.title(
-                context,
-              ).copyWith(color: palette.textPrimary, letterSpacing: 0),
+              style: AppTextStyles.title(context).copyWith(
+                color: palette.textPrimary,
+                letterSpacing: 0,
+                fontSize: compact ? 18 : 20,
+              ),
               textAlign: TextAlign.start,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             if (subtitle != null) ...[
               const SizedBox(height: AppSpacing.xs),
