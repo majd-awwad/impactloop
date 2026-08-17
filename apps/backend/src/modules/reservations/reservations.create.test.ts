@@ -519,6 +519,24 @@ describe('createReservation', () => {
     );
   });
 
+  test('learner cannot reserve a fractional piece quantity', async () => {
+    const material = await createMaterial(ctx, 'AVAILABLE', 5);
+
+    await assert.rejects(
+      () =>
+        createReservation(
+          ctx.learnerId,
+          pickupReservationPayload(material.id, 1.1),
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        assert.match(error.message, /whole numbers/i);
+        return true;
+      },
+    );
+  });
+
   test('cannot create duplicate open reservation for same learner and material', async () => {
     const material = await createMaterial(ctx);
 

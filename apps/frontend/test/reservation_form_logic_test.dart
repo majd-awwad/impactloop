@@ -105,6 +105,23 @@ void main() {
     });
   });
 
+  group('reservationQuantityStep', () {
+    test('steps by 1 for piece-like units including Arabic and pcs', () {
+      expect(reservationQuantityStep('piece'), 1);
+      expect(reservationQuantityStep('pcs'), 1);
+      expect(reservationQuantityStep('قطعة'), 1);
+      expect(reservationQuantityStep('قطعة pcs'), 1);
+      expect(reservationQuantityStep('bag'), 1);
+    });
+
+    test('steps by 0.1 only for measurable units', () {
+      expect(reservationQuantityStep('kg'), 0.1);
+      expect(reservationQuantityStep('كيلو'), 0.1);
+      expect(reservationQuantityStep('liter'), 0.1);
+      expect(reservationQuantityStep('meter'), 0.1);
+    });
+  });
+
   group('shouldShowReservationPaymentMethod', () {
     test('hides payment for free materials with zero quote', () {
       expect(

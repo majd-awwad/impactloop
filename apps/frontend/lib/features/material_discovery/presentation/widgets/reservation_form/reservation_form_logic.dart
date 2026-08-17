@@ -4,30 +4,77 @@ import '../../../../reservations/data/models/reservation_quote.dart';
 const reservationFormDesktopBreakpoint = 720.0;
 const reservationFormMaxWidth = 1000.0;
 
-bool isCountLikeReservationUnit(String unit) {
-  const countLike = {
-    'piece',
-    'pieces',
-    'item',
-    'items',
-    'unit',
-    'units',
-    'sheet',
-    'sheets',
-    'panel',
-    'panels',
-    'crate',
-    'crates',
+bool isCountLikeReservationUnit(String unit) =>
+    !isMeasurableReservationUnit(unit);
+
+/// Weight, volume, and length can be reserved in fractions.
+/// Discrete items (piece, pcs, قطعة, bag, box, …) always step by 1.
+bool isMeasurableReservationUnit(String unit) {
+  const measurable = {
+    'kg',
+    'g',
+    'liter',
+    'ml',
+    'meter',
+    'cm',
+    'm2',
+    'm3',
   };
 
-  return countLike.contains(unit.toLowerCase());
+  return measurable.contains(_normalizedReservationUnit(unit));
 }
 
 double reservationQuantityStep(String unit) =>
-    isCountLikeReservationUnit(unit) ? 1.0 : 0.1;
+    isMeasurableReservationUnit(unit) ? 0.1 : 1.0;
 
 double reservationQuantityMinimum(String unit) =>
-    isCountLikeReservationUnit(unit) ? 1.0 : 0.1;
+    isMeasurableReservationUnit(unit) ? 0.1 : 1.0;
+
+String _normalizedReservationUnit(String unit) {
+  final trimmed = unit.trim().toLowerCase();
+  if (trimmed.isEmpty) {
+    return '';
+  }
+
+  if (RegExp('كجم|كغ|كيلو').hasMatch(trimmed)) {
+    return 'kg';
+  }
+  if (RegExp('غرام|جرام').hasMatch(trimmed) && !trimmed.contains('كيلو')) {
+    return 'g';
+  }
+  if (RegExp('ملليلتر|مليلتر').hasMatch(trimmed)) {
+    return 'ml';
+  }
+  if (RegExp('لتر|ليتر').hasMatch(trimmed)) {
+    return 'liter';
+  }
+  if (RegExp('سنتيمتر|سم').hasMatch(trimmed)) {
+    return 'cm';
+  }
+  if (RegExp('متر').hasMatch(trimmed)) {
+    return 'meter';
+  }
+
+  final ascii = trimmed.replaceAll(RegExp(r'[^\x00-\x7F]+'), ' ').trim();
+  final source = ascii.isNotEmpty ? ascii : trimmed;
+  final token = source
+      .split(RegExp(r'[\s,/_-]+'))
+      .where((part) => part.isNotEmpty)
+      .last;
+
+  return switch (token) {
+    'pcs' || 'pc' || 'piece' || 'pieces' => 'piece',
+    'kg' || 'kilogram' || 'kilograms' || 'kilo' => 'kg',
+    'g' || 'gram' || 'grams' => 'g',
+    'l' || 'liter' || 'liters' || 'litre' || 'litres' => 'liter',
+    'ml' || 'milliliter' || 'millilitre' => 'ml',
+    'm' || 'meter' || 'meters' || 'metre' || 'metres' => 'meter',
+    'cm' || 'centimeter' || 'centimetre' => 'cm',
+    'm2' || 'm²' || 'sqm' => 'm2',
+    'm3' || 'm³' => 'm3',
+    _ => token,
+  };
+}
 
 double resolveInitialReservationQuantity({
   required double availableQuantity,

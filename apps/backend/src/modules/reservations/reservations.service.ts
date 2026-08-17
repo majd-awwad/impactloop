@@ -77,6 +77,10 @@ import {
   decimalToNumber,
   getMaterialQuantityState,
 } from './reservations.quantity.js';
+import {
+  isValidReservationQuantityForUnit,
+  reservationQuantityUnitErrorMessage,
+} from './reservations.unit.js';
 import type {
   CreateReservationInput,
   CreateReservationMessageInput,
@@ -681,7 +685,9 @@ export const createReservation = async (
       );
     case 'INVALID_QUANTITY':
       throw new AppError(
-        'Requested quantity must be positive and no more than the available quantity.',
+        'message' in result && typeof result.message === 'string'
+          ? result.message
+          : 'Requested quantity must be positive and no more than the available quantity.',
         400,
         'VALIDATION_ERROR',
         { availableQuantity: result.availableQuantity },
@@ -802,6 +808,15 @@ export const quoteReservation = async (
   }
 
   const availableQuantity = decimalToNumber(quantityState.availableQuantity);
+
+  if (!isValidReservationQuantityForUnit(input.quantity, material.unit)) {
+    throw new AppError(
+      reservationQuantityUnitErrorMessage(material.unit),
+      400,
+      'VALIDATION_ERROR',
+      { availableQuantity },
+    );
+  }
 
   const result = await buildReservationQuote(
     {

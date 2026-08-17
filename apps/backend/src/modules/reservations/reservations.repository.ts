@@ -18,6 +18,10 @@ import {
   type ReservationQuoteInput,
 } from './reservation-pricing.service.js';
 import {
+  isValidReservationQuantityForUnit,
+  reservationQuantityUnitErrorMessage,
+} from './reservations.unit.js';
+import {
   setBuildItemLinkedReservationId,
   validateBuildItemForReservationLink,
 } from '../learning-projects/learning-projects.build-reservation-linking.js';
@@ -365,6 +369,19 @@ export const createLearnerReservation = async (input: {
       return {
         outcome: 'INVALID_QUANTITY' as const,
         availableQuantity: decimalToNumber(quantityState.availableQuantity),
+      };
+    }
+
+    if (
+      !isValidReservationQuantityForUnit(
+        decimalToNumber(requestedQuantity),
+        material.unit,
+      )
+    ) {
+      return {
+        outcome: 'INVALID_QUANTITY' as const,
+        availableQuantity: decimalToNumber(quantityState.availableQuantity),
+        message: reservationQuantityUnitErrorMessage(material.unit),
       };
     }
 
@@ -730,6 +747,7 @@ export const findMaterialForReservationQuote = async (materialId: string) => {
       price: true,
       currency: true,
       supplierProfileId: true,
+      unit: true,
       location: {
         select: {
           city: true,
