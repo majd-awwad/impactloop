@@ -38,6 +38,155 @@ void main() {
     expect(find.text('My builds'), findsOneWidget);
     expect(find.text('Progress is saved automatically.'), findsOneWidget);
     expect(find.text('In progress'), findsOneWidget);
+    expect(find.text('Prepare materials'), findsOneWidget);
+    expect(find.text('Preparing the project'), findsNothing);
+    expect(find.textContaining('ready in your build'), findsNothing);
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+  });
+
+  testWidgets('started build focuses the current step', (tester) async {
+    await _pumpBuildPage(
+      tester,
+      build: _buildWithLastStepRemaining(),
+      sessionBundle: _sampleSessionBundle(),
+      viewport: const Size(390, 844),
+    );
+
+    expect(find.text('I finished this step'), findsOneWidget);
+    expect(find.text('Final assembly'), findsWidgets);
+    expect(find.text('Need help?'), findsOneWidget);
+    expect(find.text('Prepare materials'), findsNothing);
+    expect(find.text('Preparing the project'), findsNothing);
+  });
+
+  testWidgets(
+    'BUILD shows one compact step-progress header without the project dashboard',
+    (tester) async {
+      await _pumpBuildPage(
+        tester,
+        build: _buildAtFirstPracticalStep(),
+        sessionBundle: _sampleSessionBundle(),
+        viewport: const Size(390, 844),
+      );
+
+      expect(find.text('PVC Plant Stand'), findsOneWidget);
+      expect(find.text('Step 1 of 2 · 0%'), findsOneWidget);
+      expect(find.text('A simple plant stand build'), findsNothing);
+      expect(find.text('Progress is saved automatically.'), findsNothing);
+      expect(find.textContaining('ready in your build'), findsNothing);
+      expect(find.text('Prepare materials'), findsNothing);
+      expect(find.text('Ask AI'), findsNothing);
+      expect(find.text('I finished this step'), findsOneWidget);
+      expect(find.text('Need help?'), findsOneWidget);
+      expect(find.text('Quick knowledge check'), findsOneWidget);
+      expect(find.text('Show materials'), findsOneWidget);
+      expect(find.text('Build tools'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    },
+  );
+
+  testWidgets('reopening a progressed BUILD can show Welcome back', (
+    tester,
+  ) async {
+    await _pumpBuildPage(
+      tester,
+      build: _buildWithLastStepRemaining(),
+      sessionBundle: _sampleSessionBundle(),
+      viewport: const Size(390, 844),
+    );
+
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.text('You left off at step 2 of 2'), findsOneWidget);
+  });
+
+  testWidgets('completing a step does not show Welcome back', (tester) async {
+    final first = _buildAtFirstPracticalStep();
+    final second = _buildWithLastStepRemaining();
+    final repository = _CompletingBuildRepository(first, second);
+
+    await _pumpBuildPage(
+      tester,
+      build: first,
+      repository: repository,
+      sessionBundle: _sampleSessionBundle(),
+      viewport: const Size(390, 844),
+    );
+
+    expect(find.text('Welcome back'), findsNothing);
+
+    await tester.tap(find.text('I finished this step'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+
+    expect(find.text('✓ Step 1 is done'), findsOneWidget);
+    expect(find.text('Next:'), findsOneWidget);
+    expect(find.text('Final assembly'), findsWidgets);
+    expect(
+      find.text('An optional question to help the idea stick.'),
+      findsNothing,
+    );
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Welcome back'), findsNothing);
+    expect(find.text('You left off at step 2 of 2'), findsNothing);
+    expect(find.text('Step 2 of 2 · 50%'), findsOneWidget);
+    expect(find.text('I finished this step'), findsOneWidget);
+  });
+
+  testWidgets('BUILD tools keep Ask AI and materials reachable', (
+    tester,
+  ) async {
+    await _pumpBuildPage(
+      tester,
+      build: _buildAtFirstPracticalStep(),
+      sessionBundle: _sampleSessionBundle(),
+      viewport: const Size(390, 844),
+    );
+
+    await tester.tap(find.text('Show materials'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hide materials'), findsOneWidget);
+
+    await tester.tap(find.text('Build tools'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ask AI'), findsOneWidget);
+    expect(find.text('Project notebook'), findsOneWidget);
+    expect(find.text('Find best material plan'), findsOneWidget);
+  });
+
+  testWidgets('BUILD 360px Arabic layout does not overflow', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    FlutterError.onError = (details) {
+      final message = details.exceptionAsString();
+      if (message.contains('RenderFlex overflowed') ||
+          message.contains('overflowed by')) {
+        fail('Layout overflow: $message');
+      }
+      FlutterError.presentError(details);
+    };
+
+    await _pumpBuildPage(
+      tester,
+      build: _buildAtFirstPracticalStep(),
+      sessionBundle: _sampleSessionBundle(),
+      locale: const Locale('ar'),
+      viewport: const Size(360, 800),
+    );
+
+    expect(find.text('أنهيت هذه الخطوة'), findsOneWidget);
+    expect(find.text('تحتاج مساعدة؟'), findsOneWidget);
+    expect(find.text('تحقق سريع من فهمك'), findsOneWidget);
+    expect(find.text('أدوات البناء'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Build actions menu contains Pause build and Archive build', (
@@ -77,7 +226,7 @@ void main() {
     expect(find.text('Completed'), findsOneWidget);
     expect(find.text('Complete step'), findsNothing);
     expect(find.text('Pause build'), findsNothing);
-    expect(find.text('View private Portfolio'), findsWidgets);
+    expect(find.text('View achievement portfolio'), findsWidgets);
     expect(find.text('Build again'), findsWidgets);
   });
 
@@ -413,11 +562,11 @@ void main() {
     );
 
     await tester.scrollUntilVisible(
-      find.text('Complete step'),
+      find.text('I finished this step'),
       400,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('Complete step'));
+    await tester.tap(find.text('I finished this step'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
@@ -440,11 +589,11 @@ void main() {
     );
 
     await tester.scrollUntilVisible(
-      find.text('Complete step'),
+      find.text('I finished this step'),
       400,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('Complete step'));
+    await tester.tap(find.text('I finished this step'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
@@ -483,11 +632,11 @@ void main() {
     );
 
     await tester.scrollUntilVisible(
-      find.text('Complete step'),
+      find.text('I finished this step'),
       400,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('Complete step'));
+    await tester.tap(find.text('I finished this step'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
@@ -535,6 +684,7 @@ void main() {
     );
     expect(find.text('Pause build'), findsNothing);
     expect(find.text('Complete step'), findsNothing);
+    expect(find.text('I finished this step'), findsNothing);
   });
 
   testWidgets('ARCHIVED build hides mutation controls in review mode', (
@@ -556,7 +706,7 @@ void main() {
     expect(learnerPortfolioRoute, isNot('/portfolio'));
   });
 
-  testWidgets('View private Portfolio resolves to registered route', (
+  testWidgets('View achievement portfolio resolves to registered route', (
     tester,
   ) async {
     await _pumpBuildPage(
@@ -567,10 +717,10 @@ void main() {
     );
 
     expect(
-      find.widgetWithText(FilledButton, 'View private Portfolio'),
-      findsWidgets,
+      find.widgetWithText(FilledButton, 'View achievement portfolio'),
+      findsOneWidget,
     );
-    expect(find.text('View private Portfolio'), findsWidgets);
+    expect(find.text('View achievement portfolio'), findsOneWidget);
   });
 
   testWidgets('mobile completed review keeps sections collapsed initially', (
@@ -943,6 +1093,58 @@ Future<GoRouter> _pumpBuildPage(
   );
   await tester.pumpAndSettle();
   return router;
+}
+
+ProjectBuild _buildAtFirstPracticalStep() {
+  return ProjectBuild(
+    id: 'build-1',
+    projectId: 'project-1',
+    status: ProjectBuildStatus.inProgress,
+    project: const ProjectBuildProject(
+      id: 'project-1',
+      title: 'PVC Plant Stand',
+      shortDescription: 'A simple plant stand build',
+    ),
+    progress: const ProjectBuildProgress(total: 2, ready: 2, percent: 100),
+    materialReadiness: const ProjectBuildMaterialReadiness(
+      ready: 2,
+      linked: 2,
+      reserved: 0,
+      missing: 0,
+      total: 2,
+    ),
+    stepProgress: const ProjectBuildStepProgress(
+      completed: 0,
+      total: 2,
+      percent: 0,
+      currentStep: ProjectBuildCurrentStep(
+        stepId: 'step-1',
+        stepNumber: 1,
+        title: 'Cut PVC',
+      ),
+      steps: [
+        ProjectBuildStepView(
+          stepId: 'step-1',
+          stepNumber: 1,
+          title: 'Cut PVC',
+          description: 'Cut the PVC pipes.',
+          state: ProjectBuildStepState.current,
+        ),
+        ProjectBuildStepView(
+          stepId: 'step-2',
+          stepNumber: 2,
+          title: 'Final assembly',
+          description: 'Assemble the stand.',
+          state: ProjectBuildStepState.locked,
+        ),
+      ],
+    ),
+    items: const [],
+    learningSetup: const ProjectBuildLearningSetup(
+      status: LearningSetupStatus.ready,
+      sessionId: 'session-1',
+    ),
+  );
 }
 
 ProjectBuild _buildWithLastStepRemaining() {
@@ -1435,6 +1637,12 @@ class _StaticBuildRepository implements LearningProjectRepository {
 
   @override
   Future<ProjectBuild?> fetchMyBuild(String projectId) async => build;
+
+  @override
+  Future<StepLearningCheck?> fetchStepLearningCheck(
+    String projectId,
+    String stepId,
+  ) async => null;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

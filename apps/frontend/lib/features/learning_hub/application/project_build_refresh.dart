@@ -147,9 +147,8 @@ String? projectBuildRefreshTargetId(String? projectId) {
   return trimmed;
 }
 
-typedef ProjectBuildInvalidator = void Function(
-  FutureProvider<ProjectBuild?> provider,
-);
+typedef ProjectBuildInvalidator =
+    void Function(FutureProvider<ProjectBuild?> provider);
 
 void refreshProjectBuildWith(
   ProjectBuildInvalidator invalidate,

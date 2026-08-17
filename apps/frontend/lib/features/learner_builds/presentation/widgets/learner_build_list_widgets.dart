@@ -85,9 +85,11 @@ class LearnerBuildListCard extends StatelessWidget {
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       item.project.title,
-                      style: AppTextStyles.title(
-                        context,
-                      ).copyWith(color: palette.textPrimary),
+                      style: AppTextStyles.subtitle(context).copyWith(
+                        color: palette.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: AppTextStyles.isCompact(context) ? 16 : 18,
+                      ),
                     ),
                     if (item.project.shortDescription.isNotEmpty &&
                         !showPortfolioLearning) ...[

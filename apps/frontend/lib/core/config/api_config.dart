@@ -48,6 +48,12 @@ class ApiConfig {
     return 'http://localhost:4000';
   }
 
+  /// Scheme + host + port of [baseUrl], without an `/api` path prefix.
+  ///
+  /// Static assets such as `/demo-assets/...` and `/uploads/...` are served
+  /// from the backend origin, not under the API prefix.
+  static Uri get backendOrigin => backendOriginFrom(baseUrl);
+
   static String _webSameOriginBaseUrl() {
     final origin = Uri.base.origin;
     if (origin.isEmpty || Uri.base.host.isEmpty) {
@@ -63,16 +69,48 @@ class ApiConfig {
     return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }
 
+  @visibleForTesting
+  static Uri backendOriginFrom(String baseUrl) {
+    final apiUri = Uri.parse(_stripTrailingSlash(baseUrl.trim()));
+    return Uri(
+      scheme: apiUri.scheme,
+      host: apiUri.host,
+      port: apiUri.hasPort ? apiUri.port : null,
+    );
+  }
+
+  /// Converts a backend-provided asset path into a URL [Image.network] can load.
+  ///
+  /// Returns `null` for null/blank values so callers can show a fallback.
+  static String? resolveApiAssetUrl(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+    return resolveMediaUrl(trimmed);
+  }
+
   static String resolveMediaUrl(String url) {
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
+    return resolveMediaUrlAgainst(baseUrl, url);
+  }
+
+  @visibleForTesting
+  static String resolveMediaUrlAgainst(String baseUrl, String url) {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) {
+      return trimmed;
     }
 
-    if (url.startsWith('/')) {
-      return '$baseUrl$url';
+    final parsed = Uri.tryParse(trimmed);
+    if (parsed != null &&
+        parsed.hasScheme &&
+        (parsed.scheme == 'http' || parsed.scheme == 'https') &&
+        parsed.host.isNotEmpty) {
+      return trimmed;
     }
 
-    return '$baseUrl/$url';
+    final path = trimmed.startsWith('/') ? trimmed : '/$trimmed';
+    return backendOriginFrom(baseUrl).resolve(path).toString();
   }
 
   static void openExternalDocument(String url) {

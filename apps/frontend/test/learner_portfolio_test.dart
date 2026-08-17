@@ -247,7 +247,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('This build is read-only.'), findsOneWidget);
+    expect(
+      find.text(
+        'The build is complete. You can document the result and completion story.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('This build is read-only.'), findsNothing);
     expect(find.text('Completion story'), findsOneWidget);
     expect(find.text('Complete step'), findsNothing);
   });

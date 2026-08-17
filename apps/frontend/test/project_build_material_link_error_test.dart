@@ -64,6 +64,24 @@ void main() {
       );
     });
 
+    test('maps INCOMPATIBLE_UNIT to localized Arabic message', () {
+      const error = ApiException(
+        message:
+            'Material unit is not compatible with the required component unit.',
+        code: 'INCOMPATIBLE_UNIT',
+        statusCode: 400,
+      );
+
+      expect(
+        projectBuildMaterialLinkErrorMessage(error, languageCode: 'ar'),
+        'الوحدة غير متوافقة\nهذه المادة لا تستخدم وحدة القياس المطلوبة لهذا المكوّن.',
+      );
+      expect(
+        projectBuildMaterialLinkErrorMessage(error, languageCode: 'en'),
+        contains(LearningProjectBuildL10n.incompatibleUnitTitle.en),
+      );
+    });
+
     test('keeps existing handling for other domain errors', () {
       const ownMaterialError = ApiException(
         message:

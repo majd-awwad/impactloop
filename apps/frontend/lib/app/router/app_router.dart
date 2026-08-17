@@ -272,6 +272,18 @@ String _safeFrom(GoRouterState state) {
   return state.uri.toString();
 }
 
+String? _resolveLandingRedirect(AuthState authState, String path) {
+  if (path != rootRoute) {
+    return null;
+  }
+
+  if (authState.status == AuthStatus.authenticated && authState.user != null) {
+    return postAuthRouteForUser(authState.user!);
+  }
+
+  return null;
+}
+
 String? _resolveProtectedRoute(
   AuthState authState,
   _RouteAccessLevel accessLevel,
@@ -325,12 +337,21 @@ String? _resolveAuthCheckingRedirect(AuthState authState, GoRouterState state) {
     return null;
   }
 
-  final target = sanitizeRedirectTarget(
-    state.uri.queryParameters['from'],
-    fallback: authState.user != null
-        ? postAuthRouteForUser(authState.user!)
-        : loginRoute,
-  );
+  final from = state.uri.queryParameters['from'];
+  if (authState.user != null) {
+    final home = postAuthRouteForUser(authState.user!);
+    final target = sanitizeRedirectTarget(from, fallback: home);
+    if (Uri.parse(target).path == rootRoute) {
+      return home;
+    }
+    final accessLevel = _routeAccessForPath(Uri.parse(target).path);
+    return _resolveProtectedRoute(authState, accessLevel, target) ?? target;
+  }
+
+  final target = sanitizeRedirectTarget(from, fallback: loginRoute);
+  if (Uri.parse(target).path == rootRoute) {
+    return rootRoute;
+  }
   final accessLevel = _routeAccessForPath(Uri.parse(target).path);
   return _resolveProtectedRoute(authState, accessLevel, target) ?? target;
 }
@@ -503,6 +524,11 @@ String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
 
   if (_isAuthPage(path)) {
     return _resolveAuthPageRedirect(authState, state);
+  }
+
+  final landingRedirect = _resolveLandingRedirect(authState, path);
+  if (landingRedirect != null) {
+    return landingRedirect;
   }
 
   final accessLevel = _routeAccessForPath(path);

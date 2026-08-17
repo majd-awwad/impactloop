@@ -54,7 +54,9 @@ class _StartKnowledgeCheckSectionState
     });
 
     try {
-      final bundle = await ref.read(learningHubRepositoryProvider).setupLearningSession(
+      final bundle = await ref
+          .read(learningHubRepositoryProvider)
+          .setupLearningSession(
             widget.projectId,
             learningGoal: learningGoal,
             confidenceBefore: confidenceBefore,
@@ -189,14 +191,13 @@ class _StartKnowledgeCheckSectionState
     );
 
     return sessionAsync.when(
-      loading: () => _card(
-        child: const Center(child: CircularProgressIndicator()),
-      ),
+      loading: () =>
+          _card(child: const Center(child: CircularProgressIndicator())),
       error: (_, _) => const SizedBox.shrink(),
       data: (bundle) {
         final session = _session ?? bundle.session;
-        final effectiveSetup = bundle.learningSetup.status !=
-                LearningSetupStatus.notRequested
+        final effectiveSetup =
+            bundle.learningSetup.status != LearningSetupStatus.notRequested
             ? bundle.learningSetup
             : setup;
 
@@ -231,7 +232,8 @@ class _StartKnowledgeCheckSectionState
     ProjectBuildLearningSetup effectiveSetup,
   ) {
     final retryable = effectiveSetup.retryable;
-    final ineligible = effectiveSetup.reasonCode == 'PROJECT_NOT_ELIGIBLE' ||
+    final ineligible =
+        effectiveSetup.reasonCode == 'PROJECT_NOT_ELIGIBLE' ||
         effectiveSetup.reasonCode == 'PROJECT_HAS_NO_STEPS' ||
         effectiveSetup.reasonCode == 'LEARNING_PACK_STALE';
 
@@ -249,9 +251,9 @@ class _StartKnowledgeCheckSectionState
             const SizedBox(height: AppSpacing.sm),
             Text(
               _setupError!,
-              style: AppTextStyles.body(context).copyWith(
-                color: Colors.orange.shade800,
-              ),
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: Colors.orange.shade800),
             ),
           ],
           if (retryable && !ineligible) ...[
@@ -261,16 +263,17 @@ class _StartKnowledgeCheckSectionState
               child: FilledButton.tonal(
                 onPressed: _busy
                     ? null
-                    : () => _beginCheck(learningGoal: null, confidenceBefore: null),
+                    : () => _beginCheck(
+                        learningGoal: null,
+                        confidenceBefore: null,
+                      ),
                 child: _busy
                     ? const SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Text(
-                        LearningSessionL10n.retrySetup.resolve(context),
-                      ),
+                    : Text(LearningSessionL10n.retrySetup.resolve(context)),
               ),
             ),
           ],
@@ -279,9 +282,13 @@ class _StartKnowledgeCheckSectionState
     );
   }
 
-  Widget _buildCompactCard(BuildContext context, BuildLearningSession? session) {
+  Widget _buildCompactCard(
+    BuildContext context,
+    BuildLearningSession? session,
+  ) {
     final palette = LearningUiPalette.of(context);
-    final assignments = session?.startAssignments ?? const <LearningAssignment>[];
+    final assignments =
+        session?.startAssignments ?? const <LearningAssignment>[];
     final total = assignments.length;
     final handled = assignments.where((item) => item.isComplete).length;
     final remaining = total - handled;
@@ -313,9 +320,9 @@ class _StartKnowledgeCheckSectionState
           const SizedBox(height: AppSpacing.xs),
           Text(
             LearningSessionL10n.optional.resolve(context),
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textSecondary,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
           ),
           if (session != null && total > 0) ...[
             const SizedBox(height: AppSpacing.sm),
@@ -371,14 +378,16 @@ class _StartKnowledgeCheckFlow extends ConsumerStatefulWidget {
   final Future<BuildLearningSession?> Function({
     required String? learningGoal,
     required int? confidenceBefore,
-  }) onSetup;
+  })
+  onSetup;
 
   @override
   ConsumerState<_StartKnowledgeCheckFlow> createState() =>
       _StartKnowledgeCheckFlowState();
 }
 
-class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFlow> {
+class _StartKnowledgeCheckFlowState
+    extends ConsumerState<_StartKnowledgeCheckFlow> {
   final _goalController = TextEditingController();
   int? _confidenceBefore;
   BuildLearningSession? _session;
@@ -586,10 +595,9 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
       _feedbackMessage = null;
     });
     try {
-      await ref.read(learningHubRepositoryProvider).reportLearningAssignmentUnclear(
-            widget.projectId,
-            assignment.id,
-          );
+      await ref
+          .read(learningHubRepositoryProvider)
+          .reportLearningAssignmentUnclear(widget.projectId, assignment.id);
       if (!mounted) return;
       _updateSession(
         _session == null
@@ -621,14 +629,16 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
       );
       setState(() {
         _lastAnswerCorrect = null;
-        _feedbackMessage =
-            LearningSessionL10n.reportUnclearThanks.resolve(context);
+        _feedbackMessage = LearningSessionL10n.reportUnclearThanks.resolve(
+          context,
+        );
       });
     } on ApiException {
       if (mounted) {
         setState(() {
-          _feedbackMessage =
-              LearningSessionL10n.reportUnclearError.resolve(context);
+          _feedbackMessage = LearningSessionL10n.reportUnclearError.resolve(
+            context,
+          );
         });
       }
     } finally {
@@ -688,7 +698,8 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
           start: AppSpacing.lg,
           end: AppSpacing.lg,
           top: AppSpacing.lg,
-          bottom: AppSpacing.lg +
+          bottom:
+              AppSpacing.lg +
               (isSheet ? MediaQuery.viewInsetsOf(context).bottom : 0),
         ),
         child: switch (_phase) {
@@ -715,9 +726,9 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
           const SizedBox(height: AppSpacing.xs),
           Text(
             LearningSessionL10n.optional.resolve(context),
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textSecondary,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(
@@ -755,9 +766,9 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
             const SizedBox(height: AppSpacing.sm),
             Text(
               _setupError!,
-              style: AppTextStyles.body(context).copyWith(
-                color: Colors.orange.shade800,
-              ),
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: Colors.orange.shade800),
             ),
           ],
         ],
@@ -819,7 +830,8 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
       return _buildCompleted(context);
     }
 
-    final assignment = assignments[_questionIndex.clamp(0, assignments.length - 1)];
+    final assignment =
+        assignments[_questionIndex.clamp(0, assignments.length - 1)];
     final question = assignment.question;
     final palette = LearningUiPalette.of(context);
     final selectedKey = assignment.answerAttempts.isNotEmpty
@@ -846,7 +858,8 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
               enabled: false,
               showResult: true,
               isCorrectOption: _isCorrectOption(assignment, option.optionKey),
-              isIncorrectSelection: selectedKey == option.optionKey &&
+              isIncorrectSelection:
+                  selectedKey == option.optionKey &&
                   !assignment.hasCorrectAnswer,
             ),
           ),
@@ -854,9 +867,9 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
             const SizedBox(height: AppSpacing.sm),
             Text(
               question.hintFor(_languageCode),
-              style: AppTextStyles.body(context).copyWith(
-                color: palette.textSecondary,
-              ),
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textSecondary),
             ),
           ],
           if (assignment.hasCorrectAnswer || assignment.isComplete) ...[
@@ -881,7 +894,8 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
       secondaryActions: [
         if (_questionIndex > 0)
           _SecondaryAction(
-            label: '${LearningSessionL10n.questionProgress.resolve(context)} $_questionIndex',
+            label:
+                '${LearningSessionL10n.questionProgress.resolve(context)} $_questionIndex',
             onPressed: () => setState(() => _questionIndex -= 1),
           ),
         if (_questionIndex < assignments.length - 1)
@@ -907,7 +921,8 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
     final assignment = assignments[_questionIndex];
     final question = assignment.question;
     final palette = LearningUiPalette.of(context);
-    final showExplanation = _feedbackMessage != null &&
+    final showExplanation =
+        _feedbackMessage != null &&
         (_lastAnswerCorrect == true || _lastAnswerCorrect == false);
     final isLast = _questionIndex >= assignments.length - 1;
 
@@ -920,9 +935,9 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
           const SizedBox(height: AppSpacing.xs),
           Text(
             LearningSessionL10n.optional.resolve(context),
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textSecondary,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
@@ -938,7 +953,8 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
               enabled: !_busy && !_awaitingAdvance,
               showResult: _feedbackMessage != null || _awaitingAdvance,
               isCorrectOption: _isCorrectOption(assignment, option.optionKey),
-              isIncorrectSelection: _selectedOptionKey == option.optionKey &&
+              isIncorrectSelection:
+                  _selectedOptionKey == option.optionKey &&
                   _lastAnswerCorrect == false,
               onTap: () => setState(() {
                 _selectedOptionKey = option.optionKey;
@@ -978,9 +994,9 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
             const SizedBox(height: AppSpacing.xs),
             Text(
               LearningSessionL10n.answerSaved.resolve(context),
-              style: AppTextStyles.label(context).copyWith(
-                color: palette.textSecondary,
-              ),
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textSecondary),
             ),
           ],
         ],
@@ -992,9 +1008,14 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
     );
   }
 
-  LocalizedText _primaryActionLabel(LearningAssignment assignment, bool isLast) {
+  LocalizedText _primaryActionLabel(
+    LearningAssignment assignment,
+    bool isLast,
+  ) {
     if (_awaitingAdvance) {
-      return isLast ? LearningSessionL10n.finishCheck : LearningSessionL10n.nextQuestion;
+      return isLast
+          ? LearningSessionL10n.finishCheck
+          : LearningSessionL10n.nextQuestion;
     }
     if (_lastAnswerCorrect == false || assignment.hasCorrectAnswer) {
       return LearningSessionL10n.tryAgain;
@@ -1123,10 +1144,7 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
           child: Semantics(
             button: true,
             selected: selected,
-            label: [
-              option.promptFor(_languageCode),
-              ?statusLabel,
-            ].join('. '),
+            label: [option.promptFor(_languageCode), ?statusLabel].join('. '),
             child: Padding(
               padding: const EdgeInsetsDirectional.all(AppSpacing.md),
               child: Row(
@@ -1146,9 +1164,9 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
                           const SizedBox(height: AppSpacing.xs),
                           Text(
                             statusLabel,
-                            style: AppTextStyles.label(context).copyWith(
-                              color: iconColor,
-                            ),
+                            style: AppTextStyles.label(
+                              context,
+                            ).copyWith(color: iconColor),
                           ),
                         ],
                       ],
@@ -1182,8 +1200,8 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
     bool primaryBusy = false,
     required List<_SecondaryAction> secondaryActions,
   }) {
-    final useOverflow = MediaQuery.sizeOf(context).width < 480 &&
-        secondaryActions.length > 2;
+    final useOverflow =
+        MediaQuery.sizeOf(context).width < 480 && secondaryActions.length > 2;
 
     final screenHeight = MediaQuery.sizeOf(context).height;
     final isDesktop = MediaQuery.sizeOf(context).width >= 700;
@@ -1217,10 +1235,11 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
     required List<_SecondaryAction> secondaryActions,
     required bool useOverflow,
   }) {
-    final isSubmit = primaryLabel ==
-            LearningSessionL10n.submitAnswer.resolve(context) ||
+    final isSubmit =
+        primaryLabel == LearningSessionL10n.submitAnswer.resolve(context) ||
         primaryLabel == LearningSessionL10n.tryAgain.resolve(context);
-    final primaryDisabled = onPrimary == null ||
+    final primaryDisabled =
+        onPrimary == null ||
         (isSubmit &&
             _selectedOptionKey == null &&
             _phase == _FlowPhase.quiz &&
@@ -1287,10 +1306,7 @@ class _StartKnowledgeCheckFlowState extends ConsumerState<_StartKnowledgeCheckFl
 }
 
 class _SecondaryAction {
-  const _SecondaryAction({
-    required this.label,
-    required this.onPressed,
-  });
+  const _SecondaryAction({required this.label, required this.onPressed});
 
   final String label;
   final VoidCallback? onPressed;

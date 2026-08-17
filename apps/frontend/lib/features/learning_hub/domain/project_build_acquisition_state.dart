@@ -57,7 +57,8 @@ class ProjectBuildAcquisitionState {
 
     return switch (item.quantityAllocation?.outcome) {
       'allocation_sufficient' => 'sufficient',
-      'allocation_partial' || 'insufficient_quantity' => 'insufficient_quantity',
+      'allocation_partial' ||
+      'insufficient_quantity' => 'insufficient_quantity',
       'incompatible_unit' => 'incompatible_unit',
       'unknown_quantity' => 'unknown_quantity',
       'conflict' => 'historical_conflict',
@@ -77,8 +78,7 @@ class ProjectBuildAcquisitionState {
       resolveAllocationResult(item) == 'insufficient_quantity';
 
   static bool hasIncompatibleAcquiredAllocation(ProjectBuildItem item) =>
-      isAcquired(item) &&
-      resolveAllocationResult(item) == 'incompatible_unit';
+      isAcquired(item) && resolveAllocationResult(item) == 'incompatible_unit';
 
   static bool hasInsufficientQuantity(ProjectBuildItem item) {
     if (isAcquired(item)) {
@@ -104,7 +104,8 @@ class ProjectBuildAcquisitionState {
     }
 
     final status = reservation.status.toUpperCase();
-    if (status == 'COMPLETED' || _terminalReservationStatuses.contains(status)) {
+    if (status == 'COMPLETED' ||
+        _terminalReservationStatuses.contains(status)) {
       return false;
     }
 

@@ -270,10 +270,7 @@ class ApiLearningHubRepository implements LearningProjectRepository {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '$_basePath/$projectId/builds/me/items/$itemId/remove-acquired-allocation',
-        data: {
-          'materialId': materialId,
-          'reservationId': reservationId,
-        },
+        data: {'materialId': materialId, 'reservationId': reservationId},
       ),
       (json) => LearningHubApiMapper.fromBuildJson(
         (json['build'] as Map<String, dynamic>?) ?? json,

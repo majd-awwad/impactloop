@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,7 +9,9 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/protected_media_image.dart';
+import '../../../learner_builds/application/completion_image_picker_provider.dart';
 import '../../../learner_builds/application/learner_builds_providers.dart';
+import '../../../learner_builds/data/completion_image_picker.dart';
 import '../../../learner_builds/data/learner_builds_api.dart';
 import '../../../learner_builds/presentation/l10n/learner_builds_l10n.dart';
 import '../../domain/models/project_build.dart';
@@ -41,26 +42,31 @@ class ProjectBuildCompletionStorySection extends ConsumerStatefulWidget {
   final bool embedded;
 
   @override
-  ConsumerState<ProjectBuildCompletionStorySection> createState() =>
-      _ProjectBuildCompletionStorySectionState();
+  ProjectBuildCompletionStorySectionState createState() =>
+      ProjectBuildCompletionStorySectionState();
 }
 
-class _ProjectBuildCompletionStorySectionState
+class ProjectBuildCompletionStorySectionState
     extends ConsumerState<ProjectBuildCompletionStorySection> {
   late final TextEditingController _reflectionController;
   late final TextEditingController _captionController;
   bool _isSaving = false;
+  bool _isPickingPhoto = false;
   bool _isUploadingPhoto = false;
   bool _storySaved = false;
   bool _photoUploaded = false;
   String? _uploadError;
   _PendingCompletionPhoto? _pendingPhoto;
+  ProjectBuildCompletionStoryPhoto? _optimisticPhoto;
 
   @override
   void initState() {
     super.initState();
     final story = widget.build.completionStory;
-    _reflectionController = TextEditingController(text: story?.reflection ?? '');
+    final existing = story?.reflection?.trim() ?? '';
+    _reflectionController = TextEditingController(
+      text: existing.isNotEmpty ? existing : _localStoryDraft(widget.build),
+    );
     _captionController = TextEditingController(text: story?.caption ?? '');
   }
 
@@ -72,10 +78,35 @@ class _ProjectBuildCompletionStorySectionState
       _reflectionController.text = story?.reflection ?? '';
       _captionController.text = story?.caption ?? '';
       _pendingPhoto = null;
+      _optimisticPhoto = null;
       _uploadError = null;
       _photoUploaded = false;
       _storySaved = false;
+    } else {
+      final photos = widget.build.completionStory?.photos ?? const [];
+      final optimistic = _optimisticPhoto;
+      if (optimistic != null &&
+          photos.any((photo) => photo.id == optimistic.id)) {
+        _optimisticPhoto = null;
+      }
     }
+  }
+
+  bool get _canEditDocumentation =>
+      widget.build.status == ProjectBuildStatus.completed;
+
+  bool get _isPhotoBusy => _isPickingPhoto || _isUploadingPhoto;
+
+  List<ProjectBuildCompletionStoryPhoto> get _visiblePhotos {
+    final photos = [
+      ...?(widget.build.completionStory?.photos),
+    ];
+    final optimistic = _optimisticPhoto;
+    if (optimistic != null &&
+        photos.every((photo) => photo.id != optimistic.id)) {
+      photos.add(optimistic);
+    }
+    return photos;
   }
 
   @override
@@ -87,24 +118,41 @@ class _ProjectBuildCompletionStorySectionState
 
   String get _languageCode => Localizations.localeOf(context).languageCode;
 
+  String _localStoryDraft(ProjectBuild build) {
+    final title = build.project.title.trim();
+    if (title.isEmpty) {
+      return '';
+    }
+    final reused = build.impactSummary?.alreadyOwnedComponentCount ?? 0;
+    if (reused > 0) {
+      return 'I completed $title and reused $reused materials.';
+    }
+    return 'I completed $title.';
+  }
+
   void _refreshAfterMutation() {
     widget.onUpdated();
     invalidateLearnerBuildsLists(ref);
   }
 
   Future<void> _saveStory() async {
+    if (!_canEditDocumentation || _isSaving) {
+      return;
+    }
     setState(() {
       _isSaving = true;
       _storySaved = false;
     });
     try {
-      await ref.read(learnerBuildsApiProvider).updateCompletionStory(
-        widget.build.id,
-        UpdateCompletionStoryPayload(
-          reflection: _reflectionController.text.trim(),
-          caption: _captionController.text.trim(),
-        ),
-      );
+      await ref
+          .read(learnerBuildsApiProvider)
+          .updateCompletionStory(
+            widget.build.id,
+            UpdateCompletionStoryPayload(
+              reflection: _reflectionController.text.trim(),
+              caption: _captionController.text.trim(),
+            ),
+          );
       if (!mounted) {
         return;
       }
@@ -125,63 +173,76 @@ class _ProjectBuildCompletionStorySectionState
     }
   }
 
+  Future<void> pickResultPhoto() => _pickPhoto();
+
   Future<void> _pickPhoto() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-      withData: true,
-      allowMultiple: false,
-    );
-    if (result == null || result.files.isEmpty) {
-      return;
-    }
-    final file = result.files.single;
-    final bytes = file.bytes;
-    if (bytes == null || bytes.isEmpty) {
-      setState(() {
-        _uploadError =
-            LearnerBuildsL10n.uploadInvalidFile.resolve(context);
-        _pendingPhoto = null;
-        _photoUploaded = false;
-      });
-      return;
-    }
-
-    final extension = file.extension ??
-        (file.name.contains('.') ? file.name.split('.').last : null);
-    final mimeType = LearnerBuildsL10n.mimeTypeForCompletionPhoto(
-      fileExtension: extension,
-    );
-    if (mimeType == null) {
-      setState(() {
-        _uploadError =
-            LearnerBuildsL10n.uploadUnsupportedType.resolve(context);
-        _pendingPhoto = null;
-        _photoUploaded = false;
-      });
-      return;
-    }
-
-    if (bytes.length > LearnerBuildsL10n.completionPhotoMaxBytes) {
-      setState(() {
-        _uploadError = LearnerBuildsL10n.uploadTooLarge.resolve(context);
-        _pendingPhoto = null;
-        _photoUploaded = false;
-      });
+    if (!_canEditDocumentation || _isPhotoBusy) {
       return;
     }
 
     setState(() {
-      _pendingPhoto = _PendingCompletionPhoto(
-        bytes: bytes,
-        fileName: file.name.isNotEmpty ? file.name : 'result-photo.jpg',
-        mimeType: mimeType,
-      );
+      _isPickingPhoto = true;
       _uploadError = null;
-      _photoUploaded = false;
     });
+
+    try {
+      final result = await ref.read(completionImagePickerProvider)();
+      if (!mounted) {
+        return;
+      }
+      if (result.isCancelled) {
+        return;
+      }
+      if (result.error != null || result.image == null) {
+        setState(() {
+          _uploadError = _pickErrorMessage(result.error);
+          _photoUploaded = false;
+        });
+        return;
+      }
+
+      final selected = result.image!;
+      setState(() {
+        _pendingPhoto = _PendingCompletionPhoto(
+          bytes: selected.bytes,
+          fileName: selected.fileName,
+          mimeType: selected.mimeType,
+        );
+        _uploadError = null;
+        _photoUploaded = false;
+      });
+      await _uploadPendingPhoto();
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _uploadError = LearnerBuildsL10n.completionPhotoUploadErrorMessage(
+            error,
+            _languageCode,
+          );
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPickingPhoto = false);
+      }
+    }
+  }
+
+  String _pickErrorMessage(CompletionImagePickError? error) {
+    return switch (error) {
+      CompletionImagePickError.tooLarge =>
+        LearnerBuildsL10n.uploadTooLarge.resolve(context),
+      CompletionImagePickError.unsupportedType =>
+        LearnerBuildsL10n.uploadUnsupportedType.resolve(context),
+      CompletionImagePickError.invalidFile || null =>
+        LearnerBuildsL10n.uploadInvalidFile.resolve(context),
+    };
   }
 
   void _clearPendingPhoto() {
+    if (_isPhotoBusy) {
+      return;
+    }
     setState(() {
       _pendingPhoto = null;
       _uploadError = null;
@@ -190,7 +251,7 @@ class _ProjectBuildCompletionStorySectionState
 
   Future<void> _uploadPendingPhoto() async {
     final pending = _pendingPhoto;
-    if (pending == null || _isUploadingPhoto) {
+    if (!_canEditDocumentation || pending == null || _isUploadingPhoto) {
       return;
     }
 
@@ -201,17 +262,20 @@ class _ProjectBuildCompletionStorySectionState
     });
 
     try {
-      await ref.read(learnerBuildsApiProvider).uploadCompletionPhoto(
-        widget.build.id,
-        bytes: pending.bytes,
-        fileName: pending.fileName,
-        mimeType: pending.mimeType,
-      );
+      final photo = await ref
+          .read(learnerBuildsApiProvider)
+          .uploadCompletionPhoto(
+            widget.build.id,
+            bytes: pending.bytes,
+            fileName: pending.fileName,
+            mimeType: pending.mimeType,
+          );
       if (!mounted) {
         return;
       }
       setState(() {
         _pendingPhoto = null;
+        _optimisticPhoto = photo;
         _photoUploaded = true;
       });
       _refreshAfterMutation();
@@ -232,6 +296,9 @@ class _ProjectBuildCompletionStorySectionState
   }
 
   Future<void> _deletePhoto(String photoId) async {
+    if (!_canEditDocumentation) {
+      return;
+    }
     try {
       await ref
           .read(learnerBuildsApiProvider)
@@ -251,8 +318,7 @@ class _ProjectBuildCompletionStorySectionState
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
-    final story = widget.build.completionStory;
-    final photos = story?.photos ?? const [];
+    final photos = _visiblePhotos;
     final pending = _pendingPhoto;
 
     final content = Column(
@@ -282,6 +348,7 @@ class _ProjectBuildCompletionStorySectionState
           controller: _reflectionController,
           maxLines: 4,
           maxLength: 3000,
+          readOnly: !_canEditDocumentation,
           onChanged: (_) {
             if (_storySaved) {
               setState(() => _storySaved = false);
@@ -297,6 +364,7 @@ class _ProjectBuildCompletionStorySectionState
         TextField(
           controller: _captionController,
           maxLength: 120,
+          readOnly: !_canEditDocumentation,
           onChanged: (_) {
             if (_storySaved) {
               setState(() => _storySaved = false);
@@ -308,30 +376,32 @@ class _ProjectBuildCompletionStorySectionState
             isDense: true,
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        FilledButton(
-          onPressed: _isSaving ? null : _saveStory,
-          child: _isSaving
-              ? Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(LearnerBuildsL10n.savingStory.resolve(context)),
-                  ],
-                )
-              : Text(LearnerBuildsL10n.saveStory.resolve(context)),
-        ),
+        if (_canEditDocumentation) ...[
+          const SizedBox(height: AppSpacing.sm),
+          FilledButton(
+            onPressed: _isSaving ? null : _saveStory,
+            child: _isSaving
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(LearnerBuildsL10n.savingStory.resolve(context)),
+                    ],
+                  )
+                : Text(LearnerBuildsL10n.saveStory.resolve(context)),
+          ),
+        ],
         if (_storySaved) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(
             LearnerBuildsL10n.storySavedNotice.resolve(context),
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textSecondary,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
           ),
         ],
         const SizedBox(height: AppSpacing.lg),
@@ -348,7 +418,9 @@ class _ProjectBuildCompletionStorySectionState
                 .map(
                   (photo) => _CompletionPhotoTile(
                     photo: photo,
-                    onDelete: () => _deletePhoto(photo.id),
+                    onDelete: _canEditDocumentation
+                        ? () => _deletePhoto(photo.id)
+                        : null,
                   ),
                 )
                 .toList(growable: false),
@@ -358,51 +430,60 @@ class _ProjectBuildCompletionStorySectionState
           const SizedBox(height: AppSpacing.sm),
           _PendingPhotoPreview(
             pending: pending,
-            isUploading: _isUploadingPhoto,
+            isUploading: _isPhotoBusy,
             onRemove: _clearPendingPhoto,
             onChange: _pickPhoto,
             onUpload: _uploadPendingPhoto,
           ),
-        ] else ...[
+        ] else if (_canEditDocumentation) ...[
           const SizedBox(height: AppSpacing.sm),
           OutlinedButton.icon(
-            onPressed: _isUploadingPhoto ? null : _pickPhoto,
-            icon: const Icon(Icons.add_photo_alternate_outlined),
-            label: Text(LearnerBuildsL10n.addPhoto.resolve(context)),
+            onPressed: _isPhotoBusy ? null : _pickPhoto,
+            icon: _isPhotoBusy
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.add_photo_alternate_outlined),
+            label: Text(
+              _isPhotoBusy
+                  ? LearnerBuildsL10n.uploadingPhoto.resolve(context)
+                  : LearnerBuildsL10n.addPhoto.resolve(context),
+            ),
           ),
         ],
-        if (_isUploadingPhoto && pending == null) ...[
+        if (_isPhotoBusy && pending == null) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(
             LearnerBuildsL10n.uploadingPhoto.resolve(context),
-            style: AppTextStyles.label(context).copyWith(
-              color: palette.textSecondary,
-            ),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textSecondary),
           ),
         ],
         if (_photoUploaded) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(
             LearnerBuildsL10n.photoUploaded.resolve(context),
-            style: AppTextStyles.label(context).copyWith(
-              color: Colors.green.shade700,
-            ),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: Colors.green.shade700),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             LearnerBuildsL10n.photoUploadedNotice.resolve(context),
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textSecondary,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
           ),
         ],
         if (_uploadError != null) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(
             _uploadError!,
-            style: AppTextStyles.body(context).copyWith(
-              color: Theme.of(context).colorScheme.error,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: Theme.of(context).colorScheme.error),
           ),
         ],
       ],
@@ -463,6 +544,11 @@ class _PendingPhotoPreview extends StatelessWidget {
                   width: 72,
                   height: 72,
                   fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox(
+                    width: 72,
+                    height: 72,
+                    child: ColoredBox(color: Colors.black12),
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -576,10 +662,10 @@ class _ImpactSummaryCard extends StatelessWidget {
 }
 
 class _CompletionPhotoTile extends StatelessWidget {
-  const _CompletionPhotoTile({required this.photo, required this.onDelete});
+  const _CompletionPhotoTile({required this.photo, this.onDelete});
 
   final ProjectBuildCompletionStoryPhoto photo;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -599,22 +685,23 @@ class _CompletionPhotoTile extends StatelessWidget {
             ),
           ),
         ),
-        PositionedDirectional(
-          top: 4,
-          end: 4,
-          child: Material(
-            color: Colors.black54,
-            shape: const CircleBorder(),
-            child: InkWell(
-              onTap: onDelete,
-              customBorder: const CircleBorder(),
-              child: const Padding(
-                padding: EdgeInsets.all(4),
-                child: Icon(Icons.close_rounded, size: 16, color: Colors.white),
+        if (onDelete != null)
+          PositionedDirectional(
+            top: 4,
+            end: 4,
+            child: Material(
+              color: Colors.black54,
+              shape: const CircleBorder(),
+              child: InkWell(
+                onTap: onDelete,
+                customBorder: const CircleBorder(),
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(Icons.close_rounded, size: 16, color: Colors.white),
+                ),
               ),
             ),
           ),
-        ),
       ],
     );
   }

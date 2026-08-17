@@ -52,7 +52,8 @@ class ProjectBuildItemDisplayMeta {
       }
 
       final acquired =
-          allocation?.acquiredQuantity ?? item.linkedReservation?.quantityRequested;
+          allocation?.acquiredQuantity ??
+          item.linkedReservation?.quantityRequested;
       final required = allocation?.requiredQuantity ?? item.component.quantity;
 
       return ProjectBuildItemDisplayMeta(
@@ -95,16 +96,18 @@ class ProjectBuildItemDisplayMeta {
           label: LearningProjectBuildL10n.selected,
           icon: Icons.check_circle_outline,
           tone: AppStatusTone.primary,
-          detail: allocationResult == 'insufficient_quantity' &&
-                  available != null
+          detail:
+              allocationResult == 'insufficient_quantity' && available != null
               ? LearningProjectBuildL10n.quantityAvailableRequired(
                   available: available,
                   required: required,
                 )
+              : allocationResult == 'incompatible_unit'
+              ? LearningProjectBuildL10n.incompatibleUnitBody
               : allocation?.warning != null
               ? LocalizedText(
                   en: allocation!.warning!,
-                  ar: allocation.warning!,
+                  ar: LearningProjectBuildL10n.needsAttention.ar,
                 )
               : null,
         );

@@ -6,10 +6,12 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/models/localized_text.dart';
+import '../../../../shared/utils/content_text_direction.dart';
 import '../../../ai/application/ai_assistant_shell_provider.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../application/learning_session_providers.dart';
 import '../../domain/models/project_build.dart';
+import '../l10n/project_build_page_l10n.dart';
 import '../l10n/step_learning_check_l10n.dart';
 import '../theme/learning_ui_palette.dart';
 
@@ -56,14 +58,29 @@ class StepLearningCheckStatusRow extends ConsumerWidget {
               Expanded(
                 child: Text(
                   _statusLabel(uiState).resolve(context),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.body(context).copyWith(
                     color: palette.textSecondary,
+                    fontSize: 13,
+                    height: 1.3,
                   ),
                 ),
               ),
+              const SizedBox(width: AppSpacing.xs),
               TextButton(
                 onPressed: onOpenCheck,
-                child: Text(_actionLabel(uiState).resolve(context)),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: AppSpacing.sm,
+                  ),
+                ),
+                child: Text(
+                  _actionLabel(uiState).resolve(context),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -86,13 +103,13 @@ class StepLearningCheckStatusRow extends ConsumerWidget {
 
   LocalizedText _actionLabel(StepLearningCheckUiState state) {
     return switch (state) {
-      StepLearningCheckUiState.notAttempted => StepLearningCheckL10n.actionStart,
+      StepLearningCheckUiState.notAttempted =>
+        StepLearningCheckL10n.actionStart,
       StepLearningCheckUiState.incorrect =>
         StepLearningCheckL10n.actionTryAgain,
       StepLearningCheckUiState.skipped => StepLearningCheckL10n.actionContinue,
       StepLearningCheckUiState.correct ||
-      StepLearningCheckUiState.reviewed =>
-        StepLearningCheckL10n.actionReview,
+      StepLearningCheckUiState.reviewed => StepLearningCheckL10n.actionReview,
     };
   }
 }
@@ -136,13 +153,17 @@ Future<void> showStepLearningCheckSheet({
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    backgroundColor: Colors.transparent,
     builder: (sheetContext) {
-      return Align(
-        alignment: Alignment.bottomCenter,
+      final maxHeight = MediaQuery.sizeOf(sheetContext).height * 0.85;
+      return Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
+        ),
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: 640,
-            maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.9,
+            maxHeight: maxHeight,
           ),
           child: StepLearningCheckSheet(
             projectId: projectId,
@@ -178,7 +199,8 @@ class StepLearningCheckSheet extends ConsumerStatefulWidget {
       _StepLearningCheckSheetState();
 }
 
-class _StepLearningCheckSheetState extends ConsumerState<StepLearningCheckSheet> {
+class _StepLearningCheckSheetState
+    extends ConsumerState<StepLearningCheckSheet> {
   StepLearningCheck? _check;
   bool _loading = true;
   bool _busy = false;
@@ -188,8 +210,6 @@ class _StepLearningCheckSheetState extends ConsumerState<StepLearningCheckSheet>
   String? _feedbackMessage;
   bool? _lastAnswerCorrect;
   bool _answerSubmitted = false;
-  bool _showCompletionScreen = false;
-  bool _reviewingFromCompletion = false;
 
   @override
   void initState() {
@@ -218,11 +238,9 @@ class _StepLearningCheckSheetState extends ConsumerState<StepLearningCheckSheet>
       setState(() {
         _check = check;
         if (check?.unclearReported == true) {
-          _feedbackMessage =
-              StepLearningCheckL10n.reportUnclearThanks.resolve(context);
-        }
-        if (check != null && _isCheckComplete(check)) {
-          _showCompletionScreen = true;
+          _feedbackMessage = StepLearningCheckL10n.reportUnclearThanks.resolve(
+            context,
+          );
         }
         _loading = false;
       });
@@ -293,10 +311,7 @@ class _StepLearningCheckSheetState extends ConsumerState<StepLearningCheckSheet>
     try {
       final updated = await ref
           .read(learningHubRepositoryProvider)
-          .viewStepLearningCheckHint(
-            widget.projectId,
-            widget.step.stepId,
-          );
+          .viewStepLearningCheckHint(widget.projectId, widget.step.stepId);
       if (!mounted) return;
       setState(() {
         _check = updated;
@@ -353,9 +368,9 @@ class _StepLearningCheckSheetState extends ConsumerState<StepLearningCheckSheet>
           );
       if (!mounted) return;
       if (widget.onOpenAi != null) {
-        ref.read(aiAssistantShellProvider.notifier).open(
-              composerPrefill: handoff.suggestedPromptFor(_languageCode),
-            );
+        ref
+            .read(aiAssistantShellProvider.notifier)
+            .open(composerPrefill: handoff.suggestedPromptFor(_languageCode));
         await widget.onOpenAi!();
       }
     } on ApiException {
@@ -380,15 +395,18 @@ class _StepLearningCheckSheetState extends ConsumerState<StepLearningCheckSheet>
       _inlineError = null;
     });
     try {
-      await ref.read(learningHubRepositoryProvider).reportLearningAssignmentUnclear(
+      await ref
+          .read(learningHubRepositoryProvider)
+          .reportLearningAssignmentUnclear(
             widget.projectId,
             check.assignmentId,
           );
       if (!mounted) return;
       setState(() {
         _inlineError = null;
-        _feedbackMessage =
-            StepLearningCheckL10n.reportUnclearThanks.resolve(context);
+        _feedbackMessage = StepLearningCheckL10n.reportUnclearThanks.resolve(
+          context,
+        );
         final current = _check;
         if (current != null) {
           _check = StepLearningCheck(
@@ -416,7 +434,9 @@ class _StepLearningCheckSheetState extends ConsumerState<StepLearningCheckSheet>
     } on ApiException {
       if (!mounted) return;
       setState(() {
-        _inlineError = StepLearningCheckL10n.reportUnclearError.resolve(context);
+        _inlineError = StepLearningCheckL10n.reportUnclearError.resolve(
+          context,
+        );
       });
     } finally {
       if (mounted) {
@@ -438,15 +458,23 @@ class _StepLearningCheckSheetState extends ConsumerState<StepLearningCheckSheet>
       clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: EdgeInsetsDirectional.only(
-          start: AppSpacing.lg,
-          end: AppSpacing.lg,
-          top: AppSpacing.lg,
+          start: AppSpacing.md,
+          end: AppSpacing.md,
+          top: AppSpacing.md,
           bottom: widget.isDialogPresentation
-              ? AppSpacing.lg
-              : AppSpacing.lg + MediaQuery.viewInsetsOf(context).bottom,
+              ? AppSpacing.md
+              : AppSpacing.md + MediaQuery.paddingOf(context).bottom,
         ),
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                child: Center(
+                  child: SizedBox.square(
+                    dimension: 28,
+                    child: CircularProgressIndicator(strokeWidth: 2.4),
+                  ),
+                ),
+              )
             : _check == null
             ? _buildErrorState(context)
             : _buildShell(context, _check!),
@@ -476,81 +504,13 @@ class _StepLearningCheckSheetState extends ConsumerState<StepLearningCheckSheet>
   }
 
   Widget _buildShell(BuildContext context, StepLearningCheck check) {
-    final showCompletion =
-        _showCompletionScreen && !_reviewingFromCompletion && _isCheckComplete(check);
-
-    final screenHeight = MediaQuery.sizeOf(context).height;
-    final maxContentHeight =
-        screenHeight * (widget.isDialogPresentation ? 0.85 : 0.9) - 140;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return ListView(
+      shrinkWrap: true,
+      physics: const ClampingScrollPhysics(),
       children: [
-        ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: maxContentHeight),
-          child: SingleChildScrollView(
-            child: showCompletion
-                ? _buildCompletionContent(context, check)
-                : _buildQuestionContent(context, check),
-          ),
-        ),
-        if (!showCompletion) _buildActionBar(context, check),
-        if (showCompletion) _buildCompletionActions(context),
+        _buildQuestionContent(context, check),
+        _buildActionBar(context, check),
       ],
-    );
-  }
-
-  Widget _buildCompletionContent(BuildContext context, StepLearningCheck check) {
-    final palette = LearningUiPalette.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Icon(
-          Icons.check_circle_outline,
-          size: 48,
-          color: palette.lime,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          StepLearningCheckL10n.stepCheckCompleted.resolve(context),
-          style: AppTextStyles.title(context),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          StepLearningCheckL10n.stepCheckCompletedBody.resolve(context),
-          style: AppTextStyles.body(context).copyWith(
-            color: palette.textSecondary,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCompletionActions(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(top: AppSpacing.md),
-      child: Wrap(
-        spacing: AppSpacing.sm,
-        runSpacing: AppSpacing.xs,
-        children: [
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(StepLearningCheckL10n.actionContinue.resolve(context)),
-          ),
-          OutlinedButton(
-            onPressed: () => setState(() {
-              _reviewingFromCompletion = true;
-              _showCompletionScreen = false;
-            }),
-            child: Text(StepLearningCheckL10n.actionReview.resolve(context)),
-          ),
-          OutlinedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(StepLearningCheckL10n.close.resolve(context)),
-          ),
-        ],
-      ),
     );
   }
 
@@ -558,47 +518,88 @@ class _StepLearningCheckSheetState extends ConsumerState<StepLearningCheckSheet>
     final palette = LearningUiPalette.of(context);
     final question = check.question;
     final showResults = check.attemptCount > 0;
+    final moreMenu = _buildOverflowMenu(context, check);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          StepLearningCheckL10n.title.resolve(context),
-          style: AppTextStyles.title(context),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                StepLearningCheckL10n.title.resolve(context),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.subtitle(
+                  context,
+                ).copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+            moreMenu,
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Wrap(
+          spacing: AppSpacing.xs,
+          runSpacing: 2,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              '${ProjectBuildPageL10n.stepLabel.resolve(context)} ${widget.step.stepNumber}',
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(fontWeight: FontWeight.w700, fontSize: 13),
+            ),
+            Text(
+              '·',
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textSecondary),
+            ),
+            ContentDirectionalText(
+              widget.step.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+          ],
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          '${widget.step.stepNumber}. ${widget.step.title}',
-          style: AppTextStyles.subtitle(context),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          StepLearningCheckL10n.optional.resolve(context),
-          style: AppTextStyles.body(context).copyWith(
-            color: palette.textSecondary,
-          ),
+          StepLearningCheckL10n.optionalBlurb.resolve(context),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.body(
+            context,
+          ).copyWith(color: palette.textSecondary, fontSize: 13, height: 1.3),
         ),
         const SizedBox(height: AppSpacing.md),
-        Text(
-          question.promptFor(_languageCode),
-          style: AppTextStyles.body(context),
+        ContentDirectionalText(
+          _displayQuestionPrompt(context, check),
+          style: AppTextStyles.body(context).copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: AppSpacing.md),
         ...question.options.map(
           (option) => Padding(
             padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
             child: _LearningRadioOptionCard(
-              label: option.promptFor(_languageCode),
-              selected: _selectedOptionKey == option.optionKey ||
+              label: _displayOptionLabel(option.promptFor(_languageCode)),
+              selected:
+                  _selectedOptionKey == option.optionKey ||
                   check.latestSelectedOptionKey == option.optionKey,
               enabled: !check.isReadOnly && !_busy,
               showResult: showResults,
               isCorrectOption: _isCorrectOption(check, option.optionKey),
-              isIncorrectSelection: showResults &&
+              isIncorrectSelection:
+                  showResults &&
                   check.latestSelectedOptionKey == option.optionKey &&
                   check.latestResult != null &&
                   !check.latestResult!.isCorrect,
-              onTap: () => setState(() => _selectedOptionKey = option.optionKey),
+              onTap: () =>
+                  setState(() => _selectedOptionKey = option.optionKey),
             ),
           ),
         ),
@@ -611,48 +612,115 @@ class _StepLearningCheckSheetState extends ConsumerState<StepLearningCheckSheet>
               borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(color: palette.hintBorder),
             ),
-            child: Text(
+            child: ContentDirectionalText(
               question.hintFor(_languageCode),
               style: AppTextStyles.body(context),
             ),
           ),
         ],
-        if (_feedbackMessage != null) ...[
+        if (_lastAnswerCorrect == true) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            '✓ ${StepLearningCheckL10n.correct.resolve(context)}',
+            style: AppTextStyles.body(context).copyWith(
+              color: Colors.green.shade700,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            StepLearningCheckL10n.correctUnderstanding.resolve(context),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary, fontSize: 13),
+          ),
+          if (_conciseExplanation(check) != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            ContentDirectionalText(
+              _conciseExplanation(check)!,
+              style: AppTextStyles.body(context).copyWith(fontSize: 13),
+            ),
+          ],
+        ] else if (_feedbackMessage != null) ...[
           const SizedBox(height: AppSpacing.sm),
           Text(
             _feedbackMessage!,
             style: AppTextStyles.body(context).copyWith(
-              color: _lastAnswerCorrect == true
-                  ? Colors.green.shade700
-                  : Colors.orange.shade800,
+              color: Colors.orange.shade800,
             ),
           ),
+          if (_conciseExplanation(check) != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            ContentDirectionalText(
+              _conciseExplanation(check)!,
+              style: AppTextStyles.body(context).copyWith(fontSize: 13),
+            ),
+          ],
         ],
-        if (_answerSubmitted && check.latestResult != null) ...[
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            check.latestResult!.explanationFor(_languageCode),
-            style: AppTextStyles.body(context),
-          ),
+        if (_answerSubmitted) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(
             StepLearningCheckL10n.answerSaved.resolve(context),
-            style: AppTextStyles.label(context).copyWith(
-              color: palette.textSecondary,
-            ),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textSecondary),
           ),
         ],
         if (_inlineError != null) ...[
           const SizedBox(height: AppSpacing.sm),
           Text(
             _inlineError!,
-            style: AppTextStyles.body(context).copyWith(
-              color: Colors.orange.shade800,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: Colors.orange.shade800),
           ),
         ],
       ],
     );
+  }
+
+  String _displayQuestionPrompt(BuildContext context, StepLearningCheck check) {
+    final prompt = check.question.promptFor(_languageCode).trim();
+    final looksGenerated =
+        RegExp(
+          r'^(in step\s+\d+|في الخطوة\s+\d+)',
+          caseSensitive: false,
+        ).hasMatch(prompt) ||
+        prompt.contains('("${widget.step.title}")');
+    if (looksGenerated) {
+      return ProjectBuildPageL10n.whyThisStepMatters.resolve(context);
+    }
+    return prompt;
+  }
+
+  String _displayOptionLabel(String raw) {
+    var text = raw.trim();
+    const prefixes = [
+      'يحقق نتيجة الخطوة:',
+      'It achieves the step outcome:',
+    ];
+    for (final prefix in prefixes) {
+      if (text.toLowerCase().startsWith(prefix.toLowerCase())) {
+        text = text.substring(prefix.length).trim();
+      }
+    }
+    return text;
+  }
+
+  String? _conciseExplanation(StepLearningCheck check) {
+    final result = check.latestResult;
+    if (result == null) {
+      return null;
+    }
+    final explanation = result.explanationFor(_languageCode).trim();
+    if (explanation.isEmpty) {
+      return null;
+    }
+    if (explanation.startsWith('The correct choice matches') ||
+        explanation.startsWith('الخيار الصحيح يطابق')) {
+      return null;
+    }
+    return explanation;
   }
 
   bool _isCorrectOption(StepLearningCheck check, String optionKey) {
@@ -666,81 +734,104 @@ class _StepLearningCheckSheetState extends ConsumerState<StepLearningCheckSheet>
         check.latestResult?.isCorrect == true;
   }
 
-  Widget _buildActionBar(BuildContext context, StepLearningCheck check) {
+  Widget _buildOverflowMenu(BuildContext context, StepLearningCheck check) {
     final canMutate = !check.isReadOnly;
     final showAi =
         check.attemptCount > 0 && widget.onOpenAi != null && canMutate;
+    final showUnclear = canMutate && !check.unclearReported;
+
+    if (!showUnclear && !showAi) {
+      return const SizedBox.shrink();
+    }
+
+    return PopupMenuButton<String>(
+      tooltip: StepLearningCheckL10n.moreActions.resolve(context),
+      onSelected: (value) {
+        switch (value) {
+          case 'unclear':
+            _reportUnclear();
+          case 'ai':
+            _openAiHandoff();
+        }
+      },
+      itemBuilder: (menuContext) => [
+        if (showUnclear)
+          PopupMenuItem(
+            value: 'unclear',
+            child: Text(StepLearningCheckL10n.reportUnclear.resolve(context)),
+          ),
+        if (showAi)
+          PopupMenuItem(
+            value: 'ai',
+            child: Text(StepLearningCheckL10n.askAi.resolve(context)),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildActionBar(BuildContext context, StepLearningCheck check) {
+    final canMutate = !check.isReadOnly;
     final showFinish = _isCheckComplete(check);
+    final showPrimary = canMutate || showFinish;
+    final showHint = canMutate && !check.hasCorrectAttempt && !showFinish;
+    final showSkip = canMutate && !showFinish;
 
     return Padding(
       padding: const EdgeInsetsDirectional.only(top: AppSpacing.md),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (canMutate && !showFinish)
-            FilledButton(
-              onPressed: _busy || _selectedOptionKey == null ? null : _submitAnswer,
-              child: Text(
-                check.attemptCount > 0 && !check.hasCorrectAttempt
-                    ? StepLearningCheckL10n.actionTryAgain.resolve(context)
-                    : StepLearningCheckL10n.submitAnswer.resolve(context),
+          if (showPrimary)
+            SizedBox(
+              height: 44,
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: showFinish
+                    ? (_busy ? null : () => Navigator.of(context).pop())
+                    : (_busy || _selectedOptionKey == null
+                          ? null
+                          : _submitAnswer),
+                child: Text(
+                  showFinish
+                      ? StepLearningCheckL10n.done.resolve(context)
+                      : check.attemptCount > 0 && !check.hasCorrectAttempt
+                      ? StepLearningCheckL10n.actionTryAgain.resolve(context)
+                      : StepLearningCheckL10n.submitAnswer.resolve(context),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
-          if (canMutate && showFinish)
-            FilledButton(
-              onPressed: _busy
-                  ? null
-                  : () => setState(() {
-                        _showCompletionScreen = true;
-                        _reviewingFromCompletion = false;
-                      }),
-              child: Text(StepLearningCheckL10n.finishCheck.resolve(context)),
-            ),
-          if (canMutate && !check.hasCorrectAttempt && !showFinish) ...[
-            const SizedBox(width: AppSpacing.sm),
-            OutlinedButton(
-              onPressed: _busy ? null : _viewHint,
-              child: Text(StepLearningCheckL10n.showHint.resolve(context)),
-            ),
-          ],
-          if (canMutate && !showFinish) ...[
-            const SizedBox(width: AppSpacing.sm),
-            TextButton(
-              onPressed: _busy ? null : _skipCheck,
-              child: Text(StepLearningCheckL10n.skipForNow.resolve(context)),
-            ),
-          ],
-          const Spacer(),
-          PopupMenuButton<String>(
-            tooltip: StepLearningCheckL10n.moreActions.resolve(context),
-            onSelected: (value) {
-              switch (value) {
-                case 'unclear':
-                  _reportUnclear();
-                case 'ai':
-                  _openAiHandoff();
-                case 'close':
-                  Navigator.of(context).pop();
-              }
-            },
-            itemBuilder: (menuContext) => [
-              if (canMutate && !check.unclearReported)
-                PopupMenuItem(
-                  value: 'unclear',
-                  child: Text(
-                    StepLearningCheckL10n.reportUnclear.resolve(context),
+          if (showHint || showSkip) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                if (showHint)
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _busy ? null : _viewHint,
+                      child: Text(
+                        StepLearningCheckL10n.showHint.resolve(context),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
-                ),
-              if (showAi)
-                PopupMenuItem(
-                  value: 'ai',
-                  child: Text(StepLearningCheckL10n.askAi.resolve(context)),
-                ),
-              PopupMenuItem(
-                value: 'close',
-                child: Text(StepLearningCheckL10n.close.resolve(context)),
-              ),
-            ],
-          ),
+                if (showHint && showSkip) const SizedBox(width: AppSpacing.sm),
+                if (showSkip)
+                  Expanded(
+                    child: TextButton(
+                      onPressed: _busy ? null : _skipCheck,
+                      child: Text(
+                        StepLearningCheckL10n.skipForNow.resolve(context),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -807,14 +898,19 @@ class _LearningRadioOptionCard extends StatelessWidget {
           padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: borderColor, width: selected || showResult ? 2 : 1),
+            border: Border.all(
+              color: borderColor,
+              width: selected || showResult ? 2 : 1,
+            ),
           ),
           child: Row(
             children: [
               Expanded(
-                child: Text(
+                child: ContentDirectionalText(
                   label,
-                  style: AppTextStyles.body(context),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.body(context).copyWith(height: 1.3),
                 ),
               ),
               if (trailingIcon != null)

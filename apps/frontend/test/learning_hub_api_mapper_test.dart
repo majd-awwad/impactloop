@@ -364,5 +364,45 @@ void main() {
       );
       expect(build.stepProgress.steps.last.state, ProjectBuildStepState.locked);
     });
+
+    test('resolves relative candidate image URLs against the backend origin', () {
+      final result = LearningHubApiMapper.fromMaterialCandidatesJson({
+        'itemId': 'item-1',
+        'componentId': 'component-1',
+        'searchTerm': 'Raspberry Pi',
+        'items': [
+          {
+            'id': 'material-1',
+            'title': 'Raspberry Pi 4',
+            'imageUrl':
+                '/demo-assets/community-materials/materials/raspberry-pi.jpg',
+            'category': {'nameEn': 'Electronics'},
+            'condition': 'GOOD',
+            'status': 'AVAILABLE',
+            'isFree': true,
+            'currency': 'NIS',
+            'supplierName': 'Supplier',
+            'city': 'Ramallah',
+            'pickupAllowed': true,
+            'deliveryAllowed': false,
+            'matchHints': ['Matches component type'],
+          },
+        ],
+      });
+
+      expect(result.items, hasLength(1));
+      expect(result.items.first.imageUrl, isNotNull);
+      expect(result.items.first.imageUrl, startsWith('http'));
+      expect(
+        result.items.first.imageUrl,
+        endsWith(
+          '/demo-assets/community-materials/materials/raspberry-pi.jpg',
+        ),
+      );
+      expect(
+        result.items.first.imageUrl,
+        isNot(contains('/api/demo-assets/')),
+      );
+    });
   });
 }

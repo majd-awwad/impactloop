@@ -33,10 +33,7 @@ bool areRequiredBuildStepsComplete(ProjectBuild build) {
 }
 
 class CompletedReviewFinalCheckUi {
-  const CompletedReviewFinalCheckUi({
-    this.actionLabel,
-    this.compactNotice,
-  });
+  const CompletedReviewFinalCheckUi({this.actionLabel, this.compactNotice});
 
   final LocalizedText? actionLabel;
   final LocalizedText? compactNotice;
@@ -176,9 +173,9 @@ class FinalLearningCheckSection extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   FinalLearningCheckL10n.supporting.resolve(context),
-                  style: AppTextStyles.body(context).copyWith(
-                    color: palette.textSecondary,
-                  ),
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textSecondary),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
@@ -300,7 +297,8 @@ class FinalLearningCheckSheet extends ConsumerStatefulWidget {
       _FinalLearningCheckSheetState();
 }
 
-class _FinalLearningCheckSheetState extends ConsumerState<FinalLearningCheckSheet>
+class _FinalLearningCheckSheetState
+    extends ConsumerState<FinalLearningCheckSheet>
     with SingleTickerProviderStateMixin {
   FinalLearningCheck? _check;
   bool _loading = true;
@@ -372,7 +370,8 @@ class _FinalLearningCheckSheetState extends ConsumerState<FinalLearningCheckShee
           .fetchFinalLearningCheck(widget.projectId);
       if (!mounted) return;
       final firstOpen = check.assignments.indexWhere(
-        (item) => !item.hasCorrectAttempt &&
+        (item) =>
+            !item.hasCorrectAttempt &&
             item.status != LearningAssignmentStatus.skipped,
       );
       setState(() {
@@ -518,9 +517,9 @@ class _FinalLearningCheckSheetState extends ConsumerState<FinalLearningCheckShee
             check.assignments[_index].assignmentId,
           );
       if (!mounted) return;
-      ref.read(aiAssistantShellProvider.notifier).open(
-            composerPrefill: handoff.suggestedPromptFor(_languageCode),
-          );
+      ref
+          .read(aiAssistantShellProvider.notifier)
+          .open(composerPrefill: handoff.suggestedPromptFor(_languageCode));
       await widget.onOpenAi?.call();
     } on ApiException {
       if (mounted) {
@@ -541,7 +540,9 @@ class _FinalLearningCheckSheetState extends ConsumerState<FinalLearningCheckShee
       _inlineError = null;
     });
     try {
-      await ref.read(learningHubRepositoryProvider).reportLearningAssignmentUnclear(
+      await ref
+          .read(learningHubRepositoryProvider)
+          .reportLearningAssignmentUnclear(
             widget.projectId,
             check.assignments[_index].assignmentId,
           );
@@ -581,8 +582,9 @@ class _FinalLearningCheckSheetState extends ConsumerState<FinalLearningCheckShee
     } on ApiException {
       if (mounted) {
         setState(() {
-          _inlineError =
-              FinalLearningCheckL10n.reportUnclearError.resolve(context);
+          _inlineError = FinalLearningCheckL10n.reportUnclearError.resolve(
+            context,
+          );
         });
       }
     } finally {
@@ -634,7 +636,8 @@ class _FinalLearningCheckSheetState extends ConsumerState<FinalLearningCheckShee
             ? const Center(child: CircularProgressIndicator())
             : _check == null
             ? Text(
-                _inlineError ?? FinalLearningCheckL10n.loadError.resolve(context),
+                _inlineError ??
+                    FinalLearningCheckL10n.loadError.resolve(context),
               )
             : _buildShell(context, _check!),
       ),
@@ -703,9 +706,9 @@ class _FinalLearningCheckSheetState extends ConsumerState<FinalLearningCheckShee
         const SizedBox(height: AppSpacing.sm),
         Text(
           FinalLearningCheckL10n.supporting.resolve(context),
-          style: AppTextStyles.body(context).copyWith(
-            color: palette.textSecondary,
-          ),
+          style: AppTextStyles.body(
+            context,
+          ).copyWith(color: palette.textSecondary),
           textAlign: TextAlign.center,
         ),
       ],
@@ -749,7 +752,8 @@ class _FinalLearningCheckSheetState extends ConsumerState<FinalLearningCheckShee
       width: isMobile ? double.infinity : null,
       height: 52,
       child: TextButton(
-        onPressed: () => _closeCelebration(FinalCheckCelebrationCloseAction.close),
+        onPressed: () =>
+            _closeCelebration(FinalCheckCelebrationCloseAction.close),
         child: Text(FinalLearningCheckL10n.close.resolve(context)),
       ),
     );
@@ -778,11 +782,7 @@ class _FinalLearningCheckSheetState extends ConsumerState<FinalLearningCheckShee
         spacing: AppSpacing.sm,
         runSpacing: AppSpacing.sm,
         alignment: WrapAlignment.end,
-        children: [
-          closeButton,
-          ?secondaryButton,
-          primaryButton,
-        ],
+        children: [closeButton, ?secondaryButton, primaryButton],
       ),
     );
   }
@@ -808,7 +808,9 @@ class _FinalLearningCheckSheetState extends ConsumerState<FinalLearningCheckShee
         const SizedBox(height: AppSpacing.xs),
         Text(
           FinalLearningCheckL10n.optional.resolve(context),
-          style: AppTextStyles.body(context).copyWith(color: palette.textSecondary),
+          style: AppTextStyles.body(
+            context,
+          ).copyWith(color: palette.textSecondary),
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
@@ -821,18 +823,19 @@ class _FinalLearningCheckSheetState extends ConsumerState<FinalLearningCheckShee
             padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
             child: _LearningRadioOptionCard(
               label: option.promptFor(_languageCode),
-              selected: _selectedOptionKey == option.optionKey ||
+              selected:
+                  _selectedOptionKey == option.optionKey ||
                   assignment.latestSelectedOptionKey == option.optionKey,
-              enabled: !check.isReadOnly &&
-                  !assignment.isReadOnly &&
-                  !_busy,
+              enabled: !check.isReadOnly && !assignment.isReadOnly && !_busy,
               showResult: showResults,
               isCorrectOption: _isCorrectOption(assignment, option.optionKey),
-              isIncorrectSelection: showResults &&
+              isIncorrectSelection:
+                  showResults &&
                   assignment.latestSelectedOptionKey == option.optionKey &&
                   assignment.latestResult != null &&
                   !assignment.latestResult!.isCorrect,
-              onTap: () => setState(() => _selectedOptionKey = option.optionKey),
+              onTap: () =>
+                  setState(() => _selectedOptionKey = option.optionKey),
             ),
           ),
         ),
@@ -871,18 +874,18 @@ class _FinalLearningCheckSheetState extends ConsumerState<FinalLearningCheckShee
           const SizedBox(height: AppSpacing.xs),
           Text(
             FinalLearningCheckL10n.answerSaved.resolve(context),
-            style: AppTextStyles.label(context).copyWith(
-              color: palette.textSecondary,
-            ),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textSecondary),
           ),
         ],
         if (_inlineError != null) ...[
           const SizedBox(height: AppSpacing.sm),
           Text(
             _inlineError!,
-            style: AppTextStyles.body(context).copyWith(
-              color: Colors.orange.shade800,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: Colors.orange.shade800),
           ),
         ],
       ],
@@ -891,7 +894,8 @@ class _FinalLearningCheckSheetState extends ConsumerState<FinalLearningCheckShee
 
   bool _isCorrectOption(FinalLearningAssignment assignment, String optionKey) {
     final correctKey =
-        assignment.correctOptionKey ?? assignment.latestResult?.correctOptionKey;
+        assignment.correctOptionKey ??
+        assignment.latestResult?.correctOptionKey;
     if (correctKey != null) {
       return optionKey == correctKey;
     }
@@ -1048,9 +1052,7 @@ class _LearningRadioOptionCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Expanded(
-                child: Text(label, style: AppTextStyles.body(context)),
-              ),
+              Expanded(child: Text(label, style: AppTextStyles.body(context))),
               if (trailingIcon != null)
                 Icon(trailingIcon, color: iconColor, size: 22),
             ],
@@ -1160,8 +1162,9 @@ class LearningSummarySection extends StatelessWidget {
   }
 
   String _confidenceText(BuildContext context, int before, int after) {
-    final label =
-        FinalLearningCheckL10n.confidenceProgressLabel.resolve(context);
+    final label = FinalLearningCheckL10n.confidenceProgressLabel.resolve(
+      context,
+    );
     if (Localizations.localeOf(context).languageCode == 'ar') {
       return '$label: $before ← $after';
     }
@@ -1318,9 +1321,8 @@ class _LearningReflectionSectionState
                   onSelected: readOnly
                       ? null
                       : () => setState(
-                          () =>
-                              _goalOutcome =
-                                  LearningGoalOutcome.partiallyAchieved,
+                          () => _goalOutcome =
+                              LearningGoalOutcome.partiallyAchieved,
                         ),
                 ),
                 _GoalOutcomeChip(
@@ -1345,7 +1347,9 @@ class _LearningReflectionSectionState
               final value = index + 1;
               final selected = _confidenceAfter == value;
               return Padding(
-                padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
+                padding: const EdgeInsetsDirectional.only(
+                  bottom: AppSpacing.xs,
+                ),
                 child: Material(
                   color: selected ? palette.limeSoft : palette.cardSurface,
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -1397,9 +1401,9 @@ class _LearningReflectionSectionState
                   widget.session.confidenceBefore!,
                   _confidenceAfter!,
                 ),
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textSecondary,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary),
               ),
             ],
             const SizedBox(height: AppSpacing.md),
@@ -1413,8 +1417,9 @@ class _LearningReflectionSectionState
                 if (_saved) setState(() => _saved = false);
               },
               decoration: InputDecoration(
-                labelText:
-                    FinalLearningCheckL10n.reflectionPrompt.resolve(context),
+                labelText: FinalLearningCheckL10n.reflectionPrompt.resolve(
+                  context,
+                ),
                 alignLabelWithHint: true,
               ),
             ),
@@ -1424,17 +1429,17 @@ class _LearningReflectionSectionState
                       ? FinalLearningCheckL10n.reflectionSavedDestination
                       : FinalLearningCheckL10n.reflectionDestination)
                   .resolve(context),
-              style: AppTextStyles.body(context).copyWith(
-                color: palette.textSecondary,
-              ),
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textSecondary),
             ),
             if (_error != null) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(
                 _error!,
-                style: AppTextStyles.body(context).copyWith(
-                  color: Colors.orange.shade800,
-                ),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: Colors.orange.shade800),
               ),
             ],
             const SizedBox(height: AppSpacing.md),
@@ -1458,8 +1463,9 @@ class _LearningReflectionSectionState
                   FilledButton(
                     onPressed: () => context.push(learnerPortfolioRoute),
                     child: Text(
-                      FinalLearningCheckL10n.viewPrivatePortfolio
-                          .resolve(context),
+                      FinalLearningCheckL10n.viewPrivatePortfolio.resolve(
+                        context,
+                      ),
                     ),
                   ),
                 ],
@@ -1472,8 +1478,9 @@ class _LearningReflectionSectionState
   }
 
   String _confidenceProgressText(BuildContext context, int before, int after) {
-    final label =
-        FinalLearningCheckL10n.confidenceProgressLabel.resolve(context);
+    final label = FinalLearningCheckL10n.confidenceProgressLabel.resolve(
+      context,
+    );
     if (Localizations.localeOf(context).languageCode == 'ar') {
       return '$label: $before ← $after';
     }

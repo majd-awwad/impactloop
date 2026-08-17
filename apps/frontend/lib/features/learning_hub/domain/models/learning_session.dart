@@ -140,8 +140,7 @@ class LearningAssignment {
           ? StepLearningCheckUiState.reviewed
           : StepLearningCheckUiState.correct;
     }
-    if (status == LearningAssignmentStatus.skipped &&
-        answerAttempts.isEmpty) {
+    if (status == LearningAssignmentStatus.skipped && answerAttempts.isEmpty) {
       return StepLearningCheckUiState.skipped;
     }
     if (answerAttempts.isNotEmpty) {
@@ -314,7 +313,9 @@ class BuildLearningSession {
     final items = assignments
         .where((assignment) => assignment.isStartStage)
         .toList(growable: true);
-    items.sort((left, right) => left.displayOrder.compareTo(right.displayOrder));
+    items.sort(
+      (left, right) => left.displayOrder.compareTo(right.displayOrder),
+    );
     return List.unmodifiable(items);
   }
 
@@ -322,7 +323,9 @@ class BuildLearningSession {
     final items = assignments
         .where((assignment) => assignment.isStepStage)
         .toList(growable: true);
-    items.sort((left, right) => left.displayOrder.compareTo(right.displayOrder));
+    items.sort(
+      (left, right) => left.displayOrder.compareTo(right.displayOrder),
+    );
     return List.unmodifiable(items);
   }
 
@@ -330,7 +333,9 @@ class BuildLearningSession {
     final items = assignments
         .where((assignment) => assignment.stage == 'FINAL')
         .toList(growable: true);
-    items.sort((left, right) => left.displayOrder.compareTo(right.displayOrder));
+    items.sort(
+      (left, right) => left.displayOrder.compareTo(right.displayOrder),
+    );
     return List.unmodifiable(items);
   }
 

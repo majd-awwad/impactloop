@@ -12,11 +12,7 @@ class LearningHubApiMapper {
   const LearningHubApiMapper._();
 
   static String? _resolveMediaUrl(String? value) {
-    final trimmed = value?.trim();
-    if (trimmed == null || trimmed.isEmpty) {
-      return null;
-    }
-    return ApiConfig.resolveMediaUrl(trimmed);
+    return ApiConfig.resolveApiAssetUrl(value);
   }
 
   static LearningProject fromListItemJson(Map<String, dynamic> json) {
@@ -186,7 +182,7 @@ class LearningHubApiMapper {
       stepNumber: _intFromDynamic(json['stepNumber']) ?? 0,
       title: _stringOrFallback(json['title'], fallback: ''),
       description: _stringOrFallback(json['description'], fallback: ''),
-      imageUrl: _nullableString(json['imageUrl']),
+      imageUrl: _resolveMediaUrl(_nullableString(json['imageUrl'])),
       completedAt: _dateTimeFromDynamic(json['completedAt']),
       state: _mapBuildStepState(json['state']),
     );
@@ -725,7 +721,7 @@ class LearningHubApiMapper {
     return LinkedMaterialSummary(
       id: id,
       title: _stringOrFallback(json['title'], fallback: 'Material'),
-      imageUrl: _nullableString(json['imageUrl']),
+      imageUrl: _resolveMediaUrl(_nullableString(json['imageUrl'])),
       categoryNameEn: _stringOrFallback(
         category?['nameEn'],
         fallback: 'Material',
@@ -823,7 +819,7 @@ class LearningHubApiMapper {
     return BuildMaterialCandidate(
       id: _stringOrFallback(json['id'], fallback: ''),
       title: _stringOrFallback(json['title'], fallback: 'Material'),
-      imageUrl: _nullableString(json['imageUrl']),
+      imageUrl: _resolveMediaUrl(_nullableString(json['imageUrl'])),
       categoryNameEn: _stringOrFallback(
         _asMap(json['category'])?['nameEn'],
         fallback: 'Material',
@@ -860,6 +856,25 @@ class LearningHubApiMapper {
     };
   }
 
+  static ProjectBuildCompletionStoryPhoto? completionPhotoFromJson(
+    Object? raw,
+  ) {
+    final json = _asMap(raw);
+    if (json == null) {
+      return null;
+    }
+    final imageUrl = _stringOrFallback(json['imageUrl'], fallback: '');
+    if (imageUrl.isEmpty) {
+      return null;
+    }
+    return ProjectBuildCompletionStoryPhoto(
+      id: _stringOrFallback(json['id'], fallback: ''),
+      imageUrl: imageUrl,
+      caption: _nullableString(json['caption']),
+      sortOrder: _intFromDynamic(json['sortOrder']) ?? 0,
+    );
+  }
+
   static ProjectBuildCompletionStory? _mapCompletionStory(Object? raw) {
     final json = _asMap(raw);
     if (json == null) {
@@ -869,15 +884,8 @@ class LearningHubApiMapper {
     final photosJson = json['photos'];
     final photos = photosJson is List
         ? photosJson
-              .whereType<Map>()
-              .map(
-                (photo) => ProjectBuildCompletionStoryPhoto(
-                  id: _stringOrFallback(photo['id'], fallback: ''),
-                  imageUrl: _stringOrFallback(photo['imageUrl'], fallback: ''),
-                  caption: _nullableString(photo['caption']),
-                  sortOrder: _intFromDynamic(photo['sortOrder']) ?? 0,
-                ),
-              )
+              .map(completionPhotoFromJson)
+              .whereType<ProjectBuildCompletionStoryPhoto>()
               .toList(growable: false)
         : const <ProjectBuildCompletionStoryPhoto>[];
 
@@ -1736,14 +1744,17 @@ class LearningHubApiMapper {
     );
   }
 
-  static SmartBuildPlanResult fromSmartBuildPlanJson(Map<String, dynamic> json) {
+  static SmartBuildPlanResult fromSmartBuildPlanJson(
+    Map<String, dynamic> json,
+  ) {
     final summaryJson = _asMap(json['summary']) ?? const <String, dynamic>{};
     final plansJson = json['plans'];
 
     return SmartBuildPlanResult(
       buildId: _stringOrFallback(json['buildId'], fallback: ''),
       projectId: _stringOrFallback(json['projectId'], fallback: ''),
-      generatedAt: DateTime.tryParse(
+      generatedAt:
+          DateTime.tryParse(
             _stringOrFallback(json['generatedAt'], fallback: ''),
           ) ??
           DateTime.now(),
@@ -1792,7 +1803,8 @@ class LearningHubApiMapper {
         materialSubtotal:
             _numberFromDynamic(summaryJson['materialSubtotal']) ?? 0,
         currency: _stringOrFallback(summaryJson['currency'], fallback: 'NIS'),
-        priceUnknownCount: _intFromDynamic(summaryJson['priceUnknownCount']) ?? 0,
+        priceUnknownCount:
+            _intFromDynamic(summaryJson['priceUnknownCount']) ?? 0,
         supplierCount: _intFromDynamic(summaryJson['supplierCount']) ?? 0,
         pickupLocationCount:
             _intFromDynamic(summaryJson['pickupLocationCount']) ?? 0,
@@ -1821,8 +1833,7 @@ class LearningHubApiMapper {
         fallback: '',
       ),
       componentName: _stringOrFallback(json['componentName'], fallback: ''),
-      requiredQuantity:
-          _numberFromDynamic(json['requiredQuantity']) ?? 0,
+      requiredQuantity: _numberFromDynamic(json['requiredQuantity']) ?? 0,
       requiredUnit: _stringOrFallback(json['requiredUnit'], fallback: 'piece'),
       plannerState: _mapSmartBuildPlannerState(json['plannerState']),
       acquisitionState: _nullableString(json['acquisitionState']),
@@ -1933,7 +1944,8 @@ class LearningHubApiMapper {
       'INCOMPATIBLE_UNIT' => SmartBuildUncoveredReason.incompatibleUnit,
       'NO_AVAILABLE_MATERIAL' => SmartBuildUncoveredReason.noAvailableMaterial,
       'NOT_OPTIMIZABLE' => SmartBuildUncoveredReason.notOptimizable,
-      'NO_ELIGIBLE_CANDIDATES' => SmartBuildUncoveredReason.noEligibleCandidates,
+      'NO_ELIGIBLE_CANDIDATES' =>
+        SmartBuildUncoveredReason.noEligibleCandidates,
       _ => null,
     };
   }

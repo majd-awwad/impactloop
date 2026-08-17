@@ -143,6 +143,10 @@ class BuildGuideContext {
     required this.materialReadiness,
     required this.stepProgress,
     this.currentStep,
+    this.currentStepInstructions,
+    this.completedSteps = const [],
+    this.upcomingStepTitle,
+    this.materialNames = const [],
   });
 
   final String buildId;
@@ -152,21 +156,92 @@ class BuildGuideContext {
   final ProjectBuildMaterialReadiness materialReadiness;
   final ProjectBuildCurrentStep? currentStep;
   final ProjectBuildStepProgressSummary stepProgress;
+  final String? currentStepInstructions;
+  final List<({int stepNumber, String title})> completedSteps;
+  final String? upcomingStepTitle;
+  final List<String> materialNames;
 
   factory BuildGuideContext.fromProjectBuild(ProjectBuild build) {
+    final steps = [...build.stepProgress.steps]
+      ..sort((a, b) => a.stepNumber.compareTo(b.stepNumber));
+    ProjectBuildStepView? currentView;
+    for (final step in steps) {
+      if (step.state == ProjectBuildStepState.current) {
+        currentView = step;
+        break;
+      }
+    }
+    final completed = <({int stepNumber, String title})>[];
+    String? upcomingTitle;
+    for (final step in steps) {
+      if (step.state == ProjectBuildStepState.completed) {
+        completed.add((stepNumber: step.stepNumber, title: step.title));
+      } else if (upcomingTitle == null &&
+          step.state == ProjectBuildStepState.locked) {
+        upcomingTitle = '${step.stepNumber}. ${step.title}';
+      }
+    }
+    final names = <String>[];
+    final seen = <String>{};
+    for (final item in build.items) {
+      final name = item.component.name.en.trim().isNotEmpty
+          ? item.component.name.en.trim()
+          : item.component.name.ar.trim();
+      if (name.isEmpty || seen.contains(name)) {
+        continue;
+      }
+      seen.add(name);
+      names.add(name);
+    }
+
     return BuildGuideContext(
       buildId: build.id,
       projectId: build.projectId,
       projectTitle: build.project.title,
       buildStatus: build.status,
       materialReadiness: build.materialReadiness,
-      currentStep: build.stepProgress.currentStep,
+      currentStep: build.stepProgress.currentStep ??
+          (currentView == null
+              ? null
+              : ProjectBuildCurrentStep(
+                  stepId: currentView.stepId,
+                  stepNumber: currentView.stepNumber,
+                  title: currentView.title,
+                )),
+      currentStepInstructions: currentView?.description.trim().isEmpty == true
+          ? null
+          : currentView?.description.trim(),
+      completedSteps: completed,
+      upcomingStepTitle: upcomingTitle,
+      materialNames: names,
       stepProgress: ProjectBuildStepProgressSummary(
         completed: build.stepProgress.completed,
         total: build.stepProgress.total,
         percent: build.stepProgress.percent,
       ),
     );
+  }
+
+  Map<String, Object?> toModelRequestPayload() {
+    return {
+      'projectTitle': projectTitle,
+      'buildStatus': buildStatus.apiValue,
+      if (currentStep != null) 'currentStepNumber': currentStep!.stepNumber,
+      'totalSteps': stepProgress.total,
+      if (currentStep != null) 'currentStepTitle': currentStep!.title,
+      if (currentStepInstructions != null &&
+          currentStepInstructions!.isNotEmpty)
+        'currentStepInstructions': currentStepInstructions,
+      if (completedSteps.isNotEmpty)
+        'completedSteps': [
+          for (final step in completedSteps)
+            {'stepNumber': step.stepNumber, 'title': step.title},
+        ],
+      if (upcomingStepTitle != null) 'upcomingStepTitle': upcomingStepTitle,
+      'materialsReady': materialReadiness.ready,
+      'materialsTotal': materialReadiness.total,
+      if (materialNames.isNotEmpty) 'materialNames': materialNames,
+    };
   }
 }
 

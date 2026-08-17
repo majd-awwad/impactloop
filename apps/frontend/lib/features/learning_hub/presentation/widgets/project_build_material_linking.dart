@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../shared/widgets/app_close_button.dart';
 import '../../../../shared/widgets/app_feedback.dart';
@@ -14,6 +15,8 @@ import '../../../../shared/models/localized_text.dart';
 import '../l10n/learning_project_build_l10n.dart';
 import '../project_build_material_link_error_message.dart';
 import '../theme/learning_ui_palette.dart';
+import 'build_materials/build_material_candidate_card.dart';
+import 'build_materials/build_material_warning_copy.dart';
 import 'project_build_acquisition_state.dart';
 
 String buildChecklistMaterialDetailUri({
@@ -69,7 +72,9 @@ String smartBuildPlanReserveMaterialUri({
   );
 }
 
-@Deprecated('Use smartBuildPlanBrowseMaterialUri or smartBuildPlanReserveMaterialUri')
+@Deprecated(
+  'Use smartBuildPlanBrowseMaterialUri or smartBuildPlanReserveMaterialUri',
+)
 String smartBuildPlanMaterialDetailUri({
   required String materialId,
   required String projectId,
@@ -196,11 +201,21 @@ class _ProjectBuildMaterialCandidatesSheetState
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
-    final textTheme = Theme.of(context).textTheme;
     final componentName = widget.item.component.name.resolve(context);
+    final compact = MediaQuery.sizeOf(context).width < 600;
+    final items = _result?.items ?? const <BuildMaterialCandidate>[];
+    final heading = !_isLoading && _error == null && items.length == 1
+        ? LearningProjectBuildL10n.bestMatchTitle
+        : LearningProjectBuildL10n.possibleOptionsTitle;
+    final subtitle = !_isLoading && _error == null && items.isNotEmpty
+        ? LearningProjectBuildL10n.possibleOptionsCount(
+            count: items.length,
+            component: componentName,
+          )
+        : LearningProjectBuildL10n.possibleOptionsSubtitle(componentName);
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.72,
+      initialChildSize: compact ? 0.88 : 0.72,
       minChildSize: 0.45,
       maxChildSize: 0.95,
       expand: false,
@@ -228,11 +243,11 @@ class _ProjectBuildMaterialCandidatesSheetState
                 ),
               ),
               Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(
-                  AppSpacing.lg,
-                  AppSpacing.md,
-                  AppSpacing.lg,
-                  AppSpacing.sm,
+                padding: EdgeInsetsDirectional.fromSTEB(
+                  compact ? AppSpacing.md : AppSpacing.lg,
+                  compact ? AppSpacing.sm : AppSpacing.md,
+                  compact ? AppSpacing.sm : AppSpacing.lg,
+                  compact ? AppSpacing.sm : AppSpacing.md,
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,25 +257,27 @@ class _ProjectBuildMaterialCandidatesSheetState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Possible options',
-                            style: textTheme.titleLarge?.copyWith(
+                            heading.resolve(context),
+                            style: AppTextStyles.title(context).copyWith(
                               color: palette.textPrimary,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w800,
+                              fontSize: compact ? 22 : 24,
                             ),
                           ),
-                          const SizedBox(height: AppSpacing.xs),
+                          const SizedBox(height: 2),
                           Text(
-                            'Platform materials that may work for "$componentName". '
-                            'These are suggestions, not perfect matches.',
-                            style: textTheme.bodyMedium?.copyWith(
+                            subtitle.resolve(context),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.body(context).copyWith(
                               color: palette.textSecondary,
-                              height: 1.45,
+                              fontSize: compact ? 14 : 15,
+                              height: 1.35,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
                     AppCloseButton(
                       onPressed: () => Navigator.of(context).pop(),
                     ),
@@ -275,49 +292,59 @@ class _ProjectBuildMaterialCandidatesSheetState
                         onRetry: _loadCandidates,
                         onBrowseAll: _browseAllMaterials,
                       )
-                    : ListView(
+                    : items.isEmpty
+                    ? ListView(
                         controller: scrollController,
-                        padding: const EdgeInsetsDirectional.fromSTEB(
-                          AppSpacing.lg,
+                        padding: EdgeInsetsDirectional.fromSTEB(
+                          compact ? AppSpacing.md : AppSpacing.lg,
                           0,
+                          compact ? AppSpacing.md : AppSpacing.lg,
                           AppSpacing.lg,
-                          AppSpacing.xl,
                         ),
                         children: [
-                          if ((_result?.items ?? []).isEmpty)
-                            _CandidatesEmptyState(
-                              componentName: componentName,
-                              onBrowseAll: _browseAllMaterials,
-                            )
-                          else
-                            ..._result!.items.map(
-                              (candidate) => Padding(
-                                padding: const EdgeInsetsDirectional.only(
-                                  bottom: AppSpacing.md,
-                                ),
-                                child: _CandidateCard(
-                                  candidate: candidate,
-                                  isLinking: _linkingMaterialId == candidate.id,
-                                  onLink: () => _linkMaterial(candidate),
-                                  onView: () {
-                                    Navigator.of(context).pop();
-                                    context.go(
-                                      buildChecklistMaterialDetailUri(
-                                        materialId: candidate.id,
-                                        projectId: widget.projectId,
-                                        buildItemId: widget.item.id,
-                                        componentName: componentName,
-                                        requestedQuantity:
-                                            widget.item.quantityAllocation
-                                                ?.requiredQuantity ??
-                                            widget.item.component.quantity,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
+                          _CandidatesEmptyState(
+                            componentName: componentName,
+                            onBrowseAll: _browseAllMaterials,
+                          ),
                         ],
+                      )
+                    : ListView.separated(
+                        controller: scrollController,
+                        padding: EdgeInsetsDirectional.fromSTEB(
+                          compact ? AppSpacing.md : AppSpacing.lg,
+                          0,
+                          compact ? AppSpacing.md : AppSpacing.lg,
+                          AppSpacing.lg,
+                        ),
+                        itemCount: items.length,
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(height: AppSpacing.sm),
+                        itemBuilder: (context, index) {
+                          final candidate = items[index];
+                          return BuildMaterialCandidateCard(
+                            candidate: candidate,
+                            compact: compact,
+                            isLinking: _linkingMaterialId == candidate.id,
+                            onLink: () => _linkMaterial(candidate),
+                            onView: () {
+                              Navigator.of(context).pop();
+                              context.go(
+                                buildChecklistMaterialDetailUri(
+                                  materialId: candidate.id,
+                                  projectId: widget.projectId,
+                                  buildItemId: widget.item.id,
+                                  componentName: componentName,
+                                  requestedQuantity:
+                                      widget
+                                          .item
+                                          .quantityAllocation
+                                          ?.requiredQuantity ??
+                                      widget.item.component.quantity,
+                                ),
+                              );
+                            },
+                          );
+                        },
                       ),
               ),
             ],
@@ -389,7 +416,9 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
               Icon(
                 Icons.link_rounded,
                 size: 18,
-                color: item.isReadyForBuild ? palette.lime : palette.textSecondary,
+                color: item.isReadyForBuild
+                    ? palette.lime
+                    : palette.textSecondary,
               ),
               const SizedBox(width: AppSpacing.xs),
               Text(
@@ -438,15 +467,16 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
           if (showAvailabilityWarning) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
-              material.availabilityWarning!,
+              BuildMaterialWarningCopy.localizeRaw(
+                material.availabilityWarning!,
+              ).resolve(context),
               style: textTheme.bodyMedium?.copyWith(
                 color: colors.warningText,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ],
-          if (linkedReservation != null &&
-              acquisitionState == 'reserved') ...[
+          if (linkedReservation != null && acquisitionState == 'reserved') ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
               linkedReservation.statusLabel,
@@ -460,8 +490,9 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
           if (isAwaitingResolution) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
-              LearningProjectBuildL10n.reservationRequiresResolution
-                  .resolve(context),
+              LearningProjectBuildL10n.reservationRequiresResolution.resolve(
+                context,
+              ),
               style: textTheme.bodyMedium?.copyWith(
                 color: colors.warningText,
                 fontWeight: FontWeight.w600,
@@ -483,10 +514,12 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               LearningProjectBuildL10n.partiallyAcquiredDetail(
-                acquired: item.quantityAllocation?.acquiredQuantity ??
+                acquired:
+                    item.quantityAllocation?.acquiredQuantity ??
                     item.linkedReservation?.quantityRequested ??
                     0,
-                required: item.quantityAllocation?.requiredQuantity ??
+                required:
+                    item.quantityAllocation?.requiredQuantity ??
                     item.component.quantity,
               ).resolve(context),
               style: textTheme.bodyMedium?.copyWith(
@@ -511,7 +544,10 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
                   allocationResult == 'unknown_quantity')) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
-              item.quantityAllocation?.warning ?? item.readinessLabel,
+              BuildMaterialWarningCopy.allocationDetail(
+                    item,
+                  )?.resolve(context) ??
+                  item.readinessLabel,
               style: textTheme.bodyMedium?.copyWith(
                 color: colors.warningText,
                 height: 1.45,
@@ -561,7 +597,9 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
                   ),
                   icon: const Icon(Icons.event_available_outlined),
                   label: Text(
-                    LearningProjectBuildL10n.reserveThisMaterial.resolve(context),
+                    LearningProjectBuildL10n.reserveThisMaterial.resolve(
+                      context,
+                    ),
                   ),
                 ),
               OutlinedButton.icon(
@@ -584,7 +622,9 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
                   ),
                   icon: const Icon(Icons.swap_horiz_rounded),
                   label: Text(
-                    LearningProjectBuildL10n.useAnotherMaterial.resolve(context),
+                    LearningProjectBuildL10n.useAnotherMaterial.resolve(
+                      context,
+                    ),
                   ),
                 ),
               TextButton.icon(
@@ -594,14 +634,18 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
                   isAcquired ? AppStatusTone.warning : AppStatusTone.warning,
                 ),
                 icon: Icon(
-                  isAcquired ? Icons.layers_clear_outlined : Icons.link_off_rounded,
+                  isAcquired
+                      ? Icons.layers_clear_outlined
+                      : Icons.link_off_rounded,
                 ),
                 label: Text(
                   isAcquired
                       ? LearningProjectBuildL10n.removeFromComponent.resolve(
                           context,
                         )
-                      : LearningProjectBuildL10n.unlinkMaterial.resolve(context),
+                      : LearningProjectBuildL10n.unlinkMaterial.resolve(
+                          context,
+                        ),
                 ),
               ),
             ],
@@ -620,160 +664,6 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
       'NEEDS_REPAIR' => 'Needs repair',
       _ => raw,
     };
-  }
-}
-
-class _CandidateCard extends StatelessWidget {
-  const _CandidateCard({
-    required this.candidate,
-    required this.isLinking,
-    required this.onLink,
-    required this.onView,
-  });
-
-  final BuildMaterialCandidate candidate;
-  final bool isLinking;
-  final VoidCallback onLink;
-  final VoidCallback onView;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = LearningUiPalette.of(context);
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: palette.cardSurface,
-        borderRadius: AppRadius.lgAll,
-        border: Border.all(color: palette.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _CandidateThumbnail(imageUrl: candidate.imageUrl),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      candidate.title,
-                      style: textTheme.titleMedium?.copyWith(
-                        color: palette.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      '${candidate.supplierName} · ${candidate.locationLabel}',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: palette.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      '${candidate.priceLabel} · ${_formatCondition(candidate.condition)}',
-                      style: textTheme.labelMedium?.copyWith(
-                        color: palette.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (candidate.matchHints.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.xs,
-              runSpacing: AppSpacing.xs,
-              children: candidate.matchHints
-                  .map(
-                    (hint) => Chip(
-                      label: Text(hint),
-                      visualDensity: VisualDensity.compact,
-                      backgroundColor: palette.cardSurfaceAlt,
-                      side: BorderSide(color: palette.borderSubtle),
-                    ),
-                  )
-                  .toList(growable: false),
-            ),
-          ],
-          const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              FilledButton.icon(
-                onPressed: isLinking ? null : onLink,
-                style: AppStatusButtonStyle.filled(
-                  context,
-                  AppStatusTone.primary,
-                ),
-                icon: isLinking
-                    ? const SizedBox.square(
-                        dimension: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.link_rounded),
-                label: Text(
-                  LearningProjectBuildL10n.linkToComponent.resolve(context),
-                ),
-              ),
-              OutlinedButton(
-                onPressed: isLinking ? null : onView,
-                style: AppStatusButtonStyle.outlined(
-                  context,
-                  AppStatusTone.neutral,
-                ),
-                child: Text(
-                  LearningProjectBuildL10n.viewMaterial.resolve(context),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  static String _formatCondition(String raw) {
-    return ProjectBuildLinkedMaterialPanel._formatCondition(raw);
-  }
-}
-
-class _CandidateThumbnail extends StatelessWidget {
-  const _CandidateThumbnail({this.imageUrl});
-
-  final String? imageUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = LearningUiPalette.of(context);
-
-    return ClipRRect(
-      borderRadius: AppRadius.mdAll,
-      child: Container(
-        width: 72,
-        height: 72,
-        color: palette.mutedChip,
-        child: imageUrl == null
-            ? Icon(Icons.inventory_2_outlined, color: palette.textSecondary)
-            : Image.network(
-                imageUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Icon(
-                  Icons.broken_image_outlined,
-                  color: palette.textSecondary,
-                ),
-              ),
-      ),
-    );
   }
 }
 
@@ -846,7 +736,7 @@ class _CandidatesEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'No available platform materials found for this component yet.',
+            LearningProjectBuildL10n.noMatchingMaterials.resolve(context),
             textAlign: TextAlign.center,
             style: textTheme.bodyMedium?.copyWith(
               color: palette.textSecondary,
@@ -861,7 +751,11 @@ class _CandidatesEmptyState extends StatelessWidget {
               AppStatusTone.neutral,
             ),
             icon: const Icon(Icons.travel_explore_rounded),
-            label: Text('Browse all materials for "$componentName"'),
+            label: Text(
+              LearningProjectBuildL10n.browseAllMaterialsFor(
+                componentName,
+              ).resolve(context),
+            ),
           ),
         ],
       ),
@@ -888,7 +782,10 @@ class _CandidatesErrorState extends StatelessWidget {
           children: [
             const Icon(Icons.cloud_off_outlined, size: 40),
             const SizedBox(height: AppSpacing.md),
-            const Text('Could not load material options right now.'),
+            Text(
+              LearningProjectBuildL10n.couldNotLoadOptions.resolve(context),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: AppSpacing.lg),
             FilledButton(
               onPressed: onRetry,
@@ -896,12 +793,14 @@ class _CandidatesErrorState extends StatelessWidget {
                 context,
                 AppStatusTone.primary,
               ),
-              child: const Text('Try again'),
+              child: Text(LearningProjectBuildL10n.tryAgain.resolve(context)),
             ),
             TextButton(
               onPressed: onBrowseAll,
               style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
-              child: const Text('Browse all materials'),
+              child: Text(
+                LearningProjectBuildL10n.browseMaterials.resolve(context),
+              ),
             ),
           ],
         ),

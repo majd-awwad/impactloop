@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,6 +31,8 @@ class AuthenticatedNetworkImage extends ConsumerStatefulWidget {
 class _AuthenticatedNetworkImageState
     extends ConsumerState<AuthenticatedNetworkImage> {
   Uint8List? _bytes;
+  bool _loading = true;
+  bool _failed = false;
 
   @override
   void initState() {
@@ -44,6 +45,8 @@ class _AuthenticatedNetworkImageState
     super.didUpdateWidget(oldWidget);
     if (oldWidget.url != widget.url) {
       _bytes = null;
+      _failed = false;
+      _loading = true;
       _load();
     }
   }
@@ -51,6 +54,12 @@ class _AuthenticatedNetworkImageState
   Future<void> _load() async {
     final trimmed = widget.url.trim();
     if (trimmed.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _failed = true;
+        });
+      }
       return;
     }
 
@@ -59,17 +68,38 @@ class _AuthenticatedNetworkImageState
         trimmed,
         options: Options(
           responseType: ResponseType.bytes,
+          sendTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 60),
           headers: {'Accept': '*/*'},
         ),
       );
       final data = response.data;
-      if (!mounted || data == null) {
+      if (!mounted) {
         return;
       }
-      setState(() => _bytes = Uint8List.fromList(data));
-    } catch (_) {
+      if (data == null || data.isEmpty) {
+        setState(() {
+          _loading = false;
+          _failed = true;
+          _bytes = null;
+        });
+        return;
+      }
+      setState(() {
+        _bytes = Uint8List.fromList(data);
+        _loading = false;
+        _failed = false;
+      });
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('Image failed: $trimmed\n$error');
+      }
       if (mounted) {
-        setState(() => _bytes = null);
+        setState(() {
+          _bytes = null;
+          _loading = false;
+          _failed = true;
+        });
       }
     }
   }
@@ -88,7 +118,20 @@ class _AuthenticatedNetworkImageState
 
   @override
   Widget build(BuildContext context) {
-    if (_bytes == null) {
+    if (_loading && _bytes == null) {
+      return SizedBox(
+        width: widget.width,
+        height: widget.height,
+        child: const Center(
+          child: SizedBox.square(
+            dimension: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    if (_failed || _bytes == null) {
       return _buildError(context);
     }
 
@@ -146,13 +189,19 @@ class ProtectedMediaImage extends ConsumerWidget {
       width: width,
       height: height,
       fit: fit,
-      errorBuilder: (_, _, _) =>
-          errorBuilder?.call(context) ??
-          SizedBox(
-            width: width,
-            height: height,
-            child: const ColoredBox(color: Colors.black12),
-          ),
+      errorBuilder: (context, error, stackTrace) {
+        if (kDebugMode) {
+          debugPrint(
+            'Image failed: ${ApiConfig.resolveMediaUrl(trimmed)}\n$error',
+          );
+        }
+        return errorBuilder?.call(context) ??
+            SizedBox(
+              width: width,
+              height: height,
+              child: const ColoredBox(color: Colors.black12),
+            );
+      },
     );
   }
 }

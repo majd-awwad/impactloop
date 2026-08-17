@@ -77,9 +77,9 @@ final projectBuildProvider = FutureProvider.autoDispose
 
 final smartBuildPlanProvider = FutureProvider.autoDispose
     .family<SmartBuildPlanResult, String>((ref, projectId) async {
-      return ref.watch(learningHubRepositoryProvider).optimizeBuildPlan(
-        projectId,
-      );
+      return ref
+          .watch(learningHubRepositoryProvider)
+          .optimizeBuildPlan(projectId);
     });
 
 void invalidateLearningHubEngagement(WidgetRef ref, String projectId) {

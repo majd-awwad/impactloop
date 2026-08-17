@@ -5,10 +5,7 @@ import '../../../learning_hub/domain/models/project_build.dart';
 class LearnerBuildsL10n {
   const LearnerBuildsL10n._();
 
-  static const myBuildsTitle = LocalizedText(
-    en: 'My Builds',
-    ar: 'مشاريعي',
-  );
+  static const myBuildsTitle = LocalizedText(en: 'My Builds', ar: 'مشاريعي');
 
   static const myBuildsSubtitle = LocalizedText(
     en: 'Track active, paused, completed, and archived project builds.',
@@ -73,10 +70,8 @@ class LearnerBuildsL10n {
   );
 
   static const emptyPortfolioSubtitle = LocalizedText(
-    en:
-        'Complete a project and add your story, photo, or learning reflection to see it here.',
-    ar:
-        'أكمل مشروعًا وأضف قصة إنجاز أو صورة أو مراجعة تعلم لتظهر هنا.',
+    en: 'Complete a project and add your story, photo, or learning reflection to see it here.',
+    ar: 'أكمل مشروعًا وأضف قصة إنجاز أو صورة أو مراجعة تعلم لتظهر هنا.',
   );
 
   static const exploreProjects = LocalizedText(
@@ -96,10 +91,8 @@ class LearnerBuildsL10n {
 
   static const attemptLabel = LocalizedText(en: 'Attempt', ar: 'محاولة');
 
-  static LocalizedText attemptNumber(int number) => LocalizedText(
-    en: 'Attempt $number',
-    ar: 'المحاولة $number',
-  );
+  static LocalizedText attemptNumber(int number) =>
+      LocalizedText(en: 'Attempt $number', ar: 'المحاولة $number');
 
   static LocalizedText statusLabel(ProjectBuildStatus status) {
     return switch (status) {
@@ -134,6 +127,11 @@ class LearnerBuildsL10n {
     ar: 'هذا المشروع للعرض فقط.',
   );
 
+  static const completedBuildDocumentNotice = LocalizedText(
+    en: 'The build is complete. You can document the result and completion story.',
+    ar: 'اكتمل البناء، ويمكنك توثيق النتيجة وقصة الإنجاز.',
+  );
+
   static const pausedNotice = LocalizedText(
     en: 'This build is paused. Resume to keep editing.',
     ar: 'هذا المشروع متوقف مؤقتاً. تابع للمتابعة في التعديل.',
@@ -149,19 +147,13 @@ class LearnerBuildsL10n {
     ar: 'شارك ما تعلّمته وكيف سار المشروع.',
   );
 
-  static const reflectionLabel = LocalizedText(
-    en: 'Reflection',
-    ar: 'تأملاتك',
-  );
+  static const reflectionLabel = LocalizedText(en: 'Reflection', ar: 'تأملاتك');
 
   static const captionLabel = LocalizedText(en: 'Caption', ar: 'وصف قصير');
 
   static const saveStory = LocalizedText(en: 'Save story', ar: 'حفظ القصة');
 
-  static const savingStory = LocalizedText(
-    en: 'Saving…',
-    ar: 'جارٍ الحفظ…',
-  );
+  static const savingStory = LocalizedText(en: 'Saving…', ar: 'جارٍ الحفظ…');
 
   static const storySaved = LocalizedText(
     en: 'Story saved',
@@ -201,19 +193,13 @@ class LearnerBuildsL10n {
   static const stayHere = LocalizedText(en: 'Stay here', ar: 'البقاء هنا');
 
   static const viewPrivatePortfolio = LocalizedText(
-    en: 'View private Portfolio',
-    ar: 'عرض الملف الخاص',
+    en: 'View achievement portfolio',
+    ar: 'عرض ملف الإنجاز',
   );
 
-  static const removePhoto = LocalizedText(
-    en: 'Remove',
-    ar: 'إزالة',
-  );
+  static const removePhoto = LocalizedText(en: 'Remove', ar: 'إزالة');
 
-  static const changePhoto = LocalizedText(
-    en: 'Change',
-    ar: 'تغيير',
-  );
+  static const changePhoto = LocalizedText(en: 'Change', ar: 'تغيير');
 
   static const resultPhotosTitle = LocalizedText(
     en: 'Result photos',
@@ -231,13 +217,18 @@ class LearnerBuildsL10n {
   );
 
   static const uploadFailed = LocalizedText(
-    en: 'Couldn’t upload the result photo. Please try again.',
-    ar: 'تعذر رفع صورة النتيجة. حاول مرة أخرى.',
+    en: 'Couldn’t upload the photo. Please try again.',
+    ar: 'تعذر رفع الصورة. حاول مرة أخرى.',
   );
 
   static const uploadInvalidFile = LocalizedText(
     en: 'Choose a valid image to upload.',
     ar: 'اختر صورة صالحة لرفعها.',
+  );
+
+  static const photoLimitReached = LocalizedText(
+    en: 'You already uploaded the maximum number of result photos.',
+    ar: 'وصلت إلى الحد الأقصى لصور النتيجة.',
   );
 
   static const genericActionFailed = LocalizedText(
@@ -396,27 +387,15 @@ class LearnerBuildsL10n {
         }
         return uploadFailed.resolveFor(languageCode);
       case 'BUILD_NOT_COMPLETED':
+        return uploadFailed.resolveFor(languageCode);
       case 'COMPLETION_PHOTO_LIMIT':
-        return error.message.isNotEmpty &&
-                !_isGenericErrorMessage(error.message)
-            ? error.message
-            : uploadFailed.resolveFor(languageCode);
+        return photoLimitReached.resolveFor(languageCode);
       case 'NETWORK_ERROR':
       case 'TIMEOUT':
         return uploadFailed.resolveFor(languageCode);
       default:
-        return error.message.isNotEmpty &&
-                !_isGenericErrorMessage(error.message)
-            ? error.message
-            : uploadFailed.resolveFor(languageCode);
+        return uploadFailed.resolveFor(languageCode);
     }
-  }
-
-  static bool _isGenericErrorMessage(String message) {
-    final normalized = message.trim().toLowerCase();
-    return normalized == 'validation failed' ||
-        normalized == 'request failed' ||
-        normalized.contains('something went wrong');
   }
 
   static String? mimeTypeForCompletionPhoto({

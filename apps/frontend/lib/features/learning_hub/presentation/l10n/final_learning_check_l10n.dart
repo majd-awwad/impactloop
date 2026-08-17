@@ -9,10 +9,8 @@ class FinalLearningCheckL10n {
   );
 
   static const supporting = LocalizedText(
-    en:
-        'Review the main ideas from this project. This check is optional and does not affect build completion.',
-    ar:
-        'راجع الأفكار الأساسية في هذا المشروع. هذا التحقق اختياري ولا يؤثر على إكمال المشروع.',
+    en: 'Review the main ideas from this project. This check is optional and does not affect build completion.',
+    ar: 'راجع الأفكار الأساسية في هذا المشروع. هذا التحقق اختياري ولا يؤثر على إكمال المشروع.',
   );
 
   static const start = LocalizedText(
@@ -36,10 +34,8 @@ class FinalLearningCheckL10n {
   );
 
   static const completeDialogBody = LocalizedText(
-    en:
-        'You still have optional learning questions to review. They do not prevent you from completing the build.',
-    ar:
-        'ما زالت لديك أسئلة تعليمية اختيارية للمراجعة، ولن تمنعك من إكمال المشروع.',
+    en: 'You still have optional learning questions to review. They do not prevent you from completing the build.',
+    ar: 'ما زالت لديك أسئلة تعليمية اختيارية للمراجعة، ولن تمنعك من إكمال المشروع.',
   );
 
   static const reviewFinalCheck = LocalizedText(
@@ -62,10 +58,7 @@ class FinalLearningCheckL10n {
     ar: 'هل حققت هدفك التعليمي؟',
   );
 
-  static const goalAchieved = LocalizedText(
-    en: 'Achieved',
-    ar: 'تحقق الهدف',
-  );
+  static const goalAchieved = LocalizedText(en: 'Achieved', ar: 'تحقق الهدف');
 
   static const goalPartial = LocalizedText(
     en: 'Partially achieved',
@@ -172,16 +165,16 @@ class FinalLearningCheckL10n {
     en: 'Submit answer',
     ar: 'إرسال الإجابة',
   );
-  static const skipForNow = LocalizedText(en: 'Skip for now', ar: 'تخطي مؤقتًا');
+  static const skipForNow = LocalizedText(
+    en: 'Skip for now',
+    ar: 'تخطي مؤقتًا',
+  );
   static const tryAgain = LocalizedText(en: 'Try again', ar: 'حاول مرة أخرى');
   static const nextQuestion = LocalizedText(
     en: 'Next question',
     ar: 'السؤال التالي',
   );
-  static const questionProgress = LocalizedText(
-    en: 'Question',
-    ar: 'السؤال',
-  );
+  static const questionProgress = LocalizedText(en: 'Question', ar: 'السؤال');
   static const close = LocalizedText(en: 'Close', ar: 'إغلاق');
   static const correct = LocalizedText(en: 'Correct', ar: 'إجابة صحيحة');
   static const notQuite = LocalizedText(
@@ -224,10 +217,7 @@ class FinalLearningCheckL10n {
     ar: 'جارٍ الحفظ…',
   );
 
-  static const savedReflection = LocalizedText(
-    en: 'Saved',
-    ar: 'تم الحفظ',
-  );
+  static const savedReflection = LocalizedText(en: 'Saved', ar: 'تم الحفظ');
 
   static const saveLearningReflection = LocalizedText(
     en: 'Save learning reflection',
@@ -235,17 +225,13 @@ class FinalLearningCheckL10n {
   );
 
   static const reflectionDestination = LocalizedText(
-    en:
-        'Your reflection will appear in your private Portfolio and completed Build.',
-    ar:
-        'ستظهر مراجعتك في ملفك الخاص بالمشاريع وفي المشروع المكتمل.',
+    en: 'Your reflection will appear in your private Portfolio and completed Build.',
+    ar: 'ستظهر مراجعتك في ملفك الخاص بالمشاريع وفي المشروع المكتمل.',
   );
 
   static const reflectionSavedDestination = LocalizedText(
-    en:
-        'Reflection saved. It is available in this completed Build and your private Portfolio.',
-    ar:
-        'تم حفظ مراجعة التعلم، وهي متاحة في هذا المشروع المكتمل وفي ملفك الخاص.',
+    en: 'Reflection saved. It is available in this completed Build and your private Portfolio.',
+    ar: 'تم حفظ مراجعة التعلم، وهي متاحة في هذا المشروع المكتمل وفي ملفك الخاص.',
   );
 
   static const stayOnBuild = LocalizedText(
@@ -283,10 +269,7 @@ class FinalLearningCheckL10n {
     ar: 'مستوى المعرفة',
   );
 
-  static const progressRemaining = LocalizedText(
-    en: 'remaining',
-    ar: 'متبقي',
-  );
+  static const progressRemaining = LocalizedText(en: 'remaining', ar: 'متبقي');
 
   static const buildCompletedTitle = LocalizedText(
     en: 'Project completed!',
@@ -299,10 +282,8 @@ class FinalLearningCheckL10n {
   );
 
   static const buildCompletedSupporting = LocalizedText(
-    en:
-        'Review your result and add your completion story, result photo, and learning reflection when you are ready.',
-    ar:
-        'راجع النتيجة، وأضف قصة الإنجاز وصورة النتيجة ومراجعة التعلم عندما تكون جاهزًا.',
+    en: 'Review your result and add your completion story, result photo, and learning reflection when you are ready.',
+    ar: 'راجع النتيجة، وأضف قصة الإنجاز وصورة النتيجة ومراجعة التعلم عندما تكون جاهزًا.',
   );
 
   static const reviewCompletedProject = LocalizedText(
@@ -326,7 +307,7 @@ class FinalLearningCheckL10n {
   );
 
   static const viewPrivatePortfolio = LocalizedText(
-    en: 'View private Portfolio',
-    ar: 'عرض الملف الخاص',
+    en: 'View achievement portfolio',
+    ar: 'عرض ملف الإنجاز',
   );
 }

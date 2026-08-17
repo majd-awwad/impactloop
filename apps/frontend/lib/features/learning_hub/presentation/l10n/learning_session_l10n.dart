@@ -3,10 +3,7 @@ import '../../../../shared/models/localized_text.dart';
 class LearningSessionL10n {
   const LearningSessionL10n._();
 
-  static const title = LocalizedText(
-    en: 'Learning check',
-    ar: 'تحقق التعلم',
-  );
+  static const title = LocalizedText(en: 'Learning check', ar: 'تحقق التعلم');
 
   static const optional = LocalizedText(
     en: 'This check is optional and does not affect your build progress.',
@@ -28,10 +25,7 @@ class LearningSessionL10n {
     ar: 'ما مدى ثقتك قبل البدء؟',
   );
 
-  static const beginCheck = LocalizedText(
-    en: 'Start check',
-    ar: 'ابدأ التحقق',
-  );
+  static const beginCheck = LocalizedText(en: 'Start check', ar: 'ابدأ التحقق');
 
   static const continueCheck = LocalizedText(
     en: 'Continue check',
@@ -43,10 +37,7 @@ class LearningSessionL10n {
     ar: 'مراجعة الإجابات',
   );
 
-  static const skipCheck = LocalizedText(
-    en: 'Skip for now',
-    ar: 'تخطي مؤقتًا',
-  );
+  static const skipCheck = LocalizedText(en: 'Skip for now', ar: 'تخطي مؤقتًا');
 
   static const preparing = LocalizedText(
     en: 'Preparing learning questions…',
@@ -73,15 +64,9 @@ class LearningSessionL10n {
     ar: 'تحققات التعلم غير متاحة لهذا المشروع.',
   );
 
-  static const showHint = LocalizedText(
-    en: 'Show hint',
-    ar: 'عرض تلميح',
-  );
+  static const showHint = LocalizedText(en: 'Show hint', ar: 'عرض تلميح');
 
-  static const tryAgain = LocalizedText(
-    en: 'Try again',
-    ar: 'حاول مرة أخرى',
-  );
+  static const tryAgain = LocalizedText(en: 'Try again', ar: 'حاول مرة أخرى');
 
   static const submitAnswer = LocalizedText(
     en: 'Submit answer',
@@ -108,10 +93,7 @@ class LearningSessionL10n {
     ar: 'تم حفظ الإجابة',
   );
 
-  static const correct = LocalizedText(
-    en: 'Correct',
-    ar: 'إجابة صحيحة',
-  );
+  static const correct = LocalizedText(en: 'Correct', ar: 'إجابة صحيحة');
 
   static const notQuite = LocalizedText(
     en: 'Not quite — review the explanation and try again.',
@@ -129,10 +111,8 @@ class LearningSessionL10n {
   );
 
   static const completedBody = LocalizedText(
-    en:
-        'You completed the starting knowledge check. You can continue building and revisit these questions at any time.',
-    ar:
-        'أكملت تحقق المعرفة الأولي. يمكنك متابعة تنفيذ المشروع والعودة إلى الأسئلة في أي وقت.',
+    en: 'You completed the starting knowledge check. You can continue building and revisit these questions at any time.',
+    ar: 'أكملت تحقق المعرفة الأولي. يمكنك متابعة تنفيذ المشروع والعودة إلى الأسئلة في أي وقت.',
   );
 
   static const continueBuilding = LocalizedText(
@@ -140,25 +120,13 @@ class LearningSessionL10n {
     ar: 'متابعة المشروع',
   );
 
-  static const questionProgress = LocalizedText(
-    en: 'Question',
-    ar: 'السؤال',
-  );
+  static const questionProgress = LocalizedText(en: 'Question', ar: 'السؤال');
 
-  static const questionOf = LocalizedText(
-    en: 'of',
-    ar: 'من',
-  );
+  static const questionOf = LocalizedText(en: 'of', ar: 'من');
 
-  static const remainingLabel = LocalizedText(
-    en: 'remaining',
-    ar: 'متبقية',
-  );
+  static const remainingLabel = LocalizedText(en: 'remaining', ar: 'متبقية');
 
-  static const handledLabel = LocalizedText(
-    en: 'handled',
-    ar: 'تمت معالجتها',
-  );
+  static const handledLabel = LocalizedText(en: 'handled', ar: 'تمت معالجتها');
 
   static const reportUnclear = LocalizedText(
     en: 'Report unclear question',
@@ -175,10 +143,7 @@ class LearningSessionL10n {
     ar: 'تعذر إرسال ملاحظتك.',
   );
 
-  static const close = LocalizedText(
-    en: 'Close',
-    ar: 'إغلاق',
-  );
+  static const close = LocalizedText(en: 'Close', ar: 'إغلاق');
 
   static const confidenceJustStarting = LocalizedText(
     en: 'Just starting',
@@ -190,8 +155,5 @@ class LearningSessionL10n {
     ar: 'فهم جزئي',
   );
 
-  static const confidenceConfident = LocalizedText(
-    en: 'Confident',
-    ar: 'واثق',
-  );
+  static const confidenceConfident = LocalizedText(en: 'Confident', ar: 'واثق');
 }

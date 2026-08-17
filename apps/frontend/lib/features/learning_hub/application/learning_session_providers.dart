@@ -5,5 +5,7 @@ import 'learning_hub_providers.dart';
 
 final buildLearningSessionProvider = FutureProvider.autoDispose
     .family<LearningSessionBundle, String>((ref, projectId) async {
-      return ref.watch(learningHubRepositoryProvider).fetchLearningSession(projectId);
+      return ref
+          .watch(learningHubRepositoryProvider)
+          .fetchLearningSession(projectId);
     });

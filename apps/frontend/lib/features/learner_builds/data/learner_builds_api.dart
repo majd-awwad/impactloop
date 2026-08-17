@@ -124,23 +124,17 @@ class LearnerBuildsApi {
         '$_buildsPath/$buildId/completion-story/photos',
         data: formData,
         options: Options(
-          contentType: 'multipart/form-data',
           sendTimeout: const Duration(seconds: 60),
           receiveTimeout: const Duration(seconds: 60),
           extra: const {AuthInterceptor.skipAuthRefreshExtraKey: true},
         ),
       ),
       (json) {
-        final photo = json['photo'];
-        if (photo is Map) {
-          return ProjectBuildCompletionStoryPhoto(
-            id: photo['id'] as String? ?? '',
-            imageUrl: photo['imageUrl'] as String? ?? '',
-            caption: photo['caption'] as String?,
-            sortOrder: (photo['sortOrder'] as num?)?.toInt() ?? 0,
-          );
+        final photo = LearningHubApiMapper.completionPhotoFromJson(json['photo']);
+        if (photo == null) {
+          throw StateError('Missing completion photo in response.');
         }
-        throw StateError('Missing completion photo in response.');
+        return photo;
       },
     );
   }

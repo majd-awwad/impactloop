@@ -5,7 +5,12 @@ class StepLearningCheckL10n {
 
   static const title = LocalizedText(
     en: 'Quick knowledge check',
-    ar: 'تحقق سريع من الفهم',
+    ar: 'تحقق سريع من فهمك',
+  );
+
+  static const optionalAction = LocalizedText(
+    en: 'Quick knowledge check',
+    ar: 'تحقق سريع من فهمك',
   );
 
   static const optional = LocalizedText(
@@ -13,9 +18,20 @@ class StepLearningCheckL10n {
     ar: 'هذا التحقق اختياري ولا يؤثر على تقدمك في المشروع.',
   );
 
+  static const optionalBlurb = LocalizedText(
+    en: 'An optional question to help the idea stick.',
+    ar: 'سؤال اختياري يساعدك على تثبيت الفكرة.',
+  );
+
+  static const correctUnderstanding = LocalizedText(
+    en: 'Your understanding of this step is correct.',
+    ar: 'فهمك لهذه الخطوة صحيح.',
+  );
+
+  static const done = LocalizedText(en: 'Done', ar: 'تم');
+
   static const preparing = LocalizedText(
-    en:
-        'The learning check for this step is still being prepared. You can continue.',
+    en: 'The learning check for this step is still being prepared. You can continue.',
     ar: 'ما زال تحقق الفهم لهذه الخطوة قيد التجهيز، ويمكنك المتابعة.',
   );
 
@@ -59,10 +75,7 @@ class StepLearningCheckL10n {
     ar: 'حاول مرة أخرى',
   );
 
-  static const showHint = LocalizedText(
-    en: 'Show hint',
-    ar: 'عرض تلميح',
-  );
+  static const showHint = LocalizedText(en: 'Show hint', ar: 'عرض تلميح');
 
   static const submitAnswer = LocalizedText(
     en: 'Submit answer',
@@ -74,20 +87,11 @@ class StepLearningCheckL10n {
     ar: 'تخطي مؤقتًا',
   );
 
-  static const close = LocalizedText(
-    en: 'Close',
-    ar: 'إغلاق',
-  );
+  static const close = LocalizedText(en: 'Close', ar: 'إغلاق');
 
-  static const later = LocalizedText(
-    en: 'Later',
-    ar: 'لاحقًا',
-  );
+  static const later = LocalizedText(en: 'Later', ar: 'لاحقًا');
 
-  static const correct = LocalizedText(
-    en: 'Correct',
-    ar: 'إجابة صحيحة',
-  );
+  static const correct = LocalizedText(en: 'Correct', ar: 'إجابة صحيحة');
 
   static const notQuite = LocalizedText(
     en: 'Not quite — review the explanation and try again.',

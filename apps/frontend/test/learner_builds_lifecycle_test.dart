@@ -352,6 +352,7 @@ void main() {
     expect(multipart.value.filename, 'result.jpg');
     expect(multipart.value.contentType?.mimeType, 'image/jpeg');
     expect(multipart.value.length, bytes.length);
+    expect(adapter.options?.contentType, isNot('multipart/form-data'));
     expect(
       adapter.options?.extra['skipAuthRefresh'],
       isTrue,

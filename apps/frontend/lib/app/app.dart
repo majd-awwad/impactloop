@@ -73,6 +73,18 @@ class _ImpactLoopAppState extends ConsumerState<ImpactLoopApp>
       supportedLocales: ImpactLoopApp.supportedLocales,
       localizationsDelegates: ImpactLoopApp.localizationsDelegates,
       routerConfig: router,
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        return MediaQuery(
+          data: mediaQuery.copyWith(
+            textScaler: AppTheme.textScalerFor(
+              incoming: mediaQuery.textScaler,
+              languageCode: settings.languageCode,
+            ),
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }
