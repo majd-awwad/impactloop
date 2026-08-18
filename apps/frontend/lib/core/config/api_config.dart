@@ -7,6 +7,18 @@ class ApiConfig {
 
   static const _configuredBaseUrl = String.fromEnvironment('API_BASE_URL');
 
+  /// Client wait budget for AI generation requests. Keep this larger than
+  /// backend `AI_CHAT_TIMEOUT_MS` because one chat turn can make several LLM calls.
+  static const _aiChatTimeoutSeconds = int.fromEnvironment(
+    'AI_CHAT_TIMEOUT_SECONDS',
+    defaultValue: 300,
+  );
+
+  static Duration get aiChatRequestTimeout {
+    final seconds = _aiChatTimeoutSeconds < 30 ? 30 : _aiChatTimeoutSeconds;
+    return Duration(seconds: seconds);
+  }
+
   /// Web release builds may omit [API_BASE_URL] when the API is served from the
   /// same origin via a reverse proxy (e.g. nginx proxies `/api` to the backend).
   static const _useSameOriginApi = bool.fromEnvironment(

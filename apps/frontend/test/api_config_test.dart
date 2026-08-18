@@ -71,4 +71,8 @@ void main() {
       'http://192.0.2.10:4000',
     );
   });
+
+  test('ai chat request timeout waits longer than the default API timeout', () {
+    expect(ApiConfig.aiChatRequestTimeout, const Duration(seconds: 300));
+  });
 }
