@@ -436,6 +436,45 @@ void main() {
       }
     });
 
+    testWidgets('360 RTL compact layout keeps the same controls without overflow', (
+      tester,
+    ) async {
+      await _pumpPage(
+        tester,
+        size: const Size(360, 800),
+        overrides: [
+          notificationsListProvider.overrideWith(
+            () => _PaymentListNotifier(paymentItems),
+          ),
+          myNotificationUnreadCountProvider.overrideWith(
+            () => _UnreadCount(3),
+          ),
+        ],
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(FilterChip), findsWidgets);
+      expect(
+        find.byKey(const Key('notifications-read-filter-bar')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('notifications-mark-all-read')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('notifications-refresh-button')),
+        findsOneWidget,
+      );
+      expect(find.text('الدفع مطلوب'), findsOneWidget);
+      expect(
+        Directionality.of(
+          tester.element(find.byType(UserNotificationsPage)),
+        ),
+        TextDirection.rtl,
+      );
+    });
+
     testWidgets('english desktop list renders LTR payment copy', (tester) async {
       await _pumpPage(
         tester,

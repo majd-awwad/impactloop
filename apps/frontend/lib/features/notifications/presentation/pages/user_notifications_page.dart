@@ -31,6 +31,9 @@ import '../notification_visual_presentation.dart';
 import '../notification_visuals.dart';
 import '../widgets/payment_notification_detail_sheet.dart';
 
+bool _isCompactNotifications(BuildContext context) =>
+    MediaQuery.sizeOf(context).width < AppTextStyles.compactBreakpoint;
+
 class UserNotificationsPage extends ConsumerWidget {
   const UserNotificationsPage({super.key, this.embeddedInShell = false});
 
@@ -197,20 +200,22 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
     final categoryFilter = ref.watch(notificationCategoryFilterProvider);
     final viewportWidth = MediaQuery.sizeOf(context).width;
     final isCompactMobile = viewportWidth < 820;
+    final isCompact = _isCompactNotifications(context);
     final showPageBack = !widget.embeddedInShell;
     final safeBottom = MediaQuery.paddingOf(context).bottom;
     final bottomPadding = widget.embeddedInShell && isCompactMobile
         ? kBottomNavigationBarHeight + safeBottom + AppSpacing.xl
         : AppSpacing.xl + safeBottom + AppSpacing.md;
+    final pageInset = isCompact ? AppSpacing.sm + AppSpacing.xs : AppSpacing.md;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(
-            AppSpacing.md,
-            AppSpacing.md,
-            AppSpacing.md,
+          padding: EdgeInsetsDirectional.fromSTEB(
+            pageInset,
+            isCompact ? AppSpacing.sm : AppSpacing.md,
+            pageInset,
             0,
           ),
           child: Center(
@@ -229,7 +234,7 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
                         fallbackLocation: widget.homeRoute,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
+                    SizedBox(height: isCompact ? AppSpacing.xs : AppSpacing.sm),
                   ],
                   _NotificationsHeaderCard(
                     listAsync: listAsync,
@@ -241,13 +246,13 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
                     onMarkAllRead: () => markAllNotificationsRead(ref),
                     onRefresh: _handleRefresh,
                   ),
-                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(height: isCompact ? AppSpacing.sm : AppSpacing.md),
                   _NotificationCategoryFilterBar(
                     selected: categoryFilter,
                     onSelected: (filter) =>
                         setNotificationCategoryFilter(ref, filter),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(height: isCompact ? AppSpacing.xs : AppSpacing.sm),
                   _NotificationReadFilterBar(
                     selected: selectedFilter,
                     onSelected: (filter) =>
@@ -258,7 +263,7 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: isCompact ? AppSpacing.sm : AppSpacing.md),
         Expanded(
           child: listAsync.when(
             skipLoadingOnReload: true,
@@ -269,8 +274,8 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
                   maxWidth: notificationsContentMaxWidth,
                 ),
                 child: Padding(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: AppSpacing.md,
+                  padding: EdgeInsetsDirectional.symmetric(
+                    horizontal: pageInset,
                   ),
                   child: _NotificationsSkeletonList(bottomPadding: bottomPadding),
                 ),
@@ -285,8 +290,8 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
                       maxWidth: notificationsContentMaxWidth,
                     ),
                     child: Padding(
-                      padding: const EdgeInsetsDirectional.symmetric(
-                        horizontal: AppSpacing.md,
+                      padding: EdgeInsetsDirectional.symmetric(
+                        horizontal: pageInset,
                       ),
                       child: _NotificationsSkeletonList(
                         bottomPadding: bottomPadding,
@@ -302,8 +307,8 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
                     maxWidth: notificationsContentMaxWidth,
                   ),
                   child: Padding(
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: AppSpacing.md,
+                    padding: EdgeInsetsDirectional.symmetric(
+                      horizontal: pageInset,
                     ),
                     child: _NotificationsStateCard(
                       icon: Icons.cloud_off_outlined,
@@ -328,8 +333,8 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
                       maxWidth: notificationsContentMaxWidth,
                     ),
                     child: Padding(
-                      padding: const EdgeInsetsDirectional.symmetric(
-                        horizontal: AppSpacing.md,
+                      padding: EdgeInsetsDirectional.symmetric(
+                        horizontal: pageInset,
                       ),
                       child: _NotificationsStateCard(
                         icon: Icons.notifications_none_outlined,
@@ -350,6 +355,7 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
                     state: state,
                     visibleItems: visible,
                     bottomPadding: bottomPadding,
+                    horizontalPadding: pageInset,
                     isSupplierMode:
                         widget.user?.isSupplierMode == true &&
                         widget.user?.hasRole('SUPPLIER') == true,
@@ -578,6 +584,7 @@ class _NotificationsListView extends StatelessWidget {
     required this.state,
     required this.visibleItems,
     required this.bottomPadding,
+    required this.horizontalPadding,
     required this.isSupplierMode,
     required this.isDriverMode,
     required this.onOpen,
@@ -587,6 +594,7 @@ class _NotificationsListView extends StatelessWidget {
   final NotificationsListState state;
   final List<AppNotification> visibleItems;
   final double bottomPadding;
+  final double horizontalPadding;
   final bool isSupplierMode;
   final bool isDriverMode;
   final ValueChanged<AppNotification> onOpen;
@@ -596,13 +604,14 @@ class _NotificationsListView extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final palette = MaterialsUiPalette.of(context);
+    final compact = _isCompactNotifications(context);
     final footerCount = (state.hasMore ? 1 : 0) + (state.total > 0 ? 1 : 0);
 
     return ListView.separated(
       padding: EdgeInsetsDirectional.fromSTEB(
-        AppSpacing.md,
+        horizontalPadding,
         0,
-        AppSpacing.md,
+        horizontalPadding,
         bottomPadding,
       ),
       itemCount: visibleItems.length + footerCount,
@@ -654,9 +663,9 @@ class _NotificationsListView extends StatelessWidget {
         }
 
         return Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(
+          padding: EdgeInsetsDirectional.fromSTEB(
             AppSpacing.sm,
-            AppSpacing.md,
+            compact ? AppSpacing.sm : AppSpacing.md,
             AppSpacing.sm,
             AppSpacing.sm,
           ),
@@ -686,6 +695,8 @@ class _NotificationCategoryFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final palette = MaterialsUiPalette.of(context);
+    final compact = _isCompactNotifications(context);
+    final chipGap = compact ? AppSpacing.xs : AppSpacing.sm;
 
     Widget chip(PaymentNotificationCategoryFilter value, String label) {
       final isSelected = selected == value;
@@ -702,12 +713,22 @@ class _NotificationCategoryFilterBar extends StatelessWidget {
         labelStyle: AppTextStyles.label(context).copyWith(
           color: isSelected ? palette.textPrimary : palette.textSecondary,
           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          fontSize: compact ? 12 : 13,
+          height: 1.2,
         ),
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.xs,
+        padding: EdgeInsetsDirectional.symmetric(
+          horizontal: compact ? AppSpacing.xs : AppSpacing.sm,
+          vertical: compact ? 0 : AppSpacing.xs,
         ),
-        materialTapTargetSize: MaterialTapTargetSize.padded,
+        labelPadding: EdgeInsets.symmetric(
+          horizontal: compact ? AppSpacing.xs : AppSpacing.sm,
+        ),
+        visualDensity: compact
+            ? VisualDensity.compact
+            : VisualDensity.standard,
+        materialTapTargetSize: compact
+            ? MaterialTapTargetSize.shrinkWrap
+            : MaterialTapTargetSize.padded,
       );
     }
 
@@ -716,17 +737,17 @@ class _NotificationCategoryFilterBar extends StatelessWidget {
       child: Row(
         children: [
           chip(PaymentNotificationCategoryFilter.all, l10n.filterAll),
-          const SizedBox(width: AppSpacing.sm),
+          SizedBox(width: chipGap),
           chip(
             PaymentNotificationCategoryFilter.payments,
             l10n.notificationsFilterPayments,
           ),
-          const SizedBox(width: AppSpacing.sm),
+          SizedBox(width: chipGap),
           chip(
             PaymentNotificationCategoryFilter.delivery,
             l10n.notificationsFilterDelivery,
           ),
-          const SizedBox(width: AppSpacing.sm),
+          SizedBox(width: chipGap),
           chip(
             PaymentNotificationCategoryFilter.refunds,
             l10n.notificationsFilterRefunds,
@@ -749,8 +770,25 @@ class _NotificationReadFilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final compact = _isCompactNotifications(context);
     return SegmentedButton<NotificationReadFilter>(
       key: const Key('notifications-read-filter-bar'),
+      style: SegmentedButton.styleFrom(
+        visualDensity: compact
+            ? VisualDensity.compact
+            : VisualDensity.standard,
+        tapTargetSize: compact
+            ? MaterialTapTargetSize.shrinkWrap
+            : MaterialTapTargetSize.padded,
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? AppSpacing.sm : 12,
+          vertical: compact ? AppSpacing.xs + 2 : 10,
+        ),
+        textStyle: AppTextStyles.label(context).copyWith(
+          fontSize: compact ? 12 : 13,
+          height: 1.2,
+        ),
+      ),
       segments: [
         ButtonSegment(
           value: NotificationReadFilter.all,
@@ -802,9 +840,11 @@ class _NotificationsHeaderCard extends StatelessWidget {
       orElse: () => 0,
     );
     final refreshLabel = l10n.refreshNotifications;
+    final compact = _isCompactNotifications(context);
+    final compactPad = AppSpacing.sm + AppSpacing.xs;
 
     return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      padding: EdgeInsetsDirectional.all(compact ? compactPad : AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
@@ -819,19 +859,22 @@ class _NotificationsHeaderCard extends StatelessWidget {
                 l10n.notificationsTitle,
                 style: AppTextStyles.title(context).copyWith(
                   color: palette.textPrimary,
-                  fontSize: 22,
+                  fontSize: compact ? 19 : 22,
                   fontWeight: FontWeight.w800,
+                  height: 1.2,
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 l10n.notificationsSubtitle,
-                style: AppTextStyles.body(
-                  context,
-                ).copyWith(color: palette.textSecondary),
+                style: AppTextStyles.body(context).copyWith(
+                  color: palette.textSecondary,
+                  fontSize: compact ? 13 : 14,
+                  height: 1.3,
+                ),
               ),
               if (unreadCount > 0) ...[
-                const SizedBox(height: AppSpacing.sm),
+                SizedBox(height: compact ? AppSpacing.xs : AppSpacing.sm),
                 AppStatusBadge(
                   label: l10n.notificationsUnreadCount(unreadCount),
                   tone: AppStatusTone.info,
@@ -845,12 +888,20 @@ class _NotificationsHeaderCard extends StatelessWidget {
                   key: const Key('notifications-refresh-button'),
                   tooltip: refreshLabel,
                   onPressed: isRefreshing ? null : onRefresh,
+                  visualDensity: compact
+                      ? VisualDensity.compact
+                      : VisualDensity.standard,
+                  constraints: compact
+                      ? const BoxConstraints.tightFor(width: 40, height: 40)
+                      : null,
+                  padding: compact ? EdgeInsets.zero : null,
+                  iconSize: compact ? 20 : 24,
                   style: AppStatusButtonStyle.text(context, AppStatusTone.info),
                   icon: isRefreshing
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                      ? SizedBox(
+                          width: compact ? 16 : 18,
+                          height: compact ? 16 : 18,
+                          child: const CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.refresh_rounded),
                 )
@@ -874,9 +925,21 @@ class _NotificationsHeaderCard extends StatelessWidget {
                   ),
                 );
 
+          final markAllStyle = AppStatusButtonStyle.filled(
+            context,
+            AppStatusTone.info,
+            padding: compact
+                ? const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm + AppSpacing.xs,
+                    vertical: AppSpacing.sm,
+                  )
+                : null,
+            visualDensity: compact ? VisualDensity.compact : null,
+          );
+
           final actions = Wrap(
             spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
+            runSpacing: compact ? AppSpacing.xs : AppSpacing.sm,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               refreshControl,
@@ -884,11 +947,15 @@ class _NotificationsHeaderCard extends StatelessWidget {
                 FilledButton(
                   key: const Key('notifications-mark-all-read'),
                   onPressed: onMarkAllRead,
-                  style: AppStatusButtonStyle.filled(
-                    context,
-                    AppStatusTone.info,
+                  style: markAllStyle,
+                  child: Text(
+                    l10n.markAllRead,
+                    style: AppTextStyles.label(context).copyWith(
+                      color: AppThemeColors.of(context).textOnPrimary,
+                      fontSize: compact ? 12 : 13,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                  child: Text(l10n.markAllRead),
                 ),
             ],
           );
@@ -898,7 +965,7 @@ class _NotificationsHeaderCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 title,
-                const SizedBox(height: AppSpacing.md),
+                SizedBox(height: compact ? AppSpacing.sm : AppSpacing.md),
                 Align(
                   alignment: AlignmentDirectional.centerStart,
                   child: actions,
@@ -939,10 +1006,13 @@ class _NotificationsStateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final compact = _isCompactNotifications(context);
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      padding: EdgeInsetsDirectional.all(
+        compact ? AppSpacing.md : AppSpacing.lg,
+      ),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
@@ -951,8 +1021,8 @@ class _NotificationsStateCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 40, color: palette.mint),
-          const SizedBox(height: AppSpacing.md),
+          Icon(icon, size: compact ? 36 : 40, color: palette.mint),
+          SizedBox(height: compact ? AppSpacing.sm : AppSpacing.md),
           Text(
             title,
             textAlign: TextAlign.center,
@@ -993,6 +1063,7 @@ class _NotificationsSkeletonList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final compact = _isCompactNotifications(context);
     return ListView.separated(
       padding: EdgeInsetsDirectional.fromSTEB(
         0,
@@ -1004,7 +1075,7 @@ class _NotificationsSkeletonList extends StatelessWidget {
       separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
         return Container(
-          height: 96,
+          height: compact ? 80 : 96,
           decoration: BoxDecoration(
             color: palette.panelSurface,
             borderRadius: AppRadius.mdAll,
@@ -1068,8 +1139,8 @@ class _NotificationTile extends StatelessWidget {
     final typeIcon = ExcludeSemantics(
       child: Container(
         key: Key('notification-type-icon-${notification.id}'),
-        width: isCompact ? 40 : 44,
-        height: isCompact ? 40 : 44,
+        width: isCompact ? 36 : 44,
+        height: isCompact ? 36 : 44,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: accent.withValues(alpha: 0.12),
@@ -1078,7 +1149,7 @@ class _NotificationTile extends StatelessWidget {
         ),
         child: Icon(
           iconForNotification(notification),
-          size: isCompact ? 20 : 22,
+          size: isCompact ? 18 : 22,
           color: accent,
         ),
       ),
@@ -1100,9 +1171,9 @@ class _NotificationTile extends StatelessWidget {
       copy.title,
       style: AppTextStyles.body(context).copyWith(
         color: palette.textPrimary,
-        fontSize: isCompact ? 15 : 16,
+        fontSize: isCompact ? 14 : 16,
         fontWeight: notification.isRead ? FontWeight.w600 : FontWeight.w800,
-        height: 1.3,
+        height: 1.25,
       ),
     );
 
@@ -1110,7 +1181,11 @@ class _NotificationTile extends StatelessWidget {
       copy.body,
       style: AppTextStyles.body(
         context,
-      ).copyWith(color: palette.textSecondary, fontSize: 14, height: 1.35),
+      ).copyWith(
+        color: palette.textSecondary,
+        fontSize: isCompact ? 13 : 14,
+        height: 1.3,
+      ),
     );
 
     final timestamp = Text(
@@ -1167,7 +1242,7 @@ class _NotificationTile extends StatelessWidget {
         onTap: onOpen,
         borderRadius: AppRadius.mdAll,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 72),
+          constraints: BoxConstraints(minHeight: isCompact ? 64 : 72),
           child: Container(
             decoration: BoxDecoration(
               borderRadius: AppRadius.mdAll,
@@ -1178,7 +1253,7 @@ class _NotificationTile extends StatelessWidget {
               ),
             ),
             padding: EdgeInsetsDirectional.all(
-              isCompact ? AppSpacing.sm + 2 : AppSpacing.md,
+              isCompact ? AppSpacing.sm : AppSpacing.md,
             ),
             child: isCompact
                 ? Column(
@@ -1201,7 +1276,7 @@ class _NotificationTile extends StatelessWidget {
                           timestamp,
                         ],
                       ),
-                      const SizedBox(height: AppSpacing.sm),
+                      const SizedBox(height: AppSpacing.xs),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1213,11 +1288,11 @@ class _NotificationTile extends StatelessWidget {
                       const SizedBox(height: AppSpacing.xs),
                       body,
                       if (isPayment) ...[
-                        const SizedBox(height: AppSpacing.sm),
+                        const SizedBox(height: AppSpacing.xs),
                         metaRow,
                       ],
                       if (action != null) ...[
-                        const SizedBox(height: AppSpacing.sm),
+                        const SizedBox(height: AppSpacing.xs),
                         action,
                       ],
                     ],

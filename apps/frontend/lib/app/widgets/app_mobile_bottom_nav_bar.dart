@@ -13,10 +13,22 @@ import '../../features/ai/presentation/widgets/ai_assistant_launcher.dart';
 import '../../features/ai/presentation/widgets/ai_assistant_shell.dart';
 import '../../features/auth/application/auth_controller.dart';
 
-const appMobileBottomNavReservedHeight = 96.0;
+const appMobileBottomNavReservedHeight = 56.0;
 
 /// Extra scroll clearance so list content clears the AI FAB above the nav.
 const appMobileAiFabReservedHeight = 72.0;
+
+/// Visual pill height only. Does not include system inset or selected lift.
+const _navPillHeight = 58.0;
+const _navSelectedLift = 4.0;
+const _navBottomGap = 6.0;
+const _navHorizontalMargin = 16.0;
+const _navPillRadius = 36.0;
+const _navIconSize = 23.0;
+const _navSelectedIconSize = 25.0;
+const _navLabelSize = 11.0;
+const _navIconLabelGap = 2.0;
+const _navSelectedBubbleMaxHeight = 64.0;
 
 EdgeInsetsDirectional appMobileAwareScrollPadding(
   BuildContext context, {
@@ -94,25 +106,26 @@ class AppMobileBottomNavBar extends ConsumerWidget {
 
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        0,
-        AppSpacing.md,
-        AppSpacing.sm,
-      ),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 72, maxHeight: 88),
-        child: Center(
+      minimum: const EdgeInsets.fromLTRB(_navHorizontalMargin, 0, _navHorizontalMargin, 0),
+      child: Padding(
+        padding: const EdgeInsets.only(
+          top: _navSelectedLift,
+          bottom: _navBottomGap,
+        ),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          heightFactor: 1,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560),
             child: SizedBox(
               width: double.infinity,
+              height: _navPillHeight,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: colors.surfaceElevated.withValues(
                     alpha: isDark ? 0.96 : 0.98,
                   ),
-                  borderRadius: AppRadius.pillAll,
+                  borderRadius: BorderRadius.circular(_navPillRadius),
                   border: Border.all(color: colors.borderSubtle),
                   boxShadow: [
                     BoxShadow(
@@ -127,7 +140,6 @@ class AppMobileBottomNavBar extends ConsumerWidget {
                 child: Padding(
                   padding: const EdgeInsetsDirectional.symmetric(
                     horizontal: AppSpacing.xs,
-                    vertical: AppSpacing.xs,
                   ),
                   child: Row(
                     children: [
@@ -236,36 +248,54 @@ class _MobileBottomNavItem extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: AppRadius.pillAll,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: 4,
-            vertical: 7,
-          ),
-          decoration: BoxDecoration(
-            color: background,
-            borderRadius: AppRadius.pillAll,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(item.icon, color: foreground, size: selected ? 22 : 21),
-              const SizedBox(height: 3),
-              Text(
-                item.label,
-                style: AppTextStyles.label(context).copyWith(
-                  color: foreground,
-                  fontSize: 10.5,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  height: 1,
-                  letterSpacing: 0,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+        child: Align(
+          alignment: Alignment.center,
+          child: Transform.translate(
+            offset: Offset(0, selected ? -_navSelectedLift : 0),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOutCubic,
+              constraints: const BoxConstraints(
+                maxHeight: _navSelectedBubbleMaxHeight,
               ),
-            ],
+              padding: EdgeInsetsDirectional.symmetric(
+                horizontal: selected ? 6 : 4,
+                vertical: selected ? 5 : 4,
+              ),
+              decoration: BoxDecoration(
+                color: background,
+                borderRadius: AppRadius.pillAll,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    item.icon,
+                    color: foreground,
+                    size: selected ? _navSelectedIconSize : _navIconSize,
+                  ),
+                  const SizedBox(height: _navIconLabelGap),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      item.label,
+                      style: AppTextStyles.label(context).copyWith(
+                        color: foreground,
+                        fontSize: _navLabelSize,
+                        fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                        height: 1.0,
+                        letterSpacing: 0,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.fade,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
