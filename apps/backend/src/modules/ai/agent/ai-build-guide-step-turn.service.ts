@@ -7,8 +7,9 @@ import {
 } from '../ai-action.service.js';
 import type { VersionedActionPayload } from '../ai-action.payloads.js';
 import { loadRecentConversationMessages } from '../ai.repository.js';
-import type { AiLocale } from '../ai.types.js';
+import type { AiLocale, BoundedHistoryMessage } from '../ai.types.js';
 import { getAiChatProvider } from '../providers/ai-chat-provider.factory.js';
+import type { AiChatGenerateAnswerInput } from '../providers/ai-chat-provider.types.js';
 import { getOwnedProjectBuildByBuildId } from '../../learning-projects/learning-projects.service.js';
 import {
   buildBuildGuideModelContext,
@@ -76,19 +77,61 @@ const detectStepProgressIntent = (message: string): boolean => {
 };
 
 const detectStepBeginIntent = (message: string): boolean =>
-  /(ابدأ معي|يلا نبدأ|ساعدني أبدأ|كملني من وين وقفت|نرجع نكمل|شو أعمل هلا|شو أعمل هسا|شو اعمل هسا|شو أعمل الآن|start with me|let'?s begin|continue from where|what should i do now)/i.test(
+  /(ابدأ معي|يلا نبدأ|ساعدني أبدأ|كملني من وين وقفت|نرجع نكمل|شو أعمل هلا|شو أعمل هسا|شو اعمل هسا|شو أعمل الآن|كيف أبدأ|كيف ابدأ|start with me|let'?s begin|continue from where|what should i do now|how do i start)/i.test(
     message,
   );
 
 const detectStepExplainIntent = (message: string): boolean =>
-  /(اشرحلي|اشرح|كيف أنفذ|شو المطلوب|شو لازم أعمل|explain the current step|explain this step|how do i do this step|what should i do in this step)/i.test(
+  /(اشرحلي|اشرح لي|اشرح|فهمني|كيف أنفذ|شو المطلوب|شو لازم أعمل|شو هاي الخطوة|شو هالخطوة|explain the current step|explain this step|how do i do this step|what (?:is|'?s) this step|what should i do in this step)/i.test(
     message,
   );
 
 const detectCurrentStepHelpIntent = (message: string): boolean =>
-  /(مش عارف|مش فاهم|ما بعرف|ما بفهم|شو أعمل|شو اعمل|كيف أوصل|كيف اوصل|وين أوصل|وين اوصل|help me with this|i don'?t (?:know|understand)|i'?m stuck|what (?:do|should) i do)/i.test(
+  /(مش عارف|مش فاهم|ما بعرف|ما بفهم|شو أعمل|شو اعمل|كيف أوصل|كيف اوصل|وين أوصل|وين اوصل|واقف|مش قادر|help me with this|i don'?t (?:know|understand)|i'?m stuck|what (?:do|should) i do)/i.test(
     message,
   );
+
+const detectStillConfusedIntent = (message: string): boolean =>
+  /(لسا مش فاهم|لسه مش فاهم|ما فهمت|مش فاهم اشي|still don'?t (?:get|understand)|i still don'?t understand)/i.test(
+    message,
+  );
+
+export type BuildGuideStepTurnIntentKind =
+  | 'complete'
+  | 'show'
+  | 'explain'
+  | 'follow_up'
+  | 'none';
+
+export const classifyBuildGuideStepTurnIntent = (
+  message: string,
+): { kind: BuildGuideStepTurnIntentKind; followUp: boolean } => {
+  if (detectStepCompleteIntent(message)) {
+    return { kind: 'complete', followUp: false };
+  }
+
+  const show = detectStepProgressIntent(message);
+  const explain =
+    detectStepExplainIntent(message) ||
+    detectCurrentStepHelpIntent(message) ||
+    detectStepBeginIntent(message);
+  const followUp = detectStepFollowUpIntent(message);
+
+  if (explain) {
+    return { kind: 'explain', followUp };
+  }
+  if (show) {
+    return { kind: 'show', followUp: false };
+  }
+  if (followUp) {
+    return { kind: 'follow_up', followUp: true };
+  }
+  return { kind: 'none', followUp: false };
+};
+
+export const shouldAttachBuildStepGuideCard = (
+  kind: BuildGuideStepTurnIntentKind,
+): boolean => kind === 'show';
 
 const detectStepFollowUpIntent = (message: string): boolean => {
   const trimmed = message.trim();
@@ -294,9 +337,13 @@ const buildProgressResponse = (
             ? ` Current step: ${current.stepNumber} — ${current.title}.`
             : ''
         }`;
+  const currentView = resolveCurrentStepView(build);
 
   return {
-    blocks: [textBlock(summary)],
+    blocks: [
+      textBlock(summary),
+      ...(currentView ? [toBuildStepGuideBlock(build, currentView)] : []),
+    ],
     usedProvider: false,
     providerName: 'system',
     model: null,
@@ -307,25 +354,80 @@ const buildProgressResponse = (
   };
 };
 
-const buildStepExplanationPrompt = (input: {
+type StepTurnDependencies = {
+  loadBuild: typeof getOwnedProjectBuildByBuildId;
+  isProviderOperational: () => boolean;
+  generateAnswer: (
+    input: AiChatGenerateAnswerInput,
+  ) => ReturnType<
+    ReturnType<typeof getAiChatProvider>['generateGeneralLearningAnswer']
+  >;
+};
+
+let stepTurnDependenciesOverride: Partial<StepTurnDependencies> | null = null;
+
+export const setBuildGuideStepTurnDependenciesForTests = (
+  deps: Partial<StepTurnDependencies> | null,
+) => {
+  stepTurnDependenciesOverride = deps;
+};
+
+const resolveStepTurnDependencies = (): StepTurnDependencies => ({
+  loadBuild:
+    stepTurnDependenciesOverride?.loadBuild ?? getOwnedProjectBuildByBuildId,
+  isProviderOperational:
+    stepTurnDependenciesOverride?.isProviderOperational ??
+    isAiChatProviderOperational,
+  generateAnswer:
+    stepTurnDependenciesOverride?.generateAnswer ??
+    ((input) => getAiChatProvider().generateGeneralLearningAnswer(input)),
+});
+
+export const buildStepExplanationPrompt = (input: {
   build: MappedBuild;
   step: CurrentStepView;
   locale: AiLocale;
   userMessage: string;
+  history: BoundedHistoryMessage[];
+  followUp: boolean;
+  stillConfused: boolean;
 }) => {
-  const components = input.build.items
-    .map((item) => item.component.componentName)
-    .join(', ');
+  const materialNames = [
+    ...new Set(
+      input.build.items
+        .map((item) => item.component.componentName.trim())
+        .filter(Boolean),
+    ),
+  ];
+  const historyLines = input.history
+    .slice(-8)
+    .map((entry) => `${entry.role}: ${entry.text}`)
+    .join('\n');
+
   return [
     'You are helping a learner execute ONE official build step in ImpactLoop.',
-    'Use only the trusted step data below. Do not invent step numbers, IDs, or completion status.',
+    'The chat UI already shows the project title, current step number, and materials readiness. Do not repeat a structured step card or dump the same metadata again.',
+    'Use only the trusted step data below. Do not invent step numbers, IDs, completion status, parts, dimensions, tools, connectors, or wiring.',
     `Project: ${input.build.project.title}`,
-    `Step ${input.step.stepNumber} of ${input.build.stepProgress.total}: ${input.step.title}`,
+    `Current step ${input.step.stepNumber} of ${input.build.stepProgress.total}: ${input.step.title}`,
     `Official instructions: ${input.step.description}`,
-    `Required components: ${components}`,
-    `Progress: ${input.build.stepProgress.percent}%`,
+    `Known project materials (project-wide, not mapped to this step): ${
+      materialNames.length > 0 ? materialNames.join(', ') : 'none listed'
+    }`,
+    `Completed ${input.build.stepProgress.completed} of ${input.build.stepProgress.total} steps (${input.build.stepProgress.percent}%).`,
     `Learner question (${input.locale}): ${input.userMessage}`,
-    'Answer in the learner language. Keep guidance practical and bounded to this step.',
+    historyLines
+      ? `Recent conversation:\n${historyLines}`
+      : 'Recent conversation: (none)',
+    input.followUp
+      ? 'This is a follow-up. Give MORE detail than the previous assistant reply. Do not repeat the previous answer.'
+      : 'Give a concise practical explanation of what to do in this step.',
+    input.stillConfused
+      ? 'The learner still does not understand. Use simpler Arabic if the learner is writing in Arabic, shorter sentences, and numbered actions. Ask at most one focused clarifying question.'
+      : 'If useful, offer to walk through the known project materials one by one.',
+    'Answer in the learner language. If the learner is writing in Arabic, explain in Arabic. English project and step names may appear as labels only.',
+    'If official instructions are generic, expand them into numbered actions using only general assembly guidance, and identify that guidance as general — not a project-specific parts list.',
+    'There is no authoritative step-to-material mapping. Do not claim a material belongs to this step unless the official instructions name it.',
   ].join('\n');
 };
 
@@ -334,6 +436,9 @@ const generateStepExplanation = async (input: {
   step: CurrentStepView;
   locale: AiLocale;
   userMessage: string;
+  history: BoundedHistoryMessage[];
+  followUp: boolean;
+  stillConfused: boolean;
 }): Promise<{
   text: string;
   providerName: string;
@@ -342,12 +447,13 @@ const generateStepExplanation = async (input: {
   inputTokens: number | null;
   outputTokens: number | null;
 }> => {
-  if (!isAiChatProviderOperational()) {
+  const deps = resolveStepTurnDependencies();
+  if (!deps.isProviderOperational()) {
     return {
       text:
         input.locale === 'ar'
-          ? `${input.step.title}\n\n${input.step.description}`
-          : `${input.step.title}\n\n${input.step.description}`,
+          ? `أنت الآن في الخطوة ${input.step.stepNumber}: ${input.step.title}.\n\n${input.step.description}`
+          : `You are on step ${input.step.stepNumber}: ${input.step.title}.\n\n${input.step.description}`,
       providerName: 'system',
       model: null,
       latencyMs: null,
@@ -356,11 +462,10 @@ const generateStepExplanation = async (input: {
     };
   }
 
-  const provider = getAiChatProvider();
-  const answer = await provider.generateGeneralLearningAnswer({
+  const answer = await deps.generateAnswer({
     locale: input.locale,
     userMessage: buildStepExplanationPrompt(input),
-    history: [],
+    history: input.history,
     scopeClassification: 'DOMAIN_KNOWLEDGE',
     trustedSystemContext: formatBuildGuideTrustedSystemContext(
       buildBuildGuideModelContext(input.build),
@@ -381,17 +486,25 @@ const generateStepExplanation = async (input: {
   };
 };
 
-const buildStepGuideResponse = async (input: {
+const buildStepHelpResponse = async (input: {
   build: MappedBuild;
   step: CurrentStepView;
   locale: AiLocale;
   userMessage: string;
+  history: BoundedHistoryMessage[];
+  followUp: boolean;
+  attachGuideCard: boolean;
 }): Promise<BuildGuideStepTurnResult> => {
-  const guideBlock = toBuildStepGuideBlock(input.build, input.step);
-  const explanation = await generateStepExplanation(input);
+  const explanation = await generateStepExplanation({
+    ...input,
+    stillConfused: detectStillConfusedIntent(input.userMessage),
+  });
+  const extraBlocks = input.attachGuideCard
+    ? [toBuildStepGuideBlock(input.build, input.step)]
+    : [];
 
   return {
-    blocks: mergeAgentBlocks(explanation.text, [guideBlock]),
+    blocks: mergeAgentBlocks(explanation.text, extraBlocks),
     usedProvider: explanation.providerName !== 'system',
     providerName: explanation.providerName,
     model: explanation.model,
@@ -435,26 +548,17 @@ export const tryHandleBuildGuideStepTurn = async (input: {
   authenticatedUserId: string;
   clientMessageId: string;
   projectBuildId: string;
+  history?: BoundedHistoryMessage[];
 }): Promise<BuildGuideStepTurnResult | null> => {
-  const completeIntent = detectStepCompleteIntent(input.userMessage);
-  const progressIntent = detectStepProgressIntent(input.userMessage);
-  const beginIntent = detectStepBeginIntent(input.userMessage);
-  const explainIntent = detectStepExplainIntent(input.userMessage);
-  const followUpIntent = detectStepFollowUpIntent(input.userMessage);
-  const currentStepHelpIntent = detectCurrentStepHelpIntent(input.userMessage);
-
-  if (
-    !completeIntent &&
-    !progressIntent &&
-    !beginIntent &&
-    !explainIntent &&
-    !followUpIntent &&
-    !currentStepHelpIntent
-  ) {
+  const intent = classifyBuildGuideStepTurnIntent(input.userMessage);
+  if (intent.kind === 'none') {
     return null;
   }
 
-  const build = await getOwnedProjectBuildByBuildId(
+  const history = input.history ?? [];
+  const followUp = intent.followUp || history.some((entry) => entry.role === 'assistant');
+  const deps = resolveStepTurnDependencies();
+  const build = await deps.loadBuild(
     input.projectBuildId,
     input.authenticatedUserId,
   );
@@ -503,18 +607,13 @@ export const tryHandleBuildGuideStepTurn = async (input: {
   }
 
   if (build.status === 'COMPLETED' || build.stepProgress.nextAction === 'BUILD_COMPLETED') {
-    if (completeIntent) {
-      return buildCompletedResponse(build, input.locale);
-    }
-    if (progressIntent || beginIntent || explainIntent || followUpIntent || currentStepHelpIntent) {
-      return buildCompletedResponse(build, input.locale);
-    }
+    return buildCompletedResponse(build, input.locale);
   }
 
   const currentStep = resolveCurrentStepView(build);
   const materialsReady = allMaterialsReady(build);
 
-  if (completeIntent) {
+  if (intent.kind === 'complete') {
     if (!materialsReady || !currentStep) {
       return buildMaterialsNotReadyResponse(build, input.locale);
     }
@@ -549,65 +648,24 @@ export const tryHandleBuildGuideStepTurn = async (input: {
     };
   }
 
-  if (progressIntent) {
+  if (intent.kind === 'show') {
     if (!materialsReady && build.stepProgress.currentStep == null) {
       return buildMaterialsNotReadyResponse(build, input.locale);
     }
     return buildProgressResponse(build, input.locale, input.userMessage);
   }
 
-  if (beginIntent || explainIntent || currentStepHelpIntent) {
-    if (!materialsReady || !currentStep) {
-      return buildMaterialsNotReadyResponse(build, input.locale);
-    }
-    return buildStepGuideResponse({
-      build,
-      step: currentStep,
-      locale: input.locale,
-      userMessage: input.userMessage,
-    });
+  if (!materialsReady || !currentStep) {
+    return buildMaterialsNotReadyResponse(build, input.locale);
   }
 
-  if (followUpIntent) {
-    const persistedGuide = await findLatestBuildStepGuideBlock(input.conversationId);
-    const step =
-      currentStep &&
-      (!persistedGuide ||
-        persistedGuide.type !== 'build_step_guide' ||
-        persistedGuide.projectStepId === currentStep.stepId)
-        ? currentStep
-        : persistedGuide?.type === 'build_step_guide' &&
-            persistedGuide.projectStepId === currentStep?.stepId
-          ? currentStep
-          : currentStep;
-
-    if (!step || !materialsReady) {
-      return {
-        blocks: [
-          textBlock(
-            input.locale === 'ar'
-              ? 'حدّد الخطوة الحالية أولاً، مثلاً: "اشرحلي الخطوة الحالية".'
-              : 'Ask about the current step first, for example: "Explain the current step".',
-            'clarification',
-          ),
-        ],
-        usedProvider: false,
-        providerName: 'system',
-        model: null,
-        latencyMs: null,
-        inputTokens: null,
-        outputTokens: null,
-        route: 'BUILD_CHECKLIST',
-      };
-    }
-
-    return buildStepGuideResponse({
-      build,
-      step,
-      locale: input.locale,
-      userMessage: input.userMessage,
-    });
-  }
-
-  return null;
+  return buildStepHelpResponse({
+    build,
+    step: currentStep,
+    locale: input.locale,
+    userMessage: input.userMessage,
+    history,
+    followUp,
+    attachGuideCard: false,
+  });
 };

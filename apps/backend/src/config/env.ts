@@ -38,6 +38,7 @@ const TRACKED_AI_ENV_KEYS = [
   'AI_PROVIDER',
   'AI_CHAT_PROVIDER',
   'AI_CHAT_MODEL',
+  'AI_CHAT_TIMEOUT_MS',
   'GEMINI_API_KEY',
   'GEMINI_MODEL',
   'OPENAI_API_KEY',
@@ -464,7 +465,7 @@ export const getAiChatRuntimeConfig = (): AiChatRuntimeConfig => {
     openaiJsonMode: isOpenAiCompatibleJsonModeEnabled(openaiBaseUrl),
     openaiBaseHost,
     isOpenRouter: isOpenRouterBaseUrl(openaiBaseUrl),
-    timeoutMs: env.aiChatTimeoutMs,
+    timeoutMs: readAiChatTimeoutMs(),
     maxOutputTokens: env.aiChatMaxOutputTokens,
     modelCandidates: [model, ...fallbacks],
   };
@@ -572,6 +573,11 @@ const parsePositiveInt = (
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
+
+const DEFAULT_AI_CHAT_TIMEOUT_MS = 30_000;
+
+export const readAiChatTimeoutMs = (): number =>
+  parsePositiveInt(process.env.AI_CHAT_TIMEOUT_MS, DEFAULT_AI_CHAT_TIMEOUT_MS);
 
 const readEmailProvider = (): EmailProviderName => {
   const raw = process.env.EMAIL_PROVIDER?.trim().toLowerCase();
@@ -865,7 +871,9 @@ export const env = {
   geminiModel: process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash',
   openaiModel: process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini',
   aiChatModel: readAiChatModel(resolveAiChatProvider()),
-  aiChatTimeoutMs: parsePositiveInt(process.env.AI_CHAT_TIMEOUT_MS, 30_000),
+  get aiChatTimeoutMs() {
+    return readAiChatTimeoutMs();
+  },
   aiChatMaxOutputTokens: parsePositiveInt(
     process.env.AI_CHAT_MAX_OUTPUT_TOKENS,
     1024,
@@ -998,6 +1006,7 @@ export const getAiChatDebugInfo = () => {
     openaiBaseHost: runtime.openaiBaseHost,
     openaiJsonMode: runtime.openaiJsonMode,
     isOpenRouter: runtime.isOpenRouter,
+    chatTimeoutMs: runtime.timeoutMs,
     geminiApiKeyConfigured: Boolean(runtime.geminiApiKey),
     geminiApiKeyFingerprint: getGeminiApiKeyFingerprint(),
     devMockFallbackEnabled: isAiChatDevMockFallbackEnabled(),
@@ -1152,6 +1161,7 @@ export const getAiPlatformDiagnostics = () => {
     openaiBaseHost: runtime.openaiBaseHost,
     openaiJsonMode: runtime.openaiJsonMode,
     isOpenRouter: runtime.isOpenRouter,
+    chatTimeoutMs: runtime.timeoutMs,
     openaiModelConfigured: Boolean(process.env.OPENAI_MODEL?.trim()),
     openaiModelEffectiveOnlyIfChatModelUnset: !Boolean(
       process.env.AI_CHAT_MODEL?.trim(),

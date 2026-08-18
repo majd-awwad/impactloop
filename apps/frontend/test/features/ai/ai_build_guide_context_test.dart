@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:frontend/core/errors/api_exception.dart';
 import 'package:frontend/features/ai/application/ai_assistant_shell_provider.dart';
 import 'package:frontend/features/ai/application/ai_chat_controller.dart';
 import 'package:frontend/features/ai/data/ai_repository.dart';
@@ -101,6 +102,38 @@ void main() {
 
       await _send(container, 'طيب وبعدها؟');
       expect(repository.lastSentBuildGuideContext?['currentStepNumber'], 3);
+    });
+
+    test('timeout keeps activeBuildGuide and retry resends without retyping', () async {
+      final repository = _TimeoutThenSuccessRepository();
+      final container = _container(repository);
+      addTearDown(container.dispose);
+
+      _openGuide(container, _plantStandBuild(currentStepNumber: 3));
+      await _send(container, 'اشرح لي أكثر مش فاهم اشي!');
+
+      final chatAfterTimeout = container.read(aiAssistantControllerProvider);
+      final shellAfterTimeout = container.read(aiAssistantShellProvider);
+      expect(chatAfterTimeout.sendError?.code, 'AI_PROVIDER_TIMEOUT');
+      expect(chatAfterTimeout.pendingSend?.text, 'اشرح لي أكثر مش فاهم اشي!');
+      expect(shellAfterTimeout.buildGuideContext?.projectTitle, 'PVC Plant Stand');
+      expect(shellAfterTimeout.buildGuideContext?.currentStep?.stepNumber, 3);
+      expect(
+        shellAfterTimeout.buildGuideContext?.currentStep?.title,
+        'Assemble and connect',
+      );
+
+      await container.read(aiAssistantControllerProvider.notifier).retryPendingSend();
+
+      expect(repository.sendCalls, 2);
+      expect(repository.lastSentText, 'اشرح لي أكثر مش فاهم اشي!');
+      expect(repository.lastSentBuildGuideContext?['projectTitle'], 'PVC Plant Stand');
+      expect(repository.lastSentBuildGuideContext?['currentStepNumber'], 3);
+      expect(container.read(aiAssistantControllerProvider).sendError, isNull);
+      expect(
+        container.read(aiAssistantShellProvider).buildGuideContext?.currentStep?.stepNumber,
+        3,
+      );
     });
 
     test('short Arabic help still sends project and current step', () async {
@@ -365,6 +398,37 @@ ProjectBuildItem _item({
     isReadyForBuild: true,
     readinessLabel: 'Already owned',
   );
+}
+
+class _TimeoutThenSuccessRepository extends _RecordingSendRepository {
+  int sendCalls = 0;
+
+  @override
+  Future<AiTurnResponse> sendMessage({
+    required String conversationId,
+    required String text,
+    required String locale,
+    required String clientMessageId,
+    Map<String, Object?>? buildGuideContext,
+  }) async {
+    sendCalls += 1;
+    if (sendCalls == 1) {
+      lastSentText = text;
+      lastSentBuildGuideContext = buildGuideContext;
+      throw const ApiException(
+        message: 'The learning assistant timed out. Please try again.',
+        code: 'AI_PROVIDER_TIMEOUT',
+        statusCode: 504,
+      );
+    }
+    return super.sendMessage(
+      conversationId: conversationId,
+      text: text,
+      locale: locale,
+      clientMessageId: clientMessageId,
+      buildGuideContext: buildGuideContext,
+    );
+  }
 }
 
 class _RecordingSendRepository implements AiRepository {

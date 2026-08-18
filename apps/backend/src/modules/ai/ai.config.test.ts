@@ -130,10 +130,15 @@ describe('AI chat provider resolution', () => {
     assert.equal(runtime.openaiJsonMode, false);
     assert.equal(runtime.openaiBaseHost, 'openrouter.ai');
 
+    process.env.AI_CHAT_TIMEOUT_MS = '120000';
+    const timeoutRuntime = getAiChatRuntimeConfig();
+    assert.equal(timeoutRuntime.timeoutMs, 120000);
+
     const diagnostics = getAiPlatformDiagnostics();
     assert.equal(diagnostics.chatModel, 'canonical-model');
     assert.equal(diagnostics.openaiBaseHost, 'openrouter.ai');
     assert.equal(diagnostics.openaiJsonMode, false);
+    assert.equal(diagnostics.chatTimeoutMs, 120000);
   });
 });
 

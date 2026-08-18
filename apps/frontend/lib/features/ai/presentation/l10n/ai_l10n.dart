@@ -154,6 +154,55 @@ class AiL10n {
     ar: 'حدث خطأ. يرجى المحاولة مرة أخرى.',
   );
 
+  static const chatAssistantTimeout = LocalizedText(
+    en: 'The assistant took longer than expected. Please try again.',
+    ar: 'استغرق المساعد وقتًا أطول من المتوقع. حاول مرة أخرى.',
+  );
+
+  static String materialsReadyBanner(BuildContext context, int ready, int total) {
+    return LocalizedText(
+      en: 'Materials: $ready/$total ready',
+      ar: 'المواد: $ready من $total جاهزة',
+    ).resolve(context);
+  }
+
+  static String currentStepBanner(BuildContext context, int stepNumber, String title) {
+    return LocalizedText(
+      en: 'Step $stepNumber: $title',
+      ar: 'الخطوة $stepNumber: $title',
+    ).resolve(context);
+  }
+
+  static String preparingMaterialsBanner(BuildContext context) {
+    return LocalizedText(
+      en: 'Preparing materials',
+      ar: 'تحضير المواد',
+    ).resolve(context);
+  }
+
+  static String completedStepsProgress(
+    BuildContext context, {
+    required int completed,
+    required int total,
+    required int percent,
+  }) {
+    return LocalizedText(
+      en: 'Completed $completed of $total steps · $percent%',
+      ar: 'أنجزت $completed من $total خطوات · $percent%',
+    ).resolve(context);
+  }
+
+  static String currentStepOfTotal(
+    BuildContext context, {
+    required int stepNumber,
+    required int total,
+  }) {
+    return LocalizedText(
+      en: 'Current step: $stepNumber of $total',
+      ar: 'الخطوة الحالية: $stepNumber من $total',
+    ).resolve(context);
+  }
+
   static const loading = LocalizedText(
     en: 'Thinking…',
     ar: 'جارٍ التفكير…',
@@ -1098,7 +1147,8 @@ class AiL10n {
       case 'AI_CONVERSATION_BUSY':
         return busyConversation.resolve(context);
       case 'AI_PROVIDER_TIMEOUT':
-        return proposalGenerationTimeout.resolve(context);
+      case 'TIMEOUT':
+        return chatAssistantTimeout.resolve(context);
       case 'AI_PROVIDER_AUTH_ERROR':
         return LocalizedText(
           en: 'The assistant is not configured correctly on the server.',
@@ -1126,11 +1176,6 @@ class AiL10n {
         return LocalizedText(
           en: 'Could not reach the server.',
           ar: 'تعذر الوصول إلى الخادم.',
-        ).resolve(context);
-      case 'TIMEOUT':
-        return LocalizedText(
-          en: 'The request timed out.',
-          ar: 'انتهت مهلة الطلب.',
         ).resolve(context);
       default:
         return genericFailure.resolve(context);

@@ -99,13 +99,13 @@ export const formatBuildGuideTrustedSystemContext = (
 
   if (context.totalSteps > 0) {
     lines.push(
-      `Current progress: Step ${context.currentStepNumber ?? '-'} of ${context.totalSteps} (${context.progressPercent}%)`,
+      `Completed ${context.completedSteps.length} of ${context.totalSteps} steps (${context.progressPercent}%).`,
     );
   }
 
   if (context.currentStepNumber != null && context.currentStepTitle) {
     lines.push(
-      `Current step: ${context.currentStepNumber}. ${context.currentStepTitle}`,
+      `Current step: ${context.currentStepNumber} of ${context.totalSteps} — ${context.currentStepTitle}`,
     );
   }
 

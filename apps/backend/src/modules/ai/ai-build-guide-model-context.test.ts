@@ -70,7 +70,7 @@ test('build-guide model context uses live current step and omits internal IDs', 
   assert.equal(context.materialsTotal, 4);
   assert.deepEqual(context.materialNames, ['PVC Pipe', 'Elbow connectors']);
   assert.match(prompt, /PVC Plant Stand/);
-  assert.match(prompt, /Step 3 of 4/);
+  assert.match(prompt, /Current step: 3 of 4/);
   assert.match(prompt, /Assemble and connect/);
   assert.match(prompt, /Join the frame and connect the parts/);
   assert.match(prompt, /4 of 4 ready/);
@@ -85,9 +85,9 @@ test('step 4 context does not retain step 3 as current', () => {
     buildBuildGuideModelContext(plantStand(4)),
   );
 
-  assert.match(step3, /Current step: 3\. Assemble and connect/);
-  assert.match(step4, /Current step: 4\. Test and improve/);
-  assert.doesNotMatch(step4, /Current step: 3\. Assemble and connect/);
+  assert.match(step3, /Current step: 3 of 4 — Assemble and connect/);
+  assert.match(step4, /Current step: 4 of 4 — Test and improve/);
+  assert.doesNotMatch(step4, /Current step: 3 of 4 — Assemble and connect/);
   assert.match(step4, /Check stability and improve weak joints/);
 });
 
@@ -139,7 +139,7 @@ test('general learning system instruction includes trusted build-guide context',
 
   assert.match(instruction, new RegExp(GENERAL_LEARNING_SYSTEM_POLICY.slice(0, 40)));
   assert.match(instruction, /PVC Plant Stand/);
-  assert.match(instruction, /Step 3 of 4/);
+  assert.match(instruction, /Current step: 3 of 4/);
   assert.match(instruction, /Assemble and connect/);
 });
 
@@ -228,6 +228,6 @@ test('step 4 after step 3 still uses live current step for next-action follow-up
   const step4 = formatBuildGuideTrustedSystemContext(
     buildBuildGuideModelContext(plantStand(4)),
   );
-  assert.match(step4, /Current step: 4\. Test and improve/);
-  assert.doesNotMatch(step4, /Current step: 3\. Assemble and connect/);
+  assert.match(step4, /Current step: 4 of 4 — Test and improve/);
+  assert.doesNotMatch(step4, /Current step: 3 of 4 — Assemble and connect/);
 });

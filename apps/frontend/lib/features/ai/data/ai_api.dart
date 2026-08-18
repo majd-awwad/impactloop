@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/config/api_config.dart';
 import '../../../core/network/api_response.dart';
 import '../domain/ai_models.dart';
 import '../domain/authoring_session_models.dart';
@@ -8,6 +9,11 @@ class AiApi {
   const AiApi(this._client);
 
   final Dio _client;
+
+  Options get _generationTimeout => Options(
+    sendTimeout: ApiConfig.aiChatRequestTimeout,
+    receiveTimeout: ApiConfig.aiChatRequestTimeout,
+  );
 
   Future<AiConversationSummary> createConversation({
     required String locale,
@@ -77,6 +83,7 @@ class AiApi {
           'clientMessageId': clientMessageId,
           if (buildGuideContext != null) 'buildGuideContext': buildGuideContext,
         },
+        options: _generationTimeout,
       ),
       AiTurnResponse.fromJson,
     );
@@ -99,6 +106,7 @@ class AiApi {
           'draftContext': draftContext,
           'history': history,
         },
+        options: _generationTimeout,
       ),
       ManualDraftCopilotResponse.fromJson,
     );
@@ -108,6 +116,7 @@ class AiApi {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '/api/ai/v1/conversations/$conversationId/authoring/start',
+        options: _generationTimeout,
       ),
       AiTurnResponse.fromJson,
     );
@@ -119,6 +128,7 @@ class AiApi {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '/api/ai/v1/conversations/$conversationId/authoring/proposal',
+        options: _generationTimeout,
       ),
       AiTurnResponse.fromJson,
     );
@@ -154,6 +164,7 @@ class AiApi {
       _client.post<Map<String, dynamic>>(
         '/api/ai/v1/conversations/$conversationId/authoring/proposals/$proposalId/revise',
         data: {'reviewStateId': reviewStateId},
+        options: _generationTimeout,
       ),
       AiTurnResponse.fromJson,
     );
@@ -188,6 +199,7 @@ class AiApi {
           'comment': comment,
           'clientMessageId': clientMessageId,
         },
+        options: _generationTimeout,
       ),
       AiTurnResponse.fromJson,
     );
@@ -213,6 +225,7 @@ class AiApi {
           if (manualValue != null) 'manualValue': manualValue,
           if (mode != null) 'mode': mode,
         },
+        options: _generationTimeout,
       ),
       AiTurnResponse.fromJson,
     );
@@ -231,6 +244,7 @@ class AiApi {
           'comment': comment,
           'clientMessageId': clientMessageId,
         },
+        options: _generationTimeout,
       ),
       AiTurnResponse.fromJson,
     );
@@ -243,6 +257,7 @@ class AiApi {
       _client.post<Map<String, dynamic>>(
         '/api/ai/v1/authoring/sessions/start',
         data: {'conversationId': conversationId},
+        options: _generationTimeout,
       ),
       AuthoringSessionResponse.fromJson,
     );
@@ -281,6 +296,7 @@ class AiApi {
           if (otherText != null) 'otherText': otherText,
           if (currentTurnId != null) 'currentTurnId': currentTurnId,
         },
+        options: _generationTimeout,
       ),
       AuthoringSessionResponse.fromJson,
     );
@@ -306,6 +322,7 @@ class AiApi {
           if (mode != null) 'mode': mode,
           if (targetStage != null) 'targetStage': targetStage,
         },
+        options: _generationTimeout,
       ),
       AuthoringSessionResponse.fromJson,
     );

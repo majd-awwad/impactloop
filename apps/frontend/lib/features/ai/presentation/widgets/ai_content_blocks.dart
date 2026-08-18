@@ -388,8 +388,17 @@ class _AiErrorBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final looksLikeTimeout = (block.message ?? '').toLowerCase().contains(
+      'timed out',
+    );
+    final message = block.code != null
+        ? AiL10n.errorMessageForCode(context, block.code)
+        : looksLikeTimeout
+        ? AiL10n.chatAssistantTimeout.resolve(context)
+        : AiL10n.genericFailure.resolve(context);
+
     return Text(
-      block.message ?? AiL10n.genericFailure.resolve(context),
+      message,
       style: AppTextStyles.body(context).copyWith(
         color: materialWarning,
         height: 1.45,
@@ -793,7 +802,6 @@ class _AiBuildStepGuideBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final stepNumber = block.stepNumber;
     final totalSteps = block.totalSteps;
     final title = block.guideTitle;
@@ -804,16 +812,21 @@ class _AiBuildStepGuideBlock extends StatelessWidget {
     }
 
     final header = stepNumber != null && totalSteps != null
-        ? isAr
-            ? 'الخطوة $stepNumber من $totalSteps'
-            : 'Step $stepNumber of $totalSteps'
+        ? AiL10n.currentStepOfTotal(
+            context,
+            stepNumber: stepNumber,
+            total: totalSteps,
+          )
         : null;
     final progressLabel = block.progressPercent != null &&
             block.completedSteps != null &&
             totalSteps != null
-        ? isAr
-            ? 'التقدم: ${block.completedSteps} من $totalSteps (${block.progressPercent}%)'
-            : 'Progress: ${block.completedSteps} of $totalSteps (${block.progressPercent}%)'
+        ? AiL10n.completedStepsProgress(
+            context,
+            completed: block.completedSteps!,
+            total: totalSteps,
+            percent: block.progressPercent!,
+          )
         : null;
 
     return _AiBlockSection(

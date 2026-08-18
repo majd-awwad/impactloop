@@ -16,14 +16,14 @@ Chat AI is configured separately from price suggestion AI. Price AI env vars rem
 | `AI_CHAT_MODEL` | `gemini-2.5-flash` (falls back to `GEMINI_MODEL`) | Model when provider is `gemini` |
 | `OPENAI_API_KEY` | — | OpenAI API key when `AI_CHAT_PROVIDER=openai` |
 | `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model when provider is `openai` (`AI_CHAT_MODEL` overrides if set) |
-| `AI_CHAT_TIMEOUT_MS` | `30000` | Provider request timeout |
+| `AI_CHAT_TIMEOUT_MS` | `30000` | Per-provider request timeout in ms. Raise to `120000`–`180000` for free/slow OpenRouter models. Live-read in development after `.env` edits. Flutter waits `AI_CHAT_TIMEOUT_SECONDS` (default `300`) so the client does not abort first. |
 | `AI_CHAT_MAX_OUTPUT_TOKENS` | `1024` | Max generated tokens |
 | `AI_CHAT_MAX_MESSAGE_LENGTH` | `4000` | Max user message length |
 | `AI_CHAT_MAX_HISTORY_MESSAGES` | `20` | Recent messages sent as bounded context |
 | `AI_CHAT_RATE_LIMIT_PER_USER` | `30` | Per-user message send rate limit (per window) |
 | `AI_CHAT_RATE_LIMIT_WINDOW_MS` | `3600000` | Rate-limit window (1 hour) |
 | `AI_CHAT_MAX_CONVERSATIONS_PER_HOUR` | `20` | Per-user conversation create limit (same window) |
-| `AI_CHAT_PROCESSING_STALE_MS` | `120000` | Stale processing lock recovery window |
+| `AI_CHAT_PROCESSING_STALE_MS` | `120000` | Stale processing lock recovery window. Keep larger than `AI_CHAT_TIMEOUT_MS` times sequential LLM calls in one turn. |
 | `AI_CHAT_CLASSIFIER_CONFIDENCE_THRESHOLD` | `0.7` | Minimum confidence for model-assisted scope classification |
 
 Gemini chat uses the existing `GEMINI_API_KEY` when `AI_CHAT_PROVIDER=gemini`.

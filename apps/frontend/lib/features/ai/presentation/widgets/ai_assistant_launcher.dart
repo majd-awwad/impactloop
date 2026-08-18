@@ -35,7 +35,7 @@ class AiAssistantLauncher extends ConsumerWidget {
     final isMobile = MediaQuery.sizeOf(context).width < 600;
     // Sit clearly above the floating bottom nav; keep a stable edge inset
     // so the FAB never covers nav labels or card footers near the bottom.
-    final navOffset = isMobile ? 104.0 : 24.0;
+    final navOffset = isMobile ? 80.0 : 24.0;
 
     return PositionedDirectional(
       end: AppSpacing.md,

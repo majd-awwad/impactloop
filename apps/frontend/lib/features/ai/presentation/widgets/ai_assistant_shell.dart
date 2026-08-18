@@ -766,8 +766,12 @@ class AiBuildGuideContextBanner extends StatelessWidget {
     final palette = MaterialsUiPalette.of(context);
     final readiness = buildContext.materialReadiness;
     final currentStepLabel = buildContext.currentStep == null
-        ? 'Preparing materials'
-        : 'Step ${buildContext.currentStep!.stepNumber}: ${buildContext.currentStep!.title}';
+        ? AiL10n.preparingMaterialsBanner(context)
+        : AiL10n.currentStepBanner(
+            context,
+            buildContext.currentStep!.stepNumber,
+            buildContext.currentStep!.title,
+          );
 
     return Container(
       width: double.infinity,
@@ -794,7 +798,11 @@ class AiBuildGuideContextBanner extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Materials: ${readiness.ready}/${readiness.total} ready',
+            AiL10n.materialsReadyBanner(
+              context,
+              readiness.ready,
+              readiness.total,
+            ),
             style: AppTextStyles.body(context).copyWith(
               color: palette.textSecondary,
             ),

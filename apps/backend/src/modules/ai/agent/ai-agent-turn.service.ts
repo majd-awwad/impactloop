@@ -3000,6 +3000,7 @@ export const executeLearnerAgentPlatformTurn = async (input: {
       authenticatedUserId: input.authenticatedUserId,
       clientMessageId: input.clientMessageId,
       projectBuildId: conversation.projectBuildId,
+      history: input.history,
     });
     if (stepTurn) {
       return stepTurn;
