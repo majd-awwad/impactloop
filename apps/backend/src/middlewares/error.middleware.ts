@@ -14,7 +14,7 @@ import {
 import { serializeUnknownError } from '../observability/safe-error.js';
 import { AppError } from '../utils/app-error.js';
 import { errorResponse } from '../utils/api-response.js';
-import { markErrorLogged, hasErrorBeenLogged } from './request-context.middleware.js';
+import { markErrorLogged, hasErrorBeenLogged, recordResponseErrorCode } from './request-context.middleware.js';
 
 const INTERNAL_ERROR_MESSAGE = 'Internal server error';
 
@@ -58,6 +58,7 @@ const logServerError = (
 
 export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) => {
   if (error instanceof AppError) {
+    recordResponseErrorCode(res, error.code);
     if (shouldLogAppError(error)) {
       logServerError(res, {
         statusCode: error.statusCode,
@@ -79,6 +80,7 @@ export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) =>
   }
 
   if (isInvalidJsonBodyError(error)) {
+    recordResponseErrorCode(res, INVALID_JSON_ERROR_CODE);
     res.status(400).json(
       errorResponse(
         'Invalid JSON request body',
@@ -89,6 +91,7 @@ export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) =>
   }
 
   if (error instanceof ZodError) {
+    recordResponseErrorCode(res, COMMON_ERROR_CODES.validationError);
     res.status(400).json(
       errorResponse(
         'Validation failed',
@@ -107,6 +110,7 @@ export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) =>
   const mappedPrismaError = mapUnhandledPrismaError(error);
 
   if (mappedPrismaError) {
+    recordResponseErrorCode(res, mappedPrismaError.code);
     res
       .status(mappedPrismaError.statusCode)
       .json(
@@ -119,6 +123,7 @@ export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) =>
     return;
   }
 
+  recordResponseErrorCode(res, COMMON_ERROR_CODES.internalError);
   logServerError(res, {
     statusCode: 500,
     code: COMMON_ERROR_CODES.internalError,

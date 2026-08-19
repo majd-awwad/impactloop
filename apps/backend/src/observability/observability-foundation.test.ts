@@ -745,6 +745,8 @@ describe('observability foundation', () => {
         .filter((entry) => entry.message === 'HTTP request completed');
       assert.equal(completionLogs.length, 1);
       assert.equal(completionLogs[0]?.statusCode, 400);
+      assert.equal(logLevelName(completionLogs[0]!), 'warn');
+      assert.equal(completionLogs[0]?.errorCode, 'VALIDATION_ERROR');
     });
   });
 
@@ -1005,7 +1007,8 @@ describe('observability foundation', () => {
 
       assert.equal(errorLogs.length, 0);
       assert.equal(completionLogs.length, 1);
-      assert.equal(logLevelName(completionLogs[0]!), 'info');
+      assert.equal(logLevelName(completionLogs[0]!), 'warn');
+      assert.equal(completionLogs[0]?.errorCode, INVALID_JSON_ERROR_CODE);
       assert.doesNotMatch(JSON.stringify(completionLogs[0]), /\{"broken":/);
     });
   });
@@ -1310,6 +1313,8 @@ describe('observability foundation', () => {
       assert.equal(completionLogs.length, 2);
       assert.equal(logLevelName(completionLogs[0]!), 'info');
       assert.equal(logLevelName(completionLogs[1]!), 'info');
+      assert.equal(completionLogs[0]?.errorCode, 'UNAUTHENTICATED');
+      assert.equal(completionLogs[1]?.errorCode, 'FORBIDDEN');
     });
   });
 

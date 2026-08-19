@@ -17,6 +17,7 @@ type ObservabilityLocals = {
   errorLogged?: boolean;
   completionLogged?: boolean;
   abortController?: AbortController;
+  errorCode?: string;
 };
 
 const getObservabilityLocals = (res: Response): ObservabilityLocals => {
@@ -39,6 +40,10 @@ export const hasErrorBeenLogged = (res: Response): boolean =>
 export const getRequestAbortSignal = (res: Response): AbortSignal => {
   const locals = getObservabilityLocals(res);
   return (locals.abortController ??= new AbortController()).signal;
+};
+
+export const recordResponseErrorCode = (res: Response, errorCode: string): void => {
+  getObservabilityLocals(res).errorCode = errorCode;
 };
 
 const normalizeRequestPath = (req: Request): string => {
@@ -69,6 +74,15 @@ const completionLogLevel = (
   }
 
   if (statusCode === 429) {
+    return 'warn';
+  }
+
+  // Expected auth denials are routine client noise.
+  if (statusCode === 401 || statusCode === 403) {
+    return 'info';
+  }
+
+  if (statusCode >= 400) {
     return 'warn';
   }
 
@@ -109,6 +123,7 @@ const logRequestCompletion = (
     statusCode,
     durationMs,
     ...(Number.isFinite(responseSize) ? { responseSize } : {}),
+    ...(observability.errorCode ? { errorCode: observability.errorCode } : {}),
     ...getDatabasePoolSnapshot(),
   };
 

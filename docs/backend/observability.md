@@ -166,7 +166,8 @@ Defaults:
 One completion log per response:
 
 - `2xx` / `3xx` → `info` (`debug` for `/health`)
-- routine `4xx` including `400`, `401`, `403`, `404`, `409` → `info`
+- routine auth denials `401` / `403` → `info`
+- other client errors including `400`, `404`, `409` → `warn`, with `errorCode` when the error middleware produced the response
 - `429` → `warn`
 - `5xx` → `error` for the detailed unexpected-error event; completion logs `warn` without repeating the stack when a detailed error log was already written
 - aborted connections → `warn` (`HTTP request aborted`, no duplicate completion)
