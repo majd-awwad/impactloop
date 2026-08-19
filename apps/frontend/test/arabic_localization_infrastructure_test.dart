@@ -138,6 +138,7 @@ void main() {
   test('content direction isolates technical and Arabic values', () {
     expect(contentTextDirection('learner@example.com'), TextDirection.ltr);
     expect(contentTextDirection('+970 59 123 4567'), TextDirection.ltr);
+    expect(contentTextDirection('+970568860223'), TextDirection.ltr);
     expect(contentTextDirection('عنوان التوصيل'), TextDirection.rtl);
   });
 }

@@ -42,6 +42,7 @@ import '../widgets/project_build_material_linking.dart';
 import '../widgets/build_journey/build_active_phase.dart';
 import '../widgets/build_journey/build_prepare_phase.dart';
 import '../widgets/build_journey/build_reflection_phase.dart';
+import '../../../project_help_sessions/presentation/widgets/build_help_session_compact_action.dart';
 import '../widgets/build_steps/build_step_number_badge.dart';
 import '../widgets/project_build_completion_story_section.dart';
 import '../../application/learning_session_providers.dart';
@@ -1711,6 +1712,7 @@ class _BuildContent extends StatelessWidget {
                 ),
                 BuildDisplayPhase.complete => const SizedBox.shrink(),
               },
+              BuildHelpSessionCompactAction(buildRecord: buildRecord),
             ],
           ),
         ),

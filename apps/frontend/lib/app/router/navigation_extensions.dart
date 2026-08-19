@@ -40,6 +40,21 @@ String creatorProjectHelpSessionSettingsRoute(String projectId) =>
 String learningProjectSubmissionDetailRoute(String projectId) =>
     '/learning/submissions/$projectId';
 
+/// Canonical public learning project detail route.
+String learningProjectPublicDetailRoute(
+  String projectId, {
+  String? focus,
+}) {
+  final normalizedFocus = focus?.trim().toLowerCase();
+  if (normalizedFocus == null || normalizedFocus.isEmpty) {
+    return '/learning/$projectId';
+  }
+  return Uri(
+    path: '/learning/$projectId',
+    queryParameters: {'focus': normalizedFocus},
+  ).toString();
+}
+
 /// Canonical private project notebook route for a specific build attempt.
 String learnerBuildNotebookRoute(String buildId, {String? pageId}) {
   final base = '/learner/builds/$buildId/notebook';

@@ -59,6 +59,7 @@ class _LearnerReservationDetailsBodyState
     extends ConsumerState<LearnerReservationDetailsBody> {
   final _paymentSectionKey = GlobalKey();
   final _fulfillmentSectionKey = GlobalKey();
+  final _messagesSectionKey = GlobalKey();
   bool _didScrollToFocus = false;
 
   @override
@@ -97,8 +98,11 @@ class _LearnerReservationDetailsBodyState
         case 'fulfillment':
           ctx = _fulfillmentSectionKey.currentContext ??
               widget.pickupCodeSectionKey?.currentContext;
+        case 'messages':
+          ctx = _messagesSectionKey.currentContext;
         case 'payment':
         case 'resolution':
+          ctx = _paymentSectionKey.currentContext;
         default:
           ctx = _paymentSectionKey.currentContext;
       }
@@ -199,11 +203,14 @@ class _LearnerReservationDetailsBodyState
             ? const _OverdueWarningBanner()
             : null;
         final messages = showFollowUpMessages && userId.isNotEmpty
-            ? LearnerReservationMessagesPanel(
-                reservationId: reservation.id,
-                canSendMessage: reservation.canSendMessage,
-                currentUserId: userId,
-                constrainWidth: !isMobile,
+            ? KeyedSubtree(
+                key: _messagesSectionKey,
+                child: LearnerReservationMessagesPanel(
+                  reservationId: reservation.id,
+                  canSendMessage: reservation.canSendMessage,
+                  currentUserId: userId,
+                  constrainWidth: !isMobile,
+                ),
               )
             : null;
         final rescheduleNote =

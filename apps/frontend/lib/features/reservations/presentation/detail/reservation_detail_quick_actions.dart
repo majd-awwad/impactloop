@@ -34,12 +34,7 @@ class ReservationDetailQuickActions extends ConsumerWidget {
             reservation: reservation,
             delivery: delivery,
             onNavigate: (deliveryId) {
-              final canTrack = delivery?.canTrack == true;
-              if (canTrack) {
-                context.push('/learner/deliveries/$deliveryId/track');
-              } else {
-                context.push('/learner/deliveries/$deliveryId');
-              }
+              context.push('/learner/deliveries/$deliveryId');
             },
           )
           case final viewDelivery?)

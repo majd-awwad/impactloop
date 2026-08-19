@@ -153,5 +153,17 @@ void main() {
 
     expect(repo.issueCalls, 1);
     expect(find.byKey(const Key('supplier-driver-pickup-handover-qr-image')), findsOneWidget);
+    final dialog = find.byKey(const Key('supplier-driver-pickup-handover-qr-dialog'));
+    expect(
+      find.descendant(of: dialog, matching: find.text('482 917')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: dialog,
+        matching: find.text('If scanning fails, use the supplier handover code above.'),
+      ),
+      findsOneWidget,
+    );
   });
 }

@@ -397,6 +397,14 @@ class DriverDelivery {
 
   bool get isAssigned => learner != null;
 
+  bool get hasOperationalDeliveryWindow =>
+      confirmedDeliveryWindowStart != null &&
+      confirmedDeliveryWindowEnd != null;
+
+  bool get needsDriverDeliveryWindow =>
+      status == 'REDELIVERY_PENDING' ||
+      (status == 'PICKED_UP' && !hasOperationalDeliveryWindow);
+
   String? get nextStatus {
     switch (status) {
       case 'DRIVER_ASSIGNED':

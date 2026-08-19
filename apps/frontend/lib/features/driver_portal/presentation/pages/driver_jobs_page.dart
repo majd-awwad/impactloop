@@ -1201,6 +1201,30 @@ class _AvailableJobCard extends ConsumerWidget {
     );
     final distanceText = distanceFromYouLabel(delivery.distanceKm, l10n: l10n);
 
+    final itemStyle = AppTextStyles.body(
+      context,
+    ).copyWith(color: palette.textSecondary);
+    final acceptButton = FilledButton.icon(
+      onPressed: acceptDisabled || isSubmitting
+          ? null
+          : () => _acceptDelivery(context, ref),
+      style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
+      icon: isSubmitting
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.assignment_turned_in_outlined),
+      label: Text(
+        acceptDisabled
+            ? l10n.driverActiveLimitReachedButton
+            : isSubmitting
+            ? l10n.driverAccepting
+            : l10n.driverAcceptJob,
+      ),
+    );
+
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -1208,114 +1232,110 @@ class _AvailableJobCard extends ConsumerWidget {
         borderRadius: AppRadius.lgAll,
         border: Border.all(color: palette.borderStrong),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 520;
+          final sectionGap = isNarrow ? AppSpacing.sm : AppSpacing.md;
+          final metaChips = [
+            _InfoChip(
+              icon: Icons.schedule_outlined,
+              label: driverPickupWindowSummary(delivery, l10n: l10n),
+              expanded: isNarrow,
+            ),
+            _InfoChip(
+              icon: Icons.near_me_outlined,
+              label: distanceText,
+              expanded: isNarrow,
+            ),
+            if (delivery.hasGroupedItems)
+              _InfoChip(
+                icon: Icons.inventory_2_outlined,
+                label: labels.groupedItemsCount(delivery.itemCount),
+                expanded: isNarrow,
+              ),
+          ];
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    BidiText(
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: BidiText(
                       labels.materialTitle(delivery.material.title),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.title(
                         context,
                       ).copyWith(color: palette.textPrimary),
                     ),
-                    const SizedBox(height: AppSpacing.xs),
-                    if (delivery.hasGroupedItems) ...[
-                      Text(
-                        labels.groupedItemsCount(delivery.itemCount),
-                        style: AppTextStyles.body(
-                          context,
-                        ).copyWith(color: palette.textSecondary),
-                      ),
-                      const SizedBox(height: 2),
-                      for (final item in delivery.items) ...[
-                        BidiText(
-                          '${bidiIsolate(labels.materialTitle(item.title))} × ${bidiIsolate(driverQuantityLabel(l10n, item.quantity, item.unit))}',
-                          style: AppTextStyles.body(
-                            context,
-                          ).copyWith(color: palette.textSecondary),
-                        ),
-                        const SizedBox(height: 2),
-                      ],
-                    ] else
-                      Text(
-                        driverQuantityLabel(
-                          l10n,
-                          delivery.material.quantityRequested,
-                          delivery.material.unit,
-                        ),
-                        style: AppTextStyles.body(
-                          context,
-                        ).copyWith(color: palette.textSecondary),
-                      ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  AppStatusBadge(
+                    label: l10n.driverStatusWaitingForAssignment,
+                    tone: AppStatusTone.warning,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              if (delivery.hasGroupedItems) ...[
+                Text(
+                  labels.groupedItemsCount(delivery.itemCount),
+                  style: itemStyle,
+                ),
+                const SizedBox(height: 2),
+                for (final item in delivery.items) ...[
+                  BidiText(
+                    '${bidiIsolate(labels.materialTitle(item.title))} × ${bidiIsolate(driverQuantityLabel(l10n, item.quantity, item.unit))}',
+                    style: itemStyle,
+                  ),
+                  const SizedBox(height: 2),
+                ],
+              ] else
+                Text(
+                  driverQuantityLabel(
+                    l10n,
+                    delivery.material.quantityRequested,
+                    delivery.material.unit,
+                  ),
+                  style: itemStyle,
+                ),
+              SizedBox(height: sectionGap),
+              DriverRouteBlock(
+                pickupSummary: pickupSummary,
+                dropoffSummary: dropoffSummary,
+                compact: true,
+                forceVertical: isNarrow,
+              ),
+              SizedBox(height: sectionGap),
+              if (isNarrow)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < metaChips.length; i++) ...[
+                      if (i > 0) const SizedBox(height: AppSpacing.xs),
+                      metaChips[i],
+                    ],
                   ],
+                )
+              else
+                Wrap(
+                  spacing: AppSpacing.md,
+                  runSpacing: AppSpacing.sm,
+                  children: metaChips,
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Flexible(
-                child: AppStatusBadge(
-                  label: l10n.driverStatusWaitingForAssignment,
-                  tone: AppStatusTone.warning,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          DriverRouteBlock(
-            pickupSummary: pickupSummary,
-            dropoffSummary: dropoffSummary,
-            compact: true,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.md,
-            runSpacing: AppSpacing.sm,
-            children: [
-              _InfoChip(
-                icon: Icons.schedule_outlined,
-                label: driverPickupWindowSummary(delivery, l10n: l10n),
-              ),
-              _InfoChip(icon: Icons.near_me_outlined, label: distanceText),
-              if (delivery.hasGroupedItems)
-                _InfoChip(
-                  icon: Icons.inventory_2_outlined,
-                  label: labels.groupedItemsCount(delivery.itemCount),
+              SizedBox(height: sectionGap),
+              if (isNarrow)
+                acceptButton
+              else
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: acceptButton,
                 ),
             ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: FilledButton.icon(
-              onPressed: acceptDisabled || isSubmitting
-                  ? null
-                  : () => _acceptDelivery(context, ref),
-              style: AppStatusButtonStyle.filled(
-                context,
-                AppStatusTone.success,
-              ),
-              icon: isSubmitting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.assignment_turned_in_outlined),
-              label: Text(
-                acceptDisabled
-                    ? l10n.driverActiveLimitReachedButton
-                    : isSubmitting
-                    ? l10n.driverAccepting
-                    : l10n.driverAcceptJob,
-              ),
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -1342,15 +1362,20 @@ class _AvailableJobCard extends ConsumerWidget {
 }
 
 class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.icon, required this.label});
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    this.expanded = false,
+  });
   final IconData icon;
   final String label;
+  final bool expanded;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     return Row(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: expanded ? MainAxisSize.max : MainAxisSize.min,
       children: [
         Icon(icon, size: 14, color: palette.textMuted),
         const SizedBox(width: 4),

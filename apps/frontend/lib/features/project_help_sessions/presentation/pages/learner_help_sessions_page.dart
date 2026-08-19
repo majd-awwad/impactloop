@@ -31,7 +31,13 @@ Future<void> _startHelpSessionRequest(
     );
     if (!context.mounted) return;
     if (!availability.available) {
-      showErrorSnackBar(context, availability.reason ?? 'Unavailable');
+      showErrorSnackBar(
+        context,
+        availability.reason ?? 'UNAVAILABLE',
+        message: ProjectHelpSessionsL10n.availabilityMessage(
+          availability.reason,
+        ).resolve(context),
+      );
       return;
     }
     final session = await showProjectHelpSessionRequestFlow(

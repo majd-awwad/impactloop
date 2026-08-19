@@ -21,6 +21,7 @@ test('builds the canonical material-request fulfillment notification', () => {
       entityType: 'MATERIAL_REQUEST',
       entityId: 'request-1',
       actionType: 'OPEN_ENTITY',
+      metadata: { requestedItemName: 'DC motor' },
     },
   );
 });

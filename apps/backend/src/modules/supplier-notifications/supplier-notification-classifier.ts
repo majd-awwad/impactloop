@@ -66,6 +66,7 @@ const RESERVATION_TYPES = new Set([
   'RESERVATION_REQUESTED',
   'RESERVATION_CANCELLED',
   'RESERVATION_EXPIRED',
+  'RESERVATION_MESSAGE_RECEIVED',
 ]);
 
 const RECOVERY_TYPES = new Set([
@@ -125,6 +126,15 @@ export const classifySupplierNotification = (input: {
 
     if (isTerminalReservation(target)) {
       return { category, state: 'RESOLVED', actionType: 'NONE', waitingOn: null };
+    }
+
+    if (rawType === 'RESERVATION_MESSAGE_RECEIVED') {
+      return {
+        category,
+        state: 'UPDATE',
+        actionType: 'OPEN_RESERVATION',
+        waitingOn: null,
+      };
     }
 
     if (

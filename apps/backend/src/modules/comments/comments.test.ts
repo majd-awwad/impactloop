@@ -211,6 +211,9 @@ describe('CM-01 comments', () => {
       });
     }
     if (ctx.createdUserIds.length > 0) {
+      await prisma.notification.deleteMany({
+        where: { userId: { in: ctx.createdUserIds } },
+      });
       await prisma.user.deleteMany({
         where: { id: { in: ctx.createdUserIds } },
       });
@@ -387,5 +390,131 @@ describe('CM-01 comments', () => {
     assert.equal(moderated.status, 'MODERATED');
     assert.equal(moderated.isDeleted, true);
     assert.equal(moderated.body, null);
+  });
+
+  test('project comment notifies the owner and never the commenter', async () => {
+    const comment = await createComment(
+      'learningProject',
+      ctx.projectId,
+      { body: 'The wiring diagram is very clear.' },
+      learnerViewer(ctx.otherLearnerId),
+    );
+    ctx.createdCommentIds.push(comment.id);
+
+    const commenterNotes = await prisma.notification.findMany({
+      where: {
+        userId: ctx.otherLearnerId,
+        notificationType: {
+          in: ['PROJECT_COMMENT_RECEIVED', 'PROJECT_COMMENT_REPLY'],
+        },
+      },
+    });
+
+    const ownerForComment = await prisma.notification.findMany({
+      where: {
+        userId: ctx.learnerId,
+        notificationType: 'PROJECT_COMMENT_RECEIVED',
+        relatedEntityId: ctx.projectId,
+      },
+    });
+    const matching = ownerForComment.filter(
+      (row) =>
+        (row.metadata as { commentId?: string } | null)?.commentId ===
+        comment.id,
+    );
+
+    assert.equal(matching.length, 1);
+    assert.equal(commenterNotes.length, 0);
+    assert.equal(matching[0]?.relatedEntityType, 'LEARNING_PROJECT');
+    assert.equal(matching[0]?.actionType, 'OPEN_ENTITY');
+    assert.match(matching[0]?.body ?? '', /wiring diagram/);
+    assert.equal(
+      matching[0]?.eventKey,
+      `project-comment:${comment.id}:${ctx.learnerId}`,
+    );
+  });
+
+  test('commenter does not receive a notification for their own project comment', async () => {
+    const before = await prisma.notification.count({
+      where: { userId: ctx.learnerId },
+    });
+    const comment = await createComment(
+      'learningProject',
+      ctx.projectId,
+      { body: 'Adding a note on my own project.' },
+      learnerViewer(ctx.learnerId),
+    );
+    ctx.createdCommentIds.push(comment.id);
+    const after = await prisma.notification.count({
+      where: { userId: ctx.learnerId },
+    });
+    assert.equal(after, before);
+  });
+
+  test('reply notifies the original commenter and not the replier', async () => {
+    const root = await createComment(
+      'learningProject',
+      ctx.projectId,
+      { body: 'How did you power the sensors?' },
+      learnerViewer(ctx.otherLearnerId),
+    );
+    ctx.createdCommentIds.push(root.id);
+
+    const reply = await createComment(
+      'learningProject',
+      ctx.projectId,
+      {
+        body: 'I used a 9V battery pack.',
+        parentCommentId: root.id,
+      },
+      learnerViewer(ctx.learnerId),
+    );
+    ctx.createdCommentIds.push(reply.id);
+
+    const replyNotes = await prisma.notification.findMany({
+      where: {
+        userId: ctx.otherLearnerId,
+        notificationType: 'PROJECT_COMMENT_REPLY',
+      },
+    });
+    const matching = replyNotes.filter(
+      (row) =>
+        (row.metadata as { commentId?: string } | null)?.commentId === reply.id,
+    );
+    const replierReplyNotes = await prisma.notification.findMany({
+      where: {
+        userId: ctx.learnerId,
+        notificationType: 'PROJECT_COMMENT_REPLY',
+      },
+    });
+
+    assert.equal(matching.length, 1);
+    assert.equal(replierReplyNotes.length, 0);
+    assert.equal(matching[0]?.relatedEntityId, ctx.projectId);
+  });
+
+  test('material comments do not create project notifications', async () => {
+    const before = await prisma.notification.count({
+      where: {
+        notificationType: {
+          in: ['PROJECT_COMMENT_RECEIVED', 'PROJECT_COMMENT_REPLY'],
+        },
+      },
+    });
+    const comment = await createComment(
+      'material',
+      ctx.materialId,
+      { body: 'Useful listing.' },
+      learnerViewer(ctx.otherLearnerId),
+    );
+    ctx.createdCommentIds.push(comment.id);
+    const after = await prisma.notification.count({
+      where: {
+        notificationType: {
+          in: ['PROJECT_COMMENT_RECEIVED', 'PROJECT_COMMENT_REPLY'],
+        },
+      },
+    });
+    assert.equal(after, before);
   });
 });

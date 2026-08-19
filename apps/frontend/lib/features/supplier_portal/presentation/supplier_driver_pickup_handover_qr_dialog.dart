@@ -11,6 +11,7 @@ import '../../../core/format/localized_formatters.dart';
 import '../../../l10n/l10n.dart';
 import '../../../shared/widgets/app_dialog_shell.dart';
 import '../../../shared/widgets/app_primary_button.dart';
+import '../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../application/supplier_driver_pickup_handover_credential_controller.dart';
 import '../../reservations/data/models/handover_credential.dart';
 import 'theme/supplier_theme_extension.dart';
@@ -20,6 +21,7 @@ Future<void> showSupplierDriverPickupHandoverQrDialog({
   required WidgetRef ref,
   required String reservationId,
   required String materialTitle,
+  String? supplierHandoverCode,
 }) {
   ref.read(supplierDriverPickupHandoverCredentialControllerProvider(reservationId));
 
@@ -29,6 +31,7 @@ Future<void> showSupplierDriverPickupHandoverQrDialog({
       return SupplierDriverPickupHandoverQrDialog(
         reservationId: reservationId,
         materialTitle: materialTitle,
+        supplierHandoverCode: supplierHandoverCode,
       );
     },
   );
@@ -39,10 +42,12 @@ class SupplierDriverPickupHandoverQrDialog extends ConsumerStatefulWidget {
     super.key,
     required this.reservationId,
     required this.materialTitle,
+    this.supplierHandoverCode,
   });
 
   final String reservationId;
   final String materialTitle;
+  final String? supplierHandoverCode;
 
   @override
   ConsumerState<SupplierDriverPickupHandoverQrDialog> createState() =>
@@ -190,7 +195,10 @@ class _SupplierDriverPickupHandoverQrDialogState
                   : () => unawaited(controller.ensureIssued()),
             )
           else if (credential != null)
-            _QrContent(credential: credential)
+            _QrContent(
+              credential: credential,
+              supplierHandoverCode: widget.supplierHandoverCode,
+            )
           else
             _ErrorPanel(
               message: l10n.supplierDriverPickupQrIssueFailed,
@@ -211,9 +219,10 @@ class _SupplierDriverPickupHandoverQrDialogState
 }
 
 class _QrContent extends StatelessWidget {
-  const _QrContent({required this.credential});
+  const _QrContent({required this.credential, this.supplierHandoverCode});
 
   final HandoverCredential credential;
+  final String? supplierHandoverCode;
 
   @override
   Widget build(BuildContext context) {
@@ -281,15 +290,23 @@ class _QrContent extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          l10n.supplierDriverPickupQrManualFallbackNote,
-          textAlign: TextAlign.center,
-          style: context.supplierLabel().copyWith(
-            color: colors.textMuted,
-            fontSize: 12,
+        if (supplierHandoverCode != null &&
+            supplierHandoverCode!.trim().isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.md),
+          HandoverConfirmationCodePanel(
+            code: supplierHandoverCode!,
+            instructions: l10n.supplierDriverHandoverCodeInstructions,
           ),
-        ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            l10n.supplierDriverPickupQrManualFallbackNote,
+            textAlign: TextAlign.center,
+            style: context.supplierLabel().copyWith(
+              color: colors.textMuted,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ],
     );
   }

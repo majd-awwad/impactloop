@@ -321,6 +321,7 @@ export const suggestMaterialForRequest = async (
     entityType: 'MATERIAL_REQUEST',
     entityId: request.id,
     actionType: 'OPEN_ENTITY',
+    metadata: { requestedItemName: request.requestedItemName },
   });
 
   const fresh = await repository.findRequestByIdForSupplier(

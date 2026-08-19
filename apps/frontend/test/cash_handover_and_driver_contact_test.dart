@@ -79,6 +79,36 @@ void main() {
     expect(find.text('أؤكد استلام المبلغ نقدًا'), findsOneWidget);
   });
 
+  testWidgets('Arabic RTL keeps +970 learner phone LTR', (tester) async {
+    await tester.pumpWidget(wrap(
+      const DriverLearnerContactCard(
+        learner: DriverDeliveryParty(
+          displayName: 'ماجد',
+          phone: '+970568860223',
+        ),
+      ),
+      locale: const Locale('ar'),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('+970568860223'), findsOneWidget);
+    expect(find.textContaining('970568860223+'), findsNothing);
+
+    final phoneText = tester.widget<SelectableText>(find.byType(SelectableText));
+    expect(phoneText.data, '+970568860223');
+    expect(
+      tester.widget<Directionality>(
+        find
+            .ancestor(
+              of: find.text('+970568860223'),
+              matching: find.byType(Directionality),
+            )
+            .first,
+      ).textDirection,
+      TextDirection.ltr,
+    );
+  });
+
   testWidgets('active learner contact shows phone and call action', (tester) async {
     await tester.pumpWidget(wrap(const DriverLearnerContactCard(
       learner: DriverDeliveryParty(

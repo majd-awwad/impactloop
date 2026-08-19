@@ -36,6 +36,7 @@ import {
   issueDeliveryHandoverCredential,
   verifyDeliveryHandoverCredential,
 } from '../delivery-handover-credentials/delivery-handover-credentials.service.js';
+import { setDriverDeliveryWindow } from '../driver/driver-delivery-scheduling.service.js';
 import {
   confirmSupplierPickupHandoverCredential,
   issueSupplierPickupHandoverCredential,
@@ -124,7 +125,11 @@ async function createUser(input: {
   });
 }
 
-async function createAcceptedReservation(ctx: TestContext) {
+async function createAcceptedReservation(
+  ctx: TestContext,
+  input: { quantityRequested?: number } = {},
+) {
+  const quantityRequested = input.quantityRequested ?? 1;
   const supplierProfile = await prisma.supplierProfile.findUnique({
     where: { userId: ctx.supplierId },
     select: { id: true },
@@ -139,7 +144,7 @@ async function createAcceptedReservation(ctx: TestContext) {
       title: `${TEST_MARKER} material ${Date.now()}`,
       description: 'Test material for supplier pickup handover QR',
       materialType: 'Test material',
-      quantity: 1,
+      quantity: Math.max(quantityRequested, 1) + 5,
       unit: 'piece',
       condition: 'GOOD',
       sourceType: 'WORKSHOP_SURPLUS',
@@ -158,7 +163,7 @@ async function createAcceptedReservation(ctx: TestContext) {
       materialId: material.id,
       requesterId: ctx.learnerId,
       ownerId: ctx.supplierId,
-      quantityRequested: 1,
+      quantityRequested,
       status: 'ACCEPTED',
       pickupWindowStart: activePickup.pickupWindowStart,
       pickupWindowEnd: activePickup.pickupWindowEnd,
@@ -199,11 +204,13 @@ async function createAvailableDriver(ctx: TestContext, suffix: string) {
 
 async function createDeliveryAtArrivedPickup(
   ctx: TestContext,
-  input: { driverId?: string } = {},
+  input: { driverId?: string; quantityRequested?: number } = {},
 ) {
   const driverId =
     input.driverId ?? (await createAvailableDriver(ctx, `pickup-${Date.now()}`));
-  const { reservation } = await createAcceptedReservation(ctx);
+  const { reservation } = await createAcceptedReservation(ctx, {
+    quantityRequested: input.quantityRequested,
+  });
   const delivery = await requestDeliveryForReservation(
     ctx.learnerId,
     reservation.id,
@@ -483,6 +490,8 @@ describe('supplier pickup handover credentials', () => {
     assert.equal(preview.reservationId, reservation.id);
     assert.ok(preview.supplier.displayName);
     assert.ok(preview.items.length >= 1);
+    assert.equal(preview.items[0]?.quantity, 1);
+    assert.equal(preview.items[0]?.unit, 'piece');
     assert.ok(preview.expiresAt);
 
     const stored = await prisma.delivery.findUniqueOrThrow({
@@ -491,6 +500,29 @@ describe('supplier pickup handover credentials', () => {
     });
     assert.equal(stored.status, 'ARRIVED_PICKUP');
     assert.equal(stored.supplierPickupHandoverTokenUsedAt, null);
+  });
+
+  test('verify: preview quantity matches reserved quantityRequested', async () => {
+    const { reservation, driverId } = await createDeliveryAtArrivedPickup(
+      ctx,
+      { quantityRequested: 4 },
+    );
+    const issued = await issueSupplierPickupHandoverCredential(
+      ctx.supplierId,
+      reservation.id,
+    );
+
+    const preview = await verifySupplierPickupHandoverCredential(
+      driverId,
+      issued.qrPayload,
+    );
+
+    assert.equal(Number(reservation.quantityRequested), 4);
+    assert.equal(preview.reservationId, reservation.id);
+    assert.equal(preview.items.length, 1);
+    assert.equal(preview.items[0]?.quantity, 4);
+    assert.equal(preview.items[0]?.unit, 'piece');
+    assert.notEqual(preview.items[0]?.quantity, 0);
   });
 
   test('verify: wrong driver receives HANDOVER_CREDENTIAL_INVALID', async () => {
@@ -602,6 +634,42 @@ describe('supplier pickup handover credentials', () => {
       where: { deliveryId: delivery.id, wasPicked: true },
     });
     assert.equal(pickupItems, 1);
+  });
+
+  test('assigned driver can schedule learner delivery window after PICKED_UP', async () => {
+    const { reservation, delivery, driverId } =
+      await createDeliveryAtArrivedPickup(ctx);
+    const issued = await issueSupplierPickupHandoverCredential(
+      ctx.supplierId,
+      reservation.id,
+    );
+    const picked = await confirmSupplierPickupHandoverCredential(
+      driverId,
+      issued.handoverToken,
+    );
+    assert.equal(picked.status, 'PICKED_UP');
+
+    const start = new Date(Date.now() + 60 * 60_000);
+    const end = new Date(start.getTime() + 60 * 60_000);
+    const scheduled = await setDriverDeliveryWindow(driverId, delivery.id, {
+      start: start.toISOString(),
+      end: end.toISOString(),
+    });
+
+    assert.equal(scheduled.status, 'PICKED_UP');
+    assert.equal(
+      new Date(scheduled.confirmedDeliveryWindowStart).toISOString(),
+      start.toISOString(),
+    );
+    assert.equal(
+      new Date(scheduled.confirmedDeliveryWindowEnd).toISOString(),
+      end.toISOString(),
+    );
+
+    const onTheWay = await updateDriverDeliveryStatus(driverId, delivery.id, {
+      status: 'ON_THE_WAY',
+    });
+    assert.equal(onTheWay.status, 'ON_THE_WAY');
   });
 
   test('confirm: same token twice completes at most once', async () => {

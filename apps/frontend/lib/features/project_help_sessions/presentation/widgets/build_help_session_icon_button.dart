@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../app/router/navigation_extensions.dart';
-import '../../../learning_hub/application/learning_hub_providers.dart';
 import '../../../learning_hub/domain/models/project_build.dart';
-import '../../application/project_help_sessions_providers.dart';
+import '../../application/open_learner_help_session_entry.dart';
 import '../l10n/project_help_sessions_l10n.dart';
-import 'help_session_request_flow.dart';
 
-class BuildHelpSessionIconButton extends ConsumerWidget {
+class BuildHelpSessionIconButton extends ConsumerStatefulWidget {
   const BuildHelpSessionIconButton({
     super.key,
     required this.buildId,
@@ -21,50 +17,56 @@ class BuildHelpSessionIconButton extends ConsumerWidget {
   final String projectId;
   final ProjectBuildStatus status;
 
-  bool get _eligible =>
-      status == ProjectBuildStatus.inProgress ||
-      status == ProjectBuildStatus.paused;
+  @override
+  ConsumerState<BuildHelpSessionIconButton> createState() =>
+      _BuildHelpSessionIconButtonState();
+}
 
-  Future<void> _handleTap(BuildContext context, WidgetRef ref) async {
-    final activeSession =
-        await ref.read(activeHelpSessionForBuildProvider(buildId).future);
-    if (!context.mounted) {
+class _BuildHelpSessionIconButtonState
+    extends ConsumerState<BuildHelpSessionIconButton> {
+  bool _busy = false;
+
+  Future<void> _handleTap() async {
+    if (_busy) {
       return;
     }
-    if (activeSession != null) {
-      context.push(learnerHelpSessionDetailRoute(activeSession.id));
-      return;
-    }
-    final build = await ref.read(projectBuildProvider(projectId).future);
-    if (build == null || !context.mounted) {
-      return;
-    }
-    final availability = await ref
-        .read(projectHelpSessionAvailabilityProvider(projectId).future);
-    if (!context.mounted || !availability.available) {
-      return;
-    }
-    final session = await showProjectHelpSessionRequestFlow(
-      context: context,
-      ref: ref,
-      build: build,
-      availability: availability,
-    );
-    if (session != null && context.mounted) {
-      context.push(learnerHelpSessionDetailRoute(session.id));
+    setState(() => _busy = true);
+    try {
+      await openLearnerHelpSessionEntry(
+        context: context,
+        ref: ref,
+        buildId: widget.buildId,
+        projectId: widget.projectId,
+        onLookupsComplete: () {
+          if (mounted) {
+            setState(() => _busy = false);
+          }
+        },
+      );
+    } finally {
+      if (mounted && _busy) {
+        setState(() => _busy = false);
+      }
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (!_eligible) {
+  Widget build(BuildContext context) {
+    if (!isLearnerHelpSessionBuildEligible(widget.status)) {
       return const SizedBox.shrink();
     }
     final label = ProjectHelpSessionsL10n.listTitle.resolve(context);
     return IconButton(
+      key: const Key('build-help-session-icon'),
       tooltip: label,
-      onPressed: () => _handleTap(context, ref),
-      icon: const Icon(Icons.support_agent_outlined),
+      onPressed: _busy ? null : _handleTap,
+      icon: _busy
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.support_agent_outlined),
     );
   }
 }

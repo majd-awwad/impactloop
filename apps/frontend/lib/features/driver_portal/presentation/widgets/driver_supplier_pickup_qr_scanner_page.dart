@@ -8,6 +8,8 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../shared/handover/handover_qr_payload.dart';
+import '../../../../shared/handover/handover_scanner_navigation.dart';
 import '../../../../shared/widgets/app_back_action.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../supplier_portal/presentation/controllers/supplier_requests_providers.dart';
@@ -19,7 +21,16 @@ enum SupplierPickupQrScanResult { completed, useManualCode, cancelled }
 
 /// Full-screen driver supplier pickup QR scanner: scan → verify → preview → confirm.
 class DriverSupplierPickupQrScannerPage extends ConsumerStatefulWidget {
-  const DriverSupplierPickupQrScannerPage({super.key});
+  const DriverSupplierPickupQrScannerPage({
+    super.key,
+    this.initialPayload,
+    this.closeFallbackRoute,
+    this.manualCodeRoute,
+  });
+
+  final String? initialPayload;
+  final String? closeFallbackRoute;
+  final String? manualCodeRoute;
 
   static Future<SupplierPickupQrScanResult> open(BuildContext context) async {
     final result = await Navigator.of(context).push<SupplierPickupQrScanResult>(
@@ -49,6 +60,63 @@ class _DriverSupplierPickupQrScannerPageState
       detectionSpeed: DetectionSpeed.noDuplicates,
       formats: const [BarcodeFormat.qrCode],
     );
+    final initialPayload = widget.initialPayload?.trim();
+    if (initialPayload != null && initialPayload.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final controller = ref.read(
+          driverSupplierPickupQrControllerProvider.notifier,
+        );
+        controller.resumeScanning();
+        controller.onCodeDetected(initialPayload);
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant DriverSupplierPickupQrScannerPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final next = widget.initialPayload?.trim() ?? '';
+    final prev = oldWidget.initialPayload?.trim() ?? '';
+    if (next.isEmpty || next == prev) return;
+    final nextParsed = parseHandoverQr(next);
+    final prevParsed = parseHandoverQr(prev);
+    if (nextParsed != null &&
+        prevParsed != null &&
+        nextParsed.type == prevParsed.type &&
+        nextParsed.token == prevParsed.token) {
+      return;
+    }
+    _handledCompletion = false;
+    final controller = ref.read(
+      driverSupplierPickupQrControllerProvider.notifier,
+    );
+    controller.resumeScanning();
+    controller.onCodeDetected(next);
+  }
+
+  bool get _fromDeepLink =>
+      widget.initialPayload != null && widget.initialPayload!.trim().isNotEmpty;
+
+  void _leave(SupplierPickupQrScanResult result) {
+    closeHandoverScanner(
+      context,
+      result: result,
+      closeFallbackRoute: widget.closeFallbackRoute,
+      manualCodeRoute: widget.manualCodeRoute,
+      isManualCode: result == SupplierPickupQrScanResult.useManualCode,
+    );
+  }
+
+  void _retry() {
+    final controller = ref.read(
+      driverSupplierPickupQrControllerProvider.notifier,
+    );
+    controller.resumeScanning();
+    final payload = widget.initialPayload?.trim();
+    if (payload != null && payload.isNotEmpty) {
+      controller.onCodeDetected(payload);
+    }
   }
 
   @override
@@ -102,7 +170,7 @@ class _DriverSupplierPickupQrScannerPageState
       reservationId: reservationId,
     );
     if (!mounted) return;
-    Navigator.of(context).pop(SupplierPickupQrScanResult.completed);
+    _leave(SupplierPickupQrScanResult.completed);
   }
 
   String _errorMessage(DriverSupplierPickupQrState state) {
@@ -137,7 +205,9 @@ class _DriverSupplierPickupQrScannerPageState
       previous,
       next,
     ) {
-      _syncScannerWithPhase(next.phase);
+      if (!_fromDeepLink) {
+        _syncScannerWithPhase(next.phase);
+      }
       if (next.phase == DriverSupplierPickupQrPhase.completed) {
         _handleCompleted(next);
       }
@@ -150,7 +220,7 @@ class _DriverSupplierPickupQrScannerPageState
         foregroundColor: Colors.white,
         leading: AppBackAction(
           onBack: () async {
-            Navigator.of(context).pop(SupplierPickupQrScanResult.cancelled);
+            _leave(SupplierPickupQrScanResult.cancelled);
           },
         ),
         title: Text(context.l10n.driverScanSupplierPickupQr),
@@ -159,21 +229,24 @@ class _DriverSupplierPickupQrScannerPageState
         child: Stack(
           fit: StackFit.expand,
           children: [
-            MobileScanner(
-              controller: _scannerController,
-              onDetect: _onDetect,
-              errorBuilder: (context, error) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  final code = error.errorCode;
-                  if (code == MobileScannerErrorCode.permissionDenied) {
-                    controller.markCameraPermissionDenied();
-                  } else {
-                    controller.markCameraUnavailable();
-                  }
-                });
-                return const SizedBox.shrink();
-              },
-            ),
+            if (!_fromDeepLink)
+              MobileScanner(
+                controller: _scannerController,
+                onDetect: _onDetect,
+                errorBuilder: (context, error) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    final code = error.errorCode;
+                    if (code == MobileScannerErrorCode.permissionDenied) {
+                      controller.markCameraPermissionDenied();
+                    } else {
+                      controller.markCameraUnavailable();
+                    }
+                  });
+                  return const SizedBox.shrink();
+                },
+              )
+            else
+              const ColoredBox(color: Colors.black),
             IgnorePointer(
               child: Center(
                 child: Container(
@@ -193,7 +266,8 @@ class _DriverSupplierPickupQrScannerPageState
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (state.phase == DriverSupplierPickupQrPhase.scanning)
+                  if (state.phase == DriverSupplierPickupQrPhase.scanning &&
+                      !_fromDeepLink)
                     Semantics(
                       liveRegion: true,
                       child: Text(
@@ -225,7 +299,7 @@ class _DriverSupplierPickupQrScannerPageState
                             ),
                             const SizedBox(height: AppSpacing.sm),
                             FilledButton(
-                              onPressed: controller.resumeScanning,
+                              onPressed: _retry,
                               child: Text(
                                 state.errorKind ==
                                             DriverSupplierPickupQrErrorKind
@@ -238,9 +312,9 @@ class _DriverSupplierPickupQrScannerPageState
                               ),
                             ),
                             TextButton(
-                              onPressed: () => Navigator.of(
-                                context,
-                              ).pop(SupplierPickupQrScanResult.useManualCode),
+                              onPressed: () => _leave(
+                                SupplierPickupQrScanResult.useManualCode,
+                              ),
                               child: Text(
                                 context.l10n.useSupplierHandoverCodeInstead,
                               ),
@@ -257,15 +331,16 @@ class _DriverSupplierPickupQrScannerPageState
                       confirming:
                           state.phase == DriverSupplierPickupQrPhase.confirming,
                       onConfirm: controller.confirmPickup,
-                      onCancel: controller.resumeScanning,
+                      onCancel: _fromDeepLink
+                          ? () => _leave(SupplierPickupQrScanResult.cancelled)
+                          : controller.resumeScanning,
                     ),
                   if (state.phase == DriverSupplierPickupQrPhase.scanning ||
                       state.phase == DriverSupplierPickupQrPhase.verifying) ...[
                     const SizedBox(height: AppSpacing.md),
                     TextButton(
-                      onPressed: () => Navigator.of(
-                        context,
-                      ).pop(SupplierPickupQrScanResult.useManualCode),
+                      onPressed: () =>
+                          _leave(SupplierPickupQrScanResult.useManualCode),
                       style: TextButton.styleFrom(foregroundColor: Colors.white),
                       child: Text(context.l10n.useSupplierHandoverCodeInstead),
                     ),

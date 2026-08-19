@@ -111,6 +111,9 @@ async function cleanup(ctx: TestContext) {
   }
 
   if (ctx.createdUserIds.length) {
+    await prisma.notification.deleteMany({
+      where: { userId: { in: ctx.createdUserIds } },
+    });
     await prisma.user.deleteMany({
       where: { id: { in: ctx.createdUserIds } },
     });
@@ -559,5 +562,102 @@ describe('reservation follow-up actions', () => {
 
     assert.equal(messages.length, 1);
     assert.equal(messages[0]?.body, 'On my way');
+  });
+
+  test('learner message notifies only the other participant once', async () => {
+    const futureEnd = new Date(Date.now() + 3_600_000);
+    const { reservation } = await createAcceptedReservation(ctx, {
+      pickupWindowEnd: futureEnd,
+    });
+
+    const message = await createLearnerReservationMessage(
+      ctx.learnerId,
+      reservation.id,
+      { body: 'I will arrive at 3 PM.' },
+    );
+
+    const supplierNotes = await prisma.notification.findMany({
+      where: {
+        userId: ctx.supplierId,
+        notificationType: 'RESERVATION_MESSAGE_RECEIVED',
+        relatedEntityId: reservation.id,
+      },
+    });
+    const learnerNotes = await prisma.notification.findMany({
+      where: {
+        userId: ctx.learnerId,
+        notificationType: 'RESERVATION_MESSAGE_RECEIVED',
+        relatedEntityId: reservation.id,
+      },
+    });
+
+    assert.equal(supplierNotes.length, 1);
+    assert.equal(learnerNotes.length, 0);
+    assert.equal(supplierNotes[0]?.relatedEntityType, 'RESERVATION');
+    assert.equal(supplierNotes[0]?.actionType, 'OPEN_RESERVATION');
+    assert.match(supplierNotes[0]?.body ?? '', /I will arrive at 3 PM/);
+    assert.equal(
+      supplierNotes[0]?.eventKey,
+      `reservation:message:${message.id}:${ctx.supplierId}`,
+    );
+
+    const { notifyReservationMessageReceived } = await import(
+      '../notifications/reservation-message-notifications.js'
+    );
+    await notifyReservationMessageReceived({
+      reservationId: reservation.id,
+      messageId: message.id,
+      senderUserId: ctx.learnerId,
+      senderDisplayName: 'Learner',
+      body: 'I will arrive at 3 PM.',
+    });
+
+    const afterRetry = await prisma.notification.count({
+      where: {
+        userId: ctx.supplierId,
+        notificationType: 'RESERVATION_MESSAGE_RECEIVED',
+        relatedEntityId: reservation.id,
+      },
+    });
+    assert.equal(afterRetry, 1);
+  });
+
+  test('supplier message notifies the learner and supports read transition', async () => {
+    const futureEnd = new Date(Date.now() + 3_600_000);
+    const { reservation } = await createAcceptedReservation(ctx, {
+      pickupWindowEnd: futureEnd,
+    });
+
+    await createSupplierReservationMessage(ctx.supplierId, reservation.id, {
+      body: 'Please come before 4 PM.',
+    });
+
+    const learnerNotes = await prisma.notification.findMany({
+      where: {
+        userId: ctx.learnerId,
+        notificationType: 'RESERVATION_MESSAGE_RECEIVED',
+        relatedEntityId: reservation.id,
+      },
+    });
+    const supplierNotes = await prisma.notification.findMany({
+      where: {
+        userId: ctx.supplierId,
+        notificationType: 'RESERVATION_MESSAGE_RECEIVED',
+        relatedEntityId: reservation.id,
+      },
+    });
+
+    assert.equal(learnerNotes.length, 1);
+    assert.equal(supplierNotes.length, 0);
+    assert.equal(learnerNotes[0]?.isRead, false);
+
+    const { markMyNotificationRead } = await import(
+      '../notifications/notifications.service.js'
+    );
+    const marked = await markMyNotificationRead(
+      ctx.learnerId,
+      learnerNotes[0]!.id,
+    );
+    assert.equal(marked.isRead, true);
   });
 });

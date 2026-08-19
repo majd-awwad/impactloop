@@ -464,6 +464,54 @@ describe('delivery handover credentials', () => {
     assert.equal(stored.learnerDeliveryHandoverTokenUsedAt, null);
   });
 
+  test('issue: learner can generate QR before a driver is assigned', async () => {
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+
+    assert.equal(delivery.status, 'WAITING_FOR_DRIVER');
+    assert.equal(delivery.driver, null);
+
+    const issued = await issueDeliveryHandoverCredential(
+      ctx.learnerId,
+      delivery.id,
+    );
+
+    assert.equal(issued.deliveryId, delivery.id);
+    assert.ok(issued.qrPayload.startsWith(DELIVERY_HANDOVER_QR_URI_PREFIX));
+    assert.ok(issued.expiresAt);
+  });
+
+  test('issue: learner can generate QR before a delivery window is confirmed', async () => {
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: {
+        confirmedDeliveryWindowStart: null,
+        confirmedDeliveryWindowEnd: null,
+      },
+    });
+
+    const issued = await issueDeliveryHandoverCredential(
+      ctx.learnerId,
+      delivery.id,
+    );
+
+    assert.equal(issued.deliveryId, delivery.id);
+    assert.ok(issued.qrPayload.startsWith(DELIVERY_HANDOVER_QR_URI_PREFIX));
+    const expiresAt = new Date(issued.expiresAt).getTime();
+    assert.ok(expiresAt > Date.now());
+  });
+
   test('issue: different learner receives 404', async () => {
     const { delivery } = await createDeliveryAtArrivedDropoff(ctx);
 

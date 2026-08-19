@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 class BidiText extends StatelessWidget {
   const BidiText(
@@ -46,3 +46,27 @@ final _technicalValue = RegExp(
 
 /// Isolates a user-entered or technical fragment inside localized text.
 String bidiIsolate(String value) => '\u2068$value\u2069';
+
+/// Keeps phone numbers LTR inside Arabic RTL screens without mutating the value.
+class LtrPhoneText extends StatelessWidget {
+  const LtrPhoneText(
+    this.phone, {
+    super.key,
+    this.style,
+    this.selectable = false,
+  });
+
+  final String phone;
+  final TextStyle? style;
+  final bool selectable;
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: selectable
+          ? SelectableText(phone, style: style)
+          : Text(phone, style: style, textDirection: TextDirection.ltr),
+    );
+  }
+}

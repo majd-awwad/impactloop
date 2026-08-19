@@ -7,6 +7,8 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../shared/handover/handover_qr_payload.dart';
+import '../../../../shared/handover/handover_scanner_navigation.dart';
 import '../../../../shared/widgets/app_back_action.dart';
 import '../../application/supplier_pickup_qr_controller.dart';
 import '../../data/models/handover_verify_preview.dart';
@@ -17,7 +19,16 @@ enum PickupQrScanResult { completed, useManualCode, cancelled }
 
 /// Full-screen supplier pickup QR scanner: scan → verify → preview → confirm.
 class SupplierPickupQrScannerPage extends ConsumerStatefulWidget {
-  const SupplierPickupQrScannerPage({super.key});
+  const SupplierPickupQrScannerPage({
+    super.key,
+    this.initialPayload,
+    this.closeFallbackRoute,
+    this.manualCodeRoute,
+  });
+
+  final String? initialPayload;
+  final String? closeFallbackRoute;
+  final String? manualCodeRoute;
 
   static Future<PickupQrScanResult> open(BuildContext context) async {
     final result = await Navigator.of(context).push<PickupQrScanResult>(
@@ -47,6 +58,59 @@ class _SupplierPickupQrScannerPageState
       detectionSpeed: DetectionSpeed.noDuplicates,
       formats: const [BarcodeFormat.qrCode],
     );
+    final initialPayload = widget.initialPayload?.trim();
+    if (initialPayload != null && initialPayload.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final controller = ref.read(
+          supplierPickupQrControllerProvider.notifier,
+        );
+        controller.resumeScanning();
+        controller.onCodeDetected(initialPayload);
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant SupplierPickupQrScannerPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final next = widget.initialPayload?.trim() ?? '';
+    final prev = oldWidget.initialPayload?.trim() ?? '';
+    if (next.isEmpty || next == prev) return;
+    final nextParsed = parseHandoverQr(next);
+    final prevParsed = parseHandoverQr(prev);
+    if (nextParsed != null &&
+        prevParsed != null &&
+        nextParsed.type == prevParsed.type &&
+        nextParsed.token == prevParsed.token) {
+      return;
+    }
+    _handledCompletion = false;
+    final controller = ref.read(supplierPickupQrControllerProvider.notifier);
+    controller.resumeScanning();
+    controller.onCodeDetected(next);
+  }
+
+  bool get _fromDeepLink =>
+      widget.initialPayload != null && widget.initialPayload!.trim().isNotEmpty;
+
+  void _leave(PickupQrScanResult result) {
+    closeHandoverScanner(
+      context,
+      result: result,
+      closeFallbackRoute: widget.closeFallbackRoute,
+      manualCodeRoute: widget.manualCodeRoute,
+      isManualCode: result == PickupQrScanResult.useManualCode,
+    );
+  }
+
+  void _retry() {
+    final controller = ref.read(supplierPickupQrControllerProvider.notifier);
+    controller.resumeScanning();
+    final payload = widget.initialPayload?.trim();
+    if (payload != null && payload.isNotEmpty) {
+      controller.onCodeDetected(payload);
+    }
   }
 
   @override
@@ -88,7 +152,7 @@ class _SupplierPickupQrScannerPageState
     // Mirror manual completion refresh; snackbar is owned by the shared funnel.
     invalidateReservationSyncProviders(ref, reservationId: reservationId);
     if (!mounted) return;
-    Navigator.of(context).pop(PickupQrScanResult.completed);
+    _leave(PickupQrScanResult.completed);
   }
 
   String _errorMessage(SupplierPickupQrState state) {
@@ -123,7 +187,9 @@ class _SupplierPickupQrScannerPageState
       previous,
       next,
     ) {
-      _syncScannerWithPhase(next.phase);
+      if (!_fromDeepLink) {
+        _syncScannerWithPhase(next.phase);
+      }
       if (next.phase == SupplierPickupQrPhase.completed) {
         _handleCompleted(
           next.completedReservation?.id ?? next.preview?.reservationId,
@@ -138,7 +204,7 @@ class _SupplierPickupQrScannerPageState
         foregroundColor: Colors.white,
         leading: AppBackAction(
           onBack: () async {
-            Navigator.of(context).pop(PickupQrScanResult.cancelled);
+            _leave(PickupQrScanResult.cancelled);
           },
         ),
         title: Text(context.l10n.supplierScanPickupQr),
@@ -147,21 +213,24 @@ class _SupplierPickupQrScannerPageState
         child: Stack(
           fit: StackFit.expand,
           children: [
-            MobileScanner(
-              controller: _scannerController,
-              onDetect: _onDetect,
-              errorBuilder: (context, error) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  final code = error.errorCode;
-                  if (code == MobileScannerErrorCode.permissionDenied) {
-                    controller.markCameraPermissionDenied();
-                  } else {
-                    controller.markCameraUnavailable();
-                  }
-                });
-                return const SizedBox.shrink();
-              },
-            ),
+            if (!_fromDeepLink)
+              MobileScanner(
+                controller: _scannerController,
+                onDetect: _onDetect,
+                errorBuilder: (context, error) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    final code = error.errorCode;
+                    if (code == MobileScannerErrorCode.permissionDenied) {
+                      controller.markCameraPermissionDenied();
+                    } else {
+                      controller.markCameraUnavailable();
+                    }
+                  });
+                  return const SizedBox.shrink();
+                },
+              )
+            else
+              const ColoredBox(color: Colors.black),
             IgnorePointer(
               child: Center(
                 child: Container(
@@ -181,7 +250,8 @@ class _SupplierPickupQrScannerPageState
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (state.phase == SupplierPickupQrPhase.scanning)
+                  if (state.phase == SupplierPickupQrPhase.scanning &&
+                      !_fromDeepLink)
                     Semantics(
                       liveRegion: true,
                       child: Text(
@@ -216,7 +286,7 @@ class _SupplierPickupQrScannerPageState
                             ),
                             const SizedBox(height: AppSpacing.sm),
                             FilledButton(
-                              onPressed: controller.resumeScanning,
+                              onPressed: _retry,
                               child: Text(
                                 state.errorKind ==
                                             SupplierPickupQrErrorKind
@@ -229,9 +299,8 @@ class _SupplierPickupQrScannerPageState
                               ),
                             ),
                             TextButton(
-                              onPressed: () => Navigator.of(
-                                context,
-                              ).pop(PickupQrScanResult.useManualCode),
+                              onPressed: () =>
+                                  _leave(PickupQrScanResult.useManualCode),
                               child: Text(
                                 context.l10n.supplierPickupQrUseCodeInstead,
                               ),
@@ -248,15 +317,16 @@ class _SupplierPickupQrScannerPageState
                       confirming:
                           state.phase == SupplierPickupQrPhase.confirming,
                       onConfirm: controller.confirmHandover,
-                      onCancel: controller.resumeScanning,
+                      onCancel: _fromDeepLink
+                          ? () => _leave(PickupQrScanResult.cancelled)
+                          : controller.resumeScanning,
                     ),
                   if (state.phase == SupplierPickupQrPhase.scanning ||
                       state.phase == SupplierPickupQrPhase.verifying) ...[
                     const SizedBox(height: AppSpacing.md),
                     TextButton(
-                      onPressed: () => Navigator.of(
-                        context,
-                      ).pop(PickupQrScanResult.useManualCode),
+                      onPressed: () =>
+                          _leave(PickupQrScanResult.useManualCode),
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.white,
                       ),

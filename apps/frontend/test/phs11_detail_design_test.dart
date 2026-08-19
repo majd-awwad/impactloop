@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:frontend/app/theme/app_theme_colors.dart';
 import 'package:frontend/app/router/navigation_extensions.dart';
 import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
@@ -667,6 +668,10 @@ void main() {
         find.text('Select one of the proposed times to enable acceptance.'),
         findsNothing,
       );
+      expect(
+        tester.widget<Text>(find.text('Accept selected time')).style?.color,
+        AppThemeColors.light.textOnPrimary,
+      );
     });
 
     testWidgets('creator receives the same normal Join action', (tester) async {
@@ -696,6 +701,18 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Join Zoom'), findsWidgets);
       expect(find.widgetWithText(FilledButton, 'Join Zoom'), findsOneWidget);
+      expect(
+        tester
+            .widget<Text>(
+              find.descendant(
+                of: find.widgetWithText(FilledButton, 'Join Zoom'),
+                matching: find.text('Join Zoom'),
+              ),
+            )
+            .style
+            ?.color,
+        AppThemeColors.light.textOnPrimary,
+      );
     });
 
     testWidgets('SCHEDULING_FAILED retry', (tester) async {

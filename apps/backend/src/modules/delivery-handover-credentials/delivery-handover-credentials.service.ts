@@ -74,6 +74,24 @@ const deliveryVerificationSelect = {
   },
 } as const;
 
+const deliveryWindowTimingError = (
+  reason: 'NOT_STARTED' | 'EXPIRED' | 'MISSING_WINDOW',
+) => {
+  if (reason === 'EXPIRED') {
+    return new AppError(
+      deliveryWindowPassedMessage(),
+      400,
+      'HANDOVER_WINDOW_EXPIRED',
+    );
+  }
+
+  return new AppError(
+    deliveryWindowNotStartedMessage(),
+    400,
+    'HANDOVER_WINDOW_NOT_STARTED',
+  );
+};
+
 const assertDeliveryHandoverEligibleOrThrow = async (input: {
   delivery: {
     id: string;
@@ -90,6 +108,7 @@ const assertDeliveryHandoverEligibleOrThrow = async (input: {
   assignedDriverProfileId?: string;
   requireHandoverWindow: boolean;
   requireArrivedDropoff: boolean;
+  requireAssignedDriver?: boolean;
 }) => {
   if (
     input.learnerId != null &&
@@ -110,7 +129,10 @@ const assertDeliveryHandoverEligibleOrThrow = async (input: {
     throw invalidHandoverCredentialError();
   }
 
-  if (!input.delivery.assignedDriverProfileId) {
+  if (
+    (input.requireAssignedDriver ?? true) &&
+    !input.delivery.assignedDriverProfileId
+  ) {
     throw invalidHandoverCredentialError();
   }
 
@@ -136,14 +158,7 @@ const assertDeliveryHandoverEligibleOrThrow = async (input: {
       input.delivery.reservation.confirmedDeliveryWindowEnd,
     );
     if (!timing.ok) {
-      if (timing.reason === 'NOT_STARTED') {
-        throw new AppError(
-          deliveryWindowNotStartedMessage(),
-          400,
-          'VALIDATION_ERROR',
-        );
-      }
-      throw new AppError(deliveryWindowPassedMessage(), 400, 'VALIDATION_ERROR');
+      throw deliveryWindowTimingError(timing.reason);
     }
   }
 };
@@ -244,14 +259,11 @@ export const issueDeliveryHandoverCredential = async (
   // assigned driver schedules the retry. Do not mint a credential against the
   // superseded window while coordination is still pending.
   if (delivery.status === 'REDELIVERY_PENDING') {
-    throw invalidHandoverCredentialError();
-  }
-
-  if (
-    !delivery.reservation.confirmedDeliveryWindowStart ||
-    !delivery.reservation.confirmedDeliveryWindowEnd
-  ) {
-    throw invalidHandoverCredentialError();
+    throw new AppError(
+      'A new delivery window is needed before a handover QR can be issued.',
+      409,
+      'CONFLICT',
+    );
   }
 
   await assertDeliveryHandoverEligibleOrThrow({
@@ -259,6 +271,7 @@ export const issueDeliveryHandoverCredential = async (
     learnerId,
     requireHandoverWindow: false,
     requireArrivedDropoff: false,
+    requireAssignedDriver: false,
   });
 
   const now = new Date();
@@ -270,7 +283,7 @@ export const issueDeliveryHandoverCredential = async (
   );
 
   if (expiresAt.getTime() <= now.getTime()) {
-    throw new AppError(deliveryWindowPassedMessage(), 400, 'VALIDATION_ERROR');
+    throw deliveryWindowTimingError('EXPIRED');
   }
 
   await prisma.delivery.update({
@@ -388,11 +401,11 @@ export const confirmDeliveryHandoverCredential = async (
   }
 
   if ('windowNotStarted' in result && result.windowNotStarted) {
-    throw new AppError(deliveryWindowNotStartedMessage(), 400, 'VALIDATION_ERROR');
+    throw deliveryWindowTimingError('NOT_STARTED');
   }
 
   if ('windowExpired' in result && result.windowExpired) {
-    throw new AppError(deliveryWindowPassedMessage(), 400, 'VALIDATION_ERROR');
+    throw deliveryWindowTimingError('EXPIRED');
   }
 
   if ('paymentNotReady' in result && result.paymentNotReady) {

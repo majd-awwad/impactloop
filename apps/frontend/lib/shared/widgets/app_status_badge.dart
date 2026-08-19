@@ -70,19 +70,27 @@ class AppStatusStyle {
 
 /// Compact, route-independent presentation for a semantic status label.
 class AppStatusBadge extends StatelessWidget {
-  const AppStatusBadge({super.key, required this.label, required this.tone});
+  const AppStatusBadge({
+    super.key,
+    required this.label,
+    required this.tone,
+    this.dense = false,
+  });
 
   final String label;
   final AppStatusTone tone;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
     final style = AppStatusStyle.of(context, tone);
 
     return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.md - AppSpacing.xs,
-        vertical: AppSpacing.sm,
+      padding: EdgeInsetsDirectional.symmetric(
+        horizontal: dense
+            ? AppSpacing.sm + 2
+            : AppSpacing.md - AppSpacing.xs,
+        vertical: dense ? AppSpacing.xs : AppSpacing.sm,
       ),
       decoration: BoxDecoration(
         color: style.background,

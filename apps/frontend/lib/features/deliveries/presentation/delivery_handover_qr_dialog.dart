@@ -199,6 +199,16 @@ class _DeliveryHandoverQrDialogState
   String _issueErrorMessage(Object? error, AppLocalizations l10n) {
     if (error == null) return l10n.deliveryQrIssueFailed;
     if (error == 'EXPIRED') return l10n.deliveryQrExpired;
+    if (error is ApiException) {
+      switch (error.code) {
+        case 'HANDOVER_CREDENTIAL_INVALID':
+          return l10n.deliveryQrIssueFailed;
+        case 'HANDOVER_WINDOW_NOT_STARTED':
+          return l10n.driverHandoverWindowNotStarted;
+        case 'HANDOVER_WINDOW_EXPIRED':
+          return l10n.driverHandoverWindowExpired;
+      }
+    }
     return localizedApiErrorMessage(error, l10n);
   }
 }

@@ -39,6 +39,7 @@ void main() {
     expect(find.text('Progress is saved automatically.'), findsOneWidget);
     expect(find.text('In progress'), findsOneWidget);
     expect(find.text('Prepare materials'), findsOneWidget);
+    expect(find.text('Request a help session'), findsOneWidget);
     expect(find.text('Preparing the project'), findsNothing);
     expect(find.textContaining('ready in your build'), findsNothing);
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
@@ -81,6 +82,7 @@ void main() {
       expect(find.text('Quick knowledge check'), findsOneWidget);
       expect(find.text('Show materials'), findsOneWidget);
       expect(find.text('Build tools'), findsOneWidget);
+      expect(find.text('Request a help session'), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
     },
   );
@@ -154,6 +156,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Ask AI'), findsOneWidget);
     expect(find.text('Project notebook'), findsOneWidget);
+    expect(find.text('Request a help session'), findsWidgets);
     expect(find.text('Find best material plan'), findsOneWidget);
   });
 

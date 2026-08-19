@@ -103,6 +103,9 @@ import '../../features/admin_portal/presentation/pages/admin_supplier_verificati
 import '../../features/admin_portal/presentation/widgets/admin_shell.dart';
 import '../../features/ai/presentation/pages/general_learning_chat_page.dart';
 import '../../features/invitations/presentation/pages/invite_accept_page.dart';
+import '../../shared/handover/handover_deep_link.dart';
+import '../../shared/handover/handover_deep_link_page.dart';
+import 'app_route_not_found_page.dart';
 
 const _supplierAccessDeniedRoute = '/supplier/access-denied';
 const _adminAccessDeniedRoute = '/admin/access-denied';
@@ -240,6 +243,7 @@ _RouteAccessLevel _routeAccessForPath(String path) {
       path == '/profile' ||
       path.startsWith('/profile/') ||
       path == '/notifications' ||
+      path == handoverEntryRoute ||
       path == _supplierAccessDeniedRoute) {
     return _RouteAccessLevel.authenticated;
   }
@@ -515,6 +519,11 @@ String? _resolveBecomeLearnerRedirect(AuthState authState, String path) {
 }
 
 String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
+  final handoverLocation = normalizeHandoverDeepLink(state.uri);
+  if (handoverLocation != null && handoverLocation != state.uri.toString()) {
+    return handoverLocation;
+  }
+
   final authState = ref.read(authControllerProvider);
   final path = state.matchedLocation;
 
@@ -589,6 +598,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     navigatorKey: rootNavigatorKey,
     refreshListenable: refreshListenable,
     redirect: (context, state) => _resolveRouteRedirect(ref, state),
+    errorBuilder: (context, state) {
+      final handoverLocation = normalizeHandoverDeepLink(state.uri);
+      if (handoverLocation != null) {
+        return HandoverDeepLinkRedirectPage(target: handoverLocation);
+      }
+      return const AppRouteNotFoundPage();
+    },
     routes: [
       GoRoute(path: '/', builder: (context, state) => const LandingPage()),
       GoRoute(path: '/health', builder: (context, state) => const HealthPage()),
@@ -891,6 +907,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             recommendationImpressionId: _recommendationImpressionIdFromExtra(
               state.extra,
             ),
+            focusSection: state.uri.queryParameters['focus'],
           );
         },
       ),
@@ -994,6 +1011,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final token = state.uri.queryParameters['token'] ?? '';
           return InviteAcceptPage(token: token);
+        },
+      ),
+      GoRoute(
+        path: handoverEntryRoute,
+        parentNavigatorKey: rootNavigatorKey,
+        pageBuilder: (context, state) {
+          return NoTransitionPage(
+            key: ValueKey(
+              Object.hash(
+                state.uri.queryParameters['type'],
+                state.uri.queryParameters['token'],
+              ),
+            ),
+            child: const HandoverDeepLinkPage(),
+          );
         },
       ),
       GoRoute(

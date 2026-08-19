@@ -44,6 +44,22 @@ test('revalidates reservation actionability and recovery', () => {
   assert.equal(classifySupplierNotification({ rawType: 'RESERVATION_CANCELLED', target: reservation({ status: 'CANCELLED', attentionState: 'TERMINAL', nextActor: 'NONE', availableActions: [] }), resolvedAt: null }).state, 'RESOLVED');
 });
 
+test('reservation message notifications stay openable even while waiting on the learner', () => {
+  const classification = classifySupplierNotification({
+    rawType: 'RESERVATION_MESSAGE_RECEIVED',
+    target: reservation({
+      status: 'ACCEPTED',
+      attentionState: 'WAITING_FOR_LEARNER',
+      nextActor: 'LEARNER',
+      availableActions: [],
+    }),
+    resolvedAt: null,
+  });
+  assert.equal(classification.category, 'RESERVATION');
+  assert.equal(classification.state, 'UPDATE');
+  assert.equal(classification.actionType, 'OPEN_RESERVATION');
+});
+
 test('classifies review decisions and account waiting state', () => {
   assert.equal(classifySupplierNotification({ rawType: 'CATEGORY_REQUEST_UPDATE', target: { kind: 'CATEGORY_REQUEST', status: 'APPROVED', hasDraft: true, isPublished: false }, resolvedAt: null }).actionType, 'CONTINUE_LISTING');
   assert.equal(classifySupplierNotification({ rawType: 'PRICE_REQUEST_UPDATE', target: { kind: 'PRICE_RULE_REQUEST', status: 'REJECTED', hasDraft: true, isPublished: false }, resolvedAt: null }).actionType, 'EDIT_LISTING');

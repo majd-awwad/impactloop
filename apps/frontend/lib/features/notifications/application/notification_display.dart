@@ -1,6 +1,7 @@
 import '../data/models/app_notification.dart';
 import '../../supplier_portal/data/models/supplier_action_notification.dart';
 import '../../../app/router/navigation_extensions.dart';
+import '../../auth/application/auth_route_helpers.dart';
 import '../../../l10n/app_localizations.dart';
 import 'payment_notification_presentation.dart';
 
@@ -83,6 +84,7 @@ NotificationVisualCategory categoryForNotification(
     case 'RESERVATION_EXPIRED':
     case 'RESERVATION_REQUESTED':
     case 'RESERVATION_CANCELLED':
+    case 'RESERVATION_MESSAGE_RECEIVED':
     case 'NO_DRIVER_SUPPLIER_RESCHEDULE_REQUESTED':
     case 'STALE_PICKUP_SUPPLIER_RESCHEDULE_REQUESTED':
       return NotificationVisualCategory.reservation;
@@ -96,6 +98,8 @@ NotificationVisualCategory categoryForNotification(
     case 'PRICE_REQUEST_UPDATE':
       return NotificationVisualCategory.materialRequest;
     case 'LEARNING_PROJECT_MODERATION':
+    case 'PROJECT_COMMENT_RECEIVED':
+    case 'PROJECT_COMMENT_REPLY':
       return NotificationVisualCategory.learning;
     case 'PROJECT_HELP_SESSION_ALTERNATIVE_PROPOSED':
     case 'PROJECT_HELP_SESSION_ACCEPTED':
@@ -240,7 +244,7 @@ String notificationActionLabel(
   }
   if (notification.relatedEntityType == 'MATERIAL_REQUEST' ||
       notification.notificationType.startsWith('MATERIAL_REQUEST_')) {
-    return 'View request';
+    return l10n?.viewRequest ?? 'View request';
   }
   return l10n?.open ?? 'Open';
 }
@@ -408,10 +412,32 @@ LocalizedNotificationCopy localizedNotificationCopy(
   final contentTitle = _metadataString(notification.metadata, 'materialTitle');
   final learnerName = _metadataString(notification.metadata, 'learnerName');
   final projectTitle = _metadataString(notification.metadata, 'projectTitle');
+  final actorDisplayName = _metadataString(
+    notification.metadata,
+    'actorDisplayName',
+  );
+  final messagePreview = _metadataString(
+    notification.metadata,
+    'messagePreview',
+  );
+  final commentPreview = _metadataString(
+    notification.metadata,
+    'commentPreview',
+  );
+  final requestedItemName = _metadataString(
+    notification.metadata,
+    'requestedItemName',
+  );
   final materialTitle = contentTitle.isEmpty ? l10n.material : contentTitle;
   final safeProjectTitle = projectTitle.isEmpty
       ? l10n.learningProject
       : projectTitle;
+  final safeActorName = actorDisplayName.isEmpty
+      ? (l10n.localeName == 'ar' ? 'شخص' : 'Someone')
+      : actorDisplayName;
+  final requestItemLabel = requestedItemName.isEmpty
+      ? l10n.material
+      : requestedItemName;
   final moderationEvent =
       notification.metadata['moderationEvent']
           ?.toString()
@@ -445,6 +471,51 @@ LocalizedNotificationCopy localizedNotificationCopy(
     'RESERVATION_ACCEPTED' => (
       title: l10n.reservationAcceptedTitle,
       body: l10n.reservationAcceptedBody(materialTitle),
+    ),
+    'RESERVATION_MESSAGE_RECEIVED' => (
+      title: l10n.notificationReservationMessageTitle,
+      body: l10n.notificationReservationMessageBody(
+        safeActorName,
+        messagePreview.isEmpty ? notification.body : messagePreview,
+      ),
+    ),
+    'PROJECT_COMMENT_RECEIVED' => (
+      title: l10n.notificationProjectCommentTitle,
+      body: l10n.notificationProjectCommentBody(
+        safeActorName,
+        commentPreview.isEmpty ? notification.body : commentPreview,
+      ),
+    ),
+    'PROJECT_COMMENT_REPLY' => (
+      title: l10n.notificationProjectCommentReplyTitle,
+      body: l10n.notificationProjectCommentReplyBody(
+        safeActorName,
+        commentPreview.isEmpty ? notification.body : commentPreview,
+      ),
+    ),
+    'MATERIAL_REQUEST_SUGGESTION' => (
+      title: l10n.notificationMaterialRequestSuggestionTitle,
+      body: l10n.notificationMaterialRequestSuggestionBody(requestItemLabel),
+    ),
+    'MATERIAL_REQUEST_MATCH_UNAVAILABLE' => (
+      title: l10n.notificationMaterialRequestUnavailableTitle,
+      body: l10n.notificationMaterialRequestUnavailableBody(requestItemLabel),
+    ),
+    'MATERIAL_REQUEST_FULFILLED' => (
+      title: l10n.notificationMaterialRequestFulfilledTitle,
+      body: l10n.notificationMaterialRequestFulfilledBody(requestItemLabel),
+    ),
+    'DELIVERY_WINDOW_SCHEDULED' => (
+      title: l10n.notificationDeliveryWindowScheduledTitle,
+      body: l10n.notificationDeliveryWindowScheduledBody,
+    ),
+    'DELIVERY_WINDOW_RESCHEDULED' => (
+      title: l10n.notificationDeliveryWindowRescheduledTitle,
+      body: l10n.notificationDeliveryWindowRescheduledBody,
+    ),
+    'DELIVERY_RETRY_PENDING' => (
+      title: l10n.notificationDeliveryRetryPendingTitle,
+      body: l10n.notificationDeliveryRetryPendingBody,
     ),
     'RESERVATION_SCHEDULING_PROPOSAL' => (
       title: l10n.reservationProposalTitle,
@@ -565,11 +636,34 @@ LocalizedNotificationCopy localizedSupplierNotificationCopy(
 ) {
   final materialTitle = _metadataString(notification.metadata, 'materialTitle');
   final learnerName = _metadataString(notification.metadata, 'learnerName');
+  final actorDisplayName = _metadataString(
+    notification.metadata,
+    'actorDisplayName',
+  );
+  final messagePreview = _metadataString(
+    notification.metadata,
+    'messagePreview',
+  );
   final safeMaterialTitle = materialTitle.isEmpty
       ? l10n.material
       : materialTitle;
+  final rawType = notification.rawType.toUpperCase();
+
+  if (rawType == 'RESERVATION_MESSAGE_RECEIVED') {
+    final actor = actorDisplayName.isEmpty
+        ? (learnerName.isEmpty ? l10n.learner : learnerName)
+        : actorDisplayName;
+    return (
+      title: l10n.notificationReservationMessageTitle,
+      body: l10n.notificationReservationMessageBody(
+        actor,
+        messagePreview.isEmpty ? notification.body : messagePreview,
+      ),
+    );
+  }
+
   final copy = _localizedSupplierNotificationTemplates(
-    notification.rawType.toUpperCase(),
+    rawType,
     l10n,
     materialTitle: safeMaterialTitle,
     learnerName: learnerName,
@@ -618,9 +712,9 @@ String? _metadataPublishedMaterialId(AppNotification notification) {
 /// Resolves the in-app route for a notification open action, or null when the
 /// notification is informational only.
 ///
-/// Material-request / material routing is contract-driven only. There are
-/// currently no learner material-request notification producers in the
-/// backend; invented types must not invent destinations.
+/// Material-request routing is contract-driven: only rows with
+/// relatedEntityType=MATERIAL_REQUEST and a related entity id open the
+/// learner request detail. Invented types must not invent destinations.
 String? notificationOpenRoute(
   AppNotification notification, {
   required bool isSupplierMode,
@@ -632,6 +726,19 @@ String? notificationOpenRoute(
     return paymentNotificationOpenRoute(notification);
   }
 
+  if (isReservationMessageNotification(notification) &&
+      notification.relatedEntityId != null &&
+      notification.relatedEntityId!.isNotEmpty) {
+    final reservationId = notification.relatedEntityId!;
+    if (isSupplierMode) {
+      return '/supplier/reservations/$reservationId';
+    }
+    if (isDriverMode) {
+      return null;
+    }
+    return learnerReservationDetailRoute(reservationId, focus: 'messages');
+  }
+
   if (notification.relatedEntityType == 'RESERVATION' &&
       notification.relatedEntityId != null &&
       notification.relatedEntityId!.isNotEmpty) {
@@ -639,7 +746,7 @@ String? notificationOpenRoute(
     if (isSupplierMode) {
       return '/supplier/reservations?tab=pending&focus=$reservationId';
     }
-    return '/learner/reservations/$reservationId';
+    return learnerReservationDetailRoute(reservationId);
   }
 
   if (notification.relatedEntityType == 'DELIVERY' &&
@@ -648,13 +755,22 @@ String? notificationOpenRoute(
     if (isDriverMode) {
       return driverDeliveryNotificationRoute(notification);
     }
+    if (!isSupplierMode) {
+      return learnerDeliveryNotificationRoute(notification);
+    }
     return null;
   }
 
   if (notification.relatedEntityType == 'LEARNING_PROJECT' &&
       notification.relatedEntityId != null &&
       notification.relatedEntityId!.isNotEmpty) {
-    return '/learning/submissions/${notification.relatedEntityId}';
+    if (isProjectCommentNotification(notification)) {
+      return learningProjectPublicDetailRoute(
+        notification.relatedEntityId!,
+        focus: 'comments',
+      );
+    }
+    return learningProjectSubmissionDetailRoute(notification.relatedEntityId!);
   }
 
   if (!isSupplierMode && !isDriverMode) {
@@ -741,6 +857,15 @@ String? _supplierMaterialReviewOpenRoute(
       }
       return null;
   }
+}
+
+bool isProjectCommentNotification(AppNotification notification) {
+  final type = notification.notificationType;
+  return type == 'PROJECT_COMMENT_RECEIVED' || type == 'PROJECT_COMMENT_REPLY';
+}
+
+bool isReservationMessageNotification(AppNotification notification) {
+  return notification.notificationType == 'RESERVATION_MESSAGE_RECEIVED';
 }
 
 bool isProjectHelpSessionNotification(AppNotification notification) {
@@ -920,6 +1045,19 @@ String? materialRequestNotificationRoute(AppNotification notification) {
   }
 
   return '/learner/material-requests/${notification.relatedEntityId}';
+}
+
+/// Learner delivery notifications open the learner delivery detail route.
+String? learnerDeliveryNotificationRoute(AppNotification notification) {
+  if (notification.relatedEntityType != 'DELIVERY' ||
+      notification.relatedEntityId == null ||
+      notification.relatedEntityId!.isEmpty) {
+    return null;
+  }
+
+  final rawId = notification.relatedEntityId!;
+  final deliveryId = rawId.contains(':') ? rawId.split(':').first : rawId;
+  return '/learner/deliveries/$deliveryId';
 }
 
 /// Driver delivery notifications open the delivery detail route, which shows

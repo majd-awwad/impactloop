@@ -246,7 +246,7 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody>
                     onMarkAllRead: () => markAllNotificationsRead(ref),
                     onRefresh: _handleRefresh,
                   ),
-                  SizedBox(height: isCompact ? AppSpacing.sm : AppSpacing.md),
+                  SizedBox(height: isCompact ? AppSpacing.xs : AppSpacing.md),
                   _NotificationCategoryFilterBar(
                     selected: categoryFilter,
                     onSelected: (filter) =>
@@ -841,10 +841,15 @@ class _NotificationsHeaderCard extends StatelessWidget {
     );
     final refreshLabel = l10n.refreshNotifications;
     final compact = _isCompactNotifications(context);
-    final compactPad = AppSpacing.sm + AppSpacing.xs;
+    const compactActionHeight = 46.0;
 
     return Container(
-      padding: EdgeInsetsDirectional.all(compact ? compactPad : AppSpacing.md),
+      padding: EdgeInsetsDirectional.fromSTEB(
+        compact ? AppSpacing.cardPadding : AppSpacing.md,
+        compact ? AppSpacing.sm : AppSpacing.md,
+        compact ? AppSpacing.cardPadding : AppSpacing.md,
+        compact ? AppSpacing.sm : AppSpacing.md,
+      ),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
@@ -853,24 +858,25 @@ class _NotificationsHeaderCard extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final title = Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 l10n.notificationsTitle,
                 style: AppTextStyles.title(context).copyWith(
                   color: palette.textPrimary,
-                  fontSize: compact ? 19 : 22,
+                  fontSize: compact ? 24 : 22,
                   fontWeight: FontWeight.w800,
-                  height: 1.2,
+                  height: compact ? 1.1 : 1.2,
                 ),
               ),
-              const SizedBox(height: AppSpacing.xs),
+              SizedBox(height: compact ? 2 : AppSpacing.xs),
               Text(
                 l10n.notificationsSubtitle,
                 style: AppTextStyles.body(context).copyWith(
                   color: palette.textSecondary,
-                  fontSize: compact ? 13 : 14,
-                  height: 1.3,
+                  fontSize: compact ? 15 : 14,
+                  height: compact ? 1.2 : 1.3,
                 ),
               ),
               if (unreadCount > 0) ...[
@@ -878,6 +884,7 @@ class _NotificationsHeaderCard extends StatelessWidget {
                 AppStatusBadge(
                   label: l10n.notificationsUnreadCount(unreadCount),
                   tone: AppStatusTone.info,
+                  dense: compact,
                 ),
               ],
             ],
@@ -888,15 +895,22 @@ class _NotificationsHeaderCard extends StatelessWidget {
                   key: const Key('notifications-refresh-button'),
                   tooltip: refreshLabel,
                   onPressed: isRefreshing ? null : onRefresh,
-                  visualDensity: compact
-                      ? VisualDensity.compact
-                      : VisualDensity.standard,
                   constraints: compact
-                      ? const BoxConstraints.tightFor(width: 40, height: 40)
+                      ? const BoxConstraints.tightFor(
+                          width: compactActionHeight,
+                          height: compactActionHeight,
+                        )
                       : null,
                   padding: compact ? EdgeInsets.zero : null,
-                  iconSize: compact ? 20 : 24,
-                  style: AppStatusButtonStyle.text(context, AppStatusTone.info),
+                  iconSize: compact ? 22 : 24,
+                  style: AppStatusButtonStyle.text(
+                    context,
+                    AppStatusTone.info,
+                  ).copyWith(
+                    tapTargetSize: compact
+                        ? MaterialTapTargetSize.shrinkWrap
+                        : null,
+                  ),
                   icon: isRefreshing
                       ? SizedBox(
                           width: compact ? 16 : 18,
@@ -929,47 +943,76 @@ class _NotificationsHeaderCard extends StatelessWidget {
             context,
             AppStatusTone.info,
             padding: compact
-                ? const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm + AppSpacing.xs,
-                    vertical: AppSpacing.sm,
+                ? const EdgeInsets.symmetric(horizontal: 14, vertical: 10)
+                : null,
+          ).copyWith(
+            minimumSize: compact
+                ? const WidgetStatePropertyAll(Size(0, compactActionHeight))
+                : null,
+            maximumSize: compact
+                ? const WidgetStatePropertyAll(
+                    Size(double.infinity, compactActionHeight),
                   )
                 : null,
-            visualDensity: compact ? VisualDensity.compact : null,
+            tapTargetSize: compact
+                ? MaterialTapTargetSize.shrinkWrap
+                : null,
           );
 
-          final actions = Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: compact ? AppSpacing.xs : AppSpacing.sm,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              refreshControl,
-              if (unreadCount > 0)
-                FilledButton(
+          final markAllButton = unreadCount > 0
+              ? FilledButton(
                   key: const Key('notifications-mark-all-read'),
                   onPressed: onMarkAllRead,
                   style: markAllStyle,
                   child: Text(
                     l10n.markAllRead,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.label(context).copyWith(
                       color: AppThemeColors.of(context).textOnPrimary,
-                      fontSize: compact ? 12 : 13,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
+                      height: 1.1,
                     ),
                   ),
-                ),
-            ],
-          );
+                )
+              : null;
+
+          final Widget actions;
+          if (compact && constraints.maxWidth < 640) {
+            actions = SizedBox(
+              height: compactActionHeight,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  refreshControl,
+                  if (markAllButton != null) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(child: markAllButton),
+                  ],
+                ],
+              ),
+            );
+          } else {
+            actions = Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                refreshControl,
+                if (markAllButton != null) markAllButton,
+              ],
+            );
+          }
 
           if (constraints.maxWidth < 640) {
             return Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 title,
-                SizedBox(height: compact ? AppSpacing.sm : AppSpacing.md),
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: actions,
-                ),
+                SizedBox(height: compact ? AppSpacing.xs : AppSpacing.md),
+                actions,
               ],
             );
           }

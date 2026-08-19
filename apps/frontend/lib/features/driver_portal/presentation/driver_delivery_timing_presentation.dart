@@ -28,12 +28,16 @@ class DriverNextActionGuidance {
     required this.requirements,
     this.timingGate,
     this.isActionEnabled = true,
+    this.hasFurtherSteps = true,
+    this.requiresScheduleWindow = false,
   });
 
   final String actionLabel;
   final List<String> requirements;
   final DriverActionTimingGate? timingGate;
   final bool isActionEnabled;
+  final bool hasFurtherSteps;
+  final bool requiresScheduleWindow;
 
   bool get isBlockedByTiming => timingGate?.isBlocked == true;
 }
@@ -231,12 +235,23 @@ DriverNextActionGuidance buildDriverNextActionGuidance(
   required AppLocalizations l10n,
   DateTime? now,
 }) {
+  if (delivery.needsDriverDeliveryWindow) {
+    return DriverNextActionGuidance(
+      actionLabel: delivery.status == 'REDELIVERY_PENDING'
+          ? l10n.driverScheduleRedelivery
+          : l10n.driverSetDeliveryWindow,
+      requirements: const [],
+      requiresScheduleWindow: true,
+    );
+  }
+
   final nextStatus = delivery.nextStatus;
   if (nextStatus == null) {
     return DriverNextActionGuidance(
       actionLabel: l10n.driverNoNextAction,
       requirements: [l10n.driverCannotAdvanceFurther],
       isActionEnabled: false,
+      hasFurtherSteps: false,
     );
   }
 

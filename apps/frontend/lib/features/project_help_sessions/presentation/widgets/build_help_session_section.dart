@@ -79,10 +79,11 @@ class _BuildHelpSessionSectionState extends ConsumerState<BuildHelpSessionSectio
               return _ActiveSessionCard(session: session);
             }
             if (!availability.available) {
-              final copy = availability.reason == 'DISABLED'
-                  ? ProjectHelpSessionsL10n.disabledCopy
-                  : ProjectHelpSessionsL10n.unavailableCopy;
-              return _SubtleMessage(text: copy.resolve(context));
+              return _SubtleMessage(
+                text: ProjectHelpSessionsL10n.availabilityMessage(
+                  availability.reason,
+                ).resolve(context),
+              );
             }
             return _RequestCard(
               availability: availability,

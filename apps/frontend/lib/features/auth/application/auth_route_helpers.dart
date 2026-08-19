@@ -34,7 +34,8 @@ String learnerPaymentCheckoutRoute(String orderId) =>
 
 /// Builds a learner reservation detail route.
 ///
-/// [focus] section anchors: `payment`, `fulfillment`, `pickup`, `resolution`.
+/// [focus] section anchors: `payment`, `fulfillment`, `pickup`, `resolution`,
+/// `messages`.
 /// [focusPayment] remains supported for existing call sites.
 String learnerReservationDetailRoute(
   String reservationId, {

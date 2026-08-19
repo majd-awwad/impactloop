@@ -76,6 +76,7 @@ import {
   notifyReservationAccepted,
   notifyReservationDeclined,
 } from '../notifications/reservation-notifications.js';
+import { notifyReservationMessageReceived } from '../notifications/reservation-message-notifications.js';
 import { notifyPaymentRequiredAfterAcceptance } from '../payments/payments.notifications.js';
 import { notifyNewJobForReservationWaitingDelivery } from '../notifications/driver-notification-events.service.js';
 import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
@@ -1589,5 +1590,14 @@ export const createSupplierReservationMessage = async (
     body,
   });
 
-  return mapReservationMessage(message);
+  const mapped = mapReservationMessage(message);
+  await notifyReservationMessageReceived({
+    reservationId,
+    messageId: mapped.id,
+    senderUserId: ownerId,
+    senderDisplayName: mapped.sender.displayName,
+    body: mapped.body,
+  });
+
+  return mapped;
 };

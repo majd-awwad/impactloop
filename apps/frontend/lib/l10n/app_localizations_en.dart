@@ -306,13 +306,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusDriverAssigned => 'Driver assigned';
 
   @override
-  String get statusDriverAtPickup => 'Driver at pickup';
+  String get statusDriverAtPickup => 'Driver at supplier pickup';
 
   @override
-  String get statusPickedUp => 'Picked up';
+  String get statusPickedUp => 'Driver collected the material';
 
   @override
-  String get statusOnTheWay => 'On the way';
+  String get statusOnTheWay => 'On the way to you';
 
   @override
   String get statusArrivedDropoff => 'Arrived at drop-off';
@@ -926,6 +926,88 @@ class AppLocalizationsEn extends AppLocalizations {
   String notificationNewPickupWindowNeededBody(String materialTitle) {
     return 'A new pickup window is needed for $materialTitle.';
   }
+
+  @override
+  String get notificationReservationMessageTitle =>
+      'New message about your reservation';
+
+  @override
+  String notificationReservationMessageBody(String senderName, String preview) {
+    return '$senderName: $preview';
+  }
+
+  @override
+  String get notificationProjectCommentTitle => 'New comment on your project';
+
+  @override
+  String notificationProjectCommentBody(String commenter, String preview) {
+    return '$commenter: $preview';
+  }
+
+  @override
+  String get notificationProjectCommentReplyTitle =>
+      'New reply to your comment';
+
+  @override
+  String notificationProjectCommentReplyBody(String commenter, String preview) {
+    return '$commenter: $preview';
+  }
+
+  @override
+  String get notificationMaterialRequestSuggestionTitle =>
+      'New material suggestion';
+
+  @override
+  String notificationMaterialRequestSuggestionBody(String itemName) {
+    return 'A supplier suggested a material for your request \"$itemName\".';
+  }
+
+  @override
+  String get notificationMaterialRequestUnavailableTitle =>
+      'Suggested material unavailable';
+
+  @override
+  String notificationMaterialRequestUnavailableBody(String itemName) {
+    return 'A suggested material for \"$itemName\" is no longer available.';
+  }
+
+  @override
+  String get notificationMaterialRequestFulfilledTitle =>
+      'Material request fulfilled';
+
+  @override
+  String notificationMaterialRequestFulfilledBody(String itemName) {
+    return 'Your request \"$itemName\" was marked fulfilled after a completed reservation.';
+  }
+
+  @override
+  String get notificationDeliveryWindowScheduledTitle => 'Delivery scheduled';
+
+  @override
+  String get notificationDeliveryWindowScheduledBody =>
+      'Your delivery window has been scheduled.';
+
+  @override
+  String get notificationDeliveryWindowRescheduledTitle =>
+      'Delivery rescheduled';
+
+  @override
+  String get notificationDeliveryWindowRescheduledBody =>
+      'Your delivery has been rescheduled.';
+
+  @override
+  String get notificationDeliveryRetryPendingTitle => 'Delivery retry pending';
+
+  @override
+  String get notificationDeliveryRetryPendingBody =>
+      'A new delivery attempt is being arranged.';
+
+  @override
+  String get notificationDestinationUnavailable =>
+      'This update is no longer available.';
+
+  @override
+  String get viewRequest => 'View request';
 
   @override
   String get notificationCategoryRequestUpdateTitle =>
@@ -3474,6 +3556,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pickupWindow => 'Pickup window';
 
   @override
+  String get learnerDriverPickupWindow => 'Driver pickup from supplier';
+
+  @override
+  String get learnerDriverPickupWindowHelper =>
+      'This time is for the driver to collect the material from the supplier.';
+
+  @override
+  String get learnerDeliveryAppointment => 'Delivery to you';
+
+  @override
+  String get learnerDeliveryNotScheduled =>
+      'Delivery time has not been scheduled yet.';
+
+  @override
+  String get learnerDeliveryNotScheduledHelper =>
+      'The driver will schedule delivery after collecting the material.';
+
+  @override
+  String get learnerRedeliveryNeedsScheduling =>
+      'A new delivery attempt needs to be scheduled.';
+
+  @override
+  String get learnerRedeliveryNeedsSchedulingHelper =>
+      'The previous delivery appointment is no longer active.';
+
+  @override
+  String get learnerSupplierPickupLocation => 'Supplier pickup location';
+
+  @override
+  String get driverWillCollectFromSupplierFirst =>
+      'The driver will collect the material from the supplier first.';
+
+  @override
   String get pickupArea => 'Pickup area';
 
   @override
@@ -3508,7 +3623,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusTimeline => 'Status timeline';
 
   @override
-  String get statusTimelineDescription => 'Delivery workflow updates.';
+  String get statusTimelineDescription =>
+      'Updates as the driver collects the material and delivers it to you.';
 
   @override
   String get loadingTracking => 'Loading delivery tracking…';
@@ -6879,6 +6995,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'This is not a valid ImpactLoop pickup QR.';
 
   @override
+  String get handoverQrInvalid => 'Invalid QR code.';
+
+  @override
+  String get handoverQrWrongRole =>
+      'This QR cannot be processed with your current account.';
+
+  @override
+  String get routeNotFound => 'This page is not available.';
+
+  @override
   String get supplierPickupQrCredentialUnavailable =>
       'This pickup QR is invalid or no longer available.';
 
@@ -8275,6 +8401,30 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get driverInvalidWindow =>
       'Choose a valid window whose end is after its start.';
+
+  @override
+  String get driverDeliveryWindowMustBeFuture =>
+      'Choose a delivery window that ends in the future.';
+
+  @override
+  String get driverDeliveryWindowNotAllowed =>
+      'The delivery window can only be set after pickup or while redelivery is pending.';
+
+  @override
+  String get driverDeliveryWindowRequired =>
+      'Set the delivery window before starting delivery to the learner.';
+
+  @override
+  String get driverDeliverySchedulingConflict =>
+      'Delivery scheduling changed. Refresh and try again.';
+
+  @override
+  String get driverRedeliveryAlreadyScheduled =>
+      'A redelivery window was already scheduled. Refresh and continue.';
+
+  @override
+  String get driverRedeliveryDeadlineExceeded =>
+      'Redelivery must finish within the retry deadline.';
 
   @override
   String get driverWindowSaved => 'Delivery window saved.';

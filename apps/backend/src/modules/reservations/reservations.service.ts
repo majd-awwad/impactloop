@@ -7,6 +7,7 @@ import type {
 import { ACTIVE_DELIVERY_STATUSES } from '../deliveries/deliveries.service.js';
 import { notifyNewJobForReservationWaitingDelivery } from '../notifications/driver-notification-events.service.js';
 import { notifyReservationCancelledByLearner } from '../notifications/reservation-notifications.js';
+import { notifyReservationMessageReceived } from '../notifications/reservation-message-notifications.js';
 import { notifyPaymentRequiredAfterAcceptance } from '../payments/payments.notifications.js';
 import {
   deriveHandoverCode,
@@ -949,7 +950,16 @@ export const createLearnerReservationMessage = async (
     body,
   });
 
-  return mapReservationMessage(message);
+  const mapped = mapReservationMessage(message);
+  await notifyReservationMessageReceived({
+    reservationId,
+    messageId: mapped.id,
+    senderUserId: requesterId,
+    senderDisplayName: mapped.sender.displayName,
+    body: mapped.body,
+  });
+
+  return mapped;
 };
 
 export const requestLearnerPickupReschedule = async (

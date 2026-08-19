@@ -112,9 +112,9 @@
   "statusResolvedNoStrike": "تم الحل دون تسجيل مخالفة",
   "statusWaitingDriver": "بانتظار السائق",
   "statusDriverAssigned": "تم تعيين سائق",
-  "statusDriverAtPickup": "وصل السائق إلى موقع الاستلام",
-  "statusPickedUp": "تم الاستلام",
-  "statusOnTheWay": "في الطريق",
+  "statusDriverAtPickup": "وصل السائق إلى موقع المورد",
+  "statusPickedUp": "استلم السائق المادة من المورد",
+  "statusOnTheWay": "في الطريق إليك",
   "statusArrivedDropoff": "وصل إلى موقع التسليم",
   "statusRedeliveryPending": "جارٍ ترتيب محاولة توصيل أخرى",
   "statusRedeliveryScheduled": "تمت جدولة إعادة التوصيل",
@@ -519,6 +519,77 @@
       }
     }
   },
+  "notificationReservationMessageTitle": "رسالة جديدة بخصوص الحجز",
+  "notificationReservationMessageBody": "{senderName}: {preview}",
+  "@notificationReservationMessageBody": {
+    "placeholders": {
+      "senderName": {
+        "type": "String"
+      },
+      "preview": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationProjectCommentTitle": "تعليق جديد على مشروعك",
+  "notificationProjectCommentBody": "{commenter}: {preview}",
+  "@notificationProjectCommentBody": {
+    "placeholders": {
+      "commenter": {
+        "type": "String"
+      },
+      "preview": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationProjectCommentReplyTitle": "رد جديد على تعليقك",
+  "notificationProjectCommentReplyBody": "{commenter}: {preview}",
+  "@notificationProjectCommentReplyBody": {
+    "placeholders": {
+      "commenter": {
+        "type": "String"
+      },
+      "preview": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationMaterialRequestSuggestionTitle": "اقتراح مادة جديد",
+  "notificationMaterialRequestSuggestionBody": "اقترح مورّد مادة لطلبك \"{itemName}\".",
+  "@notificationMaterialRequestSuggestionBody": {
+    "placeholders": {
+      "itemName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationMaterialRequestUnavailableTitle": "المادة المقترحة غير متاحة",
+  "notificationMaterialRequestUnavailableBody": "المادة المقترحة لـ \"{itemName}\" لم تعد متاحة.",
+  "@notificationMaterialRequestUnavailableBody": {
+    "placeholders": {
+      "itemName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationMaterialRequestFulfilledTitle": "تم تلبية طلب المادة",
+  "notificationMaterialRequestFulfilledBody": "تم تعليم طلبك \"{itemName}\" كمُلبّى بعد اكتمال الحجز.",
+  "@notificationMaterialRequestFulfilledBody": {
+    "placeholders": {
+      "itemName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationDeliveryWindowScheduledTitle": "تم جدولة التوصيل",
+  "notificationDeliveryWindowScheduledBody": "تم تحديد نافذة التوصيل الخاصة بك.",
+  "notificationDeliveryWindowRescheduledTitle": "أُعيد جدولة التوصيل",
+  "notificationDeliveryWindowRescheduledBody": "تمت إعادة جدولة التوصيل.",
+  "notificationDeliveryRetryPendingTitle": "محاولة توصيل جديدة قيد الإعداد",
+  "notificationDeliveryRetryPendingBody": "يجري ترتيب محاولة توصيل جديدة.",
+  "notificationDestinationUnavailable": "لم يعد هذا التحديث متاحاً.",
+  "viewRequest": "عرض الطلب",
   "notificationCategoryRequestUpdateTitle": "تحديث طلب الفئة",
   "notificationCategoryRequestUpdateBody": "هناك تحديث على طلب الفئة الخاص بك.",
   "notificationPriceRequestUpdateTitle": "تحديث مراجعة السعر",
@@ -1580,18 +1651,27 @@
   },
   "assignedDriver": "السائق المعيّن",
   "pickupWindow": "موعد الاستلام",
+  "learnerDriverPickupWindow": "موعد استلام السائق من المورد",
+  "learnerDriverPickupWindowHelper": "هذا الموعد لاستلام السائق المادة من المورد.",
+  "learnerDeliveryAppointment": "موعد التوصيل إليك",
+  "learnerDeliveryNotScheduled": "لم يتم تحديد موعد التوصيل بعد",
+  "learnerDeliveryNotScheduledHelper": "سيحدد السائق موعد التوصيل بعد استلام المادة من المورد.",
+  "learnerRedeliveryNeedsScheduling": "يلزم تحديد موعد لمحاولة توصيل جديدة.",
+  "learnerRedeliveryNeedsSchedulingHelper": "موعد التوصيل السابق لم يعد ساريًا.",
+  "learnerSupplierPickupLocation": "موقع استلام السائق من المورد",
+  "driverWillCollectFromSupplierFirst": "السائق سيستلم المادة من المورد أولًا.",
   "pickupArea": "منطقة الاستلام",
   "dropoff": "موقع التوصيل",
   "driverNote": "ملاحظة السائق",
   "failureReason": "سبب التعذّر",
-  "deliveryCodeInstructions": "أعطِ هذا الرمز للسائق عند استلام المادة.",
+  "deliveryCodeInstructions": "أعطِ هذا الرمز للسائق عند استلامك للمادة.",
   "backToReservations": "العودة إلى الحجوزات",
   "liveTracking": "التتبع المباشر",
   "driverLocationUpdated": "تم تحديث موقع السائق مؤخرًا",
   "trackDelivery": "تتبّع التوصيل",
   "refreshStatus": "تحديث الحالة",
   "statusTimeline": "سجل الحالة",
-  "statusTimelineDescription": "تحديثات سير عملية التوصيل.",
+  "statusTimelineDescription": "تحديثات أثناء استلام السائق المادة وتوصيلها إليك.",
   "loadingTracking": "جارٍ تحميل تتبع التوصيل…",
   "fetchingTracking": "جارٍ جلب آخر موقع للتوصيل.",
   "trackingLoadFailed": "تعذّر تحميل التتبع.",
@@ -3171,6 +3251,9 @@
   "supplierPickupQrQuantityLabel": "الكمية",
   "supplierPickupQrConfirmHandover": "تأكيد تسليم المادة",
   "supplierPickupQrInvalidPayload": "رمز QR هذا ليس رمز استلام صالحًا في ImpactLoop.",
+  "handoverQrInvalid": "رمز QR غير صالح.",
+  "handoverQrWrongRole": "لا يمكن معالجة رمز QR هذا بحسابك الحالي.",
+  "routeNotFound": "هذه الصفحة غير متاحة.",
   "supplierPickupQrCredentialUnavailable": "رمز QR للاستلام غير صالح أو لم يعد متاحًا.",
   "supplierPickupQrVerifyFailed": "تعذر التحقق من رمز QR للاستلام.",
   "supplierPickupQrConfirmFailed": "تعذر تأكيد التسليم. حاول مرة أخرى أو استخدم رمز التأكيد.",
@@ -3729,6 +3812,12 @@
   "driverSelectWindowStart": "اختيار بداية الموعد",
   "driverSelectWindowEnd": "اختيار نهاية الموعد",
   "driverInvalidWindow": "اختر موعدًا صالحًا تكون نهايته بعد بدايته.",
+  "driverDeliveryWindowMustBeFuture": "اختر موعد توصيل ينتهي في المستقبل.",
+  "driverDeliveryWindowNotAllowed": "يمكن تحديد موعد التوصيل بعد استلام المادة من المورد أو أثناء انتظار إعادة التوصيل.",
+  "driverDeliveryWindowRequired": "حدّد موعد التوصيل قبل البدء بالتوجه إلى المتعلّم.",
+  "driverDeliverySchedulingConflict": "تغيّرت حالة جدولة التوصيل. حدّث الصفحة ثم حاول مرة أخرى.",
+  "driverRedeliveryAlreadyScheduled": "تم تحديد موعد إعادة التوصيل مسبقًا. حدّث الصفحة ثم تابع.",
+  "driverRedeliveryDeadlineExceeded": "يجب أن تكتمل إعادة التوصيل ضمن الموعد النهائي لإعادة المحاولة.",
   "driverWindowSaved": "تم حفظ موعد التوصيل.",
   "driverLearnerNote": "ملاحظة المتعلّم",
   "driverNoNextAction": "لا يوجد إجراء تالٍ",

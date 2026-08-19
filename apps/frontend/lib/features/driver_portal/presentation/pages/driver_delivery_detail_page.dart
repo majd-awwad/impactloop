@@ -254,7 +254,7 @@ class _SummaryPanel extends StatelessWidget {
           ),
           _InfoRow(
             label: l10n.supplier,
-            value: _partySummary(delivery.supplier, l10n),
+            valueWidget: _partyDetail(context, delivery.supplier, l10n),
           ),
           _InfoRow(
             label: l10n.driverPickupLabel,
@@ -267,9 +267,14 @@ class _SummaryPanel extends StatelessWidget {
           const Divider(height: AppSpacing.xl),
           _InfoRow(
             label: l10n.learner,
-            value: delivery.learner == null
-                ? l10n.driverLearnerUnavailable
-                : _partySummary(delivery.learner!, l10n),
+            valueWidget: delivery.learner == null
+                ? Text(
+                    l10n.driverLearnerUnavailable,
+                    style: AppTextStyles.body(context).copyWith(
+                      color: MaterialsUiPalette.of(context).textPrimary,
+                    ),
+                  )
+                : _partyDetail(context, delivery.learner!, l10n),
           ),
           _InfoRow(
             label: l10n.dropoff,
@@ -402,11 +407,10 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
     final nextStatus = widget.delivery.nextStatus;
     final isSubmitting = actionState.isLoading;
     final canPressAction =
-        nextStatus != null && guidance.isActionEnabled && !isSubmitting;
-    final needsInitialWindow =
-        widget.delivery.status == 'PICKED_UP' &&
-        (widget.delivery.confirmedDeliveryWindowStart == null ||
-            widget.delivery.confirmedDeliveryWindowEnd == null);
+        nextStatus != null &&
+        guidance.isActionEnabled &&
+        !guidance.requiresScheduleWindow &&
+        !isSubmitting;
     final needsRetryWindow = widget.delivery.status == 'REDELIVERY_PENDING';
 
     return _Panel(
@@ -417,7 +421,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           const SizedBox(height: AppSpacing.lg),
           _StepList(currentStatus: widget.delivery.status),
           const SizedBox(height: AppSpacing.lg),
-          if (needsInitialWindow || needsRetryWindow) ...[
+          if (guidance.requiresScheduleWindow) ...[
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
@@ -438,13 +442,13 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
               title: l10n.driverWaitingSupplierConfirmation,
               body: l10n.driverReturnToSupplierBody,
             )
-          else if (nextStatus == null)
+          else if (!guidance.hasFurtherSteps)
             _InlineNotice(
               icon: Icons.check_circle_outline,
               title: l10n.driverNoNextAction,
               body: l10n.driverCannotAdvance,
             )
-          else ...[
+          else if (nextStatus != null) ...[
             if (guidance.timingGate != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -685,7 +689,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       leaveDriverDeliveryDetail(ref);
     } on ApiException catch (error) {
       if (!mounted) return;
-      showErrorSnackBar(context, localizedApiErrorMessage(error, l10n));
+      showErrorSnackBar(context, error);
     }
   }
 
@@ -721,7 +725,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       ref.invalidate(driverDeliveryDetailProvider(widget.delivery.id));
     } on ApiException catch (error) {
       if (!mounted) return;
-      showErrorSnackBar(context, localizedApiErrorMessage(error, l10n));
+      showErrorSnackBar(context, error);
     }
   }
 
@@ -742,20 +746,19 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       showInfoSnackBar(context, l10n.driverWindowSaved);
     } on ApiException catch (error) {
       if (!mounted) return;
-      showErrorSnackBar(context, localizedApiErrorMessage(error, l10n));
+      showErrorSnackBar(context, error);
     }
   }
 
   Future<void> _reportDriverIssue() async {
     final l10n = context.l10n;
-    final noteController = TextEditingController();
+    final noteCapture = _DialogNoteCapture();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AppDialogShell(
         title: Text(l10n.driverReportDriverIssue),
-        content: TextField(
-          controller: noteController,
-          maxLength: 1000,
+        content: _OwnedDialogTextField(
+          capture: noteCapture,
           minLines: 3,
           maxLines: 5,
           decoration: InputDecoration(
@@ -770,7 +773,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           ),
           primaryAction: FilledButton(
             onPressed: () {
-              if (noteController.text.trim().isEmpty) return;
+              if (noteCapture.value.trim().isEmpty) return;
               Navigator.of(context).pop(true);
             },
             style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
@@ -779,8 +782,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
         ),
       ),
     );
-    final note = noteController.text.trim();
-    noteController.dispose();
+    final note = noteCapture.value.trim();
     if (confirmed != true || note.isEmpty || !mounted) return;
 
     try {
@@ -793,7 +795,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       leaveDriverDeliveryDetail(ref);
     } on ApiException catch (error) {
       if (!mounted) return;
-      showErrorSnackBar(context, localizedApiErrorMessage(error, l10n));
+      showErrorSnackBar(context, error);
     }
   }
 
@@ -805,7 +807,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
   }) async {
     final l10n = context.l10n;
     var selectedReason = reasonCodes.first;
-    final noteController = TextEditingController();
+    final noteCapture = _DialogNoteCapture();
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -832,9 +834,8 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
                 },
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: noteController,
-                maxLength: 1000,
+              _OwnedDialogTextField(
+                capture: noteCapture,
                 minLines: 3,
                 maxLines: 5,
                 decoration: InputDecoration(labelText: l10n.driverNoteRequired),
@@ -848,7 +849,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             ),
             primaryAction: FilledButton(
               onPressed: () {
-                if (noteController.text.trim().isEmpty) return;
+                if (noteCapture.value.trim().isEmpty) return;
                 Navigator.of(context).pop(true);
               },
               style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
@@ -858,8 +859,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
         ),
       ),
     );
-    final note = noteController.text.trim();
-    noteController.dispose();
+    final note = noteCapture.value.trim();
     if (confirmed != true || note.isEmpty) return null;
     return _DriverIncidentFormResult(reason: selectedReason, note: note);
   }
@@ -876,7 +876,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
     var scheduleNow = false;
     DateTime? retryStart;
     DateTime? retryEnd;
-    final noteController = TextEditingController();
+    final noteCapture = _DialogNoteCapture();
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -909,9 +909,8 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
                   onChanged: (value) =>
                       setState(() => contactAttempted = value ?? false),
                 ),
-                TextField(
-                  controller: noteController,
-                  maxLength: 1000,
+                _OwnedDialogTextField(
+                  capture: noteCapture,
                   minLines: 2,
                   maxLines: 4,
                   decoration: InputDecoration(
@@ -980,8 +979,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
         ),
       ),
     );
-    final note = noteController.text.trim();
-    noteController.dispose();
+    final note = noteCapture.value.trim();
     if (confirmed != true) return null;
     return _DriverIncidentFormResult(
       reason: selectedReason,
@@ -1049,6 +1047,13 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
                   showInfoSnackBar(context, l10n.driverInvalidWindow);
                   return;
                 }
+                if (!end!.isAfter(DateTime.now())) {
+                  showInfoSnackBar(
+                    context,
+                    l10n.driverDeliveryWindowMustBeFuture,
+                  );
+                  return;
+                }
                 Navigator.of(context).pop(true);
               },
               child: Text(l10n.save),
@@ -1088,6 +1093,57 @@ String _driverReturnReason(String? reason, AppLocalizations l10n) {
     'RETRY_DEADLINE_EXPIRED' => l10n.driverReturnReasonRetryExpired,
     _ => l10n.driverReturnReasonFinalAttempt,
   };
+}
+
+class _DialogNoteCapture {
+  String value = '';
+}
+
+class _OwnedDialogTextField extends StatefulWidget {
+  const _OwnedDialogTextField({
+    required this.capture,
+    required this.decoration,
+    this.minLines = 3,
+    this.maxLines = 5,
+  });
+
+  final _DialogNoteCapture capture;
+  final InputDecoration decoration;
+  final int minLines;
+  final int maxLines;
+
+  @override
+  State<_OwnedDialogTextField> createState() => _OwnedDialogTextFieldState();
+}
+
+class _OwnedDialogTextFieldState extends State<_OwnedDialogTextField> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.capture.value);
+    _controller.addListener(() {
+      widget.capture.value = _controller.text;
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _controller,
+      maxLength: 1000,
+      minLines: widget.minLines,
+      maxLines: widget.maxLines,
+      decoration: widget.decoration,
+    );
+  }
 }
 
 class _DriverIncidentFormResult {
@@ -1313,9 +1369,9 @@ class _StatusGuidanceCard extends StatelessWidget {
       title: l10n.driverCurrentStage(
         driverDeliveryStatusLabel(delivery.status, l10n),
       ),
-      body: delivery.nextStatus == null
-          ? l10n.driverNoFurtherSteps
-          : l10n.driverAdvanceTo(guidance.actionLabel),
+      body: guidance.hasFurtherSteps
+          ? l10n.driverAdvanceTo(guidance.actionLabel)
+          : l10n.driverNoFurtherSteps,
       action: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1686,12 +1742,35 @@ String _deliveryWindowDetail(DriverDelivery delivery, AppLocalizations l10n) {
   return formatters.dateTime(start ?? end!);
 }
 
-String _partySummary(DriverDeliveryParty party, AppLocalizations l10n) {
-  final details = [
-    bidiIsolate(DriverUiLabels(l10n).partyDisplayName(party.displayName)),
-    if (party.phone?.trim().isNotEmpty == true) bidiIsolate(party.phone!),
-  ];
-  return details.join(' - ');
+Widget _partyDetail(
+  BuildContext context,
+  DriverDeliveryParty party,
+  AppLocalizations l10n,
+) {
+  final palette = MaterialsUiPalette.of(context);
+  final style = AppTextStyles.body(
+    context,
+  ).copyWith(color: palette.textPrimary);
+  final name = DriverUiLabels(l10n).partyDisplayName(party.displayName);
+  final phone = party.phone?.trim() ?? '';
+  if (phone.isEmpty) {
+    return BidiText(name, style: style);
+  }
+
+  return Text.rich(
+    TextSpan(
+      style: style,
+      children: [
+        TextSpan(text: name),
+        const TextSpan(text: ' - '),
+        WidgetSpan(
+          alignment: PlaceholderAlignment.baseline,
+          baseline: TextBaseline.alphabetic,
+          child: LtrPhoneText(phone, style: style),
+        ),
+      ],
+    ),
+  );
 }
 
 Widget _locationDetail(

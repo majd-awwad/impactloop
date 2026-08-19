@@ -635,19 +635,19 @@ abstract class AppLocalizations {
   /// No description provided for @statusDriverAtPickup.
   ///
   /// In en, this message translates to:
-  /// **'Driver at pickup'**
+  /// **'Driver at supplier pickup'**
   String get statusDriverAtPickup;
 
   /// No description provided for @statusPickedUp.
   ///
   /// In en, this message translates to:
-  /// **'Picked up'**
+  /// **'Driver collected the material'**
   String get statusPickedUp;
 
   /// No description provided for @statusOnTheWay.
   ///
   /// In en, this message translates to:
-  /// **'On the way'**
+  /// **'On the way to you'**
   String get statusOnTheWay;
 
   /// No description provided for @statusArrivedDropoff.
@@ -1578,6 +1578,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A new pickup window is needed for {materialTitle}.'**
   String notificationNewPickupWindowNeededBody(String materialTitle);
+
+  /// No description provided for @notificationReservationMessageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New message about your reservation'**
+  String get notificationReservationMessageTitle;
+
+  /// No description provided for @notificationReservationMessageBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{senderName}: {preview}'**
+  String notificationReservationMessageBody(String senderName, String preview);
+
+  /// No description provided for @notificationProjectCommentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New comment on your project'**
+  String get notificationProjectCommentTitle;
+
+  /// No description provided for @notificationProjectCommentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{commenter}: {preview}'**
+  String notificationProjectCommentBody(String commenter, String preview);
+
+  /// No description provided for @notificationProjectCommentReplyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New reply to your comment'**
+  String get notificationProjectCommentReplyTitle;
+
+  /// No description provided for @notificationProjectCommentReplyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{commenter}: {preview}'**
+  String notificationProjectCommentReplyBody(String commenter, String preview);
+
+  /// No description provided for @notificationMaterialRequestSuggestionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New material suggestion'**
+  String get notificationMaterialRequestSuggestionTitle;
+
+  /// No description provided for @notificationMaterialRequestSuggestionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A supplier suggested a material for your request \"{itemName}\".'**
+  String notificationMaterialRequestSuggestionBody(String itemName);
+
+  /// No description provided for @notificationMaterialRequestUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested material unavailable'**
+  String get notificationMaterialRequestUnavailableTitle;
+
+  /// No description provided for @notificationMaterialRequestUnavailableBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A suggested material for \"{itemName}\" is no longer available.'**
+  String notificationMaterialRequestUnavailableBody(String itemName);
+
+  /// No description provided for @notificationMaterialRequestFulfilledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Material request fulfilled'**
+  String get notificationMaterialRequestFulfilledTitle;
+
+  /// No description provided for @notificationMaterialRequestFulfilledBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your request \"{itemName}\" was marked fulfilled after a completed reservation.'**
+  String notificationMaterialRequestFulfilledBody(String itemName);
+
+  /// No description provided for @notificationDeliveryWindowScheduledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery scheduled'**
+  String get notificationDeliveryWindowScheduledTitle;
+
+  /// No description provided for @notificationDeliveryWindowScheduledBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your delivery window has been scheduled.'**
+  String get notificationDeliveryWindowScheduledBody;
+
+  /// No description provided for @notificationDeliveryWindowRescheduledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery rescheduled'**
+  String get notificationDeliveryWindowRescheduledTitle;
+
+  /// No description provided for @notificationDeliveryWindowRescheduledBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your delivery has been rescheduled.'**
+  String get notificationDeliveryWindowRescheduledBody;
+
+  /// No description provided for @notificationDeliveryRetryPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery retry pending'**
+  String get notificationDeliveryRetryPendingTitle;
+
+  /// No description provided for @notificationDeliveryRetryPendingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A new delivery attempt is being arranged.'**
+  String get notificationDeliveryRetryPendingBody;
+
+  /// No description provided for @notificationDestinationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This update is no longer available.'**
+  String get notificationDestinationUnavailable;
+
+  /// No description provided for @viewRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'View request'**
+  String get viewRequest;
 
   /// No description provided for @notificationCategoryRequestUpdateTitle.
   ///
@@ -5974,6 +6094,60 @@ abstract class AppLocalizations {
   /// **'Pickup window'**
   String get pickupWindow;
 
+  /// No description provided for @learnerDriverPickupWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver pickup from supplier'**
+  String get learnerDriverPickupWindow;
+
+  /// No description provided for @learnerDriverPickupWindowHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'This time is for the driver to collect the material from the supplier.'**
+  String get learnerDriverPickupWindowHelper;
+
+  /// No description provided for @learnerDeliveryAppointment.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery to you'**
+  String get learnerDeliveryAppointment;
+
+  /// No description provided for @learnerDeliveryNotScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery time has not been scheduled yet.'**
+  String get learnerDeliveryNotScheduled;
+
+  /// No description provided for @learnerDeliveryNotScheduledHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'The driver will schedule delivery after collecting the material.'**
+  String get learnerDeliveryNotScheduledHelper;
+
+  /// No description provided for @learnerRedeliveryNeedsScheduling.
+  ///
+  /// In en, this message translates to:
+  /// **'A new delivery attempt needs to be scheduled.'**
+  String get learnerRedeliveryNeedsScheduling;
+
+  /// No description provided for @learnerRedeliveryNeedsSchedulingHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'The previous delivery appointment is no longer active.'**
+  String get learnerRedeliveryNeedsSchedulingHelper;
+
+  /// No description provided for @learnerSupplierPickupLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier pickup location'**
+  String get learnerSupplierPickupLocation;
+
+  /// No description provided for @driverWillCollectFromSupplierFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'The driver will collect the material from the supplier first.'**
+  String get driverWillCollectFromSupplierFirst;
+
   /// No description provided for @pickupArea.
   ///
   /// In en, this message translates to:
@@ -6043,7 +6217,7 @@ abstract class AppLocalizations {
   /// No description provided for @statusTimelineDescription.
   ///
   /// In en, this message translates to:
-  /// **'Delivery workflow updates.'**
+  /// **'Updates as the driver collects the material and delivers it to you.'**
   String get statusTimelineDescription;
 
   /// No description provided for @loadingTracking.
@@ -11756,6 +11930,24 @@ abstract class AppLocalizations {
   /// **'This is not a valid ImpactLoop pickup QR.'**
   String get supplierPickupQrInvalidPayload;
 
+  /// No description provided for @handoverQrInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid QR code.'**
+  String get handoverQrInvalid;
+
+  /// No description provided for @handoverQrWrongRole.
+  ///
+  /// In en, this message translates to:
+  /// **'This QR cannot be processed with your current account.'**
+  String get handoverQrWrongRole;
+
+  /// No description provided for @routeNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This page is not available.'**
+  String get routeNotFound;
+
   /// No description provided for @supplierPickupQrCredentialUnavailable.
   ///
   /// In en, this message translates to:
@@ -14095,6 +14287,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Choose a valid window whose end is after its start.'**
   String get driverInvalidWindow;
+
+  /// No description provided for @driverDeliveryWindowMustBeFuture.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a delivery window that ends in the future.'**
+  String get driverDeliveryWindowMustBeFuture;
+
+  /// No description provided for @driverDeliveryWindowNotAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'The delivery window can only be set after pickup or while redelivery is pending.'**
+  String get driverDeliveryWindowNotAllowed;
+
+  /// No description provided for @driverDeliveryWindowRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Set the delivery window before starting delivery to the learner.'**
+  String get driverDeliveryWindowRequired;
+
+  /// No description provided for @driverDeliverySchedulingConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery scheduling changed. Refresh and try again.'**
+  String get driverDeliverySchedulingConflict;
+
+  /// No description provided for @driverRedeliveryAlreadyScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'A redelivery window was already scheduled. Refresh and continue.'**
+  String get driverRedeliveryAlreadyScheduled;
+
+  /// No description provided for @driverRedeliveryDeadlineExceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Redelivery must finish within the retry deadline.'**
+  String get driverRedeliveryDeadlineExceeded;
 
   /// No description provided for @driverWindowSaved.
   ///

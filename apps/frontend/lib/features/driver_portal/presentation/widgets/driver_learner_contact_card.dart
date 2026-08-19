@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../shared/widgets/bidi_text.dart';
 import '../../data/models/driver_delivery.dart';
 
 class DriverLearnerContactCard extends StatelessWidget {
@@ -25,7 +26,9 @@ class DriverLearnerContactCard extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         Text(learner?.displayName ?? l10n.driverLearnerUnavailable),
         const SizedBox(height: AppSpacing.xs),
-        SelectableText(phone.isEmpty ? l10n.noPhoneAvailable : phone),
+        phone.isEmpty
+            ? Text(l10n.noPhoneAvailable)
+            : LtrPhoneText(phone, selectable: true),
         if (phone.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.sm),
           OutlinedButton.icon(

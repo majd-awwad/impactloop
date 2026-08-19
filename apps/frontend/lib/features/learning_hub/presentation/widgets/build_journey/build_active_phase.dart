@@ -17,6 +17,7 @@ import '../build_steps/build_step_compact_row.dart';
 import '../build_steps/build_step_current_card.dart';
 import '../start_knowledge_check_section.dart';
 import '../step_learning_check_sheet.dart';
+import '../../../../project_help_sessions/presentation/widgets/build_help_session_compact_action.dart';
 
 class BuildActivePhase extends StatefulWidget {
   const BuildActivePhase({
@@ -275,6 +276,10 @@ class _BuildActivePhaseState extends State<BuildActivePhase> {
                       Navigator.of(sheetContext).pop();
                       widget.onOpenNotebook();
                     },
+                  ),
+                  BuildHelpSessionToolsTile(
+                    buildRecord: build,
+                    hostContext: context,
                   ),
                   if (build.status == ProjectBuildStatus.inProgress ||
                       build.status == ProjectBuildStatus.paused)

@@ -22,6 +22,7 @@ export const buildMaterialRequestFulfilledNotification = (
   entityType: 'MATERIAL_REQUEST',
   entityId: input.requestId,
   actionType: 'OPEN_ENTITY',
+  metadata: { requestedItemName: input.requestedItemName },
 });
 
 export const notifyMaterialRequestFulfilled = (

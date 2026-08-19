@@ -159,17 +159,24 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final primaryForeground = spec.onPressed == null && !spec.inFlight
+        ? colors.textSecondary
+        : colors.textOnPrimary;
     final child = spec.inFlight
-        ? const SizedBox(
+        ? SizedBox(
             width: 18,
             height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: isPrimary ? colors.textOnPrimary : null,
+            ),
           )
         : Text(
             spec.label,
-            style: Theme.of(
-              context,
-            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: isPrimary ? primaryForeground : null,
+            ),
           );
 
     final button = isPrimary
@@ -181,6 +188,11 @@ class _ActionButton extends StatelessWidget {
                     : colors.primary,
               ),
               foregroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.disabled)
+                    ? colors.textSecondary
+                    : colors.textOnPrimary,
+              ),
+              iconColor: WidgetStateProperty.resolveWith(
                 (states) => states.contains(WidgetState.disabled)
                     ? colors.textSecondary
                     : colors.textOnPrimary,

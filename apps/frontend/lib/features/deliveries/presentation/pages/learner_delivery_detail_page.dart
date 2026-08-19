@@ -21,7 +21,7 @@ import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../data/models/learner_delivery.dart';
 import '../delivery_handover_qr_dialog.dart';
 import '../delivery_status_presentation.dart';
-import '../pickup_window_presentation.dart';
+import '../learner_delivery_windows.dart';
 
 class LearnerDeliveryDetailPage extends ConsumerWidget {
   const LearnerDeliveryDetailPage({super.key, required this.deliveryId});
@@ -138,9 +138,50 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final colors = AppThemeColors.of(context);
+    final l10n = context.l10n;
+    final isCompactHeader =
+        MediaQuery.sizeOf(context).width < AppBackAction.compactBreakpoint;
+    final title = Text(
+      l10n.deliveryStatusTitle,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: AppTextStyles.display(context).copyWith(
+        color: palette.textPrimary,
+        fontSize: isCompactHeader ? 24 : 28,
+      ),
+    );
+    final statusChip = AppStatusBadge(
+      label: deliveryStatusLabel(delivery.status, l10n: l10n),
+      tone: deliveryStatusAppTone(delivery.status),
+    );
+    final requestedAt = Text(
+      l10n.requestedAt(
+        LocalizedFormatters(l10n).dateTime(delivery.requestedAt),
+      ),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: AppTextStyles.label(context).copyWith(color: palette.textMuted),
+    );
+    final overdueWarning = delivery.assignedDriverPickupOverdue
+        ? Text(
+            delivery.status.toUpperCase() == 'ARRIVED_PICKUP'
+                ? l10n.pickupIncompleteAdminReview
+                : l10n.driverPickupIncompleteAdminReview,
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: colors.warningText, fontWeight: FontWeight.w600),
+          )
+        : null;
 
     return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
+      padding: isCompactHeader
+          ? const EdgeInsetsDirectional.fromSTEB(
+              AppSpacing.cardPadding,
+              AppSpacing.md,
+              AppSpacing.cardPadding,
+              AppSpacing.md,
+            )
+          : const EdgeInsetsDirectional.all(AppSpacing.xl),
       decoration: BoxDecoration(
         color: palette.panelSurface,
         borderRadius: AppRadius.xlAll,
@@ -153,53 +194,58 @@ class _Header extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppBackAction(onBack: () => _goBackFromDelivery(context, delivery)),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            context.l10n.deliveryStatusTitle,
-            style: AppTextStyles.display(
-              context,
-            ).copyWith(color: palette.textPrimary),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              AppStatusBadge(
-                label: deliveryStatusLabel(delivery.status, l10n: context.l10n),
-                tone: deliveryStatusAppTone(delivery.status),
-              ),
-              Text(
-                context.l10n.requestedAt(
-                  LocalizedFormatters(
-                    context.l10n,
-                  ).dateTime(delivery.requestedAt),
+      child: isCompactHeader
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppBackAction.compact(
+                      onBack: () => _goBackFromDelivery(context, delivery),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          title,
+                          const SizedBox(height: AppSpacing.xs),
+                          statusChip,
+                          const SizedBox(height: AppSpacing.xs),
+                          requestedAt,
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                style: AppTextStyles.label(
-                  context,
-                ).copyWith(color: palette.textMuted),
-              ),
-            ],
-          ),
-          if (delivery.assignedDriverPickupOverdue) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              delivery.status.toUpperCase() == 'ARRIVED_PICKUP'
-                  ? context.l10n.pickupIncompleteAdminReview
-                  : context.l10n.driverPickupIncompleteAdminReview,
-              style: AppTextStyles.label(context).copyWith(
-                color: colors.warningText,
-                fontWeight: FontWeight.w600,
-              ),
+                if (overdueWarning != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  overdueWarning,
+                ],
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppBackAction(
+                  onBack: () => _goBackFromDelivery(context, delivery),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                title,
+                const SizedBox(height: AppSpacing.sm),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [statusChip, requestedAt],
+                ),
+                if (overdueWarning != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  overdueWarning,
+                ],
+              ],
             ),
-          ],
-        ],
-      ),
     );
   }
 }
@@ -219,6 +265,11 @@ class _DeliverySummaryPanel extends ConsumerWidget {
       ref.watch(deliveryHandoverCredentialControllerProvider(delivery.id));
     }
 
+    final appointment = learnerDeliveryAppointmentCopy(
+      delivery,
+      context.l10n,
+    );
+
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,23 +285,20 @@ class _DeliverySummaryPanel extends ConsumerWidget {
             value: delivery.reservation.supplier.displayName,
           ),
           _InfoRow(
-            label: context.l10n.pickupWindow,
-            value: learnerReservationPickupWindowDetail(
+            label: context.l10n.learnerDriverPickupWindow,
+            value: learnerSupplierPickupWindowValue(
               delivery.reservation,
               context.l10n,
             ),
+            helper: context.l10n.learnerDriverPickupWindowHelper,
           ),
-          if (delivery.reservation.confirmedDeliveryWindowStart != null &&
-              delivery.reservation.confirmedDeliveryWindowEnd != null)
-            _InfoRow(
-              label: context.l10n.driverDeliveryWindow,
-              value: LocalizedFormatters(context.l10n).dateTimeRange(
-                delivery.reservation.confirmedDeliveryWindowStart!,
-                delivery.reservation.confirmedDeliveryWindowEnd!,
-              ),
-            ),
           _InfoRow(
-            label: context.l10n.pickupArea,
+            label: appointment.label,
+            value: appointment.value,
+            helper: appointment.helper,
+          ),
+          _InfoRow(
+            label: context.l10n.learnerSupplierPickupLocation,
             value: delivery.pickupLocation.summary,
           ),
           _InfoRow(
@@ -336,7 +384,9 @@ class _TrackingStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ping = delivery.latestDriverPing;
-    final body = _trackingStatusBody(delivery, context.l10n);
+    final body = delivery.canTrack
+        ? _liveTrackingStatusBody(delivery, context.l10n)
+        : learnerDeliveryStatusTrackingBody(delivery, context.l10n);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -547,10 +597,11 @@ class _PanelTitle extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
+  const _InfoRow({required this.label, required this.value, this.helper});
 
   final String label;
   final String value;
+  final String? helper;
 
   @override
   Widget build(BuildContext context) {
@@ -574,6 +625,15 @@ class _InfoRow extends StatelessWidget {
               context,
             ).copyWith(color: palette.textPrimary),
           ),
+          if (helper != null && helper!.trim().isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              helper!,
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textSecondary, fontSize: 13),
+            ),
+          ],
         ],
       ),
     );
@@ -655,17 +715,7 @@ String _driverSummary(LearnerDeliveryDriver driver) {
       : '${driver.displayName} • $details';
 }
 
-String _trackingStatusBody(LearnerDelivery delivery, AppLocalizations l10n) {
-  if (!delivery.canTrack) {
-    return switch (delivery.status) {
-      'WAITING_FOR_DRIVER' => l10n.waitingForDriver,
-      'DRIVER_ASSIGNED' => l10n.driverAssigned,
-      'ARRIVED_PICKUP' => l10n.driverHeadingToPickup,
-      _ when delivery.isTerminal => l10n.trackingComplete,
-      _ => l10n.trackingAvailableAfterPickup,
-    };
-  }
-
+String _liveTrackingStatusBody(LearnerDelivery delivery, AppLocalizations l10n) {
   final ping = delivery.latestDriverPing;
   if (ping == null) {
     return l10n.driverLocationNotShared;

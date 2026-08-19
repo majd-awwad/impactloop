@@ -1316,6 +1316,7 @@ class _FulfillmentCard extends ConsumerWidget {
                         ref: ref,
                         reservationId: reservation.id,
                         materialTitle: materialTitle,
+                        supplierHandoverCode: reservation.supplierHandoverCode,
                       ),
                       icon: const Icon(Icons.qr_code_2_outlined, size: 18),
                       label: Text(l.showPickupQr),

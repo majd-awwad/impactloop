@@ -113,9 +113,9 @@
   "statusResolvedNoStrike": "Resolved without strike",
   "statusWaitingDriver": "Waiting for driver",
   "statusDriverAssigned": "Driver assigned",
-  "statusDriverAtPickup": "Driver at pickup",
-  "statusPickedUp": "Picked up",
-  "statusOnTheWay": "On the way",
+  "statusDriverAtPickup": "Driver at supplier pickup",
+  "statusPickedUp": "Driver collected the material",
+  "statusOnTheWay": "On the way to you",
   "statusArrivedDropoff": "Arrived at drop-off",
   "statusRedeliveryPending": "Redelivery is being arranged",
   "statusRedeliveryScheduled": "Redelivery scheduled",
@@ -520,6 +520,77 @@
       }
     }
   },
+  "notificationReservationMessageTitle": "New message about your reservation",
+  "notificationReservationMessageBody": "{senderName}: {preview}",
+  "@notificationReservationMessageBody": {
+    "placeholders": {
+      "senderName": {
+        "type": "String"
+      },
+      "preview": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationProjectCommentTitle": "New comment on your project",
+  "notificationProjectCommentBody": "{commenter}: {preview}",
+  "@notificationProjectCommentBody": {
+    "placeholders": {
+      "commenter": {
+        "type": "String"
+      },
+      "preview": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationProjectCommentReplyTitle": "New reply to your comment",
+  "notificationProjectCommentReplyBody": "{commenter}: {preview}",
+  "@notificationProjectCommentReplyBody": {
+    "placeholders": {
+      "commenter": {
+        "type": "String"
+      },
+      "preview": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationMaterialRequestSuggestionTitle": "New material suggestion",
+  "notificationMaterialRequestSuggestionBody": "A supplier suggested a material for your request \"{itemName}\".",
+  "@notificationMaterialRequestSuggestionBody": {
+    "placeholders": {
+      "itemName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationMaterialRequestUnavailableTitle": "Suggested material unavailable",
+  "notificationMaterialRequestUnavailableBody": "A suggested material for \"{itemName}\" is no longer available.",
+  "@notificationMaterialRequestUnavailableBody": {
+    "placeholders": {
+      "itemName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationMaterialRequestFulfilledTitle": "Material request fulfilled",
+  "notificationMaterialRequestFulfilledBody": "Your request \"{itemName}\" was marked fulfilled after a completed reservation.",
+  "@notificationMaterialRequestFulfilledBody": {
+    "placeholders": {
+      "itemName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationDeliveryWindowScheduledTitle": "Delivery scheduled",
+  "notificationDeliveryWindowScheduledBody": "Your delivery window has been scheduled.",
+  "notificationDeliveryWindowRescheduledTitle": "Delivery rescheduled",
+  "notificationDeliveryWindowRescheduledBody": "Your delivery has been rescheduled.",
+  "notificationDeliveryRetryPendingTitle": "Delivery retry pending",
+  "notificationDeliveryRetryPendingBody": "A new delivery attempt is being arranged.",
+  "notificationDestinationUnavailable": "This update is no longer available.",
+  "viewRequest": "View request",
   "notificationCategoryRequestUpdateTitle": "Category request update",
   "notificationCategoryRequestUpdateBody": "There is an update on your category request.",
   "notificationPriceRequestUpdateTitle": "Price review update",
@@ -1581,6 +1652,15 @@
   },
   "assignedDriver": "Assigned driver",
   "pickupWindow": "Pickup window",
+  "learnerDriverPickupWindow": "Driver pickup from supplier",
+  "learnerDriverPickupWindowHelper": "This time is for the driver to collect the material from the supplier.",
+  "learnerDeliveryAppointment": "Delivery to you",
+  "learnerDeliveryNotScheduled": "Delivery time has not been scheduled yet.",
+  "learnerDeliveryNotScheduledHelper": "The driver will schedule delivery after collecting the material.",
+  "learnerRedeliveryNeedsScheduling": "A new delivery attempt needs to be scheduled.",
+  "learnerRedeliveryNeedsSchedulingHelper": "The previous delivery appointment is no longer active.",
+  "learnerSupplierPickupLocation": "Supplier pickup location",
+  "driverWillCollectFromSupplierFirst": "The driver will collect the material from the supplier first.",
   "pickupArea": "Pickup area",
   "dropoff": "Drop-off",
   "driverNote": "Driver note",
@@ -1592,7 +1672,7 @@
   "trackDelivery": "Track delivery",
   "refreshStatus": "Refresh status",
   "statusTimeline": "Status timeline",
-  "statusTimelineDescription": "Delivery workflow updates.",
+  "statusTimelineDescription": "Updates as the driver collects the material and delivers it to you.",
   "loadingTracking": "Loading delivery tracking…",
   "fetchingTracking": "Fetching the latest delivery location.",
   "trackingLoadFailed": "Could not load tracking.",
@@ -2846,6 +2926,9 @@
   "supplierPickupQrQuantityLabel": "Quantity",
   "supplierPickupQrConfirmHandover": "Confirm handover",
   "supplierPickupQrInvalidPayload": "This is not a valid ImpactLoop pickup QR.",
+  "handoverQrInvalid": "Invalid QR code.",
+  "handoverQrWrongRole": "This QR cannot be processed with your current account.",
+  "routeNotFound": "This page is not available.",
   "supplierPickupQrCredentialUnavailable": "This pickup QR is invalid or no longer available.",
   "supplierPickupQrVerifyFailed": "Unable to verify pickup QR.",
   "supplierPickupQrConfirmFailed": "Unable to confirm handover. Try again or use the confirmation code.",
@@ -3730,6 +3813,12 @@
   "driverSelectWindowStart": "Select window start",
   "driverSelectWindowEnd": "Select window end",
   "driverInvalidWindow": "Choose a valid window whose end is after its start.",
+  "driverDeliveryWindowMustBeFuture": "Choose a delivery window that ends in the future.",
+  "driverDeliveryWindowNotAllowed": "The delivery window can only be set after pickup or while redelivery is pending.",
+  "driverDeliveryWindowRequired": "Set the delivery window before starting delivery to the learner.",
+  "driverDeliverySchedulingConflict": "Delivery scheduling changed. Refresh and try again.",
+  "driverRedeliveryAlreadyScheduled": "A redelivery window was already scheduled. Refresh and continue.",
+  "driverRedeliveryDeadlineExceeded": "Redelivery must finish within the retry deadline.",
   "driverWindowSaved": "Delivery window saved.",
   "driverLearnerNote": "Learner note",
   "driverNoNextAction": "No next action",

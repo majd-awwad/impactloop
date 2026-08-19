@@ -9,6 +9,7 @@ import type {
   CreateCommentInput,
   UpdateCommentInput,
 } from './comments.validation.js';
+import { notifyProjectCommentCreated } from '../notifications/project-comment-notifications.js';
 
 export type CommentTargetKind = 'material' | 'learningProject';
 
@@ -228,7 +229,9 @@ export const createComment = async (
       ...target,
     });
 
-    return mapComment(created, auth, 0);
+    const mapped = mapComment(created, auth, 0);
+    await notifyProjectCommentCreated({ kind, comment: mapped });
+    return mapped;
   }
 
   const replyTargetId = input.replyToCommentId ?? input.parentCommentId!;
@@ -309,7 +312,9 @@ export const createComment = async (
     replyToCommentId: replyTarget.id,
   });
 
-  return mapComment(created, auth);
+  const mapped = mapComment(created, auth);
+  await notifyProjectCommentCreated({ kind, comment: mapped });
+  return mapped;
 };
 
 export const updateComment = async (

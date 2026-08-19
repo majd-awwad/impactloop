@@ -16,9 +16,19 @@ class ProjectHelpSessionsL10n {
     ar: 'تابع طلباتك ومواعيدك الفردية المرتبطة بالمشاريع التي تنفذها.',
   );
 
+  static const requestHelpAction = LocalizedText(
+    en: 'Request a help session',
+    ar: 'طلب جلسة مساعدة',
+  );
+
   static const requestCta = LocalizedText(
     en: 'Request a 1-on-1 help session',
     ar: 'طلب جلسة مساعدة فردية',
+  );
+
+  static const buildUnavailable = LocalizedText(
+    en: 'This build is not eligible for a help session right now.',
+    ar: 'لا يمكن طلب جلسة لهذا التنفيذ حاليًا.',
   );
 
   static const requestSupporting = LocalizedText(
@@ -35,6 +45,14 @@ class ProjectHelpSessionsL10n {
     en: 'Help sessions are unavailable for this project.',
     ar: 'جلسات المساعدة غير متاحة لهذا المشروع.',
   );
+
+  static LocalizedText availabilityMessage(String? reason) {
+    return switch (reason) {
+      'DISABLED' || 'NO_DURATION_AVAILABLE' => disabledCopy,
+      'BUILD_NOT_ELIGIBLE' => buildUnavailable,
+      _ => unavailableCopy,
+    };
+  }
 
   static const viewSession = LocalizedText(
     en: 'View session',

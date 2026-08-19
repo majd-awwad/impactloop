@@ -13,6 +13,7 @@ class DriverRouteBlock extends StatelessWidget {
     required this.pickupSummary,
     required this.dropoffSummary,
     this.compact = false,
+    this.forceVertical = false,
     this.pickupLabel,
     this.dropoffLabel,
   });
@@ -20,6 +21,7 @@ class DriverRouteBlock extends StatelessWidget {
   final String pickupSummary;
   final String dropoffSummary;
   final bool compact;
+  final bool forceVertical;
   final String? pickupLabel;
   final String? dropoffLabel;
 
@@ -59,20 +61,30 @@ class DriverRouteBlock extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final stackVertically = constraints.maxWidth < 360;
+        final stackVertically = forceVertical || constraints.maxWidth < 360;
 
         if (stackVertically) {
+          final iconSize = compact ? 16.0 : 18.0;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               pickup,
               Padding(
-                padding: EdgeInsets.symmetric(vertical: endpointSpacing),
-                child: Icon(
-                  Icons.arrow_downward_rounded,
-                  size: arrowSize,
-                  color: palette.mint,
-                  semanticLabel: l10n.driverRouteArrowSemantic,
+                padding: EdgeInsetsDirectional.only(
+                  top: compact ? 2 : endpointSpacing,
+                  bottom: compact ? 2 : endpointSpacing,
+                ),
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: SizedBox(
+                    width: iconSize,
+                    child: Icon(
+                      Icons.arrow_downward_rounded,
+                      size: arrowSize,
+                      color: palette.mint,
+                      semanticLabel: l10n.driverRouteArrowSemantic,
+                    ),
+                  ),
                 ),
               ),
               dropoff,

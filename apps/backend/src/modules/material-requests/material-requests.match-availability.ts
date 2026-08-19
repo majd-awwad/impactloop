@@ -122,6 +122,7 @@ const notifyUnavailableMatch = async (input: {
     entityType: 'MATERIAL_REQUEST',
     entityId: input.requestId,
     actionType: 'OPEN_ENTITY',
+    metadata: { requestedItemName: input.requestedItemName },
   });
 };
 

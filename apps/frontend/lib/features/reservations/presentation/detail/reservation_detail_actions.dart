@@ -794,7 +794,7 @@ ReservationDetailActionButton? resolveDeliveryActionButton({
   if (deliveryId == null) return null;
 
   return ReservationDetailActionButton(
-    label: delivery?.canTrack == true ? l10n.trackDelivery : l10n.viewDelivery,
+    label: l10n.viewDeliveryDetails,
     onPressed: () => onNavigate(deliveryId),
     tone: AppStatusTone.info,
   );

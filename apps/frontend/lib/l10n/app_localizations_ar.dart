@@ -300,13 +300,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get statusDriverAssigned => 'تم تعيين سائق';
 
   @override
-  String get statusDriverAtPickup => 'وصل السائق إلى موقع الاستلام';
+  String get statusDriverAtPickup => 'وصل السائق إلى موقع المورد';
 
   @override
-  String get statusPickedUp => 'تم الاستلام';
+  String get statusPickedUp => 'استلم السائق المادة من المورد';
 
   @override
-  String get statusOnTheWay => 'في الطريق';
+  String get statusOnTheWay => 'في الطريق إليك';
 
   @override
   String get statusArrivedDropoff => 'وصل إلى موقع التسليم';
@@ -925,6 +925,84 @@ class AppLocalizationsAr extends AppLocalizations {
   String notificationNewPickupWindowNeededBody(String materialTitle) {
     return 'يلزم تحديد موعد استلام جديد لـ $materialTitle.';
   }
+
+  @override
+  String get notificationReservationMessageTitle => 'رسالة جديدة بخصوص الحجز';
+
+  @override
+  String notificationReservationMessageBody(String senderName, String preview) {
+    return '$senderName: $preview';
+  }
+
+  @override
+  String get notificationProjectCommentTitle => 'تعليق جديد على مشروعك';
+
+  @override
+  String notificationProjectCommentBody(String commenter, String preview) {
+    return '$commenter: $preview';
+  }
+
+  @override
+  String get notificationProjectCommentReplyTitle => 'رد جديد على تعليقك';
+
+  @override
+  String notificationProjectCommentReplyBody(String commenter, String preview) {
+    return '$commenter: $preview';
+  }
+
+  @override
+  String get notificationMaterialRequestSuggestionTitle => 'اقتراح مادة جديد';
+
+  @override
+  String notificationMaterialRequestSuggestionBody(String itemName) {
+    return 'اقترح مورّد مادة لطلبك \"$itemName\".';
+  }
+
+  @override
+  String get notificationMaterialRequestUnavailableTitle =>
+      'المادة المقترحة غير متاحة';
+
+  @override
+  String notificationMaterialRequestUnavailableBody(String itemName) {
+    return 'المادة المقترحة لـ \"$itemName\" لم تعد متاحة.';
+  }
+
+  @override
+  String get notificationMaterialRequestFulfilledTitle => 'تم تلبية طلب المادة';
+
+  @override
+  String notificationMaterialRequestFulfilledBody(String itemName) {
+    return 'تم تعليم طلبك \"$itemName\" كمُلبّى بعد اكتمال الحجز.';
+  }
+
+  @override
+  String get notificationDeliveryWindowScheduledTitle => 'تم جدولة التوصيل';
+
+  @override
+  String get notificationDeliveryWindowScheduledBody =>
+      'تم تحديد نافذة التوصيل الخاصة بك.';
+
+  @override
+  String get notificationDeliveryWindowRescheduledTitle =>
+      'أُعيد جدولة التوصيل';
+
+  @override
+  String get notificationDeliveryWindowRescheduledBody =>
+      'تمت إعادة جدولة التوصيل.';
+
+  @override
+  String get notificationDeliveryRetryPendingTitle =>
+      'محاولة توصيل جديدة قيد الإعداد';
+
+  @override
+  String get notificationDeliveryRetryPendingBody =>
+      'يجري ترتيب محاولة توصيل جديدة.';
+
+  @override
+  String get notificationDestinationUnavailable => 'لم يعد هذا التحديث متاحاً.';
+
+  @override
+  String get viewRequest => 'عرض الطلب';
 
   @override
   String get notificationCategoryRequestUpdateTitle => 'تحديث طلب الفئة';
@@ -3426,6 +3504,38 @@ class AppLocalizationsAr extends AppLocalizations {
   String get pickupWindow => 'موعد الاستلام';
 
   @override
+  String get learnerDriverPickupWindow => 'موعد استلام السائق من المورد';
+
+  @override
+  String get learnerDriverPickupWindowHelper =>
+      'هذا الموعد لاستلام السائق المادة من المورد.';
+
+  @override
+  String get learnerDeliveryAppointment => 'موعد التوصيل إليك';
+
+  @override
+  String get learnerDeliveryNotScheduled => 'لم يتم تحديد موعد التوصيل بعد';
+
+  @override
+  String get learnerDeliveryNotScheduledHelper =>
+      'سيحدد السائق موعد التوصيل بعد استلام المادة من المورد.';
+
+  @override
+  String get learnerRedeliveryNeedsScheduling =>
+      'يلزم تحديد موعد لمحاولة توصيل جديدة.';
+
+  @override
+  String get learnerRedeliveryNeedsSchedulingHelper =>
+      'موعد التوصيل السابق لم يعد ساريًا.';
+
+  @override
+  String get learnerSupplierPickupLocation => 'موقع استلام السائق من المورد';
+
+  @override
+  String get driverWillCollectFromSupplierFirst =>
+      'السائق سيستلم المادة من المورد أولًا.';
+
+  @override
   String get pickupArea => 'منطقة الاستلام';
 
   @override
@@ -3439,7 +3549,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get deliveryCodeInstructions =>
-      'أعطِ هذا الرمز للسائق عند استلام المادة.';
+      'أعطِ هذا الرمز للسائق عند استلامك للمادة.';
 
   @override
   String get backToReservations => 'العودة إلى الحجوزات';
@@ -3460,7 +3570,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get statusTimeline => 'سجل الحالة';
 
   @override
-  String get statusTimelineDescription => 'تحديثات سير عملية التوصيل.';
+  String get statusTimelineDescription =>
+      'تحديثات أثناء استلام السائق المادة وتوصيلها إليك.';
 
   @override
   String get loadingTracking => 'جارٍ تحميل تتبع التوصيل…';
@@ -6802,6 +6913,15 @@ class AppLocalizationsAr extends AppLocalizations {
       'رمز QR هذا ليس رمز استلام صالحًا في ImpactLoop.';
 
   @override
+  String get handoverQrInvalid => 'رمز QR غير صالح.';
+
+  @override
+  String get handoverQrWrongRole => 'لا يمكن معالجة رمز QR هذا بحسابك الحالي.';
+
+  @override
+  String get routeNotFound => 'هذه الصفحة غير متاحة.';
+
+  @override
   String get supplierPickupQrCredentialUnavailable =>
       'رمز QR للاستلام غير صالح أو لم يعد متاحًا.';
 
@@ -8180,6 +8300,30 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get driverInvalidWindow =>
       'اختر موعدًا صالحًا تكون نهايته بعد بدايته.';
+
+  @override
+  String get driverDeliveryWindowMustBeFuture =>
+      'اختر موعد توصيل ينتهي في المستقبل.';
+
+  @override
+  String get driverDeliveryWindowNotAllowed =>
+      'يمكن تحديد موعد التوصيل بعد استلام المادة من المورد أو أثناء انتظار إعادة التوصيل.';
+
+  @override
+  String get driverDeliveryWindowRequired =>
+      'حدّد موعد التوصيل قبل البدء بالتوجه إلى المتعلّم.';
+
+  @override
+  String get driverDeliverySchedulingConflict =>
+      'تغيّرت حالة جدولة التوصيل. حدّث الصفحة ثم حاول مرة أخرى.';
+
+  @override
+  String get driverRedeliveryAlreadyScheduled =>
+      'تم تحديد موعد إعادة التوصيل مسبقًا. حدّث الصفحة ثم تابع.';
+
+  @override
+  String get driverRedeliveryDeadlineExceeded =>
+      'يجب أن تكتمل إعادة التوصيل ضمن الموعد النهائي لإعادة المحاولة.';
 
   @override
   String get driverWindowSaved => 'تم حفظ موعد التوصيل.';

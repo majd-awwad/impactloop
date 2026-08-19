@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:frontend/features/deliveries/presentation/delivery_status_presentation.dart';
+import 'package:frontend/features/deliveries/presentation/learner_delivery_windows.dart';
 import 'package:frontend/features/deliveries/domain/delivery_status_contract.dart';
 import 'package:frontend/features/deliveries/data/models/learner_delivery.dart';
 import 'package:frontend/l10n/app_localizations_ar.dart';
@@ -96,6 +97,14 @@ void main() {
       expect(delivery.shouldShowLearnerDeliveryCode, isFalse);
       expect(delivery.reservation.confirmedDeliveryWindowStart, isNotNull);
       expect(delivery.reservation.confirmedDeliveryWindowEnd, isNotNull);
+      expect(
+        resolveLearnerDeliveryAppointment(delivery).kind,
+        LearnerDeliveryAppointmentKind.redeliveryPending,
+      );
+      expect(
+        resolveLearnerDeliveryAppointment(delivery).showsOperationalWindow,
+        isFalse,
+      );
     },
   );
 

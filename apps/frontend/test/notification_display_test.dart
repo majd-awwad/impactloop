@@ -612,4 +612,174 @@ void main() {
       expect(driverDeliveryNotificationRoute(notification), isNull);
     });
   });
+
+  group('reservation message and project comment deep links', () {
+    test('reservation message routes to the reservation conversation context', () {
+      final notification = AppNotification(
+        id: 'msg-1',
+        notificationType: 'RESERVATION_MESSAGE_RECEIVED',
+        title: 'New message about your reservation',
+        body: 'Workshop: Please confirm pickup.',
+        relatedEntityType: 'RESERVATION',
+        relatedEntityId: 'res-msg',
+        actionType: 'OPEN_RESERVATION',
+        metadata: const {
+          'actorDisplayName': 'Majd Tech Reuse Workshop',
+          'messagePreview': 'Please confirm pickup.',
+        },
+        isRead: false,
+        createdAt: DateTime.utc(2026),
+      );
+
+      expect(
+        notificationOpenRoute(
+          notification,
+          isSupplierMode: false,
+          isDriverMode: false,
+        ),
+        '/learner/reservations/res-msg?focus=messages',
+      );
+      expect(
+        notificationOpenRoute(
+          notification,
+          isSupplierMode: true,
+          isDriverMode: false,
+        ),
+        '/supplier/reservations/res-msg',
+      );
+      expect(
+        categoryForNotification(notification),
+        NotificationVisualCategory.reservation,
+      );
+    });
+
+    test('missing reservation message destination does not invent a route', () {
+      final notification = AppNotification(
+        id: 'msg-missing',
+        notificationType: 'RESERVATION_MESSAGE_RECEIVED',
+        title: 'New message about your reservation',
+        body: 'Workshop: Please confirm pickup.',
+        relatedEntityType: 'RESERVATION',
+        relatedEntityId: '',
+        isRead: false,
+        createdAt: DateTime.utc(2026),
+      );
+
+      expect(
+        notificationOpenRoute(
+          notification,
+          isSupplierMode: false,
+          isDriverMode: false,
+        ),
+        isNull,
+      );
+      expect(notificationHasNavigationTarget(notification), isFalse);
+    });
+
+    test('project comment routes to the public project comments context', () {
+      final notification = AppNotification(
+        id: 'cmt-1',
+        notificationType: 'PROJECT_COMMENT_RECEIVED',
+        title: 'New comment on your project',
+        body: 'Israa: Great build guide.',
+        relatedEntityType: 'LEARNING_PROJECT',
+        relatedEntityId: 'project-42',
+        actionType: 'OPEN_ENTITY',
+        metadata: const {
+          'projectTitle': 'Obstacle Avoidance Robot',
+          'actorDisplayName': 'Israa Learner',
+          'commentPreview': 'Great build guide.',
+          'commentId': 'comment-1',
+        },
+        isRead: false,
+        createdAt: DateTime.utc(2026),
+      );
+
+      expect(
+        notificationOpenRoute(
+          notification,
+          isSupplierMode: false,
+          isDriverMode: false,
+        ),
+        '/learning/project-42?focus=comments',
+      );
+      expect(
+        notificationOpenRoute(
+          AppNotification(
+            id: 'mod-1',
+            notificationType: 'LEARNING_PROJECT_MODERATION',
+            title: 'Project approved',
+            body: 'Approved',
+            relatedEntityType: 'LEARNING_PROJECT',
+            relatedEntityId: 'project-42',
+            actionType: 'OPEN_LEARNING_PROJECT_SUBMISSION',
+            isRead: false,
+            createdAt: DateTime.utc(2026),
+          ),
+          isSupplierMode: false,
+          isDriverMode: false,
+        ),
+        '/learning/submissions/project-42',
+      );
+    });
+
+    test('material request suggestion route remains the request detail', () {
+      final notification = _materialRequestNotification(
+        notificationType: 'MATERIAL_REQUEST_SUGGESTION',
+        requestId: 'req-live',
+      );
+      expect(
+        notificationOpenRoute(
+          notification,
+          isSupplierMode: false,
+          isDriverMode: false,
+        ),
+        '/learner/material-requests/req-live',
+      );
+    });
+
+    test('localizes reservation message and project comment copy', () {
+      final ar = AppLocalizationsAr();
+      final messageCopy = localizedNotificationCopy(
+        AppNotification(
+          id: 'msg-ar',
+          notificationType: 'RESERVATION_MESSAGE_RECEIVED',
+          title: 'New message about your reservation',
+          body: 'English body',
+          relatedEntityType: 'RESERVATION',
+          relatedEntityId: 'res-1',
+          metadata: const {
+            'actorDisplayName': 'ورشة مجد',
+            'messagePreview': 'أكد موعد الاستلام',
+          },
+          isRead: false,
+          createdAt: DateTime.utc(2026),
+        ),
+        ar,
+      );
+      expect(messageCopy.title, ar.notificationReservationMessageTitle);
+      expect(messageCopy.body, contains('ورشة مجد'));
+      expect(messageCopy.body, contains('أكد موعد الاستلام'));
+
+      final commentCopy = localizedNotificationCopy(
+        AppNotification(
+          id: 'cmt-ar',
+          notificationType: 'PROJECT_COMMENT_RECEIVED',
+          title: 'New comment on your project',
+          body: 'English body',
+          relatedEntityType: 'LEARNING_PROJECT',
+          relatedEntityId: 'project-1',
+          metadata: const {
+            'actorDisplayName': 'إسراء',
+            'commentPreview': 'شرح الخطوات واضح',
+          },
+          isRead: false,
+          createdAt: DateTime.utc(2026),
+        ),
+        ar,
+      );
+      expect(commentCopy.title, ar.notificationProjectCommentTitle);
+      expect(commentCopy.body, contains('إسراء'));
+    });
+  });
 }

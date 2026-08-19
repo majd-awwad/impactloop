@@ -30,10 +30,12 @@ class LearningProjectDetailsPage extends ConsumerWidget {
     super.key,
     required this.projectId,
     this.recommendationImpressionId,
+    this.focusSection,
   });
 
   final String projectId;
   final String? recommendationImpressionId;
+  final String? focusSection;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -103,6 +105,7 @@ class LearningProjectDetailsPage extends ConsumerWidget {
                     project: project,
                     isOwner: isOwner,
                     recommendationImpressionId: recommendationImpressionId,
+                    focusSection: focusSection,
                   );
                 },
               ),
@@ -114,19 +117,64 @@ class LearningProjectDetailsPage extends ConsumerWidget {
   }
 }
 
-class _ProjectDetailsBody extends StatelessWidget {
+class _ProjectDetailsBody extends StatefulWidget {
   const _ProjectDetailsBody({
     required this.project,
     required this.isOwner,
     this.recommendationImpressionId,
+    this.focusSection,
   });
 
   final LearningProject project;
   final bool isOwner;
   final String? recommendationImpressionId;
+  final String? focusSection;
+
+  @override
+  State<_ProjectDetailsBody> createState() => _ProjectDetailsBodyState();
+}
+
+class _ProjectDetailsBodyState extends State<_ProjectDetailsBody> {
+  final _commentsSectionKey = GlobalKey();
+  bool _didScrollToFocus = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _maybeScrollToFocus();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProjectDetailsBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusSection != widget.focusSection) {
+      _didScrollToFocus = false;
+      _maybeScrollToFocus();
+    }
+  }
+
+  void _maybeScrollToFocus() {
+    if (_didScrollToFocus) return;
+    final focus = widget.focusSection?.trim().toLowerCase();
+    if (focus != 'comments') return;
+    _didScrollToFocus = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _commentsSectionKey.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final project = widget.project;
+    final isOwner = widget.isOwner;
+    final recommendationImpressionId = widget.recommendationImpressionId;
     return SingleChildScrollView(
       padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xl),
       child: Column(
@@ -185,9 +233,12 @@ class _ProjectDetailsBody extends StatelessWidget {
                         canReview: !isOwner,
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      CommentsSection(
-                        targetType: CommentTargetType.learningProject,
-                        targetId: project.id,
+                      KeyedSubtree(
+                        key: _commentsSectionKey,
+                        child: CommentsSection(
+                          targetType: CommentTargetType.learningProject,
+                          targetId: project.id,
+                        ),
                       ),
                     ],
                   ),

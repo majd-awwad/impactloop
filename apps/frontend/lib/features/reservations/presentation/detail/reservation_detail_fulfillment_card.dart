@@ -117,19 +117,10 @@ class ReservationDetailFulfillmentCard extends StatelessWidget {
               alignment: AlignmentDirectional.centerStart,
               child: TextButton.icon(
                 onPressed: () {
-                  final canTrack = delivery?.canTrack == true;
-                  if (canTrack) {
-                    context.push('/learner/deliveries/$deliveryId/track');
-                  } else {
-                    context.push('/learner/deliveries/$deliveryId');
-                  }
+                  context.push('/learner/deliveries/$deliveryId');
                 },
                 icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                label: Text(
-                  delivery?.canTrack == true
-                      ? l10n.trackDelivery
-                      : l10n.viewDelivery,
-                ),
+                label: Text(l10n.viewDeliveryDetails),
               ),
             ),
           ],

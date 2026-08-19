@@ -492,7 +492,8 @@ String _localizedTrackingMessage(
 
   return switch (tracking.status) {
     'WAITING_FOR_DRIVER' => l10n.waitingForDriver,
-    'DRIVER_ASSIGNED' => l10n.driverAssigned,
+    'DRIVER_ASSIGNED' =>
+      '${l10n.driverAssigned}\n${l10n.driverWillCollectFromSupplierFirst}',
     'ARRIVED_PICKUP' => l10n.driverHeadingToPickup,
     _ when tracking.isTerminal => l10n.trackingComplete,
     _ => l10n.trackingAvailableAfterPickup,

@@ -155,6 +155,18 @@ String localizedApiErrorMessage(
       return l10n.driverGroupedDeliverySplitConflict;
     case 'DRIVER_AVAILABLE_JOBS_CURSOR_INVALID':
       return l10n.driverAvailableJobsCursorInvalid;
+    case 'DELIVERY_WINDOW_INVALID':
+      return l10n.driverDeliveryWindowMustBeFuture;
+    case 'DELIVERY_WINDOW_NOT_ALLOWED':
+      return l10n.driverDeliveryWindowNotAllowed;
+    case 'DELIVERY_WINDOW_REQUIRED':
+      return l10n.driverDeliveryWindowRequired;
+    case 'DELIVERY_SCHEDULING_CONFLICT':
+      return l10n.driverDeliverySchedulingConflict;
+    case 'REDELIVERY_ALREADY_SCHEDULED':
+      return l10n.driverRedeliveryAlreadyScheduled;
+    case 'REDELIVERY_DEADLINE_EXCEEDED':
+      return l10n.driverRedeliveryDeadlineExceeded;
     case CommonApiErrorCodes.validationError:
       return l10n.validationError;
     case 'PROJECT_SUBMISSION_INCOMPLETE':
