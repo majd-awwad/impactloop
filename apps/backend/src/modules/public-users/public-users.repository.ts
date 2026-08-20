@@ -1,13 +1,15 @@
+import type { Prisma } from '../../generated/prisma/client.js';
+
 import { prisma } from '../../database/prisma.js';
 import { buildPublicMaterialWhere } from '../materials/public-material-visibility.js';
 
-const publishedCreatorProjectWhere = {
-  status: 'PUBLISHED' as const,
+const publishedCreatorProjectWhere: Prisma.LearningProjectWhereInput = {
+  status: 'PUBLISHED',
   hiddenAt: null,
   archivedAt: null,
   category: {
     isActive: true,
-    categoryType: { in: ['PROJECT', 'BOTH'] as const },
+    categoryType: { in: ['PROJECT', 'BOTH'] },
   },
 };
 

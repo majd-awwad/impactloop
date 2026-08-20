@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 
-import '../../../core/network/api_client.dart';
 import '../../../core/network/api_response.dart';
 import '../../learning_hub/data/learning_hub_api_mapper.dart';
 import '../../learning_hub/domain/models/learning_project.dart';
