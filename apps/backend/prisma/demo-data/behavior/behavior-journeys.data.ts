@@ -22,7 +22,7 @@ export type MrJourneyPlan = {
   learnerEmail: string;
   /** Substring match against LearningProjectTag.tag (demo-project-key:…). */
   projectKey: string;
-  /** Case-insensitive substring against ProjectRequiredComponent.componentName. */
+  /** Case-insensitive substring against componentName or materialType. */
   componentIncludes: string;
   /** English request name shown in UI / search. */
   requestedItemName: string;
@@ -45,7 +45,10 @@ export const MR_JOURNEY_PLANS: MrJourneyPlan[] = [
     kind: "open_no_suggestions",
     learnerEmail: "user52@impactloop.demo",
     projectKey: "najah-automated-liquid-sample-trainer",
-    componentIncludes: "Capacitance",
+    // Canonical Najah identity is Arabic + English: "دائرة تحسس سعوية (Capacitance)"
+    // / "Capacitance Sensing Circuit". Keep both needles so a label-only drift
+    // still resolves the same intentional marketplace gap.
+    componentIncludes: "Capacitance|سعوية",
     requestedItemName: "Capacitance Sensing Circuit",
     description:
       "Need a capacitance sensing circuit for the liquid sample trainer build — nothing matching in browse yet.",

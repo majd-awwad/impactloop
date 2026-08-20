@@ -145,6 +145,40 @@ export const PRODUCTION_MATERIAL_TYPE_ALIASES: Array<{
       { alias: 'مبدد حراري', language: 'ar' },
     ],
   },
+  {
+    nameEn: 'Soil Moisture Sensor',
+    nameAr: 'حساس رطوبة التربة',
+    aliases: [
+      { alias: 'حساس رطوبة التربة', language: 'ar' },
+      { alias: 'حساس رطوبة', language: 'ar' },
+      { alias: 'مستشعر رطوبة التربة', language: 'ar' },
+      { alias: 'حساس رطوبه التربه', language: 'ar' },
+      { alias: 'Soil Moisture Sensor Modules', language: 'en' },
+      { alias: 'soil moisture', language: 'en' },
+      { alias: 'moisture sensor', language: 'en' },
+    ],
+  },
+  {
+    nameEn: 'DHT11 Sensor',
+    nameAr: 'حساس DHT11',
+    aliases: [
+      { alias: 'حساس DHT11', language: 'ar' },
+      { alias: 'حساس حرارة ورطوبة', language: 'ar' },
+      { alias: 'DHT11', language: 'en' },
+      { alias: 'DHT11 Temperature and Humidity Sensors', language: 'en' },
+    ],
+  },
+  {
+    nameEn: 'Light Sensor',
+    nameAr: 'حساس ضوء LDR',
+    aliases: [
+      { alias: 'حساس ضوء LDR', language: 'ar' },
+      { alias: 'حساس ضوء', language: 'ar' },
+      { alias: 'LDR', language: 'en' },
+      { alias: 'LDR Light Sensor', language: 'en' },
+      { alias: 'photoresistor', language: 'en' },
+    ],
+  },
 ];
 
 export type EnsureProductionMaterialTypeAliasesResult = {

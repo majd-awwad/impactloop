@@ -3,6 +3,7 @@
  *
  * Run: npm run demo:seed:behavior
  * Safe to re-run: unique upserts + deterministic MaterialView operationKeys.
+ * Builds: create-if-missing, then backfill checklist items if the BOM changed.
  * Does NOT create reservations, deliveries, payments, or rewrite catalog content.
  */
 
@@ -89,6 +90,7 @@ type SeedCounts = {
   supplierFollowsSkipped: number;
   buildsCreated: number;
   buildsSkipped: number;
+  buildsItemsReconciled: number;
   buildsCompleted: number;
   cachesInvalidated: number;
 };
@@ -691,6 +693,66 @@ const findMaterialForBuild = (
   return null;
 };
 
+type PlannedBuildItem = {
+  requiredComponentId: string;
+  status: ProjectBuildItemStatus;
+  learnerNote: string;
+  linkedMaterialId: string | null;
+  linkedMaterialAt: Date | null;
+};
+
+const planBuildItems = (
+  plan: BuildPlan,
+  components: Array<{ id: string; componentName: string; materialType: string }>,
+  materials: MaterialCandidate[],
+  startedAt: Date,
+): PlannedBuildItem[] => {
+  const usedComponentIds = new Set<string>();
+  const itemCreates: PlannedBuildItem[] = [];
+
+  for (const itemPlan of plan.items) {
+    const component = components.find((row) => {
+      if (usedComponentIds.has(row.id)) return false;
+      if (!itemPlan.componentIncludes) return true;
+      const needle = norm(itemPlan.componentIncludes);
+      return (
+        norm(row.componentName).includes(needle) ||
+        norm(row.materialType).includes(needle)
+      );
+    });
+    if (!component) continue;
+    usedComponentIds.add(component.id);
+
+    const material =
+      itemPlan.status === "AVAILABLE"
+        ? findMaterialForBuild(itemPlan, materials)
+        : null;
+
+    itemCreates.push({
+      requiredComponentId: component.id,
+      status: itemPlan.status,
+      learnerNote: `${BEHAVIOR_NOTE_PREFIX} ${plan.note}`,
+      linkedMaterialId:
+        itemPlan.status === "AVAILABLE" && material ? material.id : null,
+      linkedMaterialAt:
+        itemPlan.status === "AVAILABLE" && material ? startedAt : null,
+    });
+  }
+
+  for (const component of components) {
+    if (usedComponentIds.has(component.id)) continue;
+    itemCreates.push({
+      requiredComponentId: component.id,
+      status: "MISSING",
+      learnerNote: `${BEHAVIOR_NOTE_PREFIX} still missing`,
+      linkedMaterialId: null,
+      linkedMaterialAt: null,
+    });
+  }
+
+  return itemCreates;
+};
+
 const seedBuild = async (
   plan: BuildPlan,
   learnersByEmail: Map<string, LearnerRow>,
@@ -726,14 +788,9 @@ const seedBuild = async (
     include: { items: true },
   });
 
-  if (existing) {
-    counts.buildsSkipped += 1;
-    return;
-  }
-
   const components = await prisma.projectRequiredComponent.findMany({
     where: { projectId: project.id },
-    select: { id: true, componentName: true },
+    select: { id: true, componentName: true, materialType: true },
     orderBy: { createdAt: "asc" },
   });
 
@@ -743,49 +800,27 @@ const seedBuild = async (
       ? timestampDaysAgo(plan.completedDaysAgo, 18)
       : null;
 
-  const usedComponentIds = new Set<string>();
-  const itemCreates: Array<{
-    requiredComponentId: string;
-    status: ProjectBuildItemStatus;
-    learnerNote: string;
-    linkedMaterialId: string | null;
-    linkedMaterialAt: Date | null;
-  }> = [];
+  const itemCreates = planBuildItems(plan, components, materials, startedAt);
 
-  for (const itemPlan of plan.items) {
-    const component = components.find((c) => {
-      if (usedComponentIds.has(c.id)) return false;
-      if (!itemPlan.componentIncludes) return true;
-      return norm(c.componentName).includes(norm(itemPlan.componentIncludes));
+  if (existing) {
+    const have = new Set(
+      existing.items.map((item) => item.requiredComponentId),
+    );
+    const missing = itemCreates.filter(
+      (item) => !have.has(item.requiredComponentId),
+    );
+    if (missing.length === 0) {
+      counts.buildsSkipped += 1;
+      return;
+    }
+    await prisma.projectBuildItem.createMany({
+      data: missing.map((item) => ({
+        buildId: existing.id,
+        ...item,
+      })),
     });
-    if (!component) continue;
-    usedComponentIds.add(component.id);
-
-    const material =
-      itemPlan.status === "AVAILABLE"
-        ? findMaterialForBuild(itemPlan, materials)
-        : null;
-
-    itemCreates.push({
-      requiredComponentId: component.id,
-      status: itemPlan.status,
-      learnerNote: `${BEHAVIOR_NOTE_PREFIX} ${plan.note}`,
-      linkedMaterialId:
-        itemPlan.status === "AVAILABLE" && material ? material.id : null,
-      linkedMaterialAt:
-        itemPlan.status === "AVAILABLE" && material ? startedAt : null,
-    });
-  }
-
-  for (const component of components) {
-    if (usedComponentIds.has(component.id)) continue;
-    itemCreates.push({
-      requiredComponentId: component.id,
-      status: "MISSING",
-      learnerNote: `${BEHAVIOR_NOTE_PREFIX} still missing`,
-      linkedMaterialId: null,
-      linkedMaterialAt: null,
-    });
+    counts.buildsItemsReconciled += missing.length;
+    return;
   }
 
   await prisma.projectBuild.create({
@@ -825,6 +860,7 @@ export const seedCommunityBehavior = async () => {
     supplierFollowsSkipped: 0,
     buildsCreated: 0,
     buildsSkipped: 0,
+    buildsItemsReconciled: 0,
     buildsCompleted: 0,
     cachesInvalidated: 0,
   };
@@ -918,7 +954,7 @@ export const seedCommunityBehavior = async () => {
     counts,
     reservationsUnchanged: reservationCount,
     note:
-      "Idempotent community engagement + limited builds. Owned engagement is reconciled each run; builds upsert by attempt. No reservation/delivery/payment workflows created.",
+      "Idempotent community engagement + limited builds. Owned engagement is reconciled each run; builds create-if-missing and backfill checklist items after BOM changes. No reservation/delivery/payment workflows created.",
   };
 };
 

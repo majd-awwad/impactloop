@@ -3,7 +3,8 @@
  *
  * Identity: ProjectTag `demo-project-key:<key>`
  * Creates/updates the 7 curated Arabic Learning Projects without touching
- * the existing 30 demo projects' content.
+ * the existing 30 demo projects' content. Required-component IDs are
+ * preserved on update so existing ProjectBuildItem rows are not cascade-deleted.
  *
  * Usage:
  *   npm run demo:seed:projects:najah -w apps/backend
@@ -96,6 +97,60 @@ const fingerprint = (project: ProjectData03Project) =>
     tags: [...project.tags].sort(),
   });
 
+const asStringArray = (value: unknown): string[] =>
+  Array.isArray(value) ? value.map((item) => String(item)) : [];
+
+const componentIdentity = (name: string, materialType: string) =>
+  `${name}\0${materialType}`;
+
+const managedTagsFor = (project: ProjectData03Project, identityTag: string) =>
+  [...new Set([identityTag, PROJECT_DATA_03_BATCH_TAG, ...project.tags])].sort();
+
+type ContentComponent = {
+  categoryId: string | null;
+  componentName: string;
+  materialType: string;
+  quantity: number;
+  unit: string;
+  componentRole: string;
+  isRequired: boolean;
+  canBeSubstituted: boolean;
+  searchKeywords: string[];
+  alternativeKeywords: string[];
+  notes: string | null;
+  conceptKey: string | null;
+};
+
+const projectContentFingerprint = (input: {
+  categoryId: string;
+  title: string;
+  shortDescription: string;
+  description: string;
+  difficulty: string;
+  estimatedDurationMinutes: number;
+  coverImageUrl: string | null;
+  status: string;
+  components: ContentComponent[];
+  steps: Array<{ title: string; description: string }>;
+  links: Array<{
+    linkType: string;
+    url: string;
+    title: string;
+    sourceName: string;
+  }>;
+  tags: string[];
+}) =>
+  JSON.stringify({
+    ...input,
+    components: [...input.components].sort((a, b) =>
+      componentIdentity(a.componentName, a.materialType).localeCompare(
+        componentIdentity(b.componentName, b.materialType),
+      ),
+    ),
+    links: [...input.links].sort((a, b) => a.url.localeCompare(b.url)),
+    tags: [...input.tags].sort(),
+  });
+
 const syncOne = async (input: {
   project: ProjectData03Project;
   authorId: string;
@@ -110,12 +165,24 @@ const syncOne = async (input: {
     project.categoryKey,
   );
 
+  const componentCategoryIds = await Promise.all(
+    project.components.map((component) =>
+      resolveCategoryId(categoryCache, component.categoryKey),
+    ),
+  );
+
   const existing = await prisma.learningProject.findFirst({
     where: { tags: { some: { tag: identityTag } } },
     include: {
       tags: true,
       images: true,
-      requiredComponents: { include: { taxonomyConcepts: true } },
+      requiredComponents: {
+        include: {
+          taxonomyConcepts: {
+            include: { concept: { select: { canonicalKey: true } } },
+          },
+        },
+      },
       steps: true,
       links: true,
     },
@@ -225,7 +292,84 @@ const syncOne = async (input: {
     return { key: project.key, action: 'created' as const, id: created.id };
   }
 
-  // Update managed content in place (preserve id / engagement / builds).
+  const desiredManagedTags = managedTagsFor(project, identityTag);
+  const desiredFingerprint = projectContentFingerprint({
+    categoryId: projectCategoryId,
+    title: project.title,
+    shortDescription: project.shortDescription,
+    description: project.description,
+    difficulty: project.difficulty,
+    estimatedDurationMinutes: project.estimatedDurationMinutes,
+    coverImageUrl: project.coverImageUrl,
+    status: project.status,
+    components: project.components.map((component, index) => ({
+      categoryId: componentCategoryIds[index] ?? null,
+      componentName: component.name,
+      materialType: component.materialType,
+      quantity: component.quantity,
+      unit: component.unit,
+      componentRole: component.role,
+      isRequired: component.required,
+      canBeSubstituted: component.substitute,
+      searchKeywords: component.keywords,
+      alternativeKeywords: component.alternatives ?? [],
+      notes: component.notes ?? null,
+      conceptKey: component.conceptKey ?? null,
+    })),
+    steps: project.steps,
+    links: project.links,
+    tags: desiredManagedTags,
+  });
+  const liveFingerprint = projectContentFingerprint({
+    categoryId: existing.categoryId,
+    title: existing.title,
+    shortDescription: existing.shortDescription,
+    description: existing.description,
+    difficulty: existing.difficulty,
+    estimatedDurationMinutes: existing.estimatedDurationMinutes,
+    coverImageUrl: existing.coverImageUrl,
+    status: existing.status,
+    components: existing.requiredComponents.map((component) => ({
+      categoryId: component.categoryId,
+      componentName: component.componentName,
+      materialType: component.materialType,
+      quantity: Number(component.quantity),
+      unit: component.unit,
+      componentRole: component.componentRole,
+      isRequired: component.isRequired,
+      canBeSubstituted: component.canBeSubstituted,
+      searchKeywords: asStringArray(component.searchKeywords),
+      alternativeKeywords: asStringArray(component.alternativeKeywords),
+      notes: component.notes ?? null,
+      conceptKey:
+        component.taxonomyConcepts.find((rel) => rel.concept.canonicalKey)
+          ?.concept.canonicalKey ?? null,
+    })),
+    steps: [...existing.steps]
+      .sort((a, b) => a.stepNumber - b.stepNumber)
+      .map((step) => ({ title: step.title, description: step.description })),
+    links: existing.links.map((link) => ({
+      linkType: link.linkType,
+      url: link.url,
+      title: link.title,
+      sourceName: link.sourceName,
+    })),
+    tags: existing.tags
+      .map((row) => row.tag)
+      .filter((tag) => desiredManagedTags.includes(tag)),
+  });
+
+  if (liveFingerprint === desiredFingerprint) {
+    return {
+      key: project.key,
+      action: 'unchanged' as const,
+      id: existing.id,
+      fingerprint: fingerprint(project).length,
+    };
+  }
+
+  // Update managed content in place. Preserve component IDs so existing
+  // ProjectBuildItem rows are not cascade-deleted on every demo:seed run.
   await prisma.$transaction(async (tx) => {
     await tx.learningProject.update({
       where: { id: existing.id },
@@ -266,42 +410,74 @@ const syncOne = async (input: {
     await tx.projectComponentConcept.deleteMany({
       where: { component: { projectId: existing.id } },
     });
-    await tx.projectRequiredComponent.deleteMany({
-      where: { projectId: existing.id },
-    });
-    for (const component of project.components) {
-      const createdComponent = await tx.projectRequiredComponent.create({
-        data: {
-          projectId: existing.id,
-          categoryId: await resolveCategoryId(
-            categoryCache,
-            component.categoryKey,
-          ),
-          componentName: component.name,
-          materialType: component.materialType,
-          quantity: component.quantity,
-          unit: component.unit,
-          componentRole: component.role,
-          isRequired: component.required,
-          canBeSubstituted: component.substitute,
-          searchKeywords: component.keywords,
-          alternativeKeywords: component.alternatives ?? [],
-          providedByUser: true,
-          confirmedByUser: true,
-          generatedOrSuggestedByAi: false,
-          reviewStatus:
-            project.status === 'PUBLISHED' ? 'ACCEPTED' : 'PENDING_REVIEW',
-          notes: component.notes ?? null,
-        },
-      });
+    const existingByIdentity = new Map(
+      existing.requiredComponents.map((row) => [
+        componentIdentity(row.componentName, row.materialType),
+        row,
+      ]),
+    );
+    const desiredIdentities = new Set<string>();
+    for (const [index, component] of project.components.entries()) {
+      const identity = componentIdentity(component.name, component.materialType);
+      desiredIdentities.add(identity);
+      const categoryId = componentCategoryIds[index];
+      if (!categoryId) {
+        throw new Error(
+          `Missing category for ${project.key} component ${component.name}`,
+        );
+      }
+      const payload = {
+        categoryId,
+        componentName: component.name,
+        materialType: component.materialType,
+        quantity: component.quantity,
+        unit: component.unit,
+        componentRole: component.role,
+        isRequired: component.required,
+        canBeSubstituted: component.substitute,
+        searchKeywords: component.keywords,
+        alternativeKeywords: component.alternatives ?? [],
+        providedByUser: true,
+        confirmedByUser: true,
+        generatedOrSuggestedByAi: false,
+        reviewStatus:
+          project.status === 'PUBLISHED' ? 'ACCEPTED' : 'PENDING_REVIEW',
+        notes: component.notes ?? null,
+      };
+      const current = existingByIdentity.get(identity);
+      const componentId = current
+        ? (
+            await tx.projectRequiredComponent.update({
+              where: { id: current.id },
+              data: payload,
+            })
+          ).id
+        : (
+            await tx.projectRequiredComponent.create({
+              data: { projectId: existing.id, ...payload },
+            })
+          ).id;
       if (component.conceptKey) {
         const conceptId = conceptIdByKey.get(component.conceptKey);
         if (conceptId) {
           await tx.projectComponentConcept.create({
-            data: { componentId: createdComponent.id, conceptId },
+            data: { componentId, conceptId },
           });
         }
       }
+    }
+    const staleComponentIds = existing.requiredComponents
+      .filter(
+        (row) =>
+          !desiredIdentities.has(
+            componentIdentity(row.componentName, row.materialType),
+          ),
+      )
+      .map((row) => row.id);
+    if (staleComponentIds.length > 0) {
+      await tx.projectRequiredComponent.deleteMany({
+        where: { id: { in: staleComponentIds } },
+      });
     }
 
     await tx.projectStep.deleteMany({ where: { projectId: existing.id } });

@@ -121,6 +121,16 @@ const CASES: CaseSpec[] = [
     categoryNameEn: 'Metal & Fasteners',
     expectedType: 'Screws and Nuts',
   },
+  {
+    raw: 'حساس رطوبة التربة',
+    categoryNameEn: 'Electronics & Components',
+    expectedType: 'Soil Moisture Sensor',
+  },
+  {
+    raw: 'مستشعر رطوبة التربة',
+    categoryNameEn: 'Electronics & Components',
+    expectedType: 'Soil Moisture Sensor',
+  },
 ];
 
 const main = async () => {

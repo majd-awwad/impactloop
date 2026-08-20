@@ -301,7 +301,7 @@ export const INTEREST_PD03_KEYS: Record<string, string[]> = {
 };
 
 export type BuildItemPlan = {
-  /** Substring match against componentName (case-insensitive). */
+  /** Substring match against componentName or materialType (case-insensitive). */
   componentIncludes?: string;
   status: "MISSING" | "ALREADY_OWNED" | "AVAILABLE";
   /** Prefer community identity tag, else match material title/type substring. */

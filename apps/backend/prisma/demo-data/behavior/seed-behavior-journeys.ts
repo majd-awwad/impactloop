@@ -29,6 +29,10 @@ import {
   MR_JOURNEY_PLANS,
   type MrJourneyPlan,
 } from "./behavior-journeys.data.js";
+import {
+  findMatchingJourneyComponent,
+  formatComponentInventory,
+} from "./match-journey-component.js";
 
 const DEMO_PROJECT_KEY_PREFIX = "demo-project-key:";
 
@@ -155,30 +159,33 @@ const findJourneyContext = async (plan: MrJourneyPlan) => {
     throw new Error(`Missing project for key ${plan.projectKey}`);
   }
 
+  const componentSelect = {
+    id: true,
+    componentName: true,
+    materialType: true,
+    searchKeywords: true,
+    categoryId: true,
+    quantity: true,
+    unit: true,
+  } as const;
+
+  const loadBuildItems = async (buildId: string) =>
+    prisma.projectBuildItem.findMany({
+      where: { buildId },
+      select: {
+        id: true,
+        status: true,
+        requiredComponent: { select: componentSelect },
+      },
+    });
+
   const build = await prisma.projectBuild.findFirst({
     where: {
       learnerId: learner.id,
       projectId: project.id,
       attemptNumber: 1,
     },
-    select: {
-      id: true,
-      items: {
-        select: {
-          id: true,
-          status: true,
-          requiredComponent: {
-            select: {
-              id: true,
-              componentName: true,
-              categoryId: true,
-              quantity: true,
-              unit: true,
-            },
-          },
-        },
-      },
-    },
+    select: { id: true },
   });
   if (!build) {
     throw new Error(
@@ -186,25 +193,66 @@ const findJourneyContext = async (plan: MrJourneyPlan) => {
     );
   }
 
-  const needle = plan.componentIncludes.toLowerCase();
-  const matches = build.items.filter((row) =>
-    row.requiredComponent.componentName.toLowerCase().includes(needle),
-  );
-  // Prefer MISSING items, then the longest component name (more specific).
-  const item =
-    [...matches].sort((a, b) => {
-      const statusRank =
-        Number(b.status === "MISSING") - Number(a.status === "MISSING");
-      if (statusRank !== 0) return statusRank;
-      return (
-        b.requiredComponent.componentName.length -
-        a.requiredComponent.componentName.length
-      );
-    })[0] ?? null;
-  if (!item) {
-    throw new Error(
-      `Missing build item matching "${plan.componentIncludes}" on ${plan.projectKey}`,
+  let items = await loadBuildItems(build.id);
+  const pickItem = (
+    rows: Awaited<ReturnType<typeof loadBuildItems>>,
+  ) => {
+    const matches = rows.filter((row) =>
+      findMatchingJourneyComponent(
+        [row.requiredComponent],
+        plan.componentIncludes,
+      ),
     );
+    return (
+      [...matches].sort((a, b) => {
+        const statusRank =
+          Number(b.status === "MISSING") - Number(a.status === "MISSING");
+        if (statusRank !== 0) return statusRank;
+        return (
+          b.requiredComponent.componentName.length -
+          a.requiredComponent.componentName.length
+        );
+      })[0] ?? null
+    );
+  };
+
+  let item = pickItem(items);
+
+  if (!item) {
+    const projectComponents = await prisma.projectRequiredComponent.findMany({
+      where: { projectId: project.id },
+      select: componentSelect,
+    });
+    const projectMatch = findMatchingJourneyComponent(
+      projectComponents,
+      plan.componentIncludes,
+    );
+    if (projectMatch) {
+      const alreadyLinked = items.some(
+        (row) => row.requiredComponent.id === projectMatch.id,
+      );
+      if (!alreadyLinked) {
+        await prisma.projectBuildItem.create({
+          data: {
+            buildId: build.id,
+            requiredComponentId: projectMatch.id,
+            status: "MISSING",
+            learnerNote:
+              "BEHAVIOR-DATA-02: reconciled canonical Najah component onto attempt-1 build",
+          },
+        });
+        items = await loadBuildItems(build.id);
+        item = pickItem(items);
+      }
+    }
+
+    if (!item) {
+      throw new Error(
+        `Missing build item matching "${plan.componentIncludes}" on ${plan.projectKey}. ` +
+          `Build items: ${formatComponentInventory(items.map((row) => row.requiredComponent))}. ` +
+          `Project components: ${formatComponentInventory(projectComponents)}.`,
+      );
+    }
   }
   if (!item.requiredComponent.categoryId) {
     throw new Error(
