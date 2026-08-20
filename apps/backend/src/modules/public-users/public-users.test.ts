@@ -23,6 +23,12 @@ const createUser = async (input: {
   displayName: string;
   roles: Array<'LEARNER' | 'SUPPLIER'>;
   supplierName?: string;
+  learnerProfile?: {
+    learnerType?: string;
+    skillLevel?: string;
+    bio?: string;
+    interests?: string[];
+  };
 }) => {
   const user = await prisma.user.create({
     data: {
@@ -37,6 +43,18 @@ const createUser = async (input: {
           isPrimary: index === 0,
         })),
       },
+      ...(input.learnerProfile
+        ? {
+            learnerProfile: {
+              create: {
+                learnerType: input.learnerProfile.learnerType,
+                skillLevel: input.learnerProfile.skillLevel,
+                bio: input.learnerProfile.bio,
+                interests: input.learnerProfile.interests ?? [],
+              },
+            },
+          }
+        : {}),
       ...(input.supplierName
         ? {
             supplierProfile: {
@@ -96,10 +114,20 @@ describe('public user creator discoverability', () => {
       displayName: `${marker} Majd Awad`,
       roles: ['LEARNER', 'SUPPLIER'],
       supplierName: `${marker} Reuse Workshop`,
+      learnerProfile: {
+        learnerType: 'University student',
+        skillLevel: 'Intermediate',
+        bio: 'Builds CNC tools for community workshops.',
+        interests: ['Arduino', ' robotics ', 'Arduino', ''],
+      },
     });
     arabicCreator = await createUser({
       displayName: `${marker} إسراء حداد`,
       roles: ['LEARNER'],
+      learnerProfile: {
+        learnerType: 'Self learner',
+        skillLevel: 'Beginner',
+      },
     });
     requester = await createUser({
       displayName: `${marker} Requester`,
@@ -110,7 +138,7 @@ describe('public user creator discoverability', () => {
       creatorId: creator.id,
       title: `${marker} CNC project`,
     });
-    await createProject({
+    const draftProject = await createProject({
       creatorId: creator.id,
       title: `${marker} private draft`,
       status: 'DRAFT',
@@ -123,6 +151,13 @@ describe('public user creator discoverability', () => {
     await createProject({
       creatorId: arabicCreator.id,
       title: `${marker} Arabic project`,
+    });
+
+    await prisma.projectLike.createMany({
+      data: [
+        { projectId: publishedProject.id, userId: requester.id },
+        { projectId: draftProject.id, userId: requester.id },
+      ],
     });
 
     const build = await prisma.projectBuild.create({
@@ -202,6 +237,27 @@ describe('public user creator discoverability', () => {
     assert.deepEqual(profile.publicRoles, ['LEARNER', 'SUPPLIER']);
     assert.equal(profile.supplier?.displayName, `${marker} Reuse Workshop`);
     assert.equal(profile.publishedProjectsCount, 1);
+    assert.equal(profile.publishedProjectsLikesCount, 1);
+    assert.equal(profile.learnerType, 'University student');
+    assert.equal(profile.skillLevel, 'Intermediate');
+    assert.equal(profile.bio, 'Builds CNC tools for community workshops.');
+    assert.deepEqual(profile.interests, ['Arduino', 'robotics']);
+    assert.deepEqual(
+      Object.keys(profile).sort(),
+      [
+        'avatarUrl',
+        'bio',
+        'displayName',
+        'id',
+        'interests',
+        'learnerType',
+        'publicRoles',
+        'publishedProjectsCount',
+        'publishedProjectsLikesCount',
+        'skillLevel',
+        'supplier',
+      ].sort(),
+    );
     for (const forbidden of [
       'email',
       'phone',
@@ -211,6 +267,31 @@ describe('public user creator discoverability', () => {
     ]) {
       assert.equal(forbidden in profile, false, `exposed ${forbidden}`);
     }
+  });
+
+  test('learner-only public profile omits supplier and empty optional fields', async () => {
+    const profile = await getPublicUserProfile(arabicCreator.id);
+    assert.equal(profile.displayName, arabicCreator.displayName);
+    assert.deepEqual(profile.publicRoles, ['LEARNER']);
+    assert.equal(profile.supplier, null);
+    assert.equal(profile.learnerType, 'Self learner');
+    assert.equal(profile.skillLevel, 'Beginner');
+    assert.equal(profile.bio, null);
+    assert.deepEqual(profile.interests, []);
+    assert.equal(profile.publishedProjectsCount, 1);
+    assert.equal(profile.publishedProjectsLikesCount, 0);
+  });
+
+  test('requester public profile does not leak private account fields', async () => {
+    const profile = await getPublicUserProfile(requester.id);
+    assert.equal(profile.bio, null);
+    assert.equal(profile.learnerType, null);
+    assert.equal(profile.skillLevel, null);
+    assert.deepEqual(profile.interests, []);
+    assert.equal(profile.supplier, null);
+    assert.equal('email' in profile, false);
+    assert.equal('phone' in profile, false);
+    assert.equal('learnerProfile' in profile, false);
   });
 
   test('public projects include only the requested creator public projects', async () => {

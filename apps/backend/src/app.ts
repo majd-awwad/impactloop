@@ -18,6 +18,7 @@ import { priceRuleRequestsRouter } from './modules/price-rule-requests/price-rul
 import { reservationsRouter } from './modules/reservations/reservations.routes.js';
 import { adminRouter } from './modules/admin/admin.routes.js';
 import { notificationsRouter } from './modules/notifications/notifications.routes.js';
+import { publicLandingRouter } from './modules/public-landing/public-landing.routes.js';
 import { publicSuppliersRouter } from './modules/public-suppliers/public-suppliers.routes.js';
 import { publicUsersRouter } from './modules/public-users/public-users.routes.js';
 import { supplierRouter } from './modules/supplier/supplier.routes.js';
@@ -167,6 +168,7 @@ export const createApp = (options: CreateAppOptions): Express => {
   app.use('/api/project-help-sessions', projectHelpSessionsRouter);
   app.use('/api/ai/v1', aiRouter);
   app.use('/api/notifications', notificationsRouter);
+  app.use('/api/public/landing', publicLandingRouter);
   app.use('/api/suppliers', publicSuppliersRouter);
   app.use('/api/users', publicUsersRouter);
   app.use('/api/supplier/material-requests', supplierMaterialRequestsRouter);
