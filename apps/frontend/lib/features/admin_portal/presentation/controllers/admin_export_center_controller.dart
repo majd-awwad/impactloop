@@ -23,7 +23,8 @@ class AdminExportCenterController extends ChangeNotifier {
   MaterialsExportCenterFilters _materials = MaterialsExportCenterFilters.empty;
   MaterialReportsExportCenterFilters _materialReports =
       MaterialReportsExportCenterFilters.empty;
-  DeliveriesExportCenterFilters _deliveries = DeliveriesExportCenterFilters.empty;
+  DeliveriesExportCenterFilters _deliveries =
+      DeliveriesExportCenterFilters.empty;
   UsersExportCenterFilters _users = UsersExportCenterFilters.empty;
   IncidentReportsExportCenterFilters _incidents =
       IncidentReportsExportCenterFilters.empty;

@@ -221,7 +221,8 @@ class AdminPeopleExportPreflight {
     );
   }
 
-  AdminExportFormatEligibility? eligibilityFor(String format) => formats[format];
+  AdminExportFormatEligibility? eligibilityFor(String format) =>
+      formats[format];
 }
 
 class AdminPeopleApi {

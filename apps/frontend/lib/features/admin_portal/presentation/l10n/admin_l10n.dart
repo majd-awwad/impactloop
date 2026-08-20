@@ -46,7 +46,8 @@ class AdminL10n {
   String get welcomeSubtitle => _l10n.adminWelcomeSubtitle;
   String get bannerOverviewLabel => _l10n.adminBannerOverviewLabel;
   String get platformDistributionTitle => _l10n.adminPlatformDistributionTitle;
-  String get platformDistributionSubtitle => _l10n.adminPlatformDistributionSubtitle;
+  String get platformDistributionSubtitle =>
+      _l10n.adminPlatformDistributionSubtitle;
   String get impactSectionTitle => _l10n.adminImpactSectionTitle;
   String get co2RingCenterLabel => _l10n.adminCo2RingCenterLabel;
   String get estimatedAvoidedSuffix => _l10n.adminEstimatedAvoidedSuffix;
@@ -83,7 +84,8 @@ class AdminL10n {
   String get reuseActivityTitle => _l10n.adminReuseActivityTitle;
   String get reuseActivitySubtitle => _l10n.adminReuseActivitySubtitle;
   String get materialsByCategoryTitle => _l10n.adminMaterialsByCategoryTitle;
-  String get materialsByCategorySubtitle => _l10n.adminMaterialsByCategorySubtitle;
+  String get materialsByCategorySubtitle =>
+      _l10n.adminMaterialsByCategorySubtitle;
   String get reservationStatusTitle => _l10n.adminReservationStatusTitle;
   String get reservationStatusSubtitle => _l10n.adminReservationStatusSubtitle;
   String get pendingActionsTitle => _l10n.adminPendingActionsTitle;
@@ -91,18 +93,23 @@ class AdminL10n {
   String get recentInvitationsTitle => _l10n.adminRecentInvitationsTitle;
   String get recentActivityTitle => _l10n.adminRecentActivityTitle;
   String get recentActivitySubtitle => _l10n.adminRecentActivitySubtitle;
-  String get recentActivityEmptySubtitle => _l10n.adminRecentActivityEmptySubtitle;
+  String get recentActivityEmptySubtitle =>
+      _l10n.adminRecentActivityEmptySubtitle;
   String get viewAllAuditLogs => _l10n.adminViewAllAuditLogs;
-  String get supplierVerificationQueueTitle => _l10n.adminSupplierVerificationQueueTitle;
+  String get supplierVerificationQueueTitle =>
+      _l10n.adminSupplierVerificationQueueTitle;
   String get reviewQueuesTitle => _l10n.adminReviewQueuesTitle;
   String get reviewQueuesSubtitle => _l10n.adminReviewQueuesSubtitle;
-  String get supplierVerificationFutureNote => _l10n.adminSupplierVerificationFutureNote;
+  String get supplierVerificationFutureNote =>
+      _l10n.adminSupplierVerificationFutureNote;
   String get impactSnapshotTitle => _l10n.adminImpactSnapshotTitle;
   String get impactSnapshotSubtitle => _l10n.adminImpactSnapshotSubtitle;
   String get impactReusedMaterials => _l10n.adminImpactReusedMaterials;
-  String get impactCompletedReservations => _l10n.adminImpactCompletedReservations;
+  String get impactCompletedReservations =>
+      _l10n.adminImpactCompletedReservations;
   String get impactLearnersBenefited => _l10n.adminImpactLearnersBenefited;
-  String get impactSuppliersContributed => _l10n.adminImpactSuppliersContributed;
+  String get impactSuppliersContributed =>
+      _l10n.adminImpactSuppliersContributed;
   String get impactTopCategory => _l10n.adminImpactTopCategory;
   String get impactTopCategoryEmpty => _l10n.adminImpactTopCategoryEmpty;
   String get impactEnvironmentalNote => _l10n.adminImpactEnvironmentalNote;
@@ -112,20 +119,74 @@ class AdminL10n {
   String get emptyNoInvitationsHint => _l10n.adminEmptyNoInvitationsHint;
   String get emptyNoActivity => _l10n.adminEmptyNoActivity;
   String get emptyNoActivityHint => _l10n.adminEmptyNoActivityHint;
-  String get emptyNoSupplierVerifications => _l10n.adminEmptyNoSupplierVerifications;
+  String get emptyNoSupplierVerifications =>
+      _l10n.adminEmptyNoSupplierVerifications;
   String get emptyAllClearTitle => _l10n.adminEmptyAllClearTitle;
   String get emptyNoPendingApprovals => _l10n.adminEmptyNoPendingApprovals;
-  String get pendingSupplierVerifications => _l10n.adminPendingSupplierVerifications;
+  String get pendingSupplierVerifications =>
+      _l10n.adminPendingSupplierVerifications;
   String get pendingCategoryRequests => _l10n.adminPendingCategoryRequests;
   String get pendingPriceRequests => _l10n.adminPendingPriceRequests;
   String get pendingReports => _l10n.adminPendingReports;
   String get opUsersDesc => _l10n.adminOpUsersDesc;
   String get opSuppliersDesc => _l10n.adminOpSuppliersDesc;
-  String get opSupplierVerificationDesc => _l10n.adminOpSupplierVerificationDesc;
+  String get opSupplierVerificationDesc =>
+      _l10n.adminOpSupplierVerificationDesc;
   String get opMaterialsDesc => _l10n.adminOpMaterialsDesc;
   String get opApprovalsDesc => _l10n.adminOpApprovalsDesc;
   String get opInvitationsDesc => _l10n.adminOpInvitationsDesc;
   String get opImpactDesc => _l10n.adminOpImpactDesc;
+  String get impactPageSubtitle => _l10n.adminImpactPageSubtitle;
+  String get completedReuseEvents => _l10n.adminCompletedReuseEvents;
+  String get completedReuseEventsHelper =>
+      _l10n.adminCompletedReuseEventsHelper;
+  String get learnersBenefitedHelper => _l10n.adminLearnersBenefitedHelper;
+  String get suppliersContributedHelper =>
+      _l10n.adminSuppliersContributedHelper;
+  String get projectComponentsFulfilled =>
+      _l10n.adminProjectComponentsFulfilled;
+  String get projectComponentsFulfilledHelper =>
+      _l10n.adminProjectComponentsFulfilledHelper;
+  String get distinctMaterialsReused => _l10n.adminDistinctMaterialsReused;
+  String get distinctMaterialsReusedHelper =>
+      _l10n.adminDistinctMaterialsReusedHelper;
+  String get completedReuseByCategoryTitle =>
+      _l10n.adminCompletedReuseByCategoryTitle;
+  String get completedReuseByCategorySubtitle =>
+      _l10n.adminCompletedReuseByCategorySubtitle;
+  String get learningImpactTitle => _l10n.adminLearningImpactTitle;
+  String get learningImpactSubtitle => _l10n.adminLearningImpactSubtitle;
+  String get learningComponentsFulfilled =>
+      _l10n.adminLearningComponentsFulfilled;
+  String get learningBuildsSupported => _l10n.adminLearningBuildsSupported;
+  String get learningProjectsSupported => _l10n.adminLearningProjectsSupported;
+  String get completedReuseOverTimeTitle =>
+      _l10n.adminCompletedReuseOverTimeTitle;
+  String get completedReuseOverTimeSubtitle =>
+      _l10n.adminCompletedReuseOverTimeSubtitle;
+  String get environmentalEstimateTitle =>
+      _l10n.adminEnvironmentalEstimateTitle;
+  String get environmentalEstimateSubtitle =>
+      _l10n.adminEnvironmentalEstimateSubtitle;
+  String get estimatedPotentialCo2eAvoided =>
+      _l10n.adminEstimatedPotentialCo2eAvoided;
+  String get environmentalUnavailableValue =>
+      _l10n.adminEnvironmentalUnavailableValue;
+  String get environmentalUnavailableBody =>
+      _l10n.adminEnvironmentalUnavailableBody;
+  String environmentalCoverage(int included, int total) =>
+      _l10n.adminEnvironmentalCoverage(included, total);
+  String environmentalCoveragePercent(int percent) =>
+      _l10n.adminEnvironmentalCoveragePercent(percent);
+  String get calculationMethodology => _l10n.adminCalculationMethodology;
+  String get environmentalMethodologyBody =>
+      _l10n.adminEnvironmentalMethodologyBody;
+  String get impactEmptyCategoryTitle => _l10n.adminImpactEmptyCategoryTitle;
+  String get impactEmptyCategorySubtitle =>
+      _l10n.adminImpactEmptyCategorySubtitle;
+  String get impactEmptyMonthlyTitle => _l10n.adminImpactEmptyMonthlyTitle;
+  String get impactEmptyMonthlySubtitle =>
+      _l10n.adminImpactEmptyMonthlySubtitle;
   String get opAuditLogsDesc => _l10n.adminOpAuditLogsDesc;
   String get categoryRequest => _l10n.adminCategoryRequest;
   String get resolveCategoryRequest => _l10n.adminResolveCategoryRequest;
@@ -149,7 +210,8 @@ class AdminL10n {
   String get createAndApprove => _l10n.adminCreateAndApprove;
   String get createJustification => _l10n.adminCreateJustification;
   String get createJustificationHelper => _l10n.adminCreateJustificationHelper;
-  String get createJustificationRequired => _l10n.adminCreateJustificationRequired;
+  String get createJustificationRequired =>
+      _l10n.adminCreateJustificationRequired;
   String get existingNameConflict => _l10n.adminExistingNameConflict;
   String get requestDetails => _l10n.adminRequestDetails;
   String get categoryMatching => _l10n.adminCategoryMatching;
@@ -170,8 +232,10 @@ class AdminL10n {
   String get nameRepeatedWords => _l10n.adminNameRepeatedWords;
   String get nameDescriptionLike => _l10n.adminNameDescriptionLike;
   String get namesAppearIdentical => _l10n.adminNamesAppearIdentical;
-  String get confirmSharedTechnicalTerm => _l10n.adminConfirmSharedTechnicalTerm;
-  String get sharedNameAcknowledgementRequired => _l10n.adminSharedNameAcknowledgementRequired;
+  String get confirmSharedTechnicalTerm =>
+      _l10n.adminConfirmSharedTechnicalTerm;
+  String get sharedNameAcknowledgementRequired =>
+      _l10n.adminSharedNameAcknowledgementRequired;
   String get nameUnusuallyLong => _l10n.adminNameUnusuallyLong;
   String get englishNameCasingWarning => _l10n.adminEnglishNameCasingWarning;
   String get repeatedWhitespaceWarning => _l10n.adminRepeatedWhitespaceWarning;
@@ -211,11 +275,10 @@ class AdminL10n {
   String get retry => _l10n.adminRetry;
   String get approvalSucceeded => _l10n.adminApprovalSucceeded;
 
-
   String materialUsageCount(int count) => t(
-        '$count marketplace material${count == 1 ? '' : 's'}',
-        '$count مادة في المنصة',
-      );
+    '$count marketplace material${count == 1 ? '' : 's'}',
+    '$count مادة في المنصة',
+  );
 
   String get cancel => _l10n.adminCancel;
   String get confirm => _l10n.adminConfirm;
@@ -251,7 +314,8 @@ class AdminL10n {
   String get noProjectBuildsWithLearningData =>
       _l10n.adminNoProjectBuildsWithLearningData;
   String get exportReservations => _l10n.adminExportReservations;
-  String get noReservationsMatchFilters => _l10n.adminNoReservationsMatchFilters;
+  String get noReservationsMatchFilters =>
+      _l10n.adminNoReservationsMatchFilters;
   String get reservationDetails => _l10n.adminReservationDetails;
   String get openReport => _l10n.adminOpenReport;
   String get openDelivery => _l10n.adminOpenDelivery;

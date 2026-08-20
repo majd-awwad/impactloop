@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
@@ -7,6 +8,11 @@ import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../../../app/theme/landing_colors.dart';
 import '../../../../app/widgets/hero_workshop_visual.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../shared/widgets/user_avatar.dart';
+import '../../application/landing_public_providers.dart';
+import '../../domain/landing_public_content.dart';
+import 'landing_live_count.dart';
+import 'landing_stat_format.dart';
 
 class LandingHeroSection extends StatelessWidget {
   const LandingHeroSection({super.key});
@@ -24,7 +30,7 @@ class LandingHeroSection extends StatelessWidget {
             child: _HeroContent(onSignIn: () => context.go('/login')),
           ),
           const SizedBox(width: AppSpacing.xxl),
-          const Expanded(flex: 10, child: HeroWorkshopVisual()),
+          const Expanded(flex: 10, child: _LiveHeroWorkshopVisual()),
         ],
       );
     }
@@ -34,8 +40,31 @@ class LandingHeroSection extends StatelessWidget {
       children: [
         _HeroContent(onSignIn: () => context.go('/login')),
         const SizedBox(height: AppSpacing.xl),
-        const HeroWorkshopVisual(),
+        const _LiveHeroWorkshopVisual(),
       ],
+    );
+  }
+}
+
+class _LiveHeroWorkshopVisual extends ConsumerWidget {
+  const _LiveHeroWorkshopVisual();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncContent = ref.watch(landingPublicContentProvider);
+    final stats = asyncContent.asData?.value.stats;
+    final unresolved = asyncContent.isLoading || asyncContent.hasError;
+
+    return HeroWorkshopVisual(
+      reusedCount: formatLandingCount(
+        unresolved ? null : stats?.reusedMaterialsCount,
+      ),
+      publishedCount: formatLandingCount(
+        unresolved ? null : stats?.publishedProjectsCount,
+      ),
+      availableCount: formatLandingCount(
+        unresolved ? null : stats?.availableMaterialsCount,
+      ),
     );
   }
 }
@@ -174,17 +203,17 @@ class _HeroContent extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _HeroMetricCard(
-                        label: context.l10n.materialsReused,
-                        value: '12.5k+',
-                        icon: Icons.recycling_rounded,
+                        label: context.l10n.landingAvailableMaterials,
+                        kind: LandingStatKind.availableMaterials,
+                        icon: Icons.inventory_2_outlined,
                       ),
                     ),
                     SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: _HeroMetricCard(
-                        label: context.l10n.activeMakers,
-                        value: '420+',
-                        icon: Icons.groups_rounded,
+                        label: context.l10n.landingPublishedProjects,
+                        kind: LandingStatKind.publishedProjects,
+                        icon: Icons.school_outlined,
                       ),
                     ),
                   ],
@@ -195,17 +224,17 @@ class _HeroContent extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _HeroMetricCard(
-                      label: context.l10n.materialsReused,
-                      value: '12.5k+',
-                      icon: Icons.recycling_rounded,
+                      label: context.l10n.landingAvailableMaterials,
+                      kind: LandingStatKind.availableMaterials,
+                      icon: Icons.inventory_2_outlined,
                     ),
                   ),
                   SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: _HeroMetricCard(
-                      label: context.l10n.activeMakers,
-                      value: '420+',
-                      icon: Icons.groups_rounded,
+                      label: context.l10n.landingPublishedProjects,
+                      kind: LandingStatKind.publishedProjects,
+                      icon: Icons.school_outlined,
                     ),
                   ),
                 ],
@@ -226,27 +255,7 @@ class _HeroContent extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                SizedBox(
-                  width: 88,
-                  height: 36,
-                  child: Stack(
-                    children: [
-                      for (var index = 0; index < 4; index++)
-                        PositionedDirectional(
-                          start: index * 22.0,
-                          child: CircleAvatar(
-                            radius: 18,
-                            backgroundColor: avatarColors[index],
-                            child: Icon(
-                              Icons.person,
-                              size: 18,
-                              color: colors.textOnPrimary,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+                _LandingCommunityAvatars(fallbackColors: avatarColors),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Text(
@@ -268,12 +277,12 @@ class _HeroContent extends StatelessWidget {
 class _HeroMetricCard extends StatelessWidget {
   const _HeroMetricCard({
     required this.label,
-    required this.value,
+    required this.kind,
     required this.icon,
   });
 
   final String label;
-  final String value;
+  final LandingStatKind kind;
   final IconData icon;
 
   @override
@@ -304,10 +313,8 @@ class _HeroMetricCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  LandingLiveCount(
+                    kind: kind,
                     style: AuthDarkTextStyles.title(
                       context,
                     ).copyWith(color: colors.textPrimary, fontSize: 18),
@@ -433,5 +440,53 @@ class _LandingOutlinedCta extends StatelessWidget {
     }
 
     return button;
+  }
+}
+
+class _LandingCommunityAvatars extends ConsumerWidget {
+  const _LandingCommunityAvatars({required this.fallbackColors});
+
+  final List<Color> fallbackColors;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = LandingColors.of(context);
+    final members =
+        ref
+            .watch(landingPublicContentProvider)
+            .asData
+            ?.value
+            .communityMembers ??
+        const <LandingCommunityMember>[];
+
+    return SizedBox(
+      width: 88,
+      height: 36,
+      child: Stack(
+        children: [
+          for (var index = 0; index < 4; index++)
+            PositionedDirectional(
+              start: index * 22.0,
+              child: index < members.length
+                  ? UserAvatar(
+                      displayName: members[index].displayName,
+                      profileImageUrl: members[index].avatarUrl,
+                      radius: 18,
+                      backgroundColor: fallbackColors[index],
+                      foregroundColor: colors.textOnPrimary,
+                    )
+                  : CircleAvatar(
+                      radius: 18,
+                      backgroundColor: fallbackColors[index],
+                      child: Icon(
+                        Icons.person,
+                        size: 18,
+                        color: colors.textOnPrimary,
+                      ),
+                    ),
+            ),
+        ],
+      ),
+    );
   }
 }

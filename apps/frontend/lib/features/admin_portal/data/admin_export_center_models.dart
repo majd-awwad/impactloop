@@ -75,7 +75,8 @@ class AdminExportCenterPreflight {
   final Map<String, dynamic> filters;
   final Map<String, AdminExportFormatEligibility> formats;
 
-  AdminExportFormatEligibility? eligibilityFor(String format) => formats[format];
+  AdminExportFormatEligibility? eligibilityFor(String format) =>
+      formats[format];
 }
 
 class ReservationsExportCenterFilters {

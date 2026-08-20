@@ -909,10 +909,7 @@ class _PaginationRow extends StatelessWidget {
         Wrap(
           spacing: 8,
           children: [
-            OutlinedButton(
-              onPressed: onPrevious,
-              child: Text(l.previous),
-            ),
+            OutlinedButton(onPressed: onPrevious, child: Text(l.previous)),
             OutlinedButton(onPressed: onNext, child: Text(l.next)),
           ],
         ),
@@ -1614,9 +1611,9 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
       );
     } on ApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
+      );
     }
   }
 

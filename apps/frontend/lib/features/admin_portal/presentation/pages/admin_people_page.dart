@@ -14,7 +14,8 @@ import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/supplier_verification_status_presentation.dart';
 import '../../data/admin_people_api.dart';
-import '../../data/admin_reservations_api.dart' show AdminExportFormatEligibility;
+import '../../data/admin_reservations_api.dart'
+    show AdminExportFormatEligibility;
 import '../l10n/admin_l10n.dart';
 import '../theme/admin_decoration_set.dart';
 import '../widgets/admin_empty_state.dart';
@@ -302,9 +303,9 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
       ).showSnackBar(SnackBar(content: Text(successMessage)));
     } on ApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
+      );
     }
   }
 
@@ -320,9 +321,9 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
       );
     } on ApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
+      );
     }
   }
 
@@ -487,9 +488,7 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
 
       if (preflight.count == 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AdminL10n.of(context).noUsersMatchFilters),
-          ),
+          SnackBar(content: Text(AdminL10n.of(context).noUsersMatchFilters)),
         );
         return;
       }
@@ -749,10 +748,7 @@ class _UsersPageHeader extends StatelessWidget {
         children: [
           titleBlock,
           const SizedBox(height: AppSpacing.md),
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: actions,
-          ),
+          Align(alignment: AlignmentDirectional.centerStart, child: actions),
         ],
       );
     }
@@ -1884,11 +1880,16 @@ class _UserActionArea extends StatelessWidget {
     final detailsButton = OutlinedButton.icon(
       onPressed: onDetails,
       icon: const Icon(Icons.visibility_outlined, size: 16),
-      label: Text(adminL10n.viewDetails),
+      label: Text(
+        adminL10n.viewDetails,
+        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
+      ),
       style: AppStatusButtonStyle.outlined(context, AppStatusTone.primary)
           .merge(
             OutlinedButton.styleFrom(
               visualDensity: VisualDensity.compact,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               textStyle: Theme.of(
                 context,
               ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
@@ -1901,51 +1902,53 @@ class _UserActionArea extends StatelessWidget {
     );
 
     final overflowButton = hasOverflow
-        ? PopupMenuButton<VoidCallback>(
-            tooltip: 'More actions',
-            icon: Icon(
-              Icons.more_vert,
-              size: 18,
-              color: AppThemeColors.of(context).textMuted,
+        ? SizedBox(
+            width: 32,
+            height: 42,
+            child: PopupMenuButton<VoidCallback>(
+              tooltip: 'More actions',
+              icon: Icon(
+                Icons.more_vert,
+                size: 18,
+                color: AppThemeColors.of(context).textMuted,
+              ),
+              padding: EdgeInsets.zero,
+              splashRadius: 18,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              onSelected: (action) => action(),
+              itemBuilder: (menuContext) => [
+                if (onSuspend != null)
+                  PopupMenuItem<VoidCallback>(
+                    value: onSuspend,
+                    child: _OverflowMenuLabel(
+                      icon: Icons.pause_circle_outline,
+                      label: adminL10n.suspendAccount,
+                      tone: AppStatusTone.warning,
+                    ),
+                  ),
+                if (onReactivate != null)
+                  PopupMenuItem<VoidCallback>(
+                    value: onReactivate,
+                    child: _OverflowMenuLabel(
+                      icon: Icons.play_circle_outline,
+                      label: adminL10n.reactivateAccount,
+                      tone: AppStatusTone.success,
+                    ),
+                  ),
+              ],
             ),
-            padding: EdgeInsets.zero,
-            onSelected: (action) => action(),
-            itemBuilder: (menuContext) => [
-              if (onSuspend != null)
-                PopupMenuItem<VoidCallback>(
-                  value: onSuspend,
-                  child: _OverflowMenuLabel(
-                    icon: Icons.pause_circle_outline,
-                    label: adminL10n.suspendAccount,
-                    tone: AppStatusTone.warning,
-                  ),
-                ),
-              if (onReactivate != null)
-                PopupMenuItem<VoidCallback>(
-                  value: onReactivate,
-                  child: _OverflowMenuLabel(
-                    icon: Icons.play_circle_outline,
-                    label: adminL10n.reactivateAccount,
-                    tone: AppStatusTone.success,
-                  ),
-                ),
-            ],
           )
         : null;
 
-    if (compact) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Expanded(child: detailsButton),
-          ?overflowButton,
-        ],
-      );
-    }
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
-      children: [detailsButton, ?overflowButton],
+      children: [
+        if (compact)
+          Expanded(child: detailsButton)
+        else
+          Flexible(child: detailsButton),
+        ?overflowButton,
+      ],
     );
   }
 }
@@ -2148,7 +2151,8 @@ class _PersonDetailDialog extends StatelessWidget {
             if (roles.contains('LEARNER')) ...[
               const SizedBox(height: AppSpacing.md),
               _AdminLearningActivitySection(
-                userId: detail['userId']?.toString() ??
+                userId:
+                    detail['userId']?.toString() ??
                     detail['id']?.toString() ??
                     '',
               ),
@@ -2329,8 +2333,7 @@ class _AdminLearningActivitySectionState
               if (_selectedLearning!['packQuality'] is Map) ...[
                 _DetailRow(
                   'Pack questions',
-                  (_selectedLearning!['packQuality']
-                      as Map)['totalQuestions'],
+                  (_selectedLearning!['packQuality'] as Map)['totalQuestions'],
                 ),
                 _DetailRow(
                   'Needs review',
@@ -2541,9 +2544,7 @@ class _AdminPeopleExportDialogState extends State<AdminPeopleExportDialog> {
       ),
       footer: AppDialogFooter.decision(
         secondaryAction: TextButton(
-          onPressed: _isDownloading
-              ? null
-              : () => Navigator.of(context).pop(),
+          onPressed: _isDownloading ? null : () => Navigator.of(context).pop(),
           child: Text(adminL10n.cancel),
         ),
         primaryAction: FilledButton(

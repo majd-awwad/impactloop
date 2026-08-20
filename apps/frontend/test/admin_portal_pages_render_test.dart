@@ -6,10 +6,12 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:frontend/features/admin_portal/data/admin_dashboard_providers.dart';
+import 'package:frontend/features/admin_portal/data/admin_impact_providers.dart';
 import 'package:frontend/features/admin_portal/data/admin_deliveries_api.dart';
 import 'package:frontend/core/errors/api_exception.dart';
 import 'package:frontend/features/admin_portal/data/models/admin_audit_logs_models.dart';
 import 'package:frontend/features/admin_portal/data/models/admin_dashboard_models.dart';
+import 'package:frontend/features/admin_portal/data/models/admin_impact_models.dart';
 import 'package:frontend/features/admin_portal/data/models/admin_deliveries_models.dart';
 import 'package:frontend/features/admin_portal/data/models/admin_reservations_models.dart';
 import 'package:frontend/features/admin_portal/presentation/pages/admin_audit_logs_page.dart';
@@ -225,7 +227,8 @@ Widget _buildAdminDeliveriesHarness({required _FakeAdminDeliveriesApi api}) {
     routes: [
       GoRoute(
         path: '/admin/deliveries',
-        builder: (context, state) => const Scaffold(body: AdminDeliveriesPage()),
+        builder: (context, state) =>
+            const Scaffold(body: AdminDeliveriesPage()),
       ),
       GoRoute(
         path: '/admin/deliveries/:deliveryId',
@@ -303,6 +306,42 @@ AdminDashboardResponse _sampleDashboard() {
   });
 }
 
+AdminImpactAnalytics _sampleImpact() {
+  return AdminImpactAnalytics.fromJson({
+    'verifiedImpact': {
+      'completedReuseEvents': 5,
+      'distinctMaterialsReused': 4,
+      'learnersBenefited': 3,
+      'suppliersContributed': 2,
+    },
+    'learningImpact': {
+      'componentsFulfilled': 3,
+      'buildsSupported': 2,
+      'projectsSupported': 2,
+    },
+    'reuseByCategory': [
+      {
+        'nameEn': 'Electronics',
+        'nameAr': 'إلكترونيات',
+        'completedReuseEvents': 4,
+      },
+    ],
+    'monthlyReuse': [
+      {'month': '2026-01', 'completedReuseEvents': 1},
+    ],
+    'environmentalEstimate': {
+      'estimatedCo2eKg': null,
+      'estimatedCo2eLabel': null,
+      'isEstimate': true,
+      'includedReuseEvents': 0,
+      'totalCompletedReuseEvents': 5,
+      'coveragePercent': 0,
+      'methodologyVersion': 'admin-impact-co2e-v2-mass-only',
+      'unavailableReason': 'NO_ELIGIBLE_EVENTS',
+    },
+  });
+}
+
 void main() {
   test('_sampleDeliveriesList includes one delivery row', () {
     final response = _sampleDeliveriesList();
@@ -337,8 +376,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          adminDashboardProvider.overrideWith(
-            (ref) async => _sampleDashboard(),
+          adminImpactAnalyticsProvider.overrideWith(
+            (ref) async => _sampleImpact(),
           ),
         ],
         child: const MaterialApp(home: Scaffold(body: AdminImpactPage())),
@@ -475,9 +514,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: _adminDeliveriesOverrides(api),
-        child: const MaterialApp(
-          home: Scaffold(body: AdminDeliveriesPage()),
-        ),
+        child: const MaterialApp(home: Scaffold(body: AdminDeliveriesPage())),
       ),
     );
 

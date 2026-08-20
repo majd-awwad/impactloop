@@ -521,7 +521,8 @@ class AdminNoShowReportsExportPreflight {
     );
   }
 
-  AdminExportFormatEligibility? eligibilityFor(String format) => formats[format];
+  AdminExportFormatEligibility? eligibilityFor(String format) =>
+      formats[format];
 }
 
 class AdminNoShowReportsApi {
@@ -577,7 +578,8 @@ class AdminNoShowReportsApi {
           if (status != null && status.trim().isNotEmpty) 'status': status,
           'page': page,
           'limit': limit,
-          if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+          if (search != null && search.trim().isNotEmpty)
+            'search': search.trim(),
           if (workflow != null && workflow.trim().isNotEmpty)
             'workflow': workflow,
           if (targetRole != null && targetRole.trim().isNotEmpty)

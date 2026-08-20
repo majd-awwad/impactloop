@@ -292,9 +292,9 @@ class _AdminReservationsPageState extends ConsumerState<AdminReservationsPage> {
     );
     if (filters.timeRange == kTimeRangeCustom && resolved.error != null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(resolved.error!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(resolved.error!)));
       return;
     }
 
@@ -786,9 +786,7 @@ class _AdminReservationsExportDialogState
       ),
       footer: AppDialogFooter.decision(
         secondaryAction: TextButton(
-          onPressed: _isDownloading
-              ? null
-              : () => Navigator.of(context).pop(),
+          onPressed: _isDownloading ? null : () => Navigator.of(context).pop(),
           child: Text(adminL10n.cancel),
         ),
         primaryAction: FilledButton(
@@ -983,7 +981,9 @@ class _FiltersPanelState extends State<_FiltersPanel> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.download_outlined, size: 18),
-              label: Text(widget.exportLoading ? 'Preparing…' : adminL10n.exportAction),
+              label: Text(
+                widget.exportLoading ? 'Preparing…' : adminL10n.exportAction,
+              ),
             ),
           );
 
@@ -2584,10 +2584,7 @@ class _TwoColRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: _MiniField(
-            label: leftLabel,
-            value: leftValue,
-          ),
+          child: _MiniField(label: leftLabel, value: leftValue),
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(
@@ -2599,10 +2596,7 @@ class _TwoColRow extends StatelessWidget {
 }
 
 class _MiniField extends StatelessWidget {
-  const _MiniField({
-    required this.label,
-    required this.value,
-  });
+  const _MiniField({required this.label, required this.value});
 
   final String label;
   final String value;

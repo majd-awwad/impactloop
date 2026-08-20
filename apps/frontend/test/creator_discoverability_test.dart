@@ -61,6 +61,34 @@ void main() {
     expect(params['q'], 'Majd Awad');
   });
 
+  test('public profile json mapper keeps only safe creator fields', () {
+    final profile = PublicUserProfile.fromJson({
+      'id': 'user-1',
+      'displayName': 'Sarah Khalil',
+      'avatarUrl': '/uploads/a.png',
+      'publicRoles': ['LEARNER'],
+      'learnerType': 'University student',
+      'skillLevel': 'Intermediate',
+      'bio': 'Builds with reclaimed materials.',
+      'interests': ['Arduino', 'Arduino', ' '],
+      'publishedProjectsCount': 2,
+      'publishedProjectsLikesCount': 5,
+      'email': 'secret@example.com',
+      'phone': '0590000000',
+      'learnerProfile': {'id': 'lp-1'},
+      'supplier': null,
+    });
+
+    expect(profile.displayName, 'Sarah Khalil');
+    expect(profile.learnerType, 'University student');
+    expect(profile.skillLevel, 'Intermediate');
+    expect(profile.bio, 'Builds with reclaimed materials.');
+    expect(profile.interests, ['Arduino']);
+    expect(profile.publishedProjectsCount, 2);
+    expect(profile.publishedProjectsLikesCount, 5);
+    expect(profile.supplier, isNull);
+  });
+
   testWidgets(
     'Learning card creator footer navigates separately from project',
     (tester) async {
@@ -147,7 +175,7 @@ void main() {
   });
 
   testWidgets(
-    'public learner profile renders projects and no supplier section',
+    'public learner profile renders creator identity, projects, and no supplier section',
     (tester) async {
       final bundle = (
         profile: const PublicUserProfile(
@@ -155,6 +183,11 @@ void main() {
           displayName: 'Majd Awad',
           publicRoles: ['LEARNER'],
           publishedProjectsCount: 1,
+          learnerType: 'University student',
+          skillLevel: 'Intermediate',
+          bio: 'Builds CNC tools for community workshops.',
+          interests: ['Arduino', 'Robotics', 'Electronics'],
+          publishedProjectsLikesCount: 4,
         ),
         projects: LearningProjectsResult(
           items: [_project()],
@@ -169,11 +202,70 @@ void main() {
         find.byKey(const ValueKey('public-user-profile-hero')),
         findsOneWidget,
       );
+      expect(find.text('Majd Awad'), findsOneWidget);
+      expect(find.text('Learner'), findsOneWidget);
+      expect(find.text('University student • Intermediate'), findsOneWidget);
+      expect(find.text('About'), findsOneWidget);
+      expect(
+        find.text('Builds CNC tools for community workshops.'),
+        findsOneWidget,
+      );
+      expect(find.text('Interests'), findsOneWidget);
+      expect(find.text('Arduino'), findsOneWidget);
+      expect(find.text('Robotics'), findsWidgets);
+      expect(find.text('Electronics'), findsOneWidget);
       expect(find.text('1'), findsOneWidget);
+      expect(find.text('4'), findsOneWidget);
+      expect(find.text('Likes received'), findsOneWidget);
       expect(find.text('Published projects'), findsWidgets);
       expect(find.text('CNC Henna Project'), findsOneWidget);
       expect(find.byType(EntityAttributionFooter), findsNothing);
-      expect(find.text('Supplier activity'), findsNothing);
+      expect(find.text('Also a Supplier on ImpactLoop'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('public-user-profile-about')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('public-user-profile-interests')),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'empty optional public profile fields do not leave extra sections',
+    (tester) async {
+      final bundle = (
+        profile: const PublicUserProfile(
+          id: 'creator-1',
+          displayName: 'Majd Awad',
+          publicRoles: ['LEARNER'],
+          publishedProjectsCount: 0,
+        ),
+        projects: const LearningProjectsResult(
+          items: [],
+          page: 1,
+          limit: 12,
+          total: 0,
+          totalPages: 0,
+        ),
+      );
+      await _pumpPublicProfile(tester, bundle, size: const Size(390, 900));
+      expect(find.text('Majd Awad'), findsOneWidget);
+      expect(find.text('Learner'), findsOneWidget);
+      expect(find.text('About'), findsNothing);
+      expect(find.text('Interests'), findsNothing);
+      expect(find.text('Likes received'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('public-user-profile-about')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('public-user-profile-interests')),
+        findsNothing,
+      );
+      expect(find.text('Also a Supplier on ImpactLoop'), findsNothing);
+      expect(tester.takeException(), isNull);
     },
   );
 
@@ -186,6 +278,9 @@ void main() {
         displayName: 'إسراء حداد',
         publicRoles: ['LEARNER', 'SUPPLIER'],
         publishedProjectsCount: 0,
+        learnerType: 'University student',
+        skillLevel: 'Intermediate',
+        interests: ['Arduino', 'Robotics', 'Electronics'],
         supplier: PublicUserSupplierSummary(
           id: 'supplier-1',
           displayName: 'ورشة الأمل',
@@ -205,27 +300,61 @@ void main() {
       tester,
       bundle,
       locale: const Locale('ar'),
-      size: const Size(320, 1200),
+      size: const Size(360, 1200),
     );
     expect(find.text('إسراء حداد'), findsOneWidget);
+    expect(find.text('متعلم'), findsOneWidget);
+    expect(find.text('طالب جامعي • متوسط'), findsOneWidget);
+    expect(find.text('الاهتمامات'), findsOneWidget);
+    expect(find.text('أردوينو'), findsOneWidget);
+    expect(find.text('الروبوتات'), findsOneWidget);
+    expect(find.text('الإلكترونيات'), findsOneWidget);
+    expect(find.text('نبذة'), findsNothing);
     expect(find.text('ورشة الأمل'), findsOneWidget);
-    expect(find.text('6'), findsOneWidget);
-    expect(find.text('المواد المتاحة'), findsOneWidget);
+    expect(find.text('6 مواد متاحة'), findsOneWidget);
     expect(find.text('موثّق'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('public-user-supplier-activity')),
       findsOneWidget,
     );
+    expect(find.text('أيضًا مورد على ImpactLoop'), findsOneWidget);
     expect(find.text('عرض ملف المورد'), findsOneWidget);
     expect(find.text('لا توجد مشاريع منشورة بعد'), findsOneWidget);
     expect(
       Directionality.of(tester.element(find.byType(PublicUserProfilePage))),
       TextDirection.rtl,
     );
+    expect(tester.takeException(), isNull);
     await tester.tap(find.text('عرض ملف المورد'));
     await tester.pumpAndSettle();
     expect(find.text('SUPPLIER PROFILE'), findsOneWidget);
   });
+
+  testWidgets(
+    'narrow public profile uses compact project cards without creator footers',
+    (tester) async {
+      final bundle = (
+        profile: const PublicUserProfile(
+          id: 'creator-1',
+          displayName: 'Sarah Khalil',
+          publicRoles: ['LEARNER'],
+          publishedProjectsCount: 1,
+        ),
+        projects: LearningProjectsResult(
+          items: [_project()],
+          page: 1,
+          limit: 12,
+          total: 1,
+          totalPages: 1,
+        ),
+      );
+      await _pumpPublicProfile(tester, bundle, size: const Size(390, 900));
+      expect(find.text('Sarah Khalil'), findsOneWidget);
+      expect(find.byType(LearningProjectCompactCard), findsOneWidget);
+      expect(find.byType(EntityAttributionFooter), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'PHS picker shows creator, searches by creator, and selects build',

@@ -3370,6 +3370,33 @@ class AppLocalizationsEn extends AppLocalizations {
       'Sustainable choices. Stronger communities. Smarter projects.';
 
   @override
+  String get landingAvailableMaterials => 'Available materials';
+
+  @override
+  String get landingPublishedProjects => 'Published projects';
+
+  @override
+  String get landingPublishedProjectsBody =>
+      'Guides the community can start today.';
+
+  @override
+  String get landingFeaturedMaterialsTitle => 'Available materials';
+
+  @override
+  String get landingFeaturedProjectsTitle => 'Published learning projects';
+
+  @override
+  String get landingFeaturedMaterialsEmpty =>
+      'No public materials are available right now.';
+
+  @override
+  String get landingFeaturedProjectsEmpty =>
+      'No published learning projects are available right now.';
+
+  @override
+  String get landingDynamicSectionError => 'This section could not be loaded.';
+
+  @override
   String get requestDelivery => 'Request delivery';
 
   @override
@@ -10317,7 +10344,125 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adminOpInvitationsDesc => 'Create and track role invitations';
 
   @override
-  String get adminOpImpactDesc => 'Explore reuse and impact analytics';
+  String get adminOpImpactDesc =>
+      'Track verified reuse, learning outcomes, and environmental estimates';
+
+  @override
+  String get adminImpactPageSubtitle =>
+      'Track verified reuse, learning outcomes, and environmental estimates';
+
+  @override
+  String get adminCompletedReuseEvents => 'Completed reuse events';
+
+  @override
+  String get adminCompletedReuseEventsHelper =>
+      'Successful completed material handovers';
+
+  @override
+  String get adminLearnersBenefitedHelper =>
+      'Distinct learners with at least one completed handover';
+
+  @override
+  String get adminSuppliersContributedHelper =>
+      'Distinct suppliers whose materials were reused';
+
+  @override
+  String get adminProjectComponentsFulfilled => 'Project components fulfilled';
+
+  @override
+  String get adminProjectComponentsFulfilledHelper =>
+      'Build components fulfilled by completed reuse';
+
+  @override
+  String get adminDistinctMaterialsReused => 'Distinct materials reused';
+
+  @override
+  String get adminDistinctMaterialsReusedHelper =>
+      'Unique listings used in completed handovers';
+
+  @override
+  String get adminCompletedReuseByCategoryTitle =>
+      'Completed reuse by category';
+
+  @override
+  String get adminCompletedReuseByCategorySubtitle =>
+      'Completed handovers grouped by material category';
+
+  @override
+  String get adminLearningImpactTitle => 'Learning impact';
+
+  @override
+  String get adminLearningImpactSubtitle =>
+      'Project builds supported through fulfilled material components';
+
+  @override
+  String get adminLearningComponentsFulfilled => 'Project components fulfilled';
+
+  @override
+  String get adminLearningBuildsSupported =>
+      'Project builds that received platform materials';
+
+  @override
+  String get adminLearningProjectsSupported => 'Learning projects supported';
+
+  @override
+  String get adminCompletedReuseOverTimeTitle =>
+      'Completed reuse activity over time';
+
+  @override
+  String get adminCompletedReuseOverTimeSubtitle =>
+      'Completed handovers by month';
+
+  @override
+  String get adminEnvironmentalEstimateTitle => 'Environmental estimate';
+
+  @override
+  String get adminEnvironmentalEstimateSubtitle =>
+      'Secondary, conservative CO₂e estimate from eligible completed reuse';
+
+  @override
+  String get adminEstimatedPotentialCo2eAvoided =>
+      'Estimated potential CO₂e avoided';
+
+  @override
+  String get adminEnvironmentalUnavailableValue =>
+      'Environmental estimate unavailable for current data';
+
+  @override
+  String get adminEnvironmentalUnavailableBody =>
+      'No completed reuse events currently have both a documented mass quantity (kg or g) and a documented category emission factor.';
+
+  @override
+  String adminEnvironmentalCoverage(int included, int total) {
+    return 'Coverage: $included of $total completed reuse events included';
+  }
+
+  @override
+  String adminEnvironmentalCoveragePercent(int percent) {
+    return '$percent% estimation coverage';
+  }
+
+  @override
+  String get adminCalculationMethodology => 'Calculation methodology';
+
+  @override
+  String get adminEnvironmentalMethodologyBody =>
+      'Verified metrics come directly from completed platform workflows. Environmental impact values are conservative estimates based on completed reuse events with sufficient material and quantity data. Unsupported units are excluded. The values are not certified environmental measurements and do not include all lifecycle effects.';
+
+  @override
+  String get adminImpactEmptyCategoryTitle =>
+      'No completed reuse by category yet';
+
+  @override
+  String get adminImpactEmptyCategorySubtitle =>
+      'Category totals appear after successful material handovers.';
+
+  @override
+  String get adminImpactEmptyMonthlyTitle => 'No completed reuse activity yet';
+
+  @override
+  String get adminImpactEmptyMonthlySubtitle =>
+      'Monthly completed handovers will appear here over time.';
 
   @override
   String get adminOpAuditLogsDesc => 'Review administrative audit history';
@@ -10878,7 +11023,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'This user has not published any public projects yet.';
 
   @override
-  String get publicUserSupplierActivity => 'Supplier activity';
+  String get publicUserPublishedProjectsLikes => 'Likes received';
+
+  @override
+  String get publicUserAbout => 'About';
+
+  @override
+  String get publicUserInterests => 'Interests';
+
+  @override
+  String get publicUserSupplierActivity => 'Also a Supplier on ImpactLoop';
 
   @override
   String get publicUserViewSupplierProfile => 'View supplier profile';

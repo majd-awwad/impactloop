@@ -74,12 +74,14 @@ class AdminExportCenterService implements AdminExportCenterGateway {
         );
 
       case AdminExportDomainKey.materials:
-        final result = await _ref.read(adminMaterialsApiProvider).preflightExport(
-          search: materials.search,
-          status: materials.status,
-          reportStatus: materials.reportStatus,
-          isFree: materials.isFree,
-        );
+        final result = await _ref
+            .read(adminMaterialsApiProvider)
+            .preflightExport(
+              search: materials.search,
+              status: materials.status,
+              reportStatus: materials.reportStatus,
+              isFree: materials.isFree,
+            );
         return AdminExportCenterPreflight(
           count: result.count,
           filters: result.filters,
@@ -127,11 +129,13 @@ class AdminExportCenterService implements AdminExportCenterGateway {
         );
 
       case AdminExportDomainKey.users:
-        final result = await _ref.read(adminPeopleApiProvider).preflightExport(
-          tab: users.tab,
-          search: users.search,
-          status: users.status,
-        );
+        final result = await _ref
+            .read(adminPeopleApiProvider)
+            .preflightExport(
+              tab: users.tab,
+              search: users.search,
+              status: users.status,
+            );
         return AdminExportCenterPreflight(
           count: result.count,
           filters: result.filters,
@@ -183,31 +187,37 @@ class AdminExportCenterService implements AdminExportCenterGateway {
         if (dates.error != null) {
           throw StateError(dates.error!);
         }
-        await _ref.read(adminReservationsApiProvider).downloadExport(
-          format: format,
-          search: reservations.search,
-          status: reservations.status,
-          hasDelivery: reservations.hasDelivery,
-          dateFrom: dates.dateFrom,
-          dateTo: dates.dateTo,
-        );
+        await _ref
+            .read(adminReservationsApiProvider)
+            .downloadExport(
+              format: format,
+              search: reservations.search,
+              status: reservations.status,
+              hasDelivery: reservations.hasDelivery,
+              dateFrom: dates.dateFrom,
+              dateTo: dates.dateTo,
+            );
 
       case AdminExportDomainKey.materials:
-        await _ref.read(adminMaterialsApiProvider).downloadExport(
-          format: format,
-          search: materials.search,
-          status: materials.status,
-          reportStatus: materials.reportStatus,
-          isFree: materials.isFree,
-        );
+        await _ref
+            .read(adminMaterialsApiProvider)
+            .downloadExport(
+              format: format,
+              search: materials.search,
+              status: materials.status,
+              reportStatus: materials.reportStatus,
+              isFree: materials.isFree,
+            );
 
       case AdminExportDomainKey.materialReports:
-        await _ref.read(adminMaterialsApiProvider).downloadReportsExport(
-          format: format,
-          search: materialReports.search,
-          status: materialReports.status,
-          reason: materialReports.reason,
-        );
+        await _ref
+            .read(adminMaterialsApiProvider)
+            .downloadReportsExport(
+              format: format,
+              search: materialReports.search,
+              status: materialReports.status,
+              reason: materialReports.reason,
+            );
 
       case AdminExportDomainKey.deliveries:
         final dates = resolveDateRange(
@@ -218,40 +228,46 @@ class AdminExportCenterService implements AdminExportCenterGateway {
         if (dates.error != null) {
           throw StateError(dates.error!);
         }
-        await _ref.read(adminDeliveriesApiProvider).downloadExport(
-          format: format,
-          search: deliveries.search,
-          status: deliveries.status,
-          assignment: deliveries.assignment,
-          scope: deliveries.scope,
-          incidentState: deliveries.incidentState,
-          dateFrom: dates.dateFrom,
-          dateTo: dates.dateTo,
-        );
+        await _ref
+            .read(adminDeliveriesApiProvider)
+            .downloadExport(
+              format: format,
+              search: deliveries.search,
+              status: deliveries.status,
+              assignment: deliveries.assignment,
+              scope: deliveries.scope,
+              incidentState: deliveries.incidentState,
+              dateFrom: dates.dateFrom,
+              dateTo: dates.dateTo,
+            );
 
       case AdminExportDomainKey.users:
-        await _ref.read(adminPeopleApiProvider).downloadExport(
-          format: format,
-          tab: users.tab,
-          search: users.search,
-          status: users.status,
-        );
+        await _ref
+            .read(adminPeopleApiProvider)
+            .downloadExport(
+              format: format,
+              tab: users.tab,
+              search: users.search,
+              status: users.status,
+            );
 
       case AdminExportDomainKey.incidentReports:
-        await _ref.read(adminNoShowReportsApiProvider).downloadExport(
-          format: format,
-          search: incidents.search,
-          status: incidents.status == 'ALL' ? null : incidents.status,
-          workflow: incidents.workflow == 'ALL' ? null : incidents.workflow,
-          targetRole: incidents.targetRole == 'ALL'
-              ? null
-              : incidents.targetRole,
-          operationalState: incidents.operationalState == 'ALL'
-              ? null
-              : incidents.operationalState,
-          dateFrom: incidents.dateFrom,
-          dateTo: incidents.dateTo,
-        );
+        await _ref
+            .read(adminNoShowReportsApiProvider)
+            .downloadExport(
+              format: format,
+              search: incidents.search,
+              status: incidents.status == 'ALL' ? null : incidents.status,
+              workflow: incidents.workflow == 'ALL' ? null : incidents.workflow,
+              targetRole: incidents.targetRole == 'ALL'
+                  ? null
+                  : incidents.targetRole,
+              operationalState: incidents.operationalState == 'ALL'
+                  ? null
+                  : incidents.operationalState,
+              dateFrom: incidents.dateFrom,
+              dateTo: incidents.dateTo,
+            );
     }
   }
 }

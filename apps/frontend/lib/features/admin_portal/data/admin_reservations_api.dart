@@ -59,7 +59,8 @@ class AdminReservationsExportPreflight {
     );
   }
 
-  AdminExportFormatEligibility? eligibilityFor(String format) => formats[format];
+  AdminExportFormatEligibility? eligibilityFor(String format) =>
+      formats[format];
 }
 
 class AdminReservationsApi {
@@ -186,7 +187,8 @@ class AdminReservationsApi {
       'pdf' => 'pdf',
       _ => 'csv',
     };
-    final filename = sanitizeAdminExportFilename(
+    final filename =
+        sanitizeAdminExportFilename(
           parseContentDispositionFilename(
             response.headers.value('content-disposition'),
           ),

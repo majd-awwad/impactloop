@@ -127,6 +127,16 @@ class AdminMaterialReportListItem {
     this.note,
     this.reviewedAt,
     this.adminNote,
+    this.resolutionAction,
+    this.reviewedByName,
+    this.materialImageUrl,
+    this.isFree = true,
+    this.price,
+    this.currency = 'NIS',
+    this.canHideMaterial = false,
+    this.canMarkUnavailable = false,
+    this.isModerationLocked = false,
+    this.lockReason,
   });
 
   final String reportId;
@@ -143,8 +153,27 @@ class AdminMaterialReportListItem {
   final DateTime createdAt;
   final DateTime? reviewedAt;
   final String? adminNote;
+  final String? resolutionAction;
+  final String? reviewedByName;
+  final String? materialImageUrl;
+  final bool isFree;
+  final double? price;
+  final String currency;
+  final bool canHideMaterial;
+  final bool canMarkUnavailable;
+  final bool isModerationLocked;
+  final String? lockReason;
+
+  bool get isPending => status.toUpperCase() == 'PENDING';
 
   factory AdminMaterialReportListItem.fromJson(Map<String, dynamic> json) {
+    final materialStatus = json['materialStatus'] as String? ?? '';
+    final allowedActions = json['allowedActions'];
+    final allowedMap = allowedActions is Map
+        ? Map<String, dynamic>.from(allowedActions)
+        : const <String, dynamic>{};
+    final fallbackAvailable = materialStatus == 'AVAILABLE';
+
     return AdminMaterialReportListItem(
       reportId: json['reportId'] as String? ?? '',
       reason: json['reason'] as String? ?? '',
@@ -154,7 +183,7 @@ class AdminMaterialReportListItem {
       reporterEmail: json['reporterEmail'] as String? ?? '',
       materialTitle: json['materialTitle'] as String? ?? '',
       materialId: json['materialId'] as String? ?? '',
-      materialStatus: json['materialStatus'] as String? ?? '',
+      materialStatus: materialStatus,
       supplierName: json['supplierName'] as String? ?? '',
       supplierVerificationStatus:
           json['supplierVerificationStatus'] as String? ?? 'NOT_REQUIRED',
@@ -165,6 +194,28 @@ class AdminMaterialReportListItem {
           ? null
           : DateTime.tryParse(json['reviewedAt'] as String),
       adminNote: json['adminNote'] as String?,
+      resolutionAction: json['resolutionAction'] as String?,
+      reviewedByName: json['reviewedByName'] as String?,
+      materialImageUrl: json['materialImageUrl'] as String?,
+      isFree: json['isFree'] as bool? ?? true,
+      price: (json['price'] as num?)?.toDouble(),
+      currency: json['currency'] as String? ?? 'NIS',
+      canHideMaterial:
+          json['canHideMaterial'] as bool? ??
+          allowedMap['canHide'] as bool? ??
+          fallbackAvailable,
+      canMarkUnavailable:
+          json['canMarkUnavailable'] as bool? ??
+          allowedMap['canMarkUnavailable'] as bool? ??
+          fallbackAvailable,
+      isModerationLocked:
+          json['isModerationLocked'] as bool? ??
+          allowedMap['isModerationLocked'] as bool? ??
+          (materialStatus == 'PENDING_RESERVATION' ||
+              materialStatus == 'RESERVED' ||
+              materialStatus == 'REUSED'),
+      lockReason:
+          json['lockReason'] as String? ?? allowedMap['lockReason'] as String?,
     );
   }
 }
@@ -201,7 +252,8 @@ class AdminMaterialsExportPreflight {
     );
   }
 
-  AdminExportFormatEligibility? eligibilityFor(String format) => formats[format];
+  AdminExportFormatEligibility? eligibilityFor(String format) =>
+      formats[format];
 }
 
 class AdminMaterialReportsExportPreflight {
@@ -238,7 +290,8 @@ class AdminMaterialReportsExportPreflight {
     );
   }
 
-  AdminExportFormatEligibility? eligibilityFor(String format) => formats[format];
+  AdminExportFormatEligibility? eligibilityFor(String format) =>
+      formats[format];
 }
 
 class AdminMaterialsApi {
@@ -517,10 +570,9 @@ class AdminMaterialsApi {
     return _patch('/api/admin/materials/$id/restore', {});
   }
 
-  Future<void> resolveReport({required String id, String? adminNote}) {
+  Future<void> resolveReport({required String id, required String adminNote}) {
     return _patch('/api/admin/material-reports/$id/resolve', {
-      if (adminNote != null && adminNote.trim().isNotEmpty)
-        'adminNote': adminNote.trim(),
+      'adminNote': adminNote.trim(),
     });
   }
 
@@ -535,6 +587,15 @@ class AdminMaterialsApi {
     required String adminNote,
   }) {
     return _patch('/api/admin/material-reports/$id/hide-material', {
+      'adminNote': adminNote.trim(),
+    });
+  }
+
+  Future<void> markUnavailableFromReport({
+    required String id,
+    required String adminNote,
+  }) {
+    return _patch('/api/admin/material-reports/$id/mark-unavailable', {
       'adminNote': adminNote.trim(),
     });
   }

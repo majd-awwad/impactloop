@@ -17,13 +17,16 @@ import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/review_status_presentation.dart';
 import '../../../../shared/widgets/supplier_verification_status_presentation.dart';
 import '../../data/admin_materials_api.dart';
-import '../../data/admin_reservations_api.dart' show AdminExportFormatEligibility;
+import '../../data/admin_reservations_api.dart'
+    show AdminExportFormatEligibility;
 import '../l10n/admin_l10n.dart';
+import '../l10n/admin_material_reports_l10n.dart';
 import '../theme/admin_decoration_set.dart';
 import '../theme/admin_palette.dart';
 import '../utils/admin_material_moderation_policy.dart';
 import '../widgets/admin_empty_state.dart';
 import '../widgets/admin_kpi_card.dart' show AdminTypography;
+import '../widgets/admin_material_report_review_dialog.dart';
 
 enum _BadgeTone { neutral, success, info, warning, danger, paid, teal, muted }
 
@@ -33,6 +36,7 @@ class _MaterialsFilters {
     required this.search,
     required this.status,
     required this.reportStatus,
+    required this.reportsQueueStatus,
     required this.priceFilter,
   });
 
@@ -40,6 +44,7 @@ class _MaterialsFilters {
   final String search;
   final String status;
   final String reportStatus;
+  final String reportsQueueStatus;
   final String priceFilter;
 
   _MaterialsFilters copyWith({
@@ -47,6 +52,7 @@ class _MaterialsFilters {
     String? search,
     String? status,
     String? reportStatus,
+    String? reportsQueueStatus,
     String? priceFilter,
   }) {
     return _MaterialsFilters(
@@ -54,6 +60,7 @@ class _MaterialsFilters {
       search: search ?? this.search,
       status: status ?? this.status,
       reportStatus: reportStatus ?? this.reportStatus,
+      reportsQueueStatus: reportsQueueStatus ?? this.reportsQueueStatus,
       priceFilter: priceFilter ?? this.priceFilter,
     );
   }
@@ -67,6 +74,7 @@ class _MaterialsFiltersNotifier extends Notifier<_MaterialsFilters> {
       search: '',
       status: 'ALL',
       reportStatus: 'ALL',
+      reportsQueueStatus: 'PENDING',
       priceFilter: 'ALL',
     );
   }
@@ -76,6 +84,8 @@ class _MaterialsFiltersNotifier extends Notifier<_MaterialsFilters> {
   void setStatus(String status) => state = state.copyWith(status: status);
   void setReportStatus(String reportStatus) =>
       state = state.copyWith(reportStatus: reportStatus);
+  void setReportsQueueStatus(String reportsQueueStatus) =>
+      state = state.copyWith(reportsQueueStatus: reportsQueueStatus);
   void setPriceFilter(String priceFilter) =>
       state = state.copyWith(priceFilter: priceFilter);
   void reset() => state = build();
@@ -112,29 +122,12 @@ final adminMaterialReportsProvider = FutureProvider.autoDispose((ref) async {
       .watch(adminMaterialsApiProvider)
       .fetchReports(
         search: filters.search,
-        status: filters.tab == 'REPORTS' ? 'PENDING' : null,
+        status: filters.tab == 'REPORTS' ? filters.reportsQueueStatus : null,
       );
 });
 
-String _formatReportReason(String reason) {
-  switch (reason) {
-    case 'MISLEADING_INFORMATION':
-      return 'Misleading information';
-    case 'WRONG_CATEGORY':
-      return 'Wrong category';
-    case 'WRONG_PRICE':
-      return 'Wrong price';
-    case 'INAPPROPRIATE':
-      return 'Inappropriate material';
-    case 'ITEM_NOT_AVAILABLE':
-      return 'Item not available';
-    case 'SUSPICIOUS_SUPPLIER':
-      return 'Suspicious supplier';
-    case 'OTHER':
-      return 'Other';
-    default:
-      return reason.replaceAll('_', ' ').toLowerCase();
-  }
+String _formatReportReason(String reason, [String languageCode = 'en']) {
+  return AdminMaterialReportsL10n.reason(reason, languageCode);
 }
 
 Color _toneColor(AdminPalette palette, _BadgeTone tone) {
@@ -230,7 +223,18 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
   }
 
   String _activeReportsFilterSummary(_MaterialsFilters filters) {
-    final parts = <String>['Status: PENDING'];
+    final languageCode = Localizations.localeOf(context).languageCode;
+    final statusLabel = switch (filters.reportsQueueStatus) {
+      'RESOLVED' => AdminMaterialReportsL10n.filterResolved.resolveFor(
+        languageCode,
+      ),
+      'REJECTED' => AdminMaterialReportsL10n.filterRejected.resolveFor(
+        languageCode,
+      ),
+      'ALL' => AdminMaterialReportsL10n.filterAll.resolveFor(languageCode),
+      _ => AdminMaterialReportsL10n.filterPending.resolveFor(languageCode),
+    };
+    final parts = <String>['Status: $statusLabel'];
     if (filters.search.trim().isNotEmpty) {
       parts.add('Search: ${filters.search.trim()}');
     }
@@ -348,7 +352,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
     try {
       final preflight = await api.preflightReportsExport(
         search: filters.search,
-        status: 'PENDING',
+        status: filters.reportsQueueStatus,
       );
 
       if (!mounted) return;
@@ -373,7 +377,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
           onDownload: (format) => api.downloadReportsExport(
             format: format,
             search: filters.search,
-            status: 'PENDING',
+            status: filters.reportsQueueStatus,
           ),
         ),
       );
@@ -421,25 +425,6 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
     ref.read(_materialsFiltersProvider.notifier).setStatus(raw);
   }
 
-  Future<void> _runAction(
-    Future<void> Function() action, {
-    String successMessage = 'Action completed successfully.',
-  }) async {
-    try {
-      await action();
-      if (!mounted) return;
-      _refresh();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(successMessage)));
-    } on ApiException catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
@@ -485,6 +470,9 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
               onReportStatusChanged: (value) => ref
                   .read(_materialsFiltersProvider.notifier)
                   .setReportStatus(value),
+              onReportsQueueStatusChanged: (value) => ref
+                  .read(_materialsFiltersProvider.notifier)
+                  .setReportsQueueStatus(value),
               onPriceFilterChanged: (value) => ref
                   .read(_materialsFiltersProvider.notifier)
                   .setPriceFilter(value),
@@ -514,10 +502,8 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
               )
             else
               _ReportsTab(
-                onAction: _runAction,
                 onViewMaterial: (id) => _showMaterialDetails(id),
-                onReject: (report) => _showRejectReportDialog(report),
-                onHideFromReport: (report) => _showHideFromReportDialog(report),
+                onReview: (report) => _showReviewReportDialog(report),
               ),
           ],
         ),
@@ -525,7 +511,10 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
     );
   }
 
-  Future<void> _showMaterialDetails(String id) async {
+  Future<void> _showMaterialDetails(
+    String id, {
+    bool fromPendingReport = false,
+  }) async {
     final api = ref.read(adminMaterialsApiProvider);
     try {
       final detail = await api.fetchMaterialDetail(id);
@@ -541,6 +530,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
           return _MaterialDetailDialog(
             detail: detail,
             moderation: actions,
+            openedFromPendingReport: fromPendingReport,
             onHide: actions.canHide
                 ? () {
                     Navigator.pop(dialogContext);
@@ -564,9 +554,9 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       );
     } on ApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
+      );
     }
   }
 
@@ -671,37 +661,64 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
     );
   }
 
-  void _showRejectReportDialog(AdminMaterialReportListItem report) {
-    _showReasonDialog(
-      title: 'Reject report',
-      warning: 'The material will remain visible. An admin note is required.',
-      materialTitle: report.materialTitle,
-      reasonLabel: 'Admin note',
-      reasonRequired: true,
-      confirmLabel: 'Reject report',
-      confirmTone: AppStatusTone.danger,
-      onConfirm: (note) => ref
-          .read(adminMaterialsApiProvider)
-          .rejectReport(id: report.reportId, adminNote: note),
-      successMessage: 'Report rejected.',
+  Future<void> _showReviewReportDialog(
+    AdminMaterialReportListItem report,
+  ) async {
+    final languageCode = Localizations.localeOf(context).languageCode;
+    final decision = await showDialog<AdminMaterialReportDecision>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AdminMaterialReportReviewDialog(
+          report: report,
+          onViewMaterial: () {
+            Navigator.pop(dialogContext);
+            _showMaterialDetails(
+              report.materialId,
+              fromPendingReport: report.isPending,
+            );
+          },
+          onSubmit: (selected, note) async {
+            final api = ref.read(adminMaterialsApiProvider);
+            switch (selected) {
+              case AdminMaterialReportDecision.reject:
+                await api.rejectReport(id: report.reportId, adminNote: note);
+              case AdminMaterialReportDecision.resolveNoAction:
+                await api.resolveReport(id: report.reportId, adminNote: note);
+              case AdminMaterialReportDecision.markUnavailable:
+                await api.markUnavailableFromReport(
+                  id: report.reportId,
+                  adminNote: note,
+                );
+              case AdminMaterialReportDecision.hide:
+                await api.hideMaterialFromReport(
+                  id: report.reportId,
+                  adminNote: note,
+                );
+            }
+          },
+        );
+      },
     );
-  }
-
-  void _showHideFromReportDialog(AdminMaterialReportListItem report) {
-    _showReasonDialog(
-      title: 'Hide material from report',
-      warning:
-          'The material will be hidden and this report will be marked resolved.',
-      materialTitle: report.materialTitle,
-      reasonLabel: 'Admin note',
-      reasonRequired: true,
-      confirmLabel: 'Hide material',
-      confirmTone: AppStatusTone.danger,
-      onConfirm: (note) => ref
-          .read(adminMaterialsApiProvider)
-          .hideMaterialFromReport(id: report.reportId, adminNote: note),
-      successMessage: 'Material hidden and report resolved.',
-    );
+    if (decision == null || !mounted) return;
+    _refresh();
+    final success = switch (decision) {
+      AdminMaterialReportDecision.reject =>
+        AdminMaterialReportsL10n.rejectSuccess.resolveFor(languageCode),
+      AdminMaterialReportDecision.resolveNoAction =>
+        AdminMaterialReportsL10n.resolveNoActionSuccess.resolveFor(
+          languageCode,
+        ),
+      AdminMaterialReportDecision.markUnavailable =>
+        AdminMaterialReportsL10n.markUnavailableSuccess.resolveFor(
+          languageCode,
+        ),
+      AdminMaterialReportDecision.hide =>
+        AdminMaterialReportsL10n.hideMaterialSuccess.resolveFor(languageCode),
+    };
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(success)));
   }
 
   Future<void> _showReasonDialog({
@@ -801,7 +818,9 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
                           } on ApiException catch (error) {
                             setState(() {
                               submitting = false;
-                              errorText = AdminL10n.of(context).localizedError(error);
+                              errorText = AdminL10n.of(
+                                context,
+                              ).localizedError(error);
                             });
                           } catch (_) {
                             setState(() {
@@ -896,7 +915,9 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
                           } on ApiException catch (error) {
                             setState(() {
                               submitting = false;
-                              errorText = AdminL10n.of(context).localizedError(error);
+                              errorText = AdminL10n.of(
+                                context,
+                              ).localizedError(error);
                             });
                           } catch (_) {
                             setState(() {
@@ -1155,6 +1176,47 @@ class _MaterialsTabSwitch extends StatelessWidget {
   }
 }
 
+/// Compact status queue for material reports: Pending | Resolved | Rejected | All.
+class _ReportsStatusFilter extends StatelessWidget {
+  const _ReportsStatusFilter({required this.value, required this.onChanged});
+
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final languageCode = Localizations.localeOf(context).languageCode;
+    final options = <(String, String)>[
+      (
+        'PENDING',
+        AdminMaterialReportsL10n.filterPending.resolveFor(languageCode),
+      ),
+      (
+        'RESOLVED',
+        AdminMaterialReportsL10n.filterResolved.resolveFor(languageCode),
+      ),
+      (
+        'REJECTED',
+        AdminMaterialReportsL10n.filterRejected.resolveFor(languageCode),
+      ),
+      ('ALL', AdminMaterialReportsL10n.filterAll.resolveFor(languageCode)),
+    ];
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final option in options)
+          ChoiceChip(
+            label: Text(option.$2),
+            selected: value == option.$1,
+            onSelected: (_) => onChanged(option.$1),
+          ),
+      ],
+    );
+  }
+}
+
 class _TabSegment extends StatelessWidget {
   const _TabSegment({
     required this.label,
@@ -1340,9 +1402,7 @@ class _AdminMaterialsExportDialogState
       ),
       footer: AppDialogFooter.decision(
         secondaryAction: TextButton(
-          onPressed: _isDownloading
-              ? null
-              : () => Navigator.of(context).pop(),
+          onPressed: _isDownloading ? null : () => Navigator.of(context).pop(),
           child: Text(adminL10n.cancel),
         ),
         primaryAction: FilledButton(
@@ -1490,9 +1550,7 @@ class _AdminMaterialReportsExportDialogState
       ),
       footer: AppDialogFooter.decision(
         secondaryAction: TextButton(
-          onPressed: _isDownloading
-              ? null
-              : () => Navigator.of(context).pop(),
+          onPressed: _isDownloading ? null : () => Navigator.of(context).pop(),
           child: Text(adminL10n.cancel),
         ),
         primaryAction: FilledButton(
@@ -1520,6 +1578,7 @@ class _FiltersPanel extends StatelessWidget {
     required this.onSearch,
     required this.onStatusChanged,
     required this.onReportStatusChanged,
+    required this.onReportsQueueStatusChanged,
     required this.onPriceFilterChanged,
     required this.onReset,
     required this.onRefresh,
@@ -1533,6 +1592,7 @@ class _FiltersPanel extends StatelessWidget {
   final ValueChanged<String> onSearch;
   final ValueChanged<String> onStatusChanged;
   final ValueChanged<String> onReportStatusChanged;
+  final ValueChanged<String> onReportsQueueStatusChanged;
   final ValueChanged<String> onPriceFilterChanged;
   final VoidCallback onReset;
   final VoidCallback onRefresh;
@@ -1552,7 +1612,9 @@ class _FiltersPanel extends StatelessWidget {
         isDense: true,
         filled: true,
         fillColor: palette.cardBackground,
-        hintText: 'Search materials, suppliers, categories...',
+        hintText: showMaterialFilters
+            ? 'Search materials, suppliers, categories...'
+            : AdminMaterialReportsL10n.searchReportsHint.resolve(context),
         prefixIcon: Icon(Icons.search, size: 19, color: palette.textSecondary),
         contentPadding: const EdgeInsets.symmetric(
           vertical: 13,
@@ -1662,9 +1724,14 @@ class _FiltersPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (!showMaterialFilters)
-            searchField
-          else if (compact)
+          if (!showMaterialFilters) ...[
+            searchField,
+            const SizedBox(height: 10),
+            _ReportsStatusFilter(
+              value: filters.reportsQueueStatus,
+              onChanged: onReportsQueueStatusChanged,
+            ),
+          ] else if (compact)
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -1694,11 +1761,7 @@ class _FiltersPanel extends StatelessWidget {
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: [
-              resetButton,
-              ?exportButton,
-              refreshButton,
-            ],
+            children: [resetButton, ?exportButton, refreshButton],
           ),
         ],
       ),
@@ -1838,25 +1901,16 @@ class _MaterialsTab extends ConsumerWidget {
 }
 
 class _ReportsTab extends ConsumerWidget {
-  const _ReportsTab({
-    required this.onAction,
-    required this.onViewMaterial,
-    required this.onReject,
-    required this.onHideFromReport,
-  });
+  const _ReportsTab({required this.onViewMaterial, required this.onReview});
 
-  final Future<void> Function(
-    Future<void> Function() action, {
-    String successMessage,
-  })
-  onAction;
   final void Function(String materialId) onViewMaterial;
-  final void Function(AdminMaterialReportListItem report) onReject;
-  final void Function(AdminMaterialReportListItem report) onHideFromReport;
+  final void Function(AdminMaterialReportListItem report) onReview;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final filters = ref.watch(_materialsFiltersProvider);
     final reportsAsync = ref.watch(adminMaterialReportsProvider);
+    final languageCode = Localizations.localeOf(context).languageCode;
     return reportsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => AdminEmptyState(
@@ -1866,10 +1920,14 @@ class _ReportsTab extends ConsumerWidget {
       ),
       data: (items) {
         if (items.isEmpty) {
-          return const AdminEmptyState(
+          return AdminEmptyState(
             icon: Icons.flag_outlined,
-            title: 'No reports yet',
-            subtitle: 'Reported materials will appear here for admin review.',
+            title: AdminMaterialReportsL10n.emptyTitleFor(
+              filters.reportsQueueStatus,
+            ).resolveFor(languageCode),
+            subtitle: AdminMaterialReportsL10n.emptySubtitleFor(
+              filters.reportsQueueStatus,
+            ).resolveFor(languageCode),
           );
         }
         return LayoutBuilder(
@@ -1883,14 +1941,9 @@ class _ReportsTab extends ConsumerWidget {
                     compact: compact,
                     showDivider: i < items.length - 1,
                     onViewMaterial: () => onViewMaterial(items[i].materialId),
-                    onResolve: () => onAction(
-                      () => ref
-                          .read(adminMaterialsApiProvider)
-                          .resolveReport(id: items[i].reportId),
-                      successMessage: 'Report resolved.',
-                    ),
-                    onReject: () => onReject(items[i]),
-                    onHideMaterial: () => onHideFromReport(items[i]),
+                    onReview: items[i].isPending
+                        ? () => onReview(items[i])
+                        : null,
                   ),
               ],
             );
@@ -2509,18 +2562,14 @@ class _ReportRow extends StatefulWidget {
     required this.compact,
     required this.showDivider,
     required this.onViewMaterial,
-    required this.onResolve,
-    required this.onReject,
-    required this.onHideMaterial,
+    this.onReview,
   });
 
   final AdminMaterialReportListItem report;
   final bool compact;
   final bool showDivider;
   final VoidCallback onViewMaterial;
-  final VoidCallback onResolve;
-  final VoidCallback onReject;
-  final VoidCallback onHideMaterial;
+  final VoidCallback? onReview;
 
   @override
   State<_ReportRow> createState() => _ReportRowState();
@@ -2533,19 +2582,12 @@ class _ReportRowState extends State<_ReportRow> {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final report = widget.report;
-    final canHideMaterial = AdminMaterialModerationPolicy.canHide(
-      report.materialStatus,
-    );
-
     const image = _ReportThumb();
     final identity = _ReportIdentityBlock(report: report);
     final metrics = _ReportMetricsBlock(report: report);
     final actions = _ReportActionArea(
-      canHideMaterial: canHideMaterial,
       onViewMaterial: widget.onViewMaterial,
-      onResolve: widget.onResolve,
-      onReject: widget.onReject,
-      onHideMaterial: widget.onHideMaterial,
+      onReview: widget.onReview,
     );
 
     final content = widget.compact
@@ -2660,10 +2702,18 @@ class _ReportIdentityBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final languageCode = Localizations.localeOf(context).languageCode;
     final created = DateFormat.yMMMd().format(report.createdAt);
     final dateStyle = Theme.of(
       context,
     ).textTheme.bodySmall?.copyWith(color: colors.textMuted);
+    final decision = AdminMaterialReportsL10n.decisionLabel(
+      report.resolutionAction,
+      languageCode,
+    );
+    final handled = report.reviewedAt == null
+        ? null
+        : DateFormat.yMMMd().format(report.reviewedAt!);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2680,7 +2730,7 @@ class _ReportIdentityBlock extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          '${report.supplierName} • Reported by ${report.reporterName}',
+          '${report.supplierName} • ${AdminMaterialReportsL10n.reportedBy.resolveFor(languageCode)} ${report.reporterName}',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -2695,11 +2745,14 @@ class _ReportIdentityBlock extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             _SemanticBadge(
-              label: _formatReportReason(report.reason),
+              label: _formatReportReason(report.reason, languageCode),
               tone: _BadgeTone.warning,
             ),
             Text('·', style: dateStyle),
-            Text('Submitted $created', style: dateStyle),
+            Text(
+              '${AdminMaterialReportsL10n.submittedLabel.resolveFor(languageCode)} $created',
+              style: dateStyle,
+            ),
           ],
         ),
         if (report.note != null && report.note!.trim().isNotEmpty) ...[
@@ -2713,6 +2766,41 @@ class _ReportIdentityBlock extends StatelessWidget {
               height: 1.3,
             ),
           ),
+        ],
+        if (!report.isPending) ...[
+          const SizedBox(height: 8),
+          if (decision.isNotEmpty)
+            Text(
+              '${AdminMaterialReportsL10n.decision.resolveFor(languageCode)}: $decision',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          if (report.adminNote != null && report.adminNote!.trim().isNotEmpty)
+            Text(
+              '${AdminMaterialReportsL10n.adminNote.resolveFor(languageCode)}: ${report.adminNote}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
+            ),
+          if (handled != null)
+            Text(
+              '${AdminMaterialReportsL10n.handledLabel.resolveFor(languageCode)} $handled',
+              style: dateStyle,
+            ),
+          if (report.reviewedByName != null &&
+              report.reviewedByName!.trim().isNotEmpty)
+            Text(
+              report.reviewedByName!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: dateStyle,
+            ),
         ],
       ],
     );
@@ -2737,7 +2825,7 @@ class _ReportMetricsBlock extends StatelessWidget {
       children: [
         _CompactStatusChip(
           icon: Icons.flag_outlined,
-          label: _reportStatusLabel(report.status),
+          label: _reportStatusLabel(context, report.status),
           tone: reviewStatusTone(report.status),
         ),
         _CompactStatusChip(
@@ -2754,15 +2842,11 @@ class _ReportMetricsBlock extends StatelessWidget {
 
 /// Report-context label so "Pending" reads unambiguously against the
 /// material status badge next to it, without inventing a new status value.
-String _reportStatusLabel(String status) {
-  switch (status.trim().toUpperCase()) {
-    case 'PENDING':
-      return 'Pending report';
-    case 'APPROVED':
-      return 'Resolved';
-    default:
-      return _displayEnum(status);
-  }
+String _reportStatusLabel(BuildContext context, String status) {
+  return AdminMaterialReportsL10n.reportStatus(
+    status,
+    Localizations.localeOf(context).languageCode,
+  );
 }
 
 /// One-line semantic status badge with a leading icon of the same tone —
@@ -2794,19 +2878,10 @@ class _CompactStatusChip extends StatelessWidget {
 }
 
 class _ReportActionArea extends StatelessWidget {
-  const _ReportActionArea({
-    required this.canHideMaterial,
-    required this.onViewMaterial,
-    required this.onResolve,
-    required this.onReject,
-    required this.onHideMaterial,
-  });
+  const _ReportActionArea({required this.onViewMaterial, this.onReview});
 
-  final bool canHideMaterial;
   final VoidCallback onViewMaterial;
-  final VoidCallback onResolve;
-  final VoidCallback onReject;
-  final VoidCallback onHideMaterial;
+  final VoidCallback? onReview;
 
   static ButtonStyle _compactStyle(BuildContext context, AppStatusTone tone) {
     return AppStatusButtonStyle.outlined(context, tone).merge(
@@ -2825,68 +2900,32 @@ class _ReportActionArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final languageCode = Localizations.localeOf(context).languageCode;
     final detailsButton = OutlinedButton.icon(
       onPressed: onViewMaterial,
       icon: const Icon(Icons.visibility_outlined, size: 16),
-      label: const Text('View material'),
+      label: Text(
+        AdminMaterialReportsL10n.viewMaterial.resolveFor(languageCode),
+      ),
       style: _compactStyle(context, AppStatusTone.neutral),
     );
 
-    final resolveButton = OutlinedButton.icon(
-      onPressed: onResolve,
-      icon: const Icon(Icons.check_circle_outline, size: 16),
-      label: const Text('Resolve'),
-      style: _compactStyle(context, AppStatusTone.success),
-    );
-
-    final overflowItems = <PopupMenuEntry<VoidCallback>>[
-      PopupMenuItem<VoidCallback>(
-        value: onReject,
-        child: const _OverflowMenuLabel(
-          icon: Icons.cancel_outlined,
-          label: 'Reject report',
-          tone: AppStatusTone.danger,
-        ),
-      ),
-      if (canHideMaterial)
-        PopupMenuItem<VoidCallback>(
-          value: onHideMaterial,
-          child: const _OverflowMenuLabel(
-            icon: Icons.visibility_off_outlined,
-            label: 'Hide material',
-            tone: AppStatusTone.danger,
-          ),
-        ),
-    ];
-
-    final overflowButton = overflowItems.isEmpty
+    final reviewButton = onReview == null
         ? null
-        : SizedBox(
-            width: 42,
-            height: 42,
-            child: PopupMenuButton<VoidCallback>(
-              tooltip: 'More actions',
-              icon: Icon(
-                Icons.more_vert,
-                size: 18,
-                color: AppThemeColors.of(context).textMuted,
-              ),
-              padding: EdgeInsets.zero,
-              onSelected: (action) => action(),
-              itemBuilder: (menuContext) => overflowItems,
+        : OutlinedButton.icon(
+            onPressed: onReview,
+            icon: const Icon(Icons.rate_review_outlined, size: 16),
+            label: Text(
+              AdminMaterialReportsL10n.reviewReport.resolveFor(languageCode),
             ),
+            style: _compactStyle(context, AppStatusTone.primary),
           );
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        detailsButton,
-        const SizedBox(width: AppSpacing.sm),
-        resolveButton,
-        if (overflowButton != null) const SizedBox(width: AppSpacing.sm),
-        ?overflowButton,
-      ],
+    return Wrap(
+      alignment: WrapAlignment.end,
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: [detailsButton, ?reviewButton],
     );
   }
 }
@@ -2922,6 +2961,7 @@ class _MaterialDetailDialog extends StatelessWidget {
   const _MaterialDetailDialog({
     required this.detail,
     required this.moderation,
+    this.openedFromPendingReport = false,
     this.onHide,
     this.onUnavailable,
     this.onRestore,
@@ -2929,6 +2969,7 @@ class _MaterialDetailDialog extends StatelessWidget {
 
   final Map<String, dynamic> detail;
   final AdminMaterialModerationActions moderation;
+  final bool openedFromPendingReport;
   final VoidCallback? onHide;
   final VoidCallback? onUnavailable;
   final VoidCallback? onRestore;
@@ -2984,6 +3025,15 @@ class _MaterialDetailDialog extends StatelessWidget {
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (openedFromPendingReport) ...[
+            AppDialogNote(
+              title: AdminMaterialReportsL10n.openedFromPendingReport.resolve(
+                context,
+              ),
+              note: AdminMaterialReportsL10n.reviewReport.resolve(context),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
           if (moderation.detailLockMessage != null) ...[
             _ModerationLockNotice(message: moderation.detailLockMessage!),
             const SizedBox(height: AppSpacing.md),

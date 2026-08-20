@@ -16,6 +16,7 @@ Admin is an operational support role. It is not available through public registr
 |------|--------|-------|
 | Admin role creation | **Implemented** | Invitation-only via admin invitation flow |
 | Backend `/api/admin/dashboard` | **Implemented** | Overview metrics, impact snapshot, charts/review data |
+| Backend `/api/admin/impact` | **Implemented** | Dedicated Impact Analytics DTO: verified reuse, learning impact, category/month charts, conservative environmental estimate |
 | Backend admin invitations | **Implemented** | List/create/resend/revoke under `/api/admin/invitations` |
 | Backend supplier verification review | **Implemented** | List/detail/approve/reject/request changes |
 | Backend approvals | **Implemented** | Category request and price request review |
@@ -23,7 +24,7 @@ Admin is an operational support role. It is not available through public registr
 | Backend people management | **Implemented** | Summary, list, detail, suspend, reactivate with safety guards |
 | Flutter admin portal | **Partial** | `/admin` shell with overview, users, supplier verification, materials, approvals, invitations, impact, audit logs, incident reports, Export Center, read-only operations monitors, and learning project moderation |
 | Admin data export | **Implemented (MVP)** | Per-page + Export Center downloads for six domains; see [Admin Data Export MVP](#admin-data-export-mvp) |
-| Impact analytics route | **Implemented** | `/admin/impact` uses dashboard impact data; broader analytics remain future work |
+| Impact analytics route | **Implemented** | `/admin/impact` uses `GET /api/admin/impact`; verified reuse/learning first, estimated CO₂e second |
 | Audit logs route | **Implemented** | `/admin/audit-logs` reads paginated `admin_activity_logs` with filters/details |
 | Delivery/reservation admin ops | **Partial** | Deliveries has a responsive, server-filtered monitoring overview with six compact server-summary KPIs, primary/secondary filters, a concise six-column operational list, pagination, and a dedicated adaptive detail workspace at `/admin/deliveries/:deliveryId`; reassignment/cancellation operations remain limited to server-authorized detail/incident flows |
 | AI usage/log viewer | **Not implemented** | Material-matching AI is not implemented |
@@ -74,6 +75,7 @@ Mounted at `/api/admin` and guarded by `ADMIN`.
 | Area | Endpoints |
 |------|-----------|
 | Dashboard | `GET /dashboard` |
+| Impact analytics | `GET /impact` |
 | Invitations | `GET/POST /invitations`, `POST /invitations/:id/resend`, `PATCH /invitations/:id/revoke` |
 | Supplier verification | `GET /supplier-verifications`, `GET /supplier-verifications/:id`, `GET /supplier-verifications/:id/document`, `PATCH /supplier-verifications/:id/approve|reject|request-changes` |
 | Approvals | `GET /approvals/summary`, `GET /approvals/category-requests`, `PATCH /approvals/category-requests/:id/approve|reject`, `GET /approvals/price-requests`, `PATCH /approvals/price-requests/:id/approve|reject` |

@@ -57,6 +57,31 @@ class MaterialType {
           : const [],
     );
   }
+
+  String displayLabel({required bool preferArabic}) {
+    if (preferArabic) {
+      final arabicName = nameAr?.trim();
+      if (arabicName != null && arabicName.isNotEmpty) {
+        return arabicName;
+      }
+    }
+    return nameEn;
+  }
+
+  bool matchesEnteredName(String value) {
+    final trimmed = value.trim().toLowerCase();
+    if (trimmed.isEmpty) {
+      return false;
+    }
+    if (nameEn.toLowerCase() == trimmed) {
+      return true;
+    }
+    final arabicName = nameAr?.trim().toLowerCase();
+    if (arabicName != null && arabicName == trimmed) {
+      return true;
+    }
+    return aliases.any((alias) => alias.trim().toLowerCase() == trimmed);
+  }
 }
 
 class MaterialTypeSearchResult {

@@ -1355,45 +1355,48 @@ Future<void> _quickRejectCategory(
     builder: (dialogContext) {
       final l = AdminL10n.of(dialogContext);
       return AppDialogShell(
-      title: const Text('Reject category'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: reasonController,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Reason (required)',
-              border: OutlineInputBorder(),
+        title: const Text('Reject category'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Reason (required)',
+                border: OutlineInputBorder(),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            initialValue: suggestedCategoryId,
-            items: [
-              for (final c in categories)
-                DropdownMenuItem(value: c.id, child: Text(c.nameEn)),
-            ],
-            onChanged: (value) => suggestedCategoryId = value,
-            decoration: const InputDecoration(
-              labelText: 'Suggested existing category (recommended)',
-              border: OutlineInputBorder(),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: suggestedCategoryId,
+              items: [
+                for (final c in categories)
+                  DropdownMenuItem(value: c.id, child: Text(c.nameEn)),
+              ],
+              onChanged: (value) => suggestedCategoryId = value,
+              decoration: const InputDecoration(
+                labelText: 'Suggested existing category (recommended)',
+                border: OutlineInputBorder(),
+              ),
             ),
+          ],
+        ),
+        footer: AppDialogFooter.decision(
+          secondaryAction: TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l.cancel),
           ),
-        ],
-      ),
-      footer: AppDialogFooter.decision(
-        secondaryAction: TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: Text(l.cancel),
+          primaryAction: FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: AppStatusButtonStyle.filled(
+              dialogContext,
+              AppStatusTone.danger,
+            ),
+            child: Text(l.reject),
+          ),
         ),
-        primaryAction: FilledButton(
-          onPressed: () => Navigator.of(dialogContext).pop(true),
-          style: AppStatusButtonStyle.filled(dialogContext, AppStatusTone.danger),
-          child: Text(l.reject),
-        ),
-      ),
-    );
+      );
     },
   );
 

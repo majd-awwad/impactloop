@@ -124,7 +124,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/admin/materials` | `AdminMaterialsPage` | admin | Materials moderation + reports |
 | `/admin/approvals` | `AdminApprovalsPage` | admin | Category + price approvals |
 | `/admin/invitations` | `AdminInvitationsPage` | admin | Admin invitation management |
-| `/admin/impact` | `AdminImpactPage` | admin | Reuse + estimated CO₂ analytics from dashboard API |
+| `/admin/impact` | `AdminImpactPage` | admin | Verified reuse, learning impact, and conservative environmental estimates from `GET /api/admin/impact` |
 | `/admin/audit-logs` | `AdminAuditLogsPage` | admin | Paginated `admin_activity_logs` with backend filters, summary stats, actor/date filters, details dialog |
 | `/admin/no-show-reports` | `AdminNoShowReportsPage` | admin | Incident report queue with View details navigation |
 | `/admin/no-show-reports/:reportId` | `AdminNoShowReportDetailPage` | admin | Dedicated responsive incident-review workspace; deep-link-safe detail, contract-driven actions, messages and report/delivery history |

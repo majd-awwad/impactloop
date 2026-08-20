@@ -33,6 +33,11 @@ class PublicUserProfile {
     required this.publicRoles,
     required this.publishedProjectsCount,
     this.avatarUrl,
+    this.learnerType,
+    this.skillLevel,
+    this.bio,
+    this.interests = const [],
+    this.publishedProjectsLikesCount = 0,
     this.supplier,
   });
 
@@ -40,7 +45,12 @@ class PublicUserProfile {
   final String displayName;
   final String? avatarUrl;
   final List<String> publicRoles;
+  final String? learnerType;
+  final String? skillLevel;
+  final String? bio;
+  final List<String> interests;
   final int publishedProjectsCount;
+  final int publishedProjectsLikesCount;
   final PublicUserSupplierSummary? supplier;
 
   factory PublicUserProfile.fromJson(Map<String, dynamic> json) {
@@ -54,8 +64,14 @@ class PublicUserProfile {
               ?.map((role) => role.toString())
               .toList(growable: false) ??
           const [],
+      learnerType: _nonEmptyString(json['learnerType']),
+      skillLevel: _nonEmptyString(json['skillLevel']),
+      bio: _nonEmptyString(json['bio']),
+      interests: _uniqueInterests(json['interests']),
       publishedProjectsCount:
           (json['publishedProjectsCount'] as num?)?.toInt() ?? 0,
+      publishedProjectsLikesCount:
+          (json['publishedProjectsLikesCount'] as num?)?.toInt() ?? 0,
       supplier: supplierJson is Map
           ? PublicUserSupplierSummary.fromJson(
               Map<String, dynamic>.from(supplierJson),
@@ -63,6 +79,27 @@ class PublicUserProfile {
           : null,
     );
   }
+}
+
+String? _nonEmptyString(Object? value) {
+  final trimmed = value?.toString().trim() ?? '';
+  return trimmed.isEmpty ? null : trimmed;
+}
+
+List<String> _uniqueInterests(Object? value) {
+  if (value is! List) {
+    return const [];
+  }
+  final seen = <String>{};
+  final interests = <String>[];
+  for (final item in value) {
+    final trimmed = item.toString().trim();
+    if (trimmed.isEmpty || !seen.add(trimmed.toLowerCase())) {
+      continue;
+    }
+    interests.add(trimmed);
+  }
+  return List.unmodifiable(interests);
 }
 
 typedef PublicUserProfileBundle = ({

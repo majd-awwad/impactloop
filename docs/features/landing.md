@@ -1,68 +1,60 @@
 # Landing Feature
 
-**Sources inspected:** `apps/frontend/lib/features/landing/`, `apps/frontend/lib/app/router/app_router.dart`, `apps/frontend/lib/app/widgets/hero_workshop_visual.dart`, `docs/frontend/routes-map.md`
+**Sources inspected:** `apps/frontend/lib/features/landing/`, `apps/frontend/lib/app/router/app_router.dart`, `apps/backend/src/modules/public-landing/`, `docs/frontend/routes-map.md`
 
 ## Purpose
 
-Public marketing **landing page** at `/` for unauthenticated visitors: brand message, feature highlights, and navigation to register/login.
-
-No backend API calls — purely presentational.
+Public marketing **landing page** at `/` for unauthenticated visitors: brand message, feature highlights, live public projects, and navigation to browse or register/login.
 
 ## Current status
 
 | Section | Status | Data source |
 |---------|--------|-------------|
 | Route `/` | **Implemented** | `LandingPage` |
-| Nav bar (sign in / create account) | **Implemented** | Static → `/login`, `/register` |
-| Hero (headline, CTAs, visual) | **Implemented** | **Static** copy + `HeroWorkshopVisual` |
-| Feature cards (3 columns) | **Implemented** | **Static** content; CTAs → `/register` |
-| Footer | **Implemented** | **Static** |
-| Live materials / learning preview | **Not implemented** | No API fetch on landing |
-| Auth state awareness | **Frontend-only** | Router redirects logged-in users away from auth pages; landing itself does not personalize |
+| Nav bar (sign in / create account) | **Implemented** | Static CTAs → `/login`, `/register`; browse links → `/materials`, `/learning` |
+| Hero (headline, CTAs, visual) | **Implemented** | Static copy + live public counts |
+| Feature cards (3 columns) | **Implemented** | Static copy; Explore → `/materials`, Share → `/register`, Start building → `/learning` |
+| Featured learning projects | **Implemented** | `GET /api/public/landing` — `PUBLISHED` only |
+| Community avatars | **Implemented** | `GET /api/public/landing` — public learner/supplier profile photos |
+| Footer | **Implemented** | Static |
+| Auth state awareness | **Frontend-only** | Router redirects logged-in users away from `/` |
 
 ## Main user flow
 
-1. Visitor opens `/`.
-2. Reads hero and feature cards.
-3. Taps **Create account** / **Sign in** → `/register` or `/login`.
-4. Feature card links also route to `/register` (not directly to `/materials` or `/learning`).
+1. Visitor opens `/` without logging in.
+2. Reads hero, feature cards, and live published projects.
+3. Taps **Explore materials** → `/materials` (or `/materials/:id` from discovery).
+4. Taps **Start building** / a project card → `/learning` or `/learning/:id`.
+5. Authenticated-only actions (reserve, like, start build, share materials) route to login with `from=`.
 
 ## Frontend files
 
 | Area | Path |
 |------|------|
 | Page | `presentation/pages/landing_page.dart` |
-| Widgets | `presentation/widgets/landing_nav_bar.dart`, `landing_hero_section.dart`, `landing_feature_cards.dart`, `landing_footer.dart`, `landing_hero_visual.dart` |
+| Widgets | `presentation/widgets/landing_nav_bar.dart`, `landing_hero_section.dart`, `landing_feature_cards.dart`, `landing_featured_projects.dart`, `landing_footer.dart` |
+| Data | `data/landing_public_api.dart`, `application/landing_public_providers.dart` |
 | Theme | `app/theme/landing_colors.dart` |
-| Shared | `app/widgets/entry_nav_bar.dart`, `app/widgets/hero_workshop_visual.dart` |
 | Router | `app/router/app_router.dart` — `GoRoute(path: '/', ...)` |
 
 ## Backend files
 
-**None** — landing does not call the API.
+| Area | Path |
+|------|------|
+| Public landing | `modules/public-landing/` |
 
 ## API endpoints
 
-None.
-
-## Database tables
-
-None.
-
-## Reusable components
-
-- `EntryNavBar` — shared with home/learning entry chrome
-- `HeroWorkshopVisual` — shared hero illustration
-- `LandingColors` — landing-specific theme tokens
-
-## Known gaps / Needs verification
-
-- Feature cards describe materials/learning but link to **register**, not live catalog.
-- No deep links to `/materials` or `/learning` from hero (by design in current code).
-- Mobile vs desktop layout breakpoints in hero/cards — UI only.
+| Method | Path | Auth | Used by landing |
+|--------|------|------|-----------------|
+| GET | `/api/public/landing` | Public | Published projects, community avatars, public counts |
+| GET | `/api/materials` | Public | Browse after landing |
+| GET | `/api/materials/:id` | Public | Material details |
+| GET | `/api/learning-projects` | Public | Learning Hub browse |
+| GET | `/api/learning-projects/:id` | Public | Project details |
 
 ## Related docs
 
 - [Auth](auth.md) — register/login targets
-- [Material discovery](material-discovery.md) — public browse at `/materials` (separate route)
-- [Learning hub](learning-hub.md) — `/learning` (mock UI)
+- [Material discovery](material-discovery.md) — public browse at `/materials`
+- [Learning hub](learning-hub.md) — `/learning`

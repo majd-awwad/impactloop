@@ -138,6 +138,23 @@ Query validation: `categoriesQuerySchema`
 
 Optional query `discoveryOnly=true` applies discovery name filtering and dedupe (`category-discovery-filter.ts`) for public browse UI only. Without it, supplier/admin category pickers receive the full active category list.
 
+## Public landing — `/api/public/landing`
+
+| Method | Path | Auth | Source file |
+|--------|------|------|-------------|
+| GET | `/api/public/landing` | Public | `public-landing/public-landing.routes.ts` |
+
+Guest-safe featured payload for the marketing landing page. Response `data`:
+
+- `stats.availableMaterialsCount` — public `AVAILABLE` materials only
+- `stats.publishedProjectsCount` — `PUBLISHED` learning projects only
+- `stats.reusedMaterialsCount` — materials with status `REUSED`
+- `materials` — up to 6 newest `AVAILABLE` public materials using the same public list fields as `GET /api/materials` (no exact coordinates, email, phone, or moderation fields)
+- `projects` — up to 6 newest `PUBLISHED` projects with public list fields only (title, cover, category, difficulty, public creator display name)
+- `communityMembers` — up to 4 newest active learners/suppliers with a real public profile photo (`displayName`, `avatarUrl` only; DiceBear placeholders omitted)
+
+Does not include pending, private, draft, hidden, or reused materials in the featured payload. The landing page shows published projects and community avatars; materials browsing stays on `/materials`.
+
 ## Material types — `/api/material-types`
 
 | Method | Path | Auth | Source file |
@@ -350,6 +367,7 @@ Saved locations are private to the authenticated user. Response rows include `la
 | Method | Path | Auth | Roles | Source file |
 |--------|------|------|-------|-------------|
 | GET | `/api/admin/dashboard` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/impact` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | GET | `/api/admin/audit-logs` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | GET | `/api/admin/reservations` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | GET | `/api/admin/reservations/:id` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` — detail includes `linkedReport` (`id`, `status`, `reasonCode`, `targetRole`) when a no-show report exists (prefers `PENDING_REVIEW`) |
@@ -451,6 +469,8 @@ Saved locations are private to the authenticated user. Response rows include `la
 **People list/detail suspension fields:** `suspensionReason`, `suspendedAt`, `suspendedBy` (`{ id, displayName, email }`), `reactivatedAt`, `reactivatedBy`, `suspensionReasonPreview` (list, when suspended).
 
 **`GET /api/admin/dashboard` extras:** `supplierVerificationPendingCount`, `supplierVerificationPreview` (pending org verifications, max 5), `recentActivity` (latest `admin_activity_logs`, max 5). `pendingActions.supplierVerifications` and `pendingActions.reports` use real pending counts.
+
+**`GET /api/admin/impact`:** Verified platform impact first, estimated environmental impact second. Response `data`: `{ verifiedImpact: { completedReuseEvents, distinctMaterialsReused, learnersBenefited, suppliersContributed }, learningImpact: { componentsFulfilled, buildsSupported, projectsSupported }, reuseByCategory[{ nameEn, nameAr, completedReuseEvents }], monthlyReuse[{ month, completedReuseEvents }], environmentalEstimate: { estimatedCo2eKg, estimatedCo2eLabel, isEstimate, includedReuseEvents, totalCompletedReuseEvents, coveragePercent, methodologyVersion, unavailableReason } }`. `completedReuseEvents` is `Reservation.status = COMPLETED`. Category and monthly series use completed reservations (`completedAt`), not listing inventory or `Material.reusedAt`. Environmental values are withheld unless a completed event has a kg/g quantity and a documented category factor; the shipped factor map is empty until a cited source exists.
 
 **`GET /api/admin/audit-logs` query:** `page`, `limit`, `search`, `action`, `targetType`, `actorId`, `dateFrom`, `dateTo` (ISO date strings; `dateTo` inclusive end-of-day UTC). **Supported actions:** `USER_SUSPENDED`, `USER_REACTIVATED`, `SUPPLIER_VERIFICATION_APPROVED`, `SUPPLIER_VERIFICATION_REJECTED`, `SUPPLIER_VERIFICATION_CHANGES_REQUESTED`, `INVITATION_CREATED`, `INVITATION_REVOKED`, `INVITATION_RESENT`, `MATERIAL_HIDDEN`, `MATERIAL_MARKED_UNAVAILABLE`, `MATERIAL_RESTORED`, `MATERIAL_REPORT_RESOLVED`, `MATERIAL_REPORT_REJECTED`, `MATERIAL_REPORT_HIDE_MATERIAL`, `CATEGORY_REQUEST_APPROVED`, `CATEGORY_REQUEST_REJECTED`, `PRICE_REQUEST_APPROVED`, `PRICE_REQUEST_REJECTED`. **Supported target types:** `USER`, `SUPPLIER_PROFILE`, `INVITATION`, `MATERIAL`, `MATERIAL_REPORT`, `CATEGORY_REQUEST`, `PRICE_RULE_REQUEST`. **Response (`data`):** `{ items[{ id, action, actionLabel, actorUserId, actorName, actorEmail, targetType, targetId, targetLabel, metadata, createdAt }], pagination: { page, limit, total, totalPages }, filterOptions: { actions[{ value, label }], targetTypes[{ value, label }], actors[{ id, displayName, email }] }, summary: { total, today, thisWeek, mostRecentAt } }`. Filter options union known actions/target types with distinct DB values. Newest first. Search matches action, readable action label, actor name/email, target label, and target type.
 

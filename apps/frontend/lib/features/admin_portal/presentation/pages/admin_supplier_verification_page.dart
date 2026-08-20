@@ -38,7 +38,7 @@ class AdminSupplierVerificationPage extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-            AdminL10n.of(context).localizedError(error),
+              AdminL10n.of(context).localizedError(error),
               style: AdminTypography.pageSubtitle(palette),
             ),
             const SizedBox(height: 12),
@@ -2079,9 +2079,9 @@ class _VerificationDocumentCardState
         return;
       }
       final message = AdminL10n.of(context).localizedError(error);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) {
         setState(() => _isOpening = false);
@@ -2163,7 +2163,9 @@ class _VerificationDocumentCardState
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : Icon(
-                        _isPdf ? Icons.open_in_new : Icons.open_in_full_outlined,
+                        _isPdf
+                            ? Icons.open_in_new
+                            : Icons.open_in_full_outlined,
                       ),
                 label: Text(_isPdf ? 'Open PDF' : 'Open full image'),
               ),

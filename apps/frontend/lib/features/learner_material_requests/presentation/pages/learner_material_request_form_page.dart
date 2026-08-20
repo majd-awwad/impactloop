@@ -458,6 +458,7 @@ class _LearnerMaterialRequestFormPageState
                                 ),
                                 child: DropdownButtonFormField<String?>(
                                   initialValue: _selectedSavedLocationId,
+                                  isExpanded: true,
                                   decoration: InputDecoration(
                                     labelText: LearnerMaterialRequestsL10n
                                         .useSavedLocation
@@ -469,13 +470,21 @@ class _LearnerMaterialRequestFormPageState
                                   items: [
                                     const DropdownMenuItem<String?>(
                                       value: null,
-                                      child: Text('Enter manually'),
+                                      child: Text(
+                                        'Enter manually',
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
                                     ),
                                     ...locations.map(
                                       (SavedLocation location) =>
                                           DropdownMenuItem<String?>(
                                             value: location.id,
-                                            child: Text(location.displayLabel),
+                                            child: Text(
+                                              location.displayLabel,
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                            ),
                                           ),
                                     ),
                                   ],

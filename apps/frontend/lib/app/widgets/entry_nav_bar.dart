@@ -85,6 +85,7 @@ class EntryNavBar extends ConsumerWidget {
         authState.status == AuthStatus.authenticated &&
         authState.isAuthenticated &&
         user != null;
+    final resolvedHomeRoute = isAuthenticated ? homeRoute : '/';
     final effectiveShowSignIn = !isAuthenticated && showSignIn;
     final effectiveShowCreateAccount = !isAuthenticated && showCreateAccount;
     final resolvedTrailing = resolveTrailingActions(
@@ -109,7 +110,7 @@ class EntryNavBar extends ConsumerWidget {
             showCreateAccount: effectiveShowCreateAccount,
             onSignIn: onSignIn,
             onCreateAccount: onCreateAccount,
-            homeRoute: homeRoute,
+            homeRoute: resolvedHomeRoute,
             settings: settings,
             user: user,
             isAuthenticated: isAuthenticated,
@@ -164,7 +165,7 @@ class EntryNavBar extends ConsumerWidget {
                       showCreateAccount: effectiveShowCreateAccount,
                       onSignIn: onSignIn,
                       onCreateAccount: onCreateAccount,
-                      homeRoute: homeRoute,
+                      homeRoute: resolvedHomeRoute,
                       settings: settings,
                       user: user,
                       isAuthenticated: isAuthenticated,
@@ -177,7 +178,7 @@ class EntryNavBar extends ConsumerWidget {
                       showCreateAccount: effectiveShowCreateAccount,
                       onSignIn: onSignIn,
                       onCreateAccount: onCreateAccount,
-                      homeRoute: homeRoute,
+                      homeRoute: resolvedHomeRoute,
                       settings: settings,
                       user: user,
                       isAuthenticated: isAuthenticated,
@@ -361,7 +362,10 @@ class _DesktopNavLayout extends StatelessWidget {
           Expanded(
             child: Align(
               alignment: AlignmentDirectional.centerStart,
-              child: _NavLinks(compact: condensed),
+              child: _NavLinks(
+                compact: condensed,
+                isAuthenticated: isAuthenticated,
+              ),
             ),
           )
         else
@@ -397,14 +401,16 @@ class _DesktopNavLayout extends StatelessWidget {
 }
 
 class _NavLinks extends StatelessWidget {
-  const _NavLinks({required this.compact});
+  const _NavLinks({required this.compact, required this.isAuthenticated});
 
   final bool compact;
+  final bool isAuthenticated;
 
   @override
   Widget build(BuildContext context) {
+    final homePath = isAuthenticated ? '/home' : '/';
     final items = [
-      (context.l10n.home, '/home', Icons.home_outlined),
+      (context.l10n.home, homePath, Icons.home_outlined),
       (context.l10n.materials, '/materials', Icons.inventory_2_outlined),
       (context.l10n.learning, '/learning', Icons.school_outlined),
     ];
@@ -691,6 +697,17 @@ class _GuestMobileMenu extends StatelessWidget {
         );
       },
       menuChildren: [
+        _AccountMenuItem(
+          icon: Icons.inventory_2_outlined,
+          label: context.l10n.materials,
+          onPressed: () => context.go('/materials'),
+        ),
+        _AccountMenuItem(
+          icon: Icons.school_outlined,
+          label: context.l10n.learning,
+          onPressed: () => context.go('/learning'),
+        ),
+        const Divider(height: 1),
         if (showSignIn)
           _AccountMenuItem(
             icon: Icons.login_rounded,

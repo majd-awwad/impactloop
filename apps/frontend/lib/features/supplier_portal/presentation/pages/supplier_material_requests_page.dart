@@ -44,21 +44,25 @@ class _SupplierMaterialRequestsPageState
   Widget build(BuildContext context) {
     final feedAsync = ref.watch(supplierMaterialRequestsFeedProvider);
     final query = ref.watch(supplierMaterialRequestsQueryProvider);
-    final compact = MediaQuery.sizeOf(context).width < 900;
+    final compact =
+        MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
+    final pagePadding = context.supplierDecorations.pagePadding(
+      compact: compact,
+    );
 
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
         child: SingleChildScrollView(
-          padding: context.supplierDecorations
-              .pagePadding(compact: compact)
-              .add(const EdgeInsets.only(top: AppSpacing.lg)),
+          padding: pagePadding.copyWith(
+            top: compact ? AppSpacing.sm : AppSpacing.md,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _FilterBar(query: query),
-              const SizedBox(height: AppSpacing.md),
+              SizedBox(height: compact ? AppSpacing.sm : AppSpacing.md),
               feedAsync.when(
                 loading: () => const Padding(
                   padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
@@ -102,92 +106,156 @@ class _FilterBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.watch(materialCategoriesProvider);
+    final l = context.s;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.sm + AppSpacing.xs),
-      decoration: BoxDecoration(
-        color: context.supplierColors.surfaceSolid.withValues(alpha: .7),
-        border: Border.all(
-          color: context.supplierColors.border.withValues(alpha: .55),
-        ),
-        borderRadius: AppRadius.mdAll,
+    final categoryField = categoriesAsync.when(
+      loading: () => _CompactFilterDropdown<String?>(
+        value: query.categoryId,
+        items: [query.categoryId],
+        itemLabel: (id) =>
+            id == null ? l.filterAllCategories : l.filterCategory,
       ),
-      child: Wrap(
-        spacing: AppSpacing.sm,
-        runSpacing: AppSpacing.sm,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          SizedBox(
-            width: 220,
-            child: categoriesAsync.when(
-              loading: () => const SizedBox.shrink(),
-              error: (_, _) => const SizedBox.shrink(),
-              data: (categories) => DropdownButtonFormField<String?>(
-                initialValue: query.categoryId,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  hintText: context.s.filterCategory,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 2,
-                  ),
-                ),
-                items: [
-                  DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text(context.s.filterAllCategories),
-                  ),
-                  ...categories.map(
-                    (MaterialCategory category) => DropdownMenuItem<String?>(
-                      value: category.id,
-                      child: Text(
-                        context.isSupplierArabic
-                            ? category.nameAr
-                            : category.nameEn,
-                      ),
-                    ),
-                  ),
-                ],
-                onChanged: (value) => ref
-                    .read(supplierMaterialRequestsQueryProvider.notifier)
-                    .setCategory(value),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 200,
-            child: TextFormField(
-              initialValue: query.city,
-              decoration: InputDecoration(
-                hintText: context.s.city,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-              ),
-              onFieldSubmitted: (value) => ref
-                  .read(supplierMaterialRequestsQueryProvider.notifier)
-                  .setCity(value.trim().isEmpty ? null : value.trim()),
-            ),
-          ),
-          FilterChip(
-            label: Text(context.s.filterUnansweredByMe),
-            selected: query.unansweredByMe,
-            onSelected: (value) => ref
-                .read(supplierMaterialRequestsQueryProvider.notifier)
-                .setUnansweredByMe(value),
-          ),
-          if (query.hasActiveFilters)
-            TextButton.icon(
-              onPressed: () => ref
-                  .read(supplierMaterialRequestsQueryProvider.notifier)
-                  .reset(),
-              icon: const Icon(Icons.restart_alt, size: 17),
-              label: const Text('Reset'),
-            ),
+      error: (_, _) => _CompactFilterDropdown<String?>(
+        value: query.categoryId,
+        items: [query.categoryId],
+        itemLabel: (id) =>
+            id == null ? l.filterAllCategories : l.filterCategory,
+      ),
+      data: (categories) => _CompactFilterDropdown<String?>(
+        value: query.categoryId,
+        items: [
+          null,
+          ...categories.map((MaterialCategory category) => category.id),
         ],
+        itemLabel: (id) {
+          if (id == null) return l.filterAllCategories;
+          final category = categories.firstWhere((item) => item.id == id);
+          return context.isSupplierArabic ? category.nameAr : category.nameEn;
+        },
+        onChanged: (value) => ref
+            .read(supplierMaterialRequestsQueryProvider.notifier)
+            .setCategory(value),
       ),
+    );
+
+    final cityField = TextFormField(
+      key: ValueKey(query.city ?? ''),
+      initialValue: query.city,
+      textInputAction: TextInputAction.done,
+      style: context.supplierBody().copyWith(
+        color: context.supplierColors.textPrimary,
+      ),
+      decoration: _compactFilterDecoration(context, hint: l.city),
+      onFieldSubmitted: (value) => ref
+          .read(supplierMaterialRequestsQueryProvider.notifier)
+          .setCity(value.trim().isEmpty ? null : value.trim()),
+    );
+
+    final unansweredField = _CompactFilterDropdown<bool>(
+      value: query.unansweredByMe,
+      items: const [false, true],
+      itemLabel: (selected) =>
+          selected ? l.filterUnansweredByMe : l.filterAllRequests,
+      onChanged: (value) => ref
+          .read(supplierMaterialRequestsQueryProvider.notifier)
+          .setUnansweredByMe(value),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = AppSpacing.sm;
+        final wide = constraints.maxWidth >= 720;
+        final twoCol = constraints.maxWidth >= 360;
+        final pairWidth = twoCol
+            ? (constraints.maxWidth - gap) / 2
+            : constraints.maxWidth;
+
+        Widget box(Widget child, {double? width}) =>
+            SizedBox(width: width ?? (wide ? 220 : pairWidth), child: child);
+
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            box(categoryField),
+            box(cityField),
+            box(unansweredField, width: wide ? 240 : pairWidth),
+            if (query.hasActiveFilters)
+              TextButton.icon(
+                onPressed: () => ref
+                    .read(supplierMaterialRequestsQueryProvider.notifier)
+                    .reset(),
+                icon: const Icon(Icons.restart_alt, size: 17),
+                label: Text(l.reset),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+InputDecoration _compactFilterDecoration(BuildContext context, {String? hint}) {
+  final colors = context.supplierColors;
+  return InputDecoration(
+    hintText: hint,
+    hintStyle: context.supplierBody().copyWith(color: colors.textMuted),
+    filled: true,
+    fillColor: colors.surfaceSolid,
+    contentPadding: const EdgeInsetsDirectional.fromSTEB(
+      AppSpacing.md,
+      12,
+      AppSpacing.sm,
+      12,
+    ),
+    border: OutlineInputBorder(
+      borderRadius: AppRadius.lgAll,
+      borderSide: BorderSide(color: colors.border),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: AppRadius.lgAll,
+      borderSide: BorderSide(color: colors.border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: AppRadius.lgAll,
+      borderSide: BorderSide(color: colors.borderFocused, width: 1.5),
+    ),
+  );
+}
+
+class _CompactFilterDropdown<T> extends StatelessWidget {
+  const _CompactFilterDropdown({
+    required this.value,
+    required this.items,
+    required this.itemLabel,
+    this.onChanged,
+  });
+
+  final T value;
+  final List<T> items;
+  final String Function(T value) itemLabel;
+  final ValueChanged<T>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<T>(
+      initialValue: value,
+      isExpanded: true,
+      onChanged: onChanged == null
+          ? null
+          : (next) {
+              if (next == null && null is! T) return;
+              onChanged!(next as T);
+            },
+      decoration: _compactFilterDecoration(context),
+      items: [
+        for (final item in items)
+          DropdownMenuItem<T>(
+            value: item,
+            child: Text(itemLabel(item), overflow: TextOverflow.ellipsis),
+          ),
+      ],
     );
   }
 }
@@ -204,8 +272,7 @@ class _RequestCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () =>
-            context.push('/supplier/material-requests/${request.id}'),
+        onTap: () => context.push('/supplier/material-requests/${request.id}'),
         borderRadius: AppRadius.lgAll,
         child: Container(
           padding: const EdgeInsetsDirectional.all(AppSpacing.md),
@@ -228,9 +295,9 @@ class _RequestCard extends StatelessWidget {
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       '${_formatQuantity(request.quantity)} ${request.unit} · ${request.location.displayLabel}',
-                      style: context
-                          .supplierBody()
-                          .copyWith(color: colors.textSecondary),
+                      style: context.supplierBody().copyWith(
+                        color: colors.textSecondary,
+                      ),
                     ),
                     if (request.description != null &&
                         request.description!.trim().isNotEmpty) ...[
@@ -239,9 +306,9 @@ class _RequestCard extends StatelessWidget {
                         request.description!,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: context
-                            .supplierBody()
-                            .copyWith(color: colors.textSecondary),
+                        style: context.supplierBody().copyWith(
+                          color: colors.textSecondary,
+                        ),
                       ),
                     ],
                     const SizedBox(height: AppSpacing.sm),
@@ -298,10 +365,7 @@ class _Chip extends StatelessWidget {
         borderRadius: AppRadius.pillAll,
         border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
-      child: Text(
-        label,
-        style: context.supplierChip().copyWith(color: color),
-      ),
+      child: Text(label, style: context.supplierChip().copyWith(color: color)),
     );
   }
 }
@@ -374,10 +438,7 @@ class _ErrorPanel extends StatelessWidget {
               style: context.supplierBody(),
             ),
           ),
-          OutlinedButton(
-            onPressed: onRetry,
-            child: Text(context.s.tryAgain),
-          ),
+          OutlinedButton(onPressed: onRetry, child: Text(context.s.tryAgain)),
         ],
       ),
     );

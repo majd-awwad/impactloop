@@ -81,9 +81,9 @@ class _AdminNoShowReportDetailPageState
       }
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
+        );
       }
     } catch (_) {
       if (mounted) {
@@ -548,9 +548,7 @@ class _IncidentOverviewCard extends StatelessWidget {
         ),
         _KeyValue(
           label: 'Delivery',
-          value: report.deliveryId == null
-              ? '—'
-              : context.l10n.viewDelivery,
+          value: report.deliveryId == null ? '—' : context.l10n.viewDelivery,
           link: report.deliveryId == null
               ? null
               : () => context.push(

@@ -65,7 +65,10 @@ void main() {
     test('nav label and page title translate to the expected Arabic copy', () {
       final ar = SupplierL10n.forLanguage('ar');
       expect(ar.navLearnerMaterialRequests, 'طلبات المواد من المتعلمين');
-      expect(ar.pageTitle('/supplier/material-requests'), ar.navLearnerMaterialRequests);
+      expect(
+        ar.pageTitle('/supplier/material-requests'),
+        ar.navLearnerMaterialRequests,
+      );
     });
 
     test('dashboard insight copy is bilingual', () {
@@ -74,6 +77,24 @@ void main() {
       expect(en.learnerMaterialRequestsInsightMessage(1), contains('1'));
       expect(ar.learnerMaterialRequestsInsightMessage(2), contains('2'));
       expect(ar.reviewLearnerMaterialRequests, 'مراجعة الطلبات');
+    });
+
+    test('dashboard quick action and compact filter copy is bilingual', () {
+      final en = SupplierL10n.forLanguage('en');
+      final ar = SupplierL10n.forLanguage('ar');
+
+      expect(en.quickActionLearnerRequests, 'Learner Requests');
+      expect(
+        en.quickActionLearnerRequestsCaption,
+        'See materials learners are looking for',
+      );
+      expect(en.filterAllRequests, 'All requests');
+      expect(ar.quickActionLearnerRequests, 'طلبات المتعلمين');
+      expect(
+        ar.quickActionLearnerRequestsCaption,
+        'شاهد المواد التي يبحث عنها المتعلمون',
+      );
+      expect(ar.filterAllRequests, 'كل الطلبات');
     });
   });
 
@@ -184,12 +205,117 @@ void main() {
 
       final en = SupplierL10n.forLanguage('en');
       expect(find.text(en.materialRequestsFilteredEmptyTitle), findsOneWidget);
+      expect(find.text(en.filterUnansweredByMe), findsOneWidget);
+      expect(find.text(en.reset), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+      'keeps compact filters and the first request visible on a phone width',
+      (tester) async {
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.binding.setSurfaceSize(const Size(390, 844));
+
+        final request = SupplierMaterialRequest.fromJson({
+          'id': 'req-1',
+          'categoryId': 'cat-1',
+          'categoryNameEn': 'Electronics',
+          'categoryNameAr': 'إلكترونيات',
+          'requestedItemName': 'Arduino Uno',
+          'quantity': 2,
+          'unit': 'piece',
+          'alternativesAllowed': true,
+          'location': {'country': 'Palestine', 'city': 'Ramallah'},
+          'status': 'OPEN',
+          'expiresAt': '2026-08-30T00:00:00.000Z',
+          'createdAt': '2026-07-01T00:00:00.000Z',
+          'suggestionCount': 0,
+          'respondedByMe': false,
+        });
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              supplierMaterialRequestsFeedProvider.overrideWith(
+                (ref) async => SupplierMaterialRequestListResult(
+                  items: [request],
+                  page: 1,
+                  limit: 20,
+                  total: 1,
+                  totalPages: 1,
+                ),
+              ),
+              materialCategoriesProvider.overrideWith((ref) async => []),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.light,
+              home: const SupplierLocaleScope(
+                languageCode: 'en',
+                child: Scaffold(body: SupplierMaterialRequestsPage()),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        final en = SupplierL10n.forLanguage('en');
+        expect(find.byType(FilterChip), findsNothing);
+        expect(find.text(en.filterAllCategories), findsWidgets);
+        expect(find.text(en.city), findsOneWidget);
+        expect(find.text(en.filterAllRequests), findsWidgets);
+        expect(find.text('Arduino Uno'), findsOneWidget);
+        expect(tester.getRect(find.text('Arduino Uno')).top, lessThan(280));
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets('compact Arabic filters do not overflow at a 360px width', (
+      tester,
+    ) async {
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.binding.setSurfaceSize(const Size(360, 800));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            supplierMaterialRequestsFeedProvider.overrideWith(
+              (ref) async => const SupplierMaterialRequestListResult(
+                items: [],
+                page: 1,
+                limit: 20,
+                total: 0,
+                totalPages: 1,
+              ),
+            ),
+            materialCategoriesProvider.overrideWith((ref) async => []),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light,
+            home: const Directionality(
+              textDirection: TextDirection.rtl,
+              child: SupplierLocaleScope(
+                languageCode: 'ar',
+                child: Scaffold(body: SupplierMaterialRequestsPage()),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      final ar = SupplierL10n.forLanguage('ar');
+      expect(find.text(ar.filterAllCategories), findsWidgets);
+      expect(find.text(ar.filterAllRequests), findsWidgets);
+      expect(find.text(ar.city), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
 }
 
-class _UnansweredOnlyQueryNotifier extends SupplierMaterialRequestsQueryNotifier {
+class _UnansweredOnlyQueryNotifier
+    extends SupplierMaterialRequestsQueryNotifier {
   @override
   SupplierMaterialRequestsQuery build() =>
       const SupplierMaterialRequestsQuery(unansweredByMe: true);

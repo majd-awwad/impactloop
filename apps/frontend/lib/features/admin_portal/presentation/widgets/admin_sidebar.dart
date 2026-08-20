@@ -66,11 +66,7 @@ class AdminSidebar extends ConsumerWidget {
         '/admin/learning-projects',
       ),
       if (kIsWeb)
-        _NavDef(
-          l.navExportCenter,
-          Icons.download_outlined,
-          '/admin/exports',
-        ),
+        _NavDef(l.navExportCenter, Icons.download_outlined, '/admin/exports'),
       _NavDef(l.navImpactAnalytics, Icons.insights_outlined, '/admin/impact'),
       _NavDef(l.navAuditLogs, Icons.receipt_long_outlined, '/admin/audit-logs'),
     ];

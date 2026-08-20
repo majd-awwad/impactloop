@@ -44,7 +44,8 @@ class AdminDeliveriesExportPreflight {
     );
   }
 
-  AdminExportFormatEligibility? eligibilityFor(String format) => formats[format];
+  AdminExportFormatEligibility? eligibilityFor(String format) =>
+      formats[format];
 }
 
 class AdminDeliveriesApi {

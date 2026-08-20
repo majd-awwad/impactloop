@@ -132,7 +132,7 @@ Mount order: `apps/backend/src/app.ts`
 
 **Purpose:** Admin dashboard, invitation management, supplier verification review, approvals, material moderation/report review, and people management.
 
-**Key files:** `admin.routes.ts`, `admin.controller.ts`, `admin.service.ts`, `admin.repository.ts`, `admin.dashboard.test.ts`
+**Key files:** `admin.routes.ts`, `admin.controller.ts`, `admin.service.ts`, `admin.repository.ts`, `admin-impact.service.ts`, `admin-impact.repository.ts`, `admin.dashboard.test.ts`, `admin-impact.test.ts`
 
 **Auth:** `authMiddleware` + `requireRoles('ADMIN')` on all `/api/admin/*` routes.
 

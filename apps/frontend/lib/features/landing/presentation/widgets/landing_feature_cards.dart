@@ -19,7 +19,7 @@ class LandingFeatureCards extends StatelessWidget {
         l10n.landingFeatureFindTitle,
         l10n.landingFeatureFindBody,
         l10n.exploreMaterials,
-        '/register',
+        '/materials',
       ),
       (
         Icons.inventory_2_outlined,
@@ -33,7 +33,7 @@ class LandingFeatureCards extends StatelessWidget {
         l10n.landingFeatureBuildTitle,
         l10n.landingFeatureBuildBody,
         l10n.startBuilding,
-        '/register',
+        '/learning',
       ),
     ];
     final useColumn = MediaQuery.sizeOf(context).width < 960;

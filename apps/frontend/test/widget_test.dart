@@ -15,6 +15,8 @@ import 'package:frontend/features/health/application/health_controller.dart';
 import 'package:frontend/features/health/data/health_remote_data_source.dart';
 import 'package:frontend/features/auth/presentation/models/registration_intent.dart';
 import 'package:frontend/features/auth/presentation/pages/register_page.dart';
+import 'package:frontend/features/landing/application/landing_public_providers.dart';
+import 'package:frontend/features/landing/data/landing_public_api.dart';
 import 'package:frontend/features/landing/presentation/pages/landing_page.dart';
 import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/application/auth_providers.dart';
@@ -46,6 +48,9 @@ final _materialDiscoveryTestOverrides = [
   ),
   materialDiscoveryRepositoryProvider.overrideWithValue(
     const MockMaterialDiscoveryRepository(),
+  ),
+  landingPublicRepositoryProvider.overrideWithValue(
+    const FakeLandingPublicRepository(),
   ),
   discoveryMaterialCategoriesProvider.overrideWith((ref) => Future.value([])),
   savedLocationsProvider.overrideWith((ref) => Future.value([])),
@@ -126,7 +131,12 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [_learningHubTestOverride],
+        overrides: [
+          _learningHubTestOverride,
+          landingPublicRepositoryProvider.overrideWithValue(
+            const FakeLandingPublicRepository(),
+          ),
+        ],
         child: MaterialApp(home: page),
       ),
     );

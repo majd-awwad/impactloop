@@ -671,3 +671,14 @@ mixin LearningHubRepositorySessionDefaults on Object
     throw UnimplementedError('clearLearningAssignmentUnclearReport');
   }
 }
+
+class ProjectLookupLearningHubRepository extends _EmptyLearningHubRepository {
+  const ProjectLookupLearningHubRepository(this.project);
+
+  final LearningProject project;
+
+  @override
+  Future<LearningProject?> fetchProjectById(String id) async {
+    return id == project.id ? project : null;
+  }
+}

@@ -11,7 +11,8 @@ import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/incident_report_status_presentation.dart';
 import '../../data/admin_no_show_reports_api.dart';
-import '../../data/admin_reservations_api.dart' show AdminExportFormatEligibility;
+import '../../data/admin_reservations_api.dart'
+    show AdminExportFormatEligibility;
 import '../l10n/admin_l10n.dart';
 import '../theme/admin_decoration_set.dart';
 import '../widgets/admin_empty_state.dart';
@@ -423,7 +424,9 @@ class _AdminNoShowReportsPageState
                           )
                         : const Icon(Icons.download_outlined, size: 18),
                     label: Text(
-                      _isPreflightLoading ? 'Preparing…' : adminL10n.exportAction,
+                      _isPreflightLoading
+                          ? 'Preparing…'
+                          : adminL10n.exportAction,
                     ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: palette.textPrimary,
@@ -1051,40 +1054,40 @@ class _IncidentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final adminL10n = AdminL10n.of(context);
     return Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      border: Border.all(color: context.adminPalette.cardBorder),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _IncidentIdentity(report: report),
-        const SizedBox(height: 12),
-        _WorkflowCell(report: report),
-        const SizedBox(height: 12),
-        _CardLine(
-          label: 'Target',
-          child: _TargetCell(report: report),
-        ),
-        _CardLine(
-          label: adminL10n.status,
-          child: _StatusCell(status: report.status),
-        ),
-        _CardLine(
-          label: 'Created',
-          child: _CreatedCell(createdAt: report.createdAt),
-        ),
-        Align(
-          alignment: AlignmentDirectional.centerEnd,
-          child: IconButton(
-            tooltip: 'View incident',
-            onPressed: () => onView(report.id),
-            icon: const Icon(Icons.visibility_outlined),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        border: Border.all(color: context.adminPalette.cardBorder),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _IncidentIdentity(report: report),
+          const SizedBox(height: 12),
+          _WorkflowCell(report: report),
+          const SizedBox(height: 12),
+          _CardLine(
+            label: 'Target',
+            child: _TargetCell(report: report),
           ),
-        ),
-      ],
-    ),
+          _CardLine(
+            label: adminL10n.status,
+            child: _StatusCell(status: report.status),
+          ),
+          _CardLine(
+            label: 'Created',
+            child: _CreatedCell(createdAt: report.createdAt),
+          ),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: IconButton(
+              tooltip: 'View incident',
+              onPressed: () => onView(report.id),
+              icon: const Icon(Icons.visibility_outlined),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1405,26 +1408,23 @@ class _IncidentEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final adminL10n = AdminL10n.of(context);
     return Container(
-    padding: const EdgeInsets.all(32),
-    decoration: BoxDecoration(
-      border: Border.all(color: context.adminPalette.cardBorder),
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Column(
-      children: [
-        const AdminEmptyState(
-          icon: Icons.report_outlined,
-          title: 'No incident reports found',
-          subtitle:
-              'Try adjusting the current filters or review incidents again later.',
-        ),
-        if (hasFilters)
-          TextButton(
-            onPressed: onReset,
-            child: Text(adminL10n.resetFilters),
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        border: Border.all(color: context.adminPalette.cardBorder),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          const AdminEmptyState(
+            icon: Icons.report_outlined,
+            title: 'No incident reports found',
+            subtitle:
+                'Try adjusting the current filters or review incidents again later.',
           ),
-      ],
-    ),
+          if (hasFilters)
+            TextButton(onPressed: onReset, child: Text(adminL10n.resetFilters)),
+        ],
+      ),
     );
   }
 }
@@ -1436,19 +1436,19 @@ class _ErrorPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final adminL10n = AdminL10n.of(context);
     return Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      border: Border.all(color: Theme.of(context).colorScheme.error),
-      borderRadius: BorderRadius.circular(14),
-    ),
-    child: Row(
-      children: [
-        const Icon(Icons.error_outline),
-        const SizedBox(width: 10),
-        Expanded(child: Text(adminL10n.couldNotLoadIncidentReports)),
-        TextButton(onPressed: onRetry, child: Text(adminL10n.retry)),
-      ],
-    ),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).colorScheme.error),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline),
+          const SizedBox(width: 10),
+          Expanded(child: Text(adminL10n.couldNotLoadIncidentReports)),
+          TextButton(onPressed: onRetry, child: Text(adminL10n.retry)),
+        ],
+      ),
     );
   }
 }
@@ -1582,9 +1582,7 @@ class _AdminIncidentReportsExportDialogState
       ),
       footer: AppDialogFooter.decision(
         secondaryAction: TextButton(
-          onPressed: _isDownloading
-              ? null
-              : () => Navigator.of(context).pop(),
+          onPressed: _isDownloading ? null : () => Navigator.of(context).pop(),
           child: Text(adminL10n.cancel),
         ),
         primaryAction: FilledButton(
@@ -1601,4 +1599,3 @@ class _AdminIncidentReportsExportDialogState
     );
   }
 }
-

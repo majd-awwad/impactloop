@@ -25,6 +25,10 @@ void main() {
     expect(materialType.normalizedName, 'wax molds');
     expect(materialType.hasActivePriceRule, isTrue);
     expect(materialType.aliases, hasLength(2));
+    expect(materialType.displayLabel(preferArabic: true), 'قوالب شمع');
+    expect(materialType.matchesEnteredName('قوالب شمع'), isTrue);
+    expect(materialType.matchesEnteredName('Candle molds'), isTrue);
+    expect(materialType.matchesEnteredName('Other'), isFalse);
   });
 
   test('MaterialListingPolicy.fromJson parses policy flags', () {

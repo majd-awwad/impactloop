@@ -76,9 +76,9 @@ class _AdminDeliveryDetailPageState
       }
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
+        );
       }
     } finally {
       if (mounted) setState(() => _isReopening = false);
@@ -842,7 +842,10 @@ class _IncidentSummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _Info(label: 'Reason', value: humanizeEnum(incident.reasonCode)),
-          _Info(label: AdminL10n.of(context).status, value: humanizeEnum(incident.status)),
+          _Info(
+            label: AdminL10n.of(context).status,
+            value: humanizeEnum(incident.status),
+          ),
           _Info(label: 'Workflow', value: humanizeEnum(incident.workflowType)),
           _Info(
             label: 'Operational state',
@@ -873,7 +876,10 @@ class _GroupSummaryCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _Info(label: 'Items', value: '${detail.group!.itemCount}'),
-        _Info(label: AdminL10n.of(context).status, value: humanizeEnum(detail.group!.status)),
+        _Info(
+          label: AdminL10n.of(context).status,
+          value: humanizeEnum(detail.group!.status),
+        ),
         OutlinedButton(
           onPressed: () => onTab('Group'),
           child: const Text('View group'),

@@ -137,7 +137,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
 
   Future<void> _maybeApplyMaterialRequestPrefill() async {
     final requestId = _sourceMaterialRequestId;
-    if (requestId == null || requestId.isEmpty || _materialRequestPrefillApplied) {
+    if (requestId == null ||
+        requestId.isEmpty ||
+        _materialRequestPrefillApplied) {
       return;
     }
     _materialRequestPrefillApplied = true;
@@ -164,8 +166,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         }
         if (_quantityController.text.trim().isEmpty ||
             _quantityController.text.trim() == '1') {
-          _quantityController.text = request.quantity == request.quantity
-              .roundToDouble()
+          _quantityController.text =
+              request.quantity == request.quantity.roundToDouble()
               ? request.quantity.toStringAsFixed(0)
               : request.quantity.toStringAsFixed(2);
         }
@@ -220,7 +222,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   void _onMaterialNameChanged(String value) {
     setState(() {
       if (_selectedMaterialType != null &&
-          value.trim() != _selectedMaterialType!.nameEn) {
+          !_selectedMaterialType!.matchesEnteredName(value)) {
         _selectedMaterialType = null;
       }
       _priceCheck = null;
@@ -231,7 +233,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   void _selectMaterialType(material_models.MaterialType materialType) {
     setState(() {
       _selectedMaterialType = materialType;
-      _materialNameController.text = materialType.nameEn;
+      _materialNameController.text = materialType.displayLabel(
+        preferArabic: context.isSupplierArabic,
+      );
       final currentUnit = _unitController.text.trim();
       if (!_unitEditedByUser &&
           (currentUnit.isEmpty || currentUnit == 'piece') &&
@@ -339,7 +343,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
 
       material_models.MaterialType? exactMatch;
       for (final item in result.items) {
-        if (item.nameEn.toLowerCase() == materialName.toLowerCase()) {
+        if (item.matchesEnteredName(materialName)) {
           exactMatch = item;
           break;
         }
@@ -1271,7 +1275,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     });
   }
 
-  List<_ChecklistItemData> _checklist(SupplierL10n l, MaterialCategory? category) => [
+  List<_ChecklistItemData> _checklist(
+    SupplierL10n l,
+    MaterialCategory? category,
+  ) => [
     _ChecklistItemData(l.chooseCategoryChecklist, _categoryId != null),
     _ChecklistItemData(
       l.enterMaterialTypeChecklist,
@@ -1285,7 +1292,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       l.addDescriptionChecklist,
       _descriptionController.text.trim().isNotEmpty,
     ),
-    _ChecklistItemData(l.setConditionChecklist, _conditions.contains(_condition)),
+    _ChecklistItemData(
+      l.setConditionChecklist,
+      _conditions.contains(_condition),
+    ),
     _ChecklistItemData(
       l.addQuantityUnitChecklist,
       double.tryParse(_quantityController.text.trim()) != null &&
@@ -1516,10 +1526,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       if (kDebugMode) {
         debugPrint('[category-request failed] unexpected: $error\n$stackTrace');
       }
-      showSupplierErrorSnackBar(
-        context,
-        context.s.couldNotUploadImages,
-      );
+      showSupplierErrorSnackBar(context, context.s.couldNotUploadImages);
     }
   }
 
@@ -2005,7 +2012,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
           '[price-review failed] status=${error.statusCode} code=${error.code} message=${error.message}',
         );
       }
-      showSupplierErrorSnackBar(context, localizedApiErrorMessage(error, context.l10n));
+      showSupplierErrorSnackBar(
+        context,
+        localizedApiErrorMessage(error, context.l10n),
+      );
     } catch (error, stackTrace) {
       if (!mounted) return;
       setState(() => _isRequestingPriceReview = false);
@@ -2120,7 +2130,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       }
       showSupplierErrorSnackBar(
         context,
-        context.s.priceVerificationFailed(localizedApiErrorMessage(error, context.l10n)),
+        context.s.priceVerificationFailed(
+          localizedApiErrorMessage(error, context.l10n),
+        ),
       );
     }
   }
@@ -2155,7 +2167,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               )
               .where((item) => item.id.isNotEmpty)
               .map(
-                (item) => item.displayLabel(preferArabic: context.isSupplierArabic),
+                (item) =>
+                    item.displayLabel(preferArabic: context.isSupplierArabic),
               )
               .join(' · ');
           if (labels.isNotEmpty) {
@@ -2264,10 +2277,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         return;
       } catch (_) {
         if (!mounted) return;
-        showSupplierErrorSnackBar(
-          context,
-          context.s.couldNotUploadImages,
-        );
+        showSupplierErrorSnackBar(context, context.s.couldNotUploadImages);
         return;
       }
 
@@ -2476,7 +2486,11 @@ class _MaterialTypeAutocompleteFieldState
 
   void _select(material_models.MaterialType materialType) {
     _debounce?.cancel();
-    setState(() => _debouncedSearch = materialType.nameEn);
+    setState(
+      () => _debouncedSearch = materialType.displayLabel(
+        preferArabic: context.isSupplierArabic,
+      ),
+    );
     widget.onSelected(materialType);
     _focusNode.unfocus();
   }
@@ -2621,9 +2635,19 @@ class _MaterialTypeOptionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = context.s;
     final colors = context.supplierColors;
+    final preferArabic = context.isSupplierArabic;
+    final title = materialType.displayLabel(preferArabic: preferArabic);
     final aliasText = materialType.aliases.take(3).join(', ');
     final secondaryParts = [
-      materialType.category.nameEn,
+      preferArabic
+          ? (materialType.category.nameAr.trim().isNotEmpty
+                ? materialType.category.nameAr
+                : materialType.category.nameEn)
+          : materialType.category.nameEn,
+      if (preferArabic &&
+          materialType.nameAr?.trim().isNotEmpty == true &&
+          materialType.nameEn.trim().isNotEmpty)
+        materialType.nameEn,
       materialType.defaultUnit,
       if (aliasText.isNotEmpty) l.materialTypeAliases(aliasText),
     ];
@@ -2644,7 +2668,7 @@ class _MaterialTypeOptionRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    materialType.nameEn,
+                    title,
                     style: context.supplierLabel().copyWith(
                       color: colors.textPrimary,
                       fontWeight: FontWeight.w700,
@@ -2719,11 +2743,7 @@ class _ListingWorkspaceHeader extends StatelessWidget {
               onPressed: () => context.popOrGo('/supplier/materials'),
               child: Text(l.navMyMaterials),
             ),
-            Icon(
-              Icons.chevron_right,
-              size: 18,
-              color: colors.textMuted,
-            ),
+            Icon(Icons.chevron_right, size: 18, color: colors.textMuted),
             Text(
               l.navAddMaterial,
               style: context.supplierLabel().copyWith(
@@ -2977,7 +2997,9 @@ class _ListingActionFooter extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.publish_outlined),
-            label: Text(isSubmitting ? context.s.publishing : context.s.publishMaterial),
+            label: Text(
+              isSubmitting ? context.s.publishing : context.s.publishMaterial,
+            ),
           ),
         ],
       ),

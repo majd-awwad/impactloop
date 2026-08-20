@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:frontend/app/theme/app_theme.dart';
+import 'package:frontend/features/supplier_portal/presentation/l10n/supplier_l10n.dart';
+import 'package:frontend/features/supplier_portal/presentation/shell/supplier_nav_config.dart';
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_locale_scope.dart';
+import 'package:frontend/features/supplier_portal/presentation/widgets/dashboard/supplier_dashboard_quick_actions_panel.dart';
 import 'package:frontend/features/supplier_portal/presentation/widgets/dashboard/supplier_dashboard_stat_card.dart';
 import 'package:frontend/shared/widgets/app_section_card.dart';
 
@@ -45,5 +51,46 @@ void main() {
     expect(find.text('Total material views'), findsOneWidget);
     expect(find.text('Total material likes'), findsOneWidget);
     expect(find.text('Followers'), findsOneWidget);
+  });
+
+  testWidgets('adds a learner requests shortcut that uses the existing route', (
+    tester,
+  ) async {
+    final en = SupplierL10n.forLanguage('en');
+    final learnerRequestsRoute = supplierNavItems
+        .firstWhere(
+          (item) =>
+              item.labelKey == SupplierNavLabelKey.learnerMaterialRequests,
+        )
+        .route;
+    final router = GoRouter(
+      initialLocation: '/supplier',
+      routes: [
+        GoRoute(
+          path: '/supplier',
+          builder: (context, state) => const SupplierLocaleScope(
+            languageCode: 'en',
+            child: Scaffold(body: SupplierDashboardQuickActionsPanel()),
+          ),
+        ),
+        GoRoute(
+          path: learnerRequestsRoute,
+          builder: (context, state) => const Text('material-requests-page'),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(en.quickActionLearnerRequests), findsOneWidget);
+    expect(find.text(en.quickActionLearnerRequestsCaption), findsOneWidget);
+
+    await tester.tap(find.text(en.quickActionLearnerRequests));
+    await tester.pumpAndSettle();
+
+    expect(find.text('material-requests-page'), findsOneWidget);
   });
 }

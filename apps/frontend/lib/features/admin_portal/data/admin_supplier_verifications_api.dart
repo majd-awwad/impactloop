@@ -136,7 +136,8 @@ class AdminSupplierVerificationsApi {
           response.headers.value('content-type')?.split(';').first.trim() ??
           'application/octet-stream';
       final disposition = response.headers.value('content-disposition');
-      final filename = _filenameFromContentDisposition(disposition) ??
+      final filename =
+          _filenameFromContentDisposition(disposition) ??
           'verification-document';
 
       return AdminVerificationDocumentBytes(

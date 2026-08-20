@@ -360,9 +360,14 @@ class _ProjectMetaChip extends StatelessWidget {
 
 /// Mobile horizontal project card matching Learning Hub reference density.
 class LearningProjectCompactCard extends StatelessWidget {
-  const LearningProjectCompactCard({super.key, required this.project});
+  const LearningProjectCompactCard({
+    super.key,
+    required this.project,
+    this.showCreatorAttribution = true,
+  });
 
   final LearningProject project;
+  final bool showCreatorAttribution;
 
   @override
   Widget build(BuildContext context) {
@@ -477,13 +482,14 @@ class LearningProjectCompactCard extends StatelessWidget {
                       project: project,
                       density: ProjectEngagementDensity.compact,
                     ),
-                    if (project.creator case final creator?) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      LearningProjectCreatorFooter(
-                        creator: creator,
-                        compact: true,
-                      ),
-                    ],
+                    if (showCreatorAttribution)
+                      if (project.creator case final creator?) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        LearningProjectCreatorFooter(
+                          creator: creator,
+                          compact: true,
+                        ),
+                      ],
                   ],
                 ),
               ),

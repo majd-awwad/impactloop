@@ -825,15 +825,14 @@ class AdminDeliveryDetail {
       resolutionOutcome: recovery['resolutionOutcome'] as String?,
       administrativelyResolvedAt:
           recovery['administrativelyResolvedAt'] as String?,
-      returnedItemLines:
-          (recovery['carriedItems'] as List<dynamic>? ?? const [])
-              .whereType<Map>()
-              .map((item) {
-                final value = Map<String, dynamic>.from(item);
-                return '${value['title'] ?? 'Material'} × ${value['quantity'] ?? 0} ${value['unit'] ?? ''}'
-                    .trim();
-              })
-              .toList(growable: false),
+      returnedItemLines: (recovery['carriedItems'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map((item) {
+            final value = Map<String, dynamic>.from(item);
+            return '${value['title'] ?? 'Material'} × ${value['quantity'] ?? 0} ${value['unit'] ?? ''}'
+                .trim();
+          })
+          .toList(growable: false),
       attemptCount: (json['attempts'] as List<dynamic>? ?? const []).length,
       materialPaymentMethod: materialPayment['method'] as String?,
       materialPaymentStatus: materialPayment['status'] as String?,

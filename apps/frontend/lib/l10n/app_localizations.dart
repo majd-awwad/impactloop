@@ -5782,6 +5782,54 @@ abstract class AppLocalizations {
   /// **'Sustainable choices. Stronger communities. Smarter projects.'**
   String get landingFooter;
 
+  /// No description provided for @landingAvailableMaterials.
+  ///
+  /// In en, this message translates to:
+  /// **'Available materials'**
+  String get landingAvailableMaterials;
+
+  /// No description provided for @landingPublishedProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Published projects'**
+  String get landingPublishedProjects;
+
+  /// No description provided for @landingPublishedProjectsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Guides the community can start today.'**
+  String get landingPublishedProjectsBody;
+
+  /// No description provided for @landingFeaturedMaterialsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Available materials'**
+  String get landingFeaturedMaterialsTitle;
+
+  /// No description provided for @landingFeaturedProjectsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Published learning projects'**
+  String get landingFeaturedProjectsTitle;
+
+  /// No description provided for @landingFeaturedMaterialsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No public materials are available right now.'**
+  String get landingFeaturedMaterialsEmpty;
+
+  /// No description provided for @landingFeaturedProjectsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No published learning projects are available right now.'**
+  String get landingFeaturedProjectsEmpty;
+
+  /// No description provided for @landingDynamicSectionError.
+  ///
+  /// In en, this message translates to:
+  /// **'This section could not be loaded.'**
+  String get landingDynamicSectionError;
+
   /// No description provided for @requestDelivery.
   ///
   /// In en, this message translates to:
@@ -17389,8 +17437,194 @@ abstract class AppLocalizations {
   /// No description provided for @adminOpImpactDesc.
   ///
   /// In en, this message translates to:
-  /// **'Explore reuse and impact analytics'**
+  /// **'Track verified reuse, learning outcomes, and environmental estimates'**
   String get adminOpImpactDesc;
+
+  /// No description provided for @adminImpactPageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Track verified reuse, learning outcomes, and environmental estimates'**
+  String get adminImpactPageSubtitle;
+
+  /// No description provided for @adminCompletedReuseEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed reuse events'**
+  String get adminCompletedReuseEvents;
+
+  /// No description provided for @adminCompletedReuseEventsHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Successful completed material handovers'**
+  String get adminCompletedReuseEventsHelper;
+
+  /// No description provided for @adminLearnersBenefitedHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Distinct learners with at least one completed handover'**
+  String get adminLearnersBenefitedHelper;
+
+  /// No description provided for @adminSuppliersContributedHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Distinct suppliers whose materials were reused'**
+  String get adminSuppliersContributedHelper;
+
+  /// No description provided for @adminProjectComponentsFulfilled.
+  ///
+  /// In en, this message translates to:
+  /// **'Project components fulfilled'**
+  String get adminProjectComponentsFulfilled;
+
+  /// No description provided for @adminProjectComponentsFulfilledHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Build components fulfilled by completed reuse'**
+  String get adminProjectComponentsFulfilledHelper;
+
+  /// No description provided for @adminDistinctMaterialsReused.
+  ///
+  /// In en, this message translates to:
+  /// **'Distinct materials reused'**
+  String get adminDistinctMaterialsReused;
+
+  /// No description provided for @adminDistinctMaterialsReusedHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Unique listings used in completed handovers'**
+  String get adminDistinctMaterialsReusedHelper;
+
+  /// No description provided for @adminCompletedReuseByCategoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed reuse by category'**
+  String get adminCompletedReuseByCategoryTitle;
+
+  /// No description provided for @adminCompletedReuseByCategorySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed handovers grouped by material category'**
+  String get adminCompletedReuseByCategorySubtitle;
+
+  /// No description provided for @adminLearningImpactTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning impact'**
+  String get adminLearningImpactTitle;
+
+  /// No description provided for @adminLearningImpactSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Project builds supported through fulfilled material components'**
+  String get adminLearningImpactSubtitle;
+
+  /// No description provided for @adminLearningComponentsFulfilled.
+  ///
+  /// In en, this message translates to:
+  /// **'Project components fulfilled'**
+  String get adminLearningComponentsFulfilled;
+
+  /// No description provided for @adminLearningBuildsSupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Project builds that received platform materials'**
+  String get adminLearningBuildsSupported;
+
+  /// No description provided for @adminLearningProjectsSupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning projects supported'**
+  String get adminLearningProjectsSupported;
+
+  /// No description provided for @adminCompletedReuseOverTimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed reuse activity over time'**
+  String get adminCompletedReuseOverTimeTitle;
+
+  /// No description provided for @adminCompletedReuseOverTimeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed handovers by month'**
+  String get adminCompletedReuseOverTimeSubtitle;
+
+  /// No description provided for @adminEnvironmentalEstimateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Environmental estimate'**
+  String get adminEnvironmentalEstimateTitle;
+
+  /// No description provided for @adminEnvironmentalEstimateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Secondary, conservative CO₂e estimate from eligible completed reuse'**
+  String get adminEnvironmentalEstimateSubtitle;
+
+  /// No description provided for @adminEstimatedPotentialCo2eAvoided.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated potential CO₂e avoided'**
+  String get adminEstimatedPotentialCo2eAvoided;
+
+  /// No description provided for @adminEnvironmentalUnavailableValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Environmental estimate unavailable for current data'**
+  String get adminEnvironmentalUnavailableValue;
+
+  /// No description provided for @adminEnvironmentalUnavailableBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No completed reuse events currently have both a documented mass quantity (kg or g) and a documented category emission factor.'**
+  String get adminEnvironmentalUnavailableBody;
+
+  /// No description provided for @adminEnvironmentalCoverage.
+  ///
+  /// In en, this message translates to:
+  /// **'Coverage: {included} of {total} completed reuse events included'**
+  String adminEnvironmentalCoverage(int included, int total);
+
+  /// No description provided for @adminEnvironmentalCoveragePercent.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% estimation coverage'**
+  String adminEnvironmentalCoveragePercent(int percent);
+
+  /// No description provided for @adminCalculationMethodology.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculation methodology'**
+  String get adminCalculationMethodology;
+
+  /// No description provided for @adminEnvironmentalMethodologyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified metrics come directly from completed platform workflows. Environmental impact values are conservative estimates based on completed reuse events with sufficient material and quantity data. Unsupported units are excluded. The values are not certified environmental measurements and do not include all lifecycle effects.'**
+  String get adminEnvironmentalMethodologyBody;
+
+  /// No description provided for @adminImpactEmptyCategoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No completed reuse by category yet'**
+  String get adminImpactEmptyCategoryTitle;
+
+  /// No description provided for @adminImpactEmptyCategorySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Category totals appear after successful material handovers.'**
+  String get adminImpactEmptyCategorySubtitle;
+
+  /// No description provided for @adminImpactEmptyMonthlyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No completed reuse activity yet'**
+  String get adminImpactEmptyMonthlyTitle;
+
+  /// No description provided for @adminImpactEmptyMonthlySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly completed handovers will appear here over time.'**
+  String get adminImpactEmptyMonthlySubtitle;
 
   /// No description provided for @adminOpAuditLogsDesc.
   ///
@@ -18370,10 +18604,28 @@ abstract class AppLocalizations {
   /// **'This user has not published any public projects yet.'**
   String get publicUserNoPublishedProjectsBody;
 
+  /// No description provided for @publicUserPublishedProjectsLikes.
+  ///
+  /// In en, this message translates to:
+  /// **'Likes received'**
+  String get publicUserPublishedProjectsLikes;
+
+  /// No description provided for @publicUserAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get publicUserAbout;
+
+  /// No description provided for @publicUserInterests.
+  ///
+  /// In en, this message translates to:
+  /// **'Interests'**
+  String get publicUserInterests;
+
   /// No description provided for @publicUserSupplierActivity.
   ///
   /// In en, this message translates to:
-  /// **'Supplier activity'**
+  /// **'Also a Supplier on ImpactLoop'**
   String get publicUserSupplierActivity;
 
   /// No description provided for @publicUserViewSupplierProfile.

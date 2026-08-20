@@ -3318,6 +3318,32 @@ class AppLocalizationsAr extends AppLocalizations {
   String get landingFooter => 'خيارات مستدامة. مجتمعات أقوى. مشاريع أذكى.';
 
   @override
+  String get landingAvailableMaterials => 'مواد متاحة';
+
+  @override
+  String get landingPublishedProjects => 'مشاريع منشورة';
+
+  @override
+  String get landingPublishedProjectsBody =>
+      'أدلة يمكن للمجتمع البدء بها اليوم.';
+
+  @override
+  String get landingFeaturedMaterialsTitle => 'مواد متاحة';
+
+  @override
+  String get landingFeaturedProjectsTitle => 'مشاريع تعليمية منشورة';
+
+  @override
+  String get landingFeaturedMaterialsEmpty => 'لا توجد مواد عامة متاحة حالياً.';
+
+  @override
+  String get landingFeaturedProjectsEmpty =>
+      'لا توجد مشاريع تعليمية منشورة حالياً.';
+
+  @override
+  String get landingDynamicSectionError => 'تعذر تحميل هذا القسم.';
+
+  @override
   String get requestDelivery => 'طلب التوصيل';
 
   @override
@@ -10269,7 +10295,126 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminOpInvitationsDesc => 'إنشاء وتتبع دعوات الأدوار';
 
   @override
-  String get adminOpImpactDesc => 'استكشاف تحليلات إعادة الاستخدام والأثر';
+  String get adminOpImpactDesc =>
+      'تتبع إعادة الاستخدام المؤكدة، ونتائج التعلم، والتقديرات البيئية';
+
+  @override
+  String get adminImpactPageSubtitle =>
+      'تتبع إعادة الاستخدام المؤكدة، ونتائج التعلم، والتقديرات البيئية';
+
+  @override
+  String get adminCompletedReuseEvents => 'عمليات إعادة الاستخدام المكتملة';
+
+  @override
+  String get adminCompletedReuseEventsHelper =>
+      'عمليات تسليم المواد المكتملة بنجاح';
+
+  @override
+  String get adminLearnersBenefitedHelper =>
+      'متعلمون مميزون أكملوا تسليمًا واحدًا على الأقل';
+
+  @override
+  String get adminSuppliersContributedHelper =>
+      'موردون مميزون أُعيد استخدام موادهم';
+
+  @override
+  String get adminProjectComponentsFulfilled =>
+      'مكونات المشاريع التي تم توفيرها';
+
+  @override
+  String get adminProjectComponentsFulfilledHelper =>
+      'مكونات خطط البناء التي وُفرت عبر إعادة استخدام مكتملة';
+
+  @override
+  String get adminDistinctMaterialsReused => 'مواد مختلفة أعيد استخدامها';
+
+  @override
+  String get adminDistinctMaterialsReusedHelper =>
+      'قوائم فريدة استُخدمت في عمليات تسليم مكتملة';
+
+  @override
+  String get adminCompletedReuseByCategoryTitle =>
+      'إعادة الاستخدام المكتملة حسب الفئة';
+
+  @override
+  String get adminCompletedReuseByCategorySubtitle =>
+      'عمليات التسليم المكتملة مجمعة حسب فئة المادة';
+
+  @override
+  String get adminLearningImpactTitle => 'أثر التعلم';
+
+  @override
+  String get adminLearningImpactSubtitle =>
+      'خطط البناء التي استفادت من مكونات مواد وفّرتها المنصة';
+
+  @override
+  String get adminLearningComponentsFulfilled => 'مكونات مشاريع تم توفيرها';
+
+  @override
+  String get adminLearningBuildsSupported => 'خطط بناء استفادت من مواد المنصة';
+
+  @override
+  String get adminLearningProjectsSupported => 'مشاريع تعليمية تم دعمها';
+
+  @override
+  String get adminCompletedReuseOverTimeTitle =>
+      'عمليات إعادة الاستخدام المكتملة عبر الزمن';
+
+  @override
+  String get adminCompletedReuseOverTimeSubtitle =>
+      'عدد عمليات التسليم المكتملة شهريًا';
+
+  @override
+  String get adminEnvironmentalEstimateTitle => 'التقدير البيئي';
+
+  @override
+  String get adminEnvironmentalEstimateSubtitle =>
+      'تقدير ثانوي ومحافظ لانبعاثات CO₂e من عمليات إعادة الاستخدام المؤهلة';
+
+  @override
+  String get adminEstimatedPotentialCo2eAvoided =>
+      'تقدير تقريبي لانبعاثات CO₂e التي يمكن تجنبها';
+
+  @override
+  String get adminEnvironmentalUnavailableValue =>
+      'التقدير البيئي غير متاح للبيانات الحالية';
+
+  @override
+  String get adminEnvironmentalUnavailableBody =>
+      'لا توجد حاليًا عمليات إعادة استخدام مكتملة تتوفر لها كمية كتلة موثقة (كغ أو غرام) وعامل انبعاث موثق حسب الفئة.';
+
+  @override
+  String adminEnvironmentalCoverage(int included, int total) {
+    return 'التغطية: تم احتساب التقدير لـ $included من أصل $total عمليات إعادة استخدام مكتملة';
+  }
+
+  @override
+  String adminEnvironmentalCoveragePercent(int percent) {
+    return 'تغطية التقدير $percent٪';
+  }
+
+  @override
+  String get adminCalculationMethodology => 'منهجية الحساب';
+
+  @override
+  String get adminEnvironmentalMethodologyBody =>
+      'المقاييس المؤكدة تأتي مباشرة من مسارات العمل المكتملة على المنصة. قيم الأثر البيئي تقديرية ومحافظة، ويتم حسابها فقط لعمليات إعادة الاستخدام المكتملة التي تتوفر لها بيانات كافية عن نوع المادة والكمية. يتم استثناء الوحدات غير القابلة للتحويل بشكل موثوق، ولا تمثل القيم قياسات بيئية معتمدة ولا تشمل جميع آثار دورة الحياة.';
+
+  @override
+  String get adminImpactEmptyCategoryTitle =>
+      'لا توجد إعادة استخدام مكتملة حسب الفئة بعد';
+
+  @override
+  String get adminImpactEmptyCategorySubtitle =>
+      'تظهر مجاميع الفئات بعد عمليات تسليم المواد الناجحة.';
+
+  @override
+  String get adminImpactEmptyMonthlyTitle =>
+      'لا يوجد نشاط إعادة استخدام مكتمل بعد';
+
+  @override
+  String get adminImpactEmptyMonthlySubtitle =>
+      'ستظهر عمليات التسليم المكتملة الشهرية هنا مع الوقت.';
 
   @override
   String get adminOpAuditLogsDesc => 'مراجعة سجل التدقيق الإداري';
@@ -10819,7 +10964,16 @@ class AppLocalizationsAr extends AppLocalizations {
       'لم ينشر هذا المستخدم مشاريع عامة بعد.';
 
   @override
-  String get publicUserSupplierActivity => 'نشاط المورد';
+  String get publicUserPublishedProjectsLikes => 'الإعجابات';
+
+  @override
+  String get publicUserAbout => 'نبذة';
+
+  @override
+  String get publicUserInterests => 'الاهتمامات';
+
+  @override
+  String get publicUserSupplierActivity => 'أيضًا مورد على ImpactLoop';
 
   @override
   String get publicUserViewSupplierProfile => 'عرض ملف المورد';

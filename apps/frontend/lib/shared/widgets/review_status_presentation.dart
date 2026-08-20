@@ -7,6 +7,7 @@ AppStatusTone reviewStatusTone(String status) {
     case 'CHANGES_REQUESTED':
       return AppStatusTone.warning;
     case 'APPROVED':
+    case 'RESOLVED':
       return AppStatusTone.success;
     case 'REJECTED':
       return AppStatusTone.danger;

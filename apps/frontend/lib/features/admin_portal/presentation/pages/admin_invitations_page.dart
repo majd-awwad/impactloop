@@ -206,7 +206,9 @@ Future<AdminInvitationCreateResult?> _resendInvitation(
     return result;
   } catch (error) {
     if (!context.mounted) return null;
-    messenger.showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
+    messenger.showSnackBar(
+      SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
+    );
     return null;
   }
 }
@@ -229,7 +231,9 @@ Future<AdminInvitationItem?> _revokeInvitation(
     return result;
   } catch (error) {
     if (!context.mounted) return null;
-    messenger.showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
+    messenger.showSnackBar(
+      SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
+    );
     return null;
   }
 }
@@ -2274,11 +2278,7 @@ class _CreateInvitationDialogState
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AdminL10n.of(context).localizedError(error),
-          ),
-        ),
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
       );
     }
   }

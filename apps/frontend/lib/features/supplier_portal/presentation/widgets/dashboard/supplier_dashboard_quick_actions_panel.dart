@@ -4,8 +4,13 @@ import 'package:go_router/go_router.dart';
 import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
 import '../../../../../shared/widgets/app_section_card.dart';
+import '../../shell/supplier_nav_config.dart';
 import '../../theme/supplier_theme_extension.dart';
 import 'supplier_dashboard_colors.dart';
+
+final _learnerMaterialRequestsNav = supplierNavItems.firstWhere(
+  (item) => item.labelKey == SupplierNavLabelKey.learnerMaterialRequests,
+);
 
 class _QuickActionSpec {
   const _QuickActionSpec({
@@ -40,6 +45,13 @@ class SupplierDashboardQuickActionsPanel extends StatelessWidget {
       icon: Icons.inbox_outlined,
       route: '/supplier/reservations',
       accent: SupplierDashboardColors.pending,
+    ),
+    _QuickActionSpec(
+      label: context.s.quickActionLearnerRequests,
+      caption: context.s.quickActionLearnerRequestsCaption,
+      icon: _learnerMaterialRequestsNav.icon,
+      route: _learnerMaterialRequestsNav.route,
+      accent: SupplierDashboardColors.followers,
     ),
     _QuickActionSpec(
       label: context.s.navPickupSchedule,

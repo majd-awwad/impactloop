@@ -145,7 +145,7 @@ This branch changes **forward** stock semantics only. It does not backfill histo
 | Existing row state | Risk after deploy |
 |--------------------|-------------------|
 | `COMPLETED` reservations where `material.quantity` was never decremented | `availableQuantity` overstates stock; learners may reserve already-delivered quantity |
-| `REUSED` materials with `quantity > 0` (common in old seeds) | Hidden from discovery; admin CO₂ may over-count until cleaned |
+| `REUSED` materials with `quantity > 0` (common in old seeds) | Hidden from discovery; Admin Impact Analytics no longer estimates CO₂e from leftover listing quantity |
 
 **Before manual QA on a shared dev database:** reseed (`SEED_FORCE_*` / fresh migrate) **or** run a one-time backfill. Example SQL (review on a copy first):
 

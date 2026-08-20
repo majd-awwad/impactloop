@@ -8,7 +8,8 @@ import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_deliveries_api.dart';
-import '../../data/admin_reservations_api.dart' show AdminExportFormatEligibility;
+import '../../data/admin_reservations_api.dart'
+    show AdminExportFormatEligibility;
 import '../../data/models/admin_deliveries_models.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../l10n/admin_l10n.dart';
@@ -274,9 +275,9 @@ class _AdminDeliveriesPageState extends ConsumerState<AdminDeliveriesPage> {
     );
     if (filters.timeRange == kTimeRangeCustom && resolved.error != null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(resolved.error!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(resolved.error!)));
       return;
     }
 
@@ -801,7 +802,10 @@ class _FiltersPanelState extends State<_FiltersPanel> {
         ? null
         : OutlinedButton.icon(
             onPressed: widget.exportLoading ? null : widget.onExport,
-            style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
+            style: AppStatusButtonStyle.outlined(
+              context,
+              AppStatusTone.neutral,
+            ),
             icon: widget.exportLoading
                 ? const SizedBox(
                     width: 16,
@@ -809,7 +813,11 @@ class _FiltersPanelState extends State<_FiltersPanel> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.download_outlined, size: 18),
-            label: Text(widget.exportLoading ? 'Preparing…' : AdminL10n.of(context).exportAction),
+            label: Text(
+              widget.exportLoading
+                  ? 'Preparing…'
+                  : AdminL10n.of(context).exportAction,
+            ),
           );
     final secondaryCount = [
       widget.filters.scope != 'ALL',
@@ -1581,9 +1589,9 @@ class _DeliveryDetailDialogState extends ConsumerState<_DeliveryDetailDialog> {
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _isReopening = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AdminL10n.of(context).localizedError(error))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
+      );
     }
   }
 
@@ -2144,9 +2152,7 @@ class _AdminDeliveriesExportDialogState
       ),
       footer: AppDialogFooter.decision(
         secondaryAction: TextButton(
-          onPressed: _isDownloading
-              ? null
-              : () => Navigator.of(context).pop(),
+          onPressed: _isDownloading ? null : () => Navigator.of(context).pop(),
           child: Text(adminL10n.cancel),
         ),
         primaryAction: FilledButton(

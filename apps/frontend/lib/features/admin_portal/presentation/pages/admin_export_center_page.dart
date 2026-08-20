@@ -6,7 +6,8 @@ import 'package:intl/intl.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../data/admin_export_center_models.dart';
 import '../../data/admin_export_center_service.dart';
-import '../../data/admin_reservations_api.dart' show AdminExportFormatEligibility;
+import '../../data/admin_reservations_api.dart'
+    show AdminExportFormatEligibility;
 import '../l10n/admin_l10n.dart';
 import '../controllers/admin_export_center_controller.dart';
 import '../theme/admin_decoration_set.dart';
@@ -243,9 +244,9 @@ class _DomainTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'Formats: ${domain.supportedFormats.map((f) => _formatLabel(AdminL10n.of(context), f)).join(', ')}',
-                    style: AdminTypography.kpiHelper(palette).copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AdminTypography.kpiHelper(
+                      palette,
+                    ).copyWith(fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -353,7 +354,10 @@ class _SummaryPanel extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: AppSpacing.md),
-          Text(AdminL10n.of(context).format, style: AdminTypography.kpiLabel(palette)),
+          Text(
+            AdminL10n.of(context).format,
+            style: AdminTypography.kpiLabel(palette),
+          ),
           const SizedBox(height: AppSpacing.sm),
           SegmentedButton<String>(
             segments: [
@@ -989,8 +993,8 @@ class _CustomDateRow extends StatelessWidget {
   final bool enabled;
 
   Future<void> _pick(BuildContext context, {required bool isFrom}) async {
-    final initial = DateTime.tryParse(isFrom ? (from ?? '') : (to ?? '')) ??
-        DateTime.now();
+    final initial =
+        DateTime.tryParse(isFrom ? (from ?? '') : (to ?? '')) ?? DateTime.now();
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,

@@ -17,6 +17,8 @@ class AdminKpiCard extends StatelessWidget {
     this.badge,
     this.onTap,
     this.helperMaxLines = 2,
+    this.labelMaxLines = 1,
+    this.minHeight,
   });
 
   final String label;
@@ -27,6 +29,8 @@ class AdminKpiCard extends StatelessWidget {
   final String? badge;
   final VoidCallback? onTap;
   final int helperMaxLines;
+  final int labelMaxLines;
+  final double? minHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +42,9 @@ class AdminKpiCard extends StatelessWidget {
 
     final card = Container(
       width: double.infinity,
+      constraints: minHeight != null
+          ? BoxConstraints(minHeight: minHeight!)
+          : null,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
@@ -116,7 +123,7 @@ class AdminKpiCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   label,
-                  maxLines: 1,
+                  maxLines: labelMaxLines,
                   overflow: TextOverflow.ellipsis,
                   style: AdminTypography.kpiLabel(palette),
                 ),

@@ -8,7 +8,16 @@ import '../theme/landing_colors.dart';
 
 /// Hero workshop photo with premium impact overlays.
 class HeroWorkshopVisual extends StatelessWidget {
-  const HeroWorkshopVisual({super.key});
+  const HeroWorkshopVisual({
+    super.key,
+    this.reusedCount = '—',
+    this.publishedCount = '—',
+    this.availableCount = '—',
+  });
+
+  final String reusedCount;
+  final String publishedCount;
+  final String availableCount;
 
   static const _heroImageAsset = 'assets/images/landing/hero_workshop.png';
 
@@ -54,7 +63,11 @@ class HeroWorkshopVisual extends StatelessWidget {
               start: AppSpacing.lg,
               end: AppSpacing.lg,
               bottom: AppSpacing.lg,
-              child: _ImpactCard(),
+              child: _ImpactCard(
+                reusedCount: reusedCount,
+                publishedCount: publishedCount,
+                availableCount: availableCount,
+              ),
             ),
           ],
         ),
@@ -126,6 +139,16 @@ class _ImpactBadge extends StatelessWidget {
 }
 
 class _ImpactCard extends StatelessWidget {
+  const _ImpactCard({
+    required this.reusedCount,
+    required this.publishedCount,
+    required this.availableCount,
+  });
+
+  final String reusedCount;
+  final String publishedCount;
+  final String availableCount;
+
   @override
   Widget build(BuildContext context) {
     final colors = LandingColors.of(context);
@@ -192,9 +215,12 @@ class _ImpactCard extends StatelessWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _PrimaryMetric(maxWidth: constraints.maxWidth),
+                    _PrimaryMetric(
+                      maxWidth: constraints.maxWidth,
+                      value: reusedCount,
+                    ),
                     const SizedBox(height: AppSpacing.md),
-                    const _ImpactTrendCard(),
+                    _ImpactTrendCard(value: publishedCount),
                   ],
                 );
               }
@@ -204,10 +230,16 @@ class _ImpactCard extends StatelessWidget {
                 children: [
                   Expanded(
                     flex: 6,
-                    child: _PrimaryMetric(maxWidth: constraints.maxWidth),
+                    child: _PrimaryMetric(
+                      maxWidth: constraints.maxWidth,
+                      value: reusedCount,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.md),
-                  const Expanded(flex: 4, child: _ImpactTrendCard()),
+                  Expanded(
+                    flex: 4,
+                    child: _ImpactTrendCard(value: publishedCount),
+                  ),
                 ],
               );
             },
@@ -217,9 +249,18 @@ class _ImpactCard extends StatelessWidget {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
-              _MiniStatPill(label: context.l10n.learner, value: '1.8k'),
-              _MiniStatPill(label: context.l10n.supplier, value: '320'),
-              _MiniStatPill(label: context.l10n.landingSavedKg, value: '46t'),
+              _MiniStatPill(
+                label: context.l10n.landingAvailableMaterials,
+                value: availableCount,
+              ),
+              _MiniStatPill(
+                label: context.l10n.landingPublishedProjects,
+                value: publishedCount,
+              ),
+              _MiniStatPill(
+                label: context.l10n.materialsReused,
+                value: reusedCount,
+              ),
             ],
           ),
         ],
@@ -229,9 +270,10 @@ class _ImpactCard extends StatelessWidget {
 }
 
 class _PrimaryMetric extends StatelessWidget {
-  const _PrimaryMetric({required this.maxWidth});
+  const _PrimaryMetric({required this.maxWidth, required this.value});
 
   final double maxWidth;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
@@ -248,7 +290,7 @@ class _PrimaryMetric extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          '12,584+',
+          value,
           style: AuthDarkTextStyles.display(context).copyWith(
             color: colors.textPrimary,
             fontSize: maxWidth < 360 ? 34 : 42,
@@ -263,7 +305,9 @@ class _PrimaryMetric extends StatelessWidget {
 }
 
 class _ImpactTrendCard extends StatelessWidget {
-  const _ImpactTrendCard();
+  const _ImpactTrendCard({required this.value});
+
+  final String value;
 
   @override
   Widget build(BuildContext context) {
@@ -280,21 +324,21 @@ class _ImpactTrendCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            context.l10n.landingMonthlyLift,
+            context.l10n.landingPublishedProjects,
             style: AuthDarkTextStyles.label(
               context,
             ).copyWith(color: colors.textMuted),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            '+18%',
+            value,
             style: AuthDarkTextStyles.title(
               context,
             ).copyWith(fontSize: 28, color: colors.accentMint),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            context.l10n.landingMonthlyLiftBody,
+            context.l10n.landingPublishedProjectsBody,
             style: AuthDarkTextStyles.body(
               context,
             ).copyWith(color: colors.textSecondary),
