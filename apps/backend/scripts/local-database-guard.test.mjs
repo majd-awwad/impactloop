@@ -111,6 +111,20 @@ describe('local-database-guard — demo host', () => {
       /non-local database host/,
     );
   });
+
+  test('refuses remote hosts for screenshot and audit demo prep purposes', () => {
+    for (const purpose of [
+      'demo:prepare orchestration',
+      'admin audit demo prep',
+      'local CASH handover demo prep',
+      'local driver ON_THE_WAY demo prep',
+    ]) {
+      assert.throws(
+        () => assertLocalDemoDatabaseUrl(REMOTE_URL, purpose),
+        /non-local database host/,
+      );
+    }
+  });
 });
 
 describe('local-database-guard — driver benchmark', () => {

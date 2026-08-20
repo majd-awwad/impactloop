@@ -2,12 +2,14 @@
 
 Durable guide for ImpactLoop’s community demo dataset: people, materials, learning projects, local assets, and deterministic behavior seeding.
 
-## Three seed paths (do not confuse)
+## Seed and prepare paths (do not confuse)
 
 | Command | Purpose | Safety |
 |---|---|---|
 | `npm run prisma:seed -w apps/backend` | **Destructive** core catalog + workflow scenarios (truncates local DB) | Localhost + refuses CI/test/E2E/bench/prod-like DBs |
-| `npm run demo:seed -w apps/backend` | **Additive** graduation/community demo preparation | Each stage refuses non-local hosts |
+| `npm run demo:seed -w apps/backend` | **Additive** canonical dataset (people, materials, projects, behavior, journeys) | Each stage refuses non-local hosts |
+| `npm run demo:prepare -w apps/backend` | **Additive** graduation/report screenshot states (reviews, landing, help-session, notifications, CASH handover, driver ON_THE_WAY, admin audit) | Each stage refuses non-local hosts |
+| `npm run demo:all -w apps/backend` | `demo:seed` then `demo:prepare` | Same local-demo guard |
 | `npm run seed:ci -w apps/backend` | **CI-only** minimal fixtures (`impactloop_ci`) | `guard:ci:database` + `IMPACTLOOP_CI_DATABASE=1` |
 
 ## Overview
@@ -29,7 +31,14 @@ From a migrated local database (`DATABASE_URL` on localhost), after a core reset
 ```bash
 # From repository root (or apps/backend without -w)
 npm run prisma:seed -w apps/backend   # optional full reset — destructive
+npm run demo:all -w apps/backend      # canonical dataset + screenshot-state preparation
+```
+
+Equivalent two-step flow (preferred when you want to refresh screenshot state without re-seeding):
+
+```bash
 npm run demo:seed -w apps/backend     # people → materials → projects → najah → behavior → journeys
+npm run demo:prepare -w apps/backend  # reviews, landing, help-session, notifications, deliveries, admin audit
 ```
 
 `demo:seed` runs these stages in order and fails fast on the first error:
@@ -41,7 +50,21 @@ npm run demo:seed -w apps/backend     # people → materials → projects → na
 5. `demo:seed:behavior`
 6. `demo:seed:behavior:journeys`
 
-Optional (not part of `demo:seed`):
+`demo:prepare` is **not** mixed into canonical `demo:seed`. It repairs operational screenshot states (including isolated CASH `ARRIVED_DROPOFF` vs driver `ON_THE_WAY` deliveries, and Admin Audit Log activity via real admin actions). Reruns are idempotent and still refuse non-local hosts.
+
+Per-stage wrappers:
+
+```bash
+npm run demo:prepare:reviews -w apps/backend
+npm run demo:prepare:landing -w apps/backend
+npm run demo:prepare:help-session -w apps/backend
+npm run demo:prepare:notifications -w apps/backend
+npm run demo:prepare:cash-handover -w apps/backend
+npm run demo:prepare:driver-ontheway -w apps/backend
+npm run demo:prepare:admin-audit -w apps/backend
+```
+
+Optional (not part of `demo:seed` or `demo:prepare`):
 
 ```bash
 # After prisma:seed — ensures Majd's project-budget material set for Obstacle Avoidance Robot
@@ -126,7 +149,8 @@ npm run demo:smoke:personalization -w apps/backend
 - Deterministic RNG (mulberry32 from `cdb1|{email}|{purpose}`); no `Math.random()`
 - Fixed epoch end `2026-08-11T12:00:00.000Z`, ~45-day recent-biased window
 - Idempotent: reconciles owned community-demo engagement for the 35 learners, then rewrites the planned graph
-- Builds are create-if-missing on `(learnerId, projectId, attemptNumber=1)`
+- Builds are create-if-missing on `(learnerId, projectId, attemptNumber=1)` and missing checklist items are backfilled after BOM changes
+- An-Najah project sync preserves required-component IDs (does not delete/recreate the BOM on every run)
 - Core scenario users and non-demo views are never deleted
 
 Learner activity tiers: HIGH 6 / MEDIUM 14 / LIGHT 11 / DORMANT 4.
@@ -169,7 +193,7 @@ requires a prior `prisma:seed` (Majd supplier + Obstacle Avoidance Robot) and up
 
 - Community people/materials/projects/behavior scripts are idempotent on localhost
 - `npm run prisma:seed` truncates the local database — use only for a full reset
-- After a full `prisma:seed`, re-run `demo:seed` (or the per-stage commands above)
+- After a full `prisma:seed`, re-run `demo:all` (or `demo:seed` then `demo:prepare`)
 
 ## Demo data vs ML artifacts
 
