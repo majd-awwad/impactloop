@@ -19,6 +19,7 @@ import type {
   AdminMaterialsListQuery,
   HideMaterialFromReportInput,
   HideMaterialInput,
+  MarkUnavailableFromReportInput,
   MarkUnavailableInput,
   RejectMaterialReportInput,
   ResolveMaterialReportInput,
@@ -317,32 +318,53 @@ export const restoreAdminMaterial = async (
   };
 };
 
+const materialImageUrl = (material: {
+  images?: Array<{ imageUrl: string }>;
+}) => material.images?.[0]?.imageUrl ?? null;
+
+const mapReportListItem = (
+  report: Awaited<ReturnType<typeof repository.listMaterialReportsForAdmin>>['items'][number],
+) => {
+  const moderationPolicy = getMaterialModerationPolicy(report.material.status);
+  return {
+    reportId: report.id,
+    reason: report.reason,
+    note: report.note,
+    status: report.status,
+    resolutionAction: report.resolutionAction,
+    reporterName: report.reporter.displayName,
+    reporterEmail: report.reporter.email,
+    reviewedByName: report.reviewedBy?.displayName ?? null,
+    materialTitle: report.material.title,
+    materialId: report.material.id,
+    materialStatus: report.material.status,
+    materialImageUrl: materialImageUrl(report.material),
+    isFree: report.material.isFree,
+    price: report.material.price == null ? null : decimalToNumber(report.material.price),
+    currency: report.material.currency,
+    canHideMaterial: moderationPolicy.canHide,
+    canMarkUnavailable: moderationPolicy.canMarkUnavailable,
+    isModerationLocked: moderationPolicy.isModerationLocked,
+    lockReason: moderationPolicy.lockReason,
+    allowedActions: moderationPolicy,
+    supplierName:
+      report.material.owner.supplierProfile?.publicName ??
+      report.material.owner.displayName,
+    supplierVerificationStatus:
+      report.material.owner.supplierProfile?.verificationStatus ?? 'NOT_REQUIRED',
+    createdAt: report.createdAt.toISOString(),
+    reviewedAt: report.reviewedAt?.toISOString() ?? null,
+    adminNote: report.adminNote,
+  };
+};
+
 export const listAdminMaterialReports = async (
   query: AdminMaterialReportsListQuery,
 ) => {
   const result = await repository.listMaterialReportsForAdmin(query);
 
   return {
-    items: result.items.map((report) => ({
-      reportId: report.id,
-      reason: report.reason,
-      note: report.note,
-      status: report.status,
-      reporterName: report.reporter.displayName,
-      reporterEmail: report.reporter.email,
-      materialTitle: report.material.title,
-      materialId: report.material.id,
-      materialStatus: report.material.status,
-      canHideMaterial: getMaterialModerationPolicy(report.material.status).canHide,
-      supplierName:
-        report.material.owner.supplierProfile?.publicName ??
-        report.material.owner.displayName,
-      supplierVerificationStatus:
-        report.material.owner.supplierProfile?.verificationStatus ?? 'NOT_REQUIRED',
-      createdAt: report.createdAt.toISOString(),
-      reviewedAt: report.reviewedAt?.toISOString() ?? null,
-      adminNote: report.adminNote,
-    })),
+    items: result.items.map(mapReportListItem),
     pagination: {
       page: query.page,
       limit: query.limit,
@@ -357,11 +379,14 @@ export const getAdminMaterialReportById = async (id: string) => {
     throw new AppError('Report not found', 404, COMMON_ERROR_CODES.notFound);
   }
 
+  const moderationPolicy = getMaterialModerationPolicy(report.material.status);
+
   return {
     id: report.id,
     reason: report.reason,
     note: report.note,
     status: report.status,
+    resolutionAction: report.resolutionAction,
     adminNote: report.adminNote,
     reviewedAt: report.reviewedAt?.toISOString() ?? null,
     createdAt: report.createdAt.toISOString(),
@@ -377,6 +402,12 @@ export const getAdminMaterialReportById = async (id: string) => {
       id: report.material.id,
       title: report.material.title,
       status: report.material.status,
+      isFree: report.material.isFree,
+      price:
+        report.material.price == null
+          ? null
+          : decimalToNumber(report.material.price),
+      currency: report.material.currency,
       imageUrl: report.material.images[0]?.imageUrl ?? null,
       category: report.material.category,
       location: report.material.location,
@@ -399,6 +430,7 @@ export const getAdminMaterialReportById = async (id: string) => {
           : null,
       },
     },
+    allowedActions: moderationPolicy,
   };
 };
 
@@ -414,6 +446,18 @@ const assertPendingReport = (
   }
 };
 
+const requireAdminNote = (note: string) => {
+  const trimmed = note.trim();
+  if (trimmed.length < 3) {
+    throw new AppError(
+      'An admin note is required.',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
+  }
+  return trimmed;
+};
+
 export const resolveAdminMaterialReport = async (
   adminUserId: string,
   reportId: string,
@@ -426,10 +470,12 @@ export const resolveAdminMaterialReport = async (
 
   assertPendingReport(report);
 
+  const adminNote = requireAdminNote(input.adminNote);
+
   const updated = await repository.resolveMaterialReport({
     reportId,
     adminUserId,
-    adminNote: input.adminNote?.trim(),
+    adminNote,
   });
 
   await logAdminActivity({
@@ -441,7 +487,8 @@ export const resolveAdminMaterialReport = async (
     metadata: {
       materialId: report.materialId,
       reportReason: report.reason,
-      adminNote: input.adminNote?.trim() ?? null,
+      adminNote,
+      resolutionAction: 'NO_MATERIAL_ACTION',
     },
   });
 
@@ -449,6 +496,7 @@ export const resolveAdminMaterialReport = async (
     id: updated.id,
     status: updated.status,
     adminNote: updated.adminNote,
+    resolutionAction: updated.resolutionAction,
   };
 };
 
@@ -496,6 +544,7 @@ export const rejectAdminMaterialReport = async (
     id: updated.id,
     status: updated.status,
     adminNote: updated.adminNote,
+    resolutionAction: updated.resolutionAction,
   };
 };
 
@@ -541,6 +590,7 @@ export const hideMaterialFromAdminReport = async (
       reportReason: report.reason,
       adminNote: input.adminNote.trim(),
       materialStatus: material.status,
+      resolutionAction: 'HIDDEN',
     },
   });
 
@@ -550,6 +600,63 @@ export const hideMaterialFromAdminReport = async (
     materialId: material.id,
     materialStatus: material.status,
     adminNote: input.adminNote.trim(),
+    resolutionAction: 'HIDDEN',
+  };
+};
+
+export const markUnavailableFromAdminReport = async (
+  adminUserId: string,
+  reportId: string,
+  input: MarkUnavailableFromReportInput,
+) => {
+  const report = await repository.findMaterialReportByIdForAdmin(reportId);
+  if (!report) {
+    throw new AppError('Report not found', 404, COMMON_ERROR_CODES.notFound);
+  }
+
+  assertPendingReport(report);
+  await assertCanMarkMaterialUnavailable(report.materialId, report.material.status);
+
+  const ownerId = report.material.owner.id;
+
+  const { material } = await repository.markMaterialUnavailableAndResolveReport({
+    reportId,
+    materialId: report.materialId,
+    adminUserId,
+    adminNote: input.adminNote.trim(),
+  });
+
+  await repository.createMaterialModerationNotification({
+    userId: ownerId,
+    title: 'Material marked unavailable after report review',
+    body: `Your material '${material.title}' was marked unavailable after admin review. Reason: ${input.adminNote.trim()}.`,
+    materialId: report.materialId,
+    eventKey: `material-moderation:${report.materialId}:${material.status}:${material.updatedAt.toISOString()}`,
+    actorId: adminUserId,
+  });
+
+  await logAdminActivity({
+    actorUserId: adminUserId,
+    action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_REPORT_MARK_UNAVAILABLE,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.MATERIAL,
+    targetId: report.materialId,
+    targetLabel: material.title,
+    metadata: {
+      reportId,
+      reportReason: report.reason,
+      adminNote: input.adminNote.trim(),
+      materialStatus: material.status,
+      resolutionAction: 'MARKED_UNAVAILABLE',
+    },
+  });
+
+  return {
+    reportId,
+    reportStatus: 'RESOLVED',
+    materialId: material.id,
+    materialStatus: material.status,
+    adminNote: input.adminNote.trim(),
+    resolutionAction: 'MARKED_UNAVAILABLE',
   };
 };
 

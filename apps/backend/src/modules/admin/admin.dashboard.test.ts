@@ -230,7 +230,7 @@ describe('admin dashboard', () => {
     assert.equal(Array.isArray(dashboard.recentActivity), true);
     assert.equal(typeof dashboard.impact.estimatedCo2Label, 'string');
     assert.match(dashboard.impact.estimatedCo2Label, /kg CO₂e$/);
-    assert.match(dashboard.impact.estimatedCo2Method, /Conservative MVP estimates/);
+    assert.match(dashboard.impact.estimatedCo2Method, /mass-only MVP estimate/);
     assert.equal(typeof dashboard.impact.reuseCompletionRate, 'number');
     assert.equal(dashboard.impact.reuseCompletionRate >= 0, true);
     assert.equal(dashboard.impact.reuseCompletionRate <= 1, true);

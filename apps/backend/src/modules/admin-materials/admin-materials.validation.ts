@@ -88,7 +88,7 @@ export const adminMaterialReportIdParamSchema = z.object({
 });
 
 export const resolveMaterialReportSchema = z.object({
-  adminNote: z.string().trim().max(2000).optional(),
+  adminNote: z.string().trim().min(3).max(2000),
 });
 
 export const rejectMaterialReportSchema = z.object({
@@ -96,6 +96,10 @@ export const rejectMaterialReportSchema = z.object({
 });
 
 export const hideMaterialFromReportSchema = z.object({
+  adminNote: z.string().trim().min(3).max(2000),
+});
+
+export const markUnavailableFromReportSchema = z.object({
   adminNote: z.string().trim().min(3).max(2000),
 });
 
@@ -113,6 +117,9 @@ export type AdminMaterialReportIdParams = z.infer<
 export type ResolveMaterialReportInput = z.infer<typeof resolveMaterialReportSchema>;
 export type RejectMaterialReportInput = z.infer<typeof rejectMaterialReportSchema>;
 export type HideMaterialFromReportInput = z.infer<typeof hideMaterialFromReportSchema>;
+export type MarkUnavailableFromReportInput = z.infer<
+  typeof markUnavailableFromReportSchema
+>;
 
 export const adminMaterialsExportFiltersSchema = adminMaterialsListQuerySchema.omit({
   page: true,

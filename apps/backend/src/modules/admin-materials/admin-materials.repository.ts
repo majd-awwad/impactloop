@@ -355,6 +355,14 @@ const reportListInclude = {
       id: true,
       title: true,
       status: true,
+      isFree: true,
+      price: true,
+      currency: true,
+      images: {
+        orderBy: { sortOrder: 'asc' as const },
+        take: 1,
+        select: { imageUrl: true },
+      },
       owner: {
         select: {
           displayName: true,
@@ -556,13 +564,14 @@ export const createMaterialReport = async (input: {
 export const resolveMaterialReport = async (input: {
   reportId: string;
   adminUserId: string;
-  adminNote?: string;
+  adminNote: string;
 }) => {
   return prisma.materialReport.update({
     where: { id: input.reportId },
     data: {
       status: 'RESOLVED',
-      adminNote: input.adminNote ?? null,
+      adminNote: input.adminNote,
+      resolutionAction: 'NO_MATERIAL_ACTION',
       reviewedById: input.adminUserId,
       reviewedAt: new Date(),
     },
@@ -607,6 +616,39 @@ export const hideMaterialAndResolveReport = async (input: {
       data: {
         status: 'RESOLVED',
         adminNote: input.adminNote,
+        resolutionAction: 'HIDDEN',
+        reviewedById: input.adminUserId,
+        reviewedAt: new Date(),
+      },
+    });
+
+    return { material, report };
+  });
+};
+
+export const markMaterialUnavailableAndResolveReport = async (input: {
+  reportId: string;
+  materialId: string;
+  adminUserId: string;
+  adminNote: string;
+}) => {
+  return prisma.$transaction(async (tx) => {
+    const material = await tx.material.update({
+      where: { id: input.materialId },
+      data: {
+        status: 'UNAVAILABLE',
+        moderationReason: input.adminNote,
+        moderatedAt: new Date(),
+        moderatedById: input.adminUserId,
+      },
+    });
+
+    const report = await tx.materialReport.update({
+      where: { id: input.reportId },
+      data: {
+        status: 'RESOLVED',
+        adminNote: input.adminNote,
+        resolutionAction: 'MARKED_UNAVAILABLE',
         reviewedById: input.adminUserId,
         reviewedAt: new Date(),
       },

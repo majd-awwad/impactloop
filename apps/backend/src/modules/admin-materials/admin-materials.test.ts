@@ -8,14 +8,17 @@ import { getMaterials } from '../materials/materials.service.js';
 
 import {
   hideAdminMaterial,
+  listAdminMaterialReports,
   listAdminMaterials,
   markAdminMaterialUnavailable,
+  markUnavailableFromAdminReport,
   rejectAdminMaterialReport,
   resolveAdminMaterialReport,
   restoreAdminMaterial,
   submitMaterialReport,
   hideMaterialFromAdminReport,
 } from './admin-materials.service.js';
+import { ADMIN_ACTIVITY_ACTIONS } from '../admin/admin-activity-log.js';
 
 const TEST_MARKER = '[test-admin-materials]';
 
@@ -468,12 +471,70 @@ describe('admin materials management', () => {
       adminNote: 'Reviewed and kept visible',
     });
     assert.equal(resolved.status, 'RESOLVED');
+    assert.equal(resolved.resolutionAction, 'NO_MATERIAL_ACTION');
+    assert.equal(resolved.adminNote, 'Reviewed and kept visible');
 
     const persisted = await prisma.material.findUnique({
       where: { id: material.id },
       select: { status: true },
     });
     assert.equal(persisted?.status, 'AVAILABLE');
+
+    const listedResolved = await listAdminMaterialReports({
+      page: 1,
+      limit: 50,
+      status: 'RESOLVED',
+    });
+    const listedItem = listedResolved.items.find(
+      (item) => item.reportId === report.id,
+    );
+    assert.ok(listedItem);
+    assert.equal(listedItem?.resolutionAction, 'NO_MATERIAL_ACTION');
+    assert.equal(listedItem?.adminNote, 'Reviewed and kept visible');
+    assert.ok(listedItem?.reviewedByName);
+
+    const listedPending = await listAdminMaterialReports({
+      page: 1,
+      limit: 50,
+      status: 'PENDING',
+    });
+    assert.equal(
+      listedPending.items.some((item) => item.reportId === report.id),
+      false,
+    );
+
+    const audit = await prisma.adminActivityLog.findFirst({
+      where: {
+        action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_REPORT_RESOLVED,
+        targetId: report.id,
+      },
+    });
+    assert.ok(audit);
+  });
+
+  test('resolve without a usable admin note is rejected', async () => {
+    const material = await createMaterial('AVAILABLE');
+    const report = await submitMaterialReport(ctx.learnerId, material.id, {
+      reason: 'WRONG_PRICE',
+    });
+    ctx.reportIds.push(report.id);
+
+    await assert.rejects(
+      () =>
+        resolveAdminMaterialReport(ctx.adminId, report.id, {
+          adminNote: 'ab',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        return true;
+      },
+    );
+
+    const persistedReport = await prisma.materialReport.findUnique({
+      where: { id: report.id },
+      select: { status: true },
+    });
+    assert.equal(persistedReport?.status, 'PENDING');
   });
 
   test('admin can reject report with note', async () => {
@@ -487,6 +548,21 @@ describe('admin materials management', () => {
       adminNote: 'No issue found',
     });
     assert.equal(rejected.status, 'REJECTED');
+
+    const listedRejected = await listAdminMaterialReports({
+      page: 1,
+      limit: 50,
+      status: 'REJECTED',
+    });
+    assert.ok(listedRejected.items.some((item) => item.reportId === report.id));
+
+    const audit = await prisma.adminActivityLog.findFirst({
+      where: {
+        action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_REPORT_REJECTED,
+        targetId: report.id,
+      },
+    });
+    assert.ok(audit);
   });
 
   test('admin can hide material from report in one transaction', async () => {
@@ -501,12 +577,62 @@ describe('admin materials management', () => {
       adminNote: 'Hidden after inappropriate report',
     });
     assert.equal(result.materialStatus, 'UNAVAILABLE');
+    assert.equal(result.reportStatus, 'RESOLVED');
+    assert.equal(result.resolutionAction, 'HIDDEN');
 
     const persistedReport = await prisma.materialReport.findUnique({
       where: { id: report.id },
-      select: { status: true },
+      select: { status: true, resolutionAction: true },
     });
     assert.equal(persistedReport?.status, 'RESOLVED');
+    assert.equal(persistedReport?.resolutionAction, 'HIDDEN');
+
+    const audit = await prisma.adminActivityLog.findFirst({
+      where: {
+        action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_REPORT_HIDE_MATERIAL,
+        targetId: material.id,
+      },
+    });
+    assert.ok(audit);
+  });
+
+  test('admin can mark material unavailable from report in one transaction', async () => {
+    const material = await createMaterial('AVAILABLE');
+    const report = await submitMaterialReport(ctx.learnerId, material.id, {
+      reason: 'ITEM_NOT_AVAILABLE',
+      note: 'Supplier confirmed it is gone',
+    });
+    ctx.reportIds.push(report.id);
+
+    const result = await markUnavailableFromAdminReport(ctx.adminId, report.id, {
+      adminNote: 'Marked unavailable after report review',
+    });
+    assert.equal(result.materialStatus, 'UNAVAILABLE');
+    assert.equal(result.reportStatus, 'RESOLVED');
+    assert.equal(result.resolutionAction, 'MARKED_UNAVAILABLE');
+
+    const persistedReport = await prisma.materialReport.findUnique({
+      where: { id: report.id },
+      select: { status: true, resolutionAction: true },
+    });
+    assert.equal(persistedReport?.status, 'RESOLVED');
+    assert.equal(persistedReport?.resolutionAction, 'MARKED_UNAVAILABLE');
+
+    const listed = await listAdminMaterialReports({
+      page: 1,
+      limit: 50,
+      status: 'RESOLVED',
+    });
+    const listedItem = listed.items.find((item) => item.reportId === report.id);
+    assert.equal(listedItem?.resolutionAction, 'MARKED_UNAVAILABLE');
+
+    const audit = await prisma.adminActivityLog.findFirst({
+      where: {
+        action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_REPORT_MARK_UNAVAILABLE,
+        targetId: material.id,
+      },
+    });
+    assert.ok(audit);
   });
 
   test('report hide-material action is blocked for reserved materials', async () => {
@@ -532,5 +658,42 @@ describe('admin materials management', () => {
         return true;
       },
     );
+
+    const persistedReport = await prisma.materialReport.findUnique({
+      where: { id: report.id },
+      select: { status: true },
+    });
+    assert.equal(persistedReport?.status, 'PENDING');
+  });
+
+  test('report mark-unavailable action is blocked for reserved materials', async () => {
+    const material = await createMaterial('RESERVED');
+    const report = await submitMaterialReport(ctx.learnerId, material.id, {
+      reason: 'ITEM_NOT_AVAILABLE',
+      note: 'Should not mark reserved material unavailable from report',
+    });
+    ctx.reportIds.push(report.id);
+
+    await assert.rejects(
+      () =>
+        markUnavailableFromAdminReport(ctx.adminId, report.id, {
+          adminNote: 'Attempted unavailable on reserved material',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.match(
+          error.message,
+          /cannot be marked unavailable because it is reserved or already reused/i,
+        );
+        return true;
+      },
+    );
+
+    const persistedReport = await prisma.materialReport.findUnique({
+      where: { id: report.id },
+      select: { status: true },
+    });
+    assert.equal(persistedReport?.status, 'PENDING');
   });
 });

@@ -8361,6 +8361,18 @@ const createProjectBuilds = async (context: SeedContext) => {
         },
       ],
     },
+    {
+      learnerEmail: "majd@learner.com",
+      projectKey: "simple-led-circuit",
+      links: [
+        {
+          componentIncludes: "Breadboard",
+          materialKey: "wf-majd-breadboard-kit",
+          reservationKey: "r-majd-breadboard-completed",
+          status: "AVAILABLE" as const,
+        },
+      ],
+    },
   ];
 
   for (const buildSeed of builds) {

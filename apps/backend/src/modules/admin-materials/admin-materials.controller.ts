@@ -26,6 +26,7 @@ import type {
   AdminMaterialsListQuery,
   HideMaterialFromReportInput,
   HideMaterialInput,
+  MarkUnavailableFromReportInput,
   MarkUnavailableInput,
   RejectMaterialReportInput,
   ResolveMaterialReportInput,
@@ -192,6 +193,21 @@ export const hideMaterialFromAdminReport = async (
     req.body as HideMaterialFromReportInput,
   );
   res.json(successResponse('Material hidden and report resolved.', result));
+};
+
+export const markUnavailableFromAdminReport = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<AdminMaterialReportIdParams>(req);
+  const result = await service.markUnavailableFromAdminReport(
+    req.auth!.sub,
+    id,
+    req.body as MarkUnavailableFromReportInput,
+  );
+  res.json(
+    successResponse('Material marked unavailable and report resolved.', result),
+  );
 };
 
 export const submitMaterialReport = async (

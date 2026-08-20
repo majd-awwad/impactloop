@@ -35,7 +35,7 @@ import {
   requestChangesSupplierVerificationSchema,
   supplierVerificationIdParamSchema,
 } from '../admin-supplier-verifications/admin-supplier-verifications.validation.js';
-import { getAdminDashboard } from './admin.controller.js';
+import { getAdminDashboard, getAdminImpactAnalytics } from './admin.controller.js';
 import { listAdminAuditLogs } from './admin-audit-logs.controller.js';
 import { adminAuditLogsListQuerySchema } from './admin-audit-logs.validation.js';
 import {
@@ -68,6 +68,7 @@ import {
   listAdminMaterialReports,
   listAdminMaterials,
   markAdminMaterialUnavailable,
+  markUnavailableFromAdminReport,
   preflightAdminMaterialReportsExportHandler,
   preflightAdminMaterialsExportHandler,
   rejectAdminMaterialReport,
@@ -86,6 +87,7 @@ import {
   adminMaterialsListQuerySchema,
   hideMaterialFromReportSchema,
   hideMaterialSchema,
+  markUnavailableFromReportSchema,
   markUnavailableSchema,
   rejectMaterialReportSchema,
   resolveMaterialReportSchema,
@@ -187,6 +189,13 @@ adminRouter.get(
   authMiddleware,
   requireRoles('ADMIN'),
   asyncHandler(getAdminDashboard),
+);
+
+adminRouter.get(
+  '/impact',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  asyncHandler(getAdminImpactAnalytics),
 );
 
 adminRouter.get(
@@ -490,6 +499,15 @@ adminRouter.patch(
   validate(adminMaterialReportIdParamSchema, 'params'),
   validate(hideMaterialFromReportSchema),
   asyncHandler(hideMaterialFromAdminReport),
+);
+
+adminRouter.patch(
+  '/material-reports/:id/mark-unavailable',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminMaterialReportIdParamSchema, 'params'),
+  validate(markUnavailableFromReportSchema),
+  asyncHandler(markUnavailableFromAdminReport),
 );
 
 adminRouter.get(
