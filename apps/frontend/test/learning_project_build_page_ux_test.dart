@@ -605,18 +605,22 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
   });
 
-  testWidgets('completed page does not dump question rows inline', (
+  testWidgets('completed page hides question rows until Check review is opened', (
     tester,
   ) async {
     await _pumpBuildPage(
       tester,
       build: _sampleBuild(status: ProjectBuildStatus.completed),
       sessionBundle: _sampleSessionBundle(),
-      viewport: const Size(1024, 900),
+      viewport: const Size(390, 844),
     );
 
     expect(find.text('What is the first step?'), findsNothing);
-    expect(find.text('Review answers'), findsWidgets);
+
+    await _openCompletedCheckReview(tester);
+
+    expect(find.text('What is the first step?'), findsWidgets);
+    expect(find.text('Start check'), findsOneWidget);
   });
 
   testWidgets('project celebration does not show final check celebration', (
@@ -741,6 +745,75 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('completed Review checks section expands on tap', (tester) async {
+    await _pumpBuildPage(
+      tester,
+      build: _sampleBuild(status: ProjectBuildStatus.completed),
+      sessionBundle: _sampleSessionBundleWithAllStages(),
+      locale: const Locale('ar'),
+      viewport: const Size(390, 844),
+    );
+
+    expect(find.text('مراجعة الأسئلة'), findsOneWidget);
+    expect(find.text('أسئلة البداية'), findsNothing);
+
+    await _openCompletedCheckReview(tester, label: 'مراجعة الأسئلة');
+
+    expect(find.text('أسئلة البداية'), findsOneWidget);
+    expect(find.text('ما الخطوة الأولى؟'), findsWidgets);
+  });
+
+  testWidgets(
+    'completed Review checks shows persisted START, STEP, and FINAL groups',
+    (tester) async {
+      await _pumpBuildPage(
+        tester,
+        build: _sampleBuild(status: ProjectBuildStatus.completed),
+        sessionBundle: _sampleSessionBundleWithAllStages(),
+        viewport: const Size(390, 844),
+      );
+
+      await _openCompletedCheckReview(tester);
+
+      expect(find.text('Start check'), findsOneWidget);
+      expect(find.text('Step checks'), findsOneWidget);
+      expect(find.text('Final check'), findsOneWidget);
+      expect(find.text('What is the first step?'), findsWidgets);
+      expect(find.text('Place the LED'), findsWidgets);
+      expect(find.text('Why does this step matter?'), findsOneWidget);
+      expect(find.text('What did you learn most?'), findsOneWidget);
+      expect(find.text('Your answer'), findsWidgets);
+    },
+  );
+
+  testWidgets(
+    'opening completed Review checks twice does not mutate learning state',
+    (tester) async {
+      final repository = _CountingSetupRepository(
+        _sampleBuild(status: ProjectBuildStatus.completed),
+      );
+
+      await _pumpBuildPage(
+        tester,
+        build: repository.build,
+        repository: repository,
+        sessionBundle: _sampleSessionBundleWithAllStages(),
+        viewport: const Size(390, 844),
+      );
+
+      await _openCompletedCheckReview(tester);
+      expect(find.text('Start check'), findsOneWidget);
+
+      await _openCompletedCheckReview(tester);
+      expect(find.text('Start check'), findsNothing);
+
+      await _openCompletedCheckReview(tester);
+      expect(find.text('Start check'), findsOneWidget);
+
+      expect(repository.setupCalls, 0);
+    },
+  );
+
   testWidgets('check review shows skipped and incorrect labels', (
     tester,
   ) async {
@@ -752,12 +825,10 @@ void main() {
     );
 
     await tester.scrollUntilVisible(
-      find.text('Review answers').first,
-      500,
+      find.text('Skipped for now'),
+      300,
       scrollable: find.byType(Scrollable).last,
     );
-    await tester.tap(find.text('Review answers').first);
-    await tester.pumpAndSettle();
 
     expect(find.text('Skipped for now'), findsOneWidget);
     expect(find.text('Your answer needs review'), findsOneWidget);
@@ -876,7 +947,12 @@ void main() {
     );
 
     await _openContinueFinalCheck(tester);
-    await tester.tap(find.text('Planning'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(FinalLearningCheckSheet),
+        matching: find.text('Planning'),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Submit answer'));
     await tester.pumpAndSettle();
@@ -910,14 +986,6 @@ void main() {
       sessionBundle: _sampleSessionBundle(),
       viewport: const Size(1024, 1400),
     );
-
-    await tester.scrollUntilVisible(
-      find.text('Review answers').first,
-      400,
-      scrollable: find.byType(Scrollable).last,
-    );
-    await tester.tap(find.text('Review answers').first);
-    await tester.pumpAndSettle();
 
     expect(find.text('Submit answer'), findsNothing);
     expect(find.text('Show hint'), findsNothing);
@@ -985,6 +1053,21 @@ void main() {
     expect(ui.actionLabel, FinalLearningCheckL10n.continueCheck);
     expect(tester.takeException(), isNull);
   });
+}
+
+Future<void> _openCompletedCheckReview(
+  WidgetTester tester, {
+  String label = 'Check review',
+}) async {
+  final target = find.text(label);
+  await tester.scrollUntilVisible(
+    target.first,
+    240,
+    scrollable: find.byType(Scrollable).last,
+  );
+  await tester.ensureVisible(target.first);
+  await tester.tap(target.first);
+  await tester.pumpAndSettle();
 }
 
 Future<void> _scrollToContinueFinalCheck(WidgetTester tester) async {
@@ -1342,6 +1425,123 @@ LearningSessionBundle _sampleSessionBundle() {
   );
 }
 
+LearningSessionBundle _sampleSessionBundleWithAllStages() {
+  const startQuestion = LearningQuestion(
+    id: 'q-start',
+    stage: 'START',
+    questionType: 'MULTIPLE_CHOICE',
+    promptEn: 'What is the first step?',
+    promptAr: 'ما الخطوة الأولى؟',
+    explanationEn: 'Review the plan first.',
+    explanationAr: 'راجع الخطة أولًا.',
+    hintEn: 'hint',
+    hintAr: 'تلميح',
+    options: [
+      LearningQuestionOption(
+        optionKey: 'a',
+        textEn: 'Plan',
+        textAr: 'خطة',
+        displayOrder: 1,
+      ),
+      LearningQuestionOption(
+        optionKey: 'b',
+        textEn: 'Skip',
+        textAr: 'تخطي',
+        displayOrder: 2,
+      ),
+    ],
+  );
+  const stepQuestion = LearningQuestion(
+    id: 'q-step',
+    stage: 'STEP',
+    questionType: 'MULTIPLE_CHOICE',
+    promptEn: 'Why does placing the LED correctly matter?',
+    promptAr: 'لماذا يهم وضع الـ LED بشكل صحيح؟',
+    explanationEn: 'The LED needs correct polarity.',
+    explanationAr: 'يحتاج الـ LED قطبية صحيحة.',
+    hintEn: 'hint',
+    hintAr: 'تلميح',
+    options: [
+      LearningQuestionOption(
+        optionKey: 'a',
+        textEn: 'Polarity',
+        textAr: 'القطبية',
+        displayOrder: 1,
+      ),
+      LearningQuestionOption(
+        optionKey: 'b',
+        textEn: 'Rename the project',
+        textAr: 'إعادة تسمية المشروع',
+        displayOrder: 2,
+      ),
+    ],
+  );
+
+  return LearningSessionBundle(
+    session: BuildLearningSession(
+      id: 'session-1',
+      buildId: 'build-1',
+      packId: 'pack-1',
+      assignments: [
+        LearningAssignment(
+          id: 'assign-start-1',
+          stage: 'START',
+          status: LearningAssignmentStatus.answered,
+          displayOrder: 1,
+          question: startQuestion,
+          answerAttempts: [
+            LearningAnswerAttempt(
+              id: 'attempt-start-1',
+              attemptNumber: 1,
+              selectedOptionKey: 'a',
+              isCorrect: true,
+              submittedAt: DateTime(2026, 1, 15),
+            ),
+          ],
+        ),
+        LearningAssignment(
+          id: 'assign-step-1',
+          stage: 'STEP',
+          projectStepId: 'step-1',
+          stepTitle: 'Place the LED',
+          status: LearningAssignmentStatus.answered,
+          displayOrder: 1,
+          question: stepQuestion,
+          answerAttempts: [
+            LearningAnswerAttempt(
+              id: 'attempt-step-1',
+              attemptNumber: 1,
+              selectedOptionKey: 'a',
+              isCorrect: true,
+              submittedAt: DateTime(2026, 1, 15),
+            ),
+          ],
+        ),
+        LearningAssignment(
+          id: 'assign-final-1',
+          stage: 'FINAL',
+          status: LearningAssignmentStatus.answered,
+          displayOrder: 1,
+          question: _sampleFinalQuestion(),
+          answerAttempts: [
+            LearningAnswerAttempt(
+              id: 'attempt-final-1',
+              attemptNumber: 1,
+              selectedOptionKey: 'a',
+              isCorrect: true,
+              submittedAt: DateTime(2026, 1, 15),
+            ),
+          ],
+        ),
+      ],
+    ),
+    learningSetup: const ProjectBuildLearningSetup(
+      status: LearningSetupStatus.ready,
+      sessionId: 'session-1',
+    ),
+  );
+}
+
 LearningQuestion _sampleFinalQuestion() {
   return const LearningQuestion(
     id: 'q-final',
@@ -1649,6 +1849,22 @@ class _StaticBuildRepository implements LearningProjectRepository {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _CountingSetupRepository extends _StaticBuildRepository {
+  _CountingSetupRepository(super.build);
+
+  int setupCalls = 0;
+
+  @override
+  Future<LearningSessionBundle> setupLearningSession(
+    String projectId, {
+    String? learningGoal,
+    int? confidenceBefore,
+  }) async {
+    setupCalls += 1;
+    return _sampleSessionBundleWithAllStages();
+  }
 }
 
 class _AlwaysFailingBuildRepository implements LearningProjectRepository {

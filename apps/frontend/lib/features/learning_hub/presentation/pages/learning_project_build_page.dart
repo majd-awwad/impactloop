@@ -2453,18 +2453,22 @@ class _CompletedBuildReviewContentState
       MediaQuery.sizeOf(context).width < 600;
 
   bool _isSectionExpanded(String sectionId, {required bool desktopDefault}) {
-    if (sectionId == 'check' && _collapseCheckReview) {
-      return false;
-    }
     if (_expandedSectionId != null) {
       return _expandedSectionId == sectionId;
+    }
+    if (sectionId == 'check' && _collapseCheckReview) {
+      return false;
     }
     return !_isMobile(context) && desktopDefault;
   }
 
   void _toggleSection(String sectionId) {
     setState(() {
-      _expandedSectionId = _expandedSectionId == sectionId ? null : sectionId;
+      final collapsing = _expandedSectionId == sectionId;
+      _expandedSectionId = collapsing ? null : sectionId;
+      if (sectionId == 'check' && !collapsing) {
+        _collapseCheckReview = false;
+      }
     });
   }
 
@@ -3262,42 +3266,6 @@ class _CheckReviewGroup extends StatelessWidget {
   final CompletedReviewFinalCheckUi? finalCheckUi;
   final VoidCallback? onOpenFinalCheck;
 
-  Future<void> _openReviewDialog(BuildContext context) async {
-    if (assignments.isEmpty) {
-      return;
-    }
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(title),
-          content: SizedBox(
-            width: 520,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final assignment in assignments)
-                    _CheckReviewQuestionTile(
-                      assignment: assignment,
-                      expanded: true,
-                      onExpanded: () {},
-                    ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(ProjectBuildPageL10n.cancel.resolve(context)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
@@ -3326,6 +3294,15 @@ class _CheckReviewGroup extends StatelessWidget {
               context,
             ).copyWith(color: palette.textSecondary),
           ),
+          if (assignments.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            for (final assignment in assignments)
+              _CheckReviewQuestionTile(
+                assignment: assignment,
+                expanded: true,
+                onExpanded: () {},
+              ),
+          ],
           if (isFinalGroup && finalCheckUi != null) ...[
             const SizedBox(height: AppSpacing.sm),
             if (finalCheckUi!.compactNotice != null)
@@ -3346,18 +3323,6 @@ class _CheckReviewGroup extends StatelessWidget {
                 ),
               ),
             ],
-          ],
-          if (assignments.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.sm),
-            SizedBox(
-              height: 52,
-              child: OutlinedButton(
-                onPressed: () => _openReviewDialog(context),
-                child: Text(
-                  ProjectBuildPageL10n.reviewAnswers.resolve(context),
-                ),
-              ),
-            ),
           ],
         ],
       ),

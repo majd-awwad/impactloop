@@ -12,6 +12,21 @@ const learnerShellTabRoutes = {
   '/profile',
 };
 
+/// Top-level supplier tabs rendered inside [SupplierShell].
+/// Sibling shell pages must use [GoRouter.go]; [GoRouter.push] stacks a second
+/// copy of the same shell page and crashes the Navigator with duplicate keys.
+const supplierShellTabRoutes = {
+  '/supplier',
+  '/supplier/overview',
+  '/supplier/materials',
+  '/supplier/materials/new',
+  '/supplier/reservations',
+  '/supplier/pickup-schedule',
+  '/supplier/material-requests',
+  '/supplier/notifications',
+  '/supplier/profile',
+};
+
 /// Canonical learner private Portfolio route (registered in [appRouterProvider]).
 const learnerPortfolioRoute = '/learner/portfolio';
 
@@ -65,6 +80,17 @@ String learnerBuildNotebookRoute(String buildId, {String? pageId}) {
 }
 
 extension AppNavigationExtensions on BuildContext {
+  /// Replaces the current shell page for sibling portal tabs; otherwise pushes.
+  void goShellTabOrPush(String location) {
+    final path = Uri.tryParse(location)?.path ?? location;
+    if (learnerShellTabRoutes.contains(path) ||
+        supplierShellTabRoutes.contains(path)) {
+      go(location);
+      return;
+    }
+    push(location);
+  }
+
   /// Requests a normal Navigator pop and uses [fallbackLocation] only when the
   /// request bubbles because there is no route in the app stack to pop.
   ///

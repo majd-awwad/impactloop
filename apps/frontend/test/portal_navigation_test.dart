@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:frontend/app/router/navigation_extensions.dart';
 import 'package:frontend/features/auth/application/auth_navigation.dart';
 import 'package:frontend/features/auth/application/portal_navigation.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
@@ -262,6 +263,17 @@ void main() {
           ),
         ),
         SupplierEntryDestination.supplierOverview,
+      );
+    });
+  });
+
+  group('supplierShellTabRoutes', () {
+    test('treats profile as a sibling shell tab, not a stacked detail', () {
+      expect(supplierShellTabRoutes, contains('/supplier/profile'));
+      expect(supplierShellTabRoutes, contains('/supplier/overview'));
+      expect(
+        supplierShellTabRoutes.contains('/supplier/materials/material-1'),
+        isFalse,
       );
     });
   });

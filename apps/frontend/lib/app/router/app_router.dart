@@ -583,15 +583,66 @@ String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
   return legacyOnboardingRedirect(ref, state);
 }
 
+bool _authChangeRequiresRouteRefresh(AuthState? previous, AuthState next) {
+  if (previous == null) {
+    return true;
+  }
+
+  if (previous.status != next.status) {
+    return true;
+  }
+
+  final previousUser = previous.user;
+  final nextUser = next.user;
+  if (previousUser?.id != nextUser?.id ||
+      previousUser?.activeRole != nextUser?.activeRole ||
+      previousUser?.canSwitchToSupplier != nextUser?.canSwitchToSupplier ||
+      previousUser?.canSwitchToLearner != nextUser?.canSwitchToLearner ||
+      previousUser?.canBecomeLearner != nextUser?.canBecomeLearner ||
+      previousUser?.supplierProfile?.verificationStatus !=
+          nextUser?.supplierProfile?.verificationStatus ||
+      previousUser?.supplierProfile?.supplierType !=
+          nextUser?.supplierProfile?.supplierType) {
+    return true;
+  }
+
+  final previousRoles = previousUser?.roles ?? const <String>[];
+  final nextRoles = nextUser?.roles ?? const <String>[];
+  if (previousRoles.length != nextRoles.length) {
+    return true;
+  }
+  for (var i = 0; i < previousRoles.length; i++) {
+    if (previousRoles[i] != nextRoles[i]) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   // Keep browser URL aligned with imperative pushes (notifications inbox).
   GoRouter.optionURLReflectsImperativeAPIs = true;
 
   final refreshListenable = ValueNotifier<int>(0);
   final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+  final learnerShellNavigatorKey = GlobalKey<NavigatorState>(
+    debugLabel: 'learnerShell',
+  );
+  final driverShellNavigatorKey = GlobalKey<NavigatorState>(
+    debugLabel: 'driverShell',
+  );
+  final supplierShellNavigatorKey = GlobalKey<NavigatorState>(
+    debugLabel: 'supplierShell',
+  );
+  final adminShellNavigatorKey = GlobalKey<NavigatorState>(
+    debugLabel: 'adminShell',
+  );
   ref.onDispose(refreshListenable.dispose);
   ref.listen<AuthState>(authControllerProvider, (previous, next) {
-    refreshListenable.value++;
+    if (_authChangeRequiresRouteRefresh(previous, next)) {
+      refreshListenable.value++;
+    }
   });
 
   return GoRouter(
@@ -609,13 +660,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (context, state) => const LandingPage()),
       GoRoute(path: '/health', builder: (context, state) => const HealthPage()),
       ShellRoute(
+        navigatorKey: learnerShellNavigatorKey,
         builder: (context, state, child) =>
             AppMobileNavigationShell(child: child),
         routes: [
           GoRoute(
             path: '/home',
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: HomePage()),
+            pageBuilder: (context, state) => NoTransitionPage(
+              key: state.pageKey,
+              child: const HomePage(),
+            ),
           ),
           GoRoute(
             path: '/home/recommendations/:sectionKey',
@@ -635,6 +689,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) {
               final search = state.uri.queryParameters['q']?.trim();
               return NoTransitionPage(
+                key: state.pageKey,
                 child: MaterialsDiscoveryPage(
                   initialQuery: search == null || search.isEmpty
                       ? null
@@ -648,6 +703,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) {
               final search = state.uri.queryParameters['q']?.trim();
               return NoTransitionPage(
+                key: state.pageKey,
                 child: LearningHubPage(
                   initialSearch: search == null || search.isEmpty
                       ? null
@@ -658,17 +714,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/learner/reservations',
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: LearnerReservationsPage()),
+            pageBuilder: (context, state) => NoTransitionPage(
+              key: state.pageKey,
+              child: const LearnerReservationsPage(),
+            ),
           ),
           GoRoute(
             path: '/profile',
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: ProfilePage()),
+            pageBuilder: (context, state) => NoTransitionPage(
+              key: state.pageKey,
+              child: const ProfilePage(),
+            ),
           ),
           GoRoute(
             path: '/ai/assistant',
             pageBuilder: (context, state) => NoTransitionPage(
+              key: state.pageKey,
               child: AiAssistantRoutePage(
                 conversationId: state.uri.queryParameters['conversationId'],
               ),
@@ -1045,6 +1106,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AdminAccessDeniedPage(),
       ),
       ShellRoute(
+        navigatorKey: driverShellNavigatorKey,
         builder: (context, state, child) => DriverPortalShell(child: child),
         routes: [
           GoRoute(
@@ -1091,6 +1153,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
       ShellRoute(
+        navigatorKey: supplierShellNavigatorKey,
         builder: (context, state, child) => SupplierShell(child: child),
         routes: [
           GoRoute(
@@ -1177,6 +1240,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
       ShellRoute(
+        navigatorKey: adminShellNavigatorKey,
         builder: (context, state, child) => AdminShell(child: child),
         routes: [
           GoRoute(
