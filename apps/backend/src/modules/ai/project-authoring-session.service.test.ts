@@ -850,6 +850,92 @@ describe('project authoring persisted session', () => {
     assert.ok(assistantMessages.length >= 1, 'assistant reply must be generated');
   });
 
+  test('a failed next-stage component generation consumes Accept into a retryable state', async () => {
+    const { randomUUID } = await import('node:crypto');
+    const { AppError } = await import('../../utils/app-error.js');
+    const { runPersistedAuthoringSessionAction } = await import(
+      './project-authoring-session.service.js'
+    );
+    const { learner, conversation, project } = await createDraftPair('component-generation-retry');
+    const sessionId = randomUUID();
+    const turnId = randomUUID();
+    await prisma.projectAuthoringSession.create({
+      data: {
+        id: sessionId,
+        conversationId: conversation.id,
+        learningProjectId: project.id,
+        ownerId: learner.id,
+        stage: 'ESTIMATED_DURATION',
+        status: 'WAITING_FOR_USER',
+        version: 1,
+        baseProjectUpdatedAt: project.updatedAt,
+        completedStages: [
+          'OVERVIEW',
+          'TITLE',
+          'SHORT_DESCRIPTION',
+          'FULL_DESCRIPTION',
+          'DIFFICULTY',
+        ],
+      },
+    });
+    await prisma.projectAuthoringTurn.create({
+      data: {
+        id: turnId,
+        sessionId,
+        stage: 'ESTIMATED_DURATION',
+        kind: 'STAGE_PROPOSAL',
+        status: 'PROPOSED',
+        payload: { value: 120 },
+        explanation: 'Two hours gives a beginner enough time to build and test it.',
+        baseProjectUpdatedAt: project.updatedAt,
+      },
+    });
+    await prisma.projectAuthoringSession.update({
+      where: { id: sessionId },
+      data: { currentTurnId: turnId },
+    });
+
+    const originalProvider = process.env.AI_CHAT_PROVIDER;
+    process.env.AI_CHAT_PROVIDER = 'disabled';
+    try {
+      await assert.rejects(
+        () => runPersistedAuthoringSessionAction(learner.id, sessionId, {
+          action: 'ACCEPT_CURRENT',
+          expectedVersion: 1,
+          turnId,
+        }),
+        (error: unknown) => error instanceof AppError && error.code === 'AI_DISABLED',
+      );
+
+      const failed = await prisma.projectAuthoringSession.findUniqueOrThrow({
+        where: { id: sessionId },
+        include: { currentTurn: true },
+      });
+      const accepted = await prisma.projectAuthoringTurn.findUniqueOrThrow({ where: { id: turnId } });
+      assert.equal(accepted.status, 'ACCEPTED');
+      assert.equal(failed.stage, 'COMPONENTS');
+      assert.equal(failed.status, 'GENERATION_FAILED');
+      assert.equal(failed.currentTurn, null);
+      assert.equal(failed.generationErrorCode, 'AI_DISABLED');
+
+      process.env.AI_CHAT_PROVIDER = 'mock';
+      const recovered = await runPersistedAuthoringSessionAction(learner.id, sessionId, {
+        action: 'REGENERATE_FAILED_STAGE',
+        expectedVersion: failed.version,
+      });
+      assert.equal(recovered.session.stage, 'COMPONENTS');
+      assert.equal(recovered.session.status, 'WAITING_FOR_USER');
+      assert.equal(recovered.currentTurn?.kind, 'COMPONENT_LIST');
+      assert.notEqual(recovered.currentTurn?.id, turnId);
+    } finally {
+      if (originalProvider === undefined) {
+        delete process.env.AI_CHAT_PROVIDER;
+      } else {
+        process.env.AI_CHAT_PROVIDER = originalProvider;
+      }
+    }
+  });
+
   test('get session by id does not invoke scalar proposal generation on reload', async () => {
     const { randomUUID } = await import('node:crypto');
     const { getPersistedAuthoringSessionStateById } = await import(

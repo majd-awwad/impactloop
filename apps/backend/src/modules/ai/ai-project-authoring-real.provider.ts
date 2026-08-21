@@ -4,13 +4,15 @@ import { ZodError, z } from 'zod';
 
 import {
   env,
+  getAiChatRuntimeConfig,
   getConfiguredGeminiApiKey,
   getGeminiChatModelCandidates,
 } from '../../config/env.js';
+import { logger } from '../../observability/logger.js';
 import { AppError } from '../../utils/app-error.js';
-import { extractJsonObject } from '../../services/gemini-price-suggestion.provider.js';
 
 import {
+  aiAuthoringClarificationProviderJsonSchema,
   type AiProjectAuthoringClarificationBlock,
 } from './ai.content-blocks.js';
 import type { AiLocale } from './ai.types.js';
@@ -23,10 +25,27 @@ import { MAX_PROPOSAL_STEPS } from './ai-project-authoring-proposal.policy.js';
 import { reindexWorkingSteps } from './ai-project-authoring-sequential.policy.js';
 import {
   computeAuthoringTopicState,
+  getAuthoringProviderSchemaIssues,
   parseAuthoringProviderPayload,
   recordAuthoringValidationDiagnostic,
 } from './ai-project-authoring-clarification.shared.js';
-import { setOpenAiChatClientFactoryForTests } from './providers/openai-chat.provider.js';
+
+type OpenAiAuthoringClient = {
+  chat: {
+    completions: {
+      create: (
+        ...args: Parameters<OpenAI['chat']['completions']['create']>
+      ) => Promise<OpenAI.Chat.Completions.ChatCompletion>;
+    };
+  };
+};
+let openAiAuthoringClientFactoryOverride: (() => OpenAiAuthoringClient) | null = null;
+
+export const setAuthoringOpenAiClientFactoryForTests = (
+  factory: (() => OpenAiAuthoringClient) | null,
+) => {
+  openAiAuthoringClientFactoryOverride = factory;
+};
 
 export const PROJECT_AUTHORING_TOPIC_KEYS = [
   'project_goal',
@@ -97,7 +116,16 @@ export const PROJECT_AUTHORING_CLARIFICATION_SYSTEM_POLICY = [
   'Do not search the web or cite external sources.',
   'Return strict JSON only with keys clarification and assistantText.',
   'clarification.type must be project_authoring_clarification.',
+  'assistantText is required and must be a non-empty string.',
+  'clarification.nextQuestion must be an object or null; never serialize it as a string.',
+  'clarification.remainingTopics must be an unquoted integer from 0 to 20.',
+  'knownFacts, assumptions, warnings, and nextQuestion.options must be arrays.',
+  'knownFacts[].source must be IDEA, DRAFT, LEARNER_ANSWER, or PROFILE exactly.',
+  'clarification.status must be NEEDS_CLARIFICATION or READY_FOR_PROPOSAL exactly.',
+  'nextQuestion.answerType must be FREE_TEXT, SINGLE_CHOICE, or MULTI_CHOICE exactly.',
   'Do not wrap JSON in markdown.',
+  'Do not emit tool calls, function calls, XML, or special tokens such as <|tool_call_start|>.',
+  'The first character must be { and the final character must be }.',
   'Examples:',
   '- Electronics beginner Arduino watering: ask expected_behavior or power_source if missing.',
   '- Recycled cardboard organizer: ask project_goal or project_scale, not power or microcontroller.',
@@ -196,7 +224,77 @@ const withTimeout = async <T>(
   }
 };
 
-const mapOpenAiFailure = (error: unknown): AppError => {
+type OpenAiFailure = {
+  status: number | null;
+  code: string | null;
+  type: string | null;
+  message: string;
+  body: string | null;
+};
+
+const truncateUpstreamDiagnostic = (value: string, maxLength = 1200): string =>
+  value
+    .replace(/Bearer\s+\S+/gi, 'Bearer [redacted]')
+    .replace(/(authorization|cookie|api[_-]?key|token|secret)\s*[:=]\s*\S+/gi, '$1=[redacted]')
+    .replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, '[email]')
+    .slice(0, maxLength);
+
+const readOpenAiFailure = (error: unknown): OpenAiFailure => {
+  const record = error && typeof error === 'object'
+    ? (error as Record<string, unknown>)
+    : {};
+  const body = record.error ?? record.body ?? record.responseBody ?? null;
+  let safeBody: string | null = null;
+  if (body != null) {
+    try {
+      safeBody = truncateUpstreamDiagnostic(
+        typeof body === 'string' ? body : JSON.stringify(body),
+      );
+    } catch {
+      safeBody = '[unserializable upstream error body]';
+    }
+  }
+
+  return {
+    status: typeof record.status === 'number' ? record.status : null,
+    code: typeof record.code === 'string' ? record.code : null,
+    type: typeof record.type === 'string' ? record.type : null,
+    message: truncateUpstreamDiagnostic(
+      error instanceof Error ? error.message : String(error ?? 'Unknown OpenAI-compatible error'),
+      300,
+    ),
+    body: safeBody,
+  };
+};
+
+const logOpenAiAuthoringFailure = (
+  failure: OpenAiFailure,
+  runtime: ReturnType<typeof getAiChatRuntimeConfig>,
+) => {
+  if ((process.env.NODE_ENV ?? 'development') !== 'development') {
+    return;
+  }
+
+  logger.warn(
+    {
+      operation: 'ai_authoring_openai_compatible_request',
+      upstreamStatus: failure.status,
+      upstreamErrorCode: failure.code,
+      upstreamErrorType: failure.type,
+      upstreamMessage: failure.message,
+      configuredModel: runtime.model,
+      resolvedProviderModel: null,
+      requestEndpoint: `${runtime.openaiBaseUrl ?? 'https://api.openai.com/v1'}/chat/completions`,
+      upstreamResponseBody: failure.body,
+    },
+    'AI authoring OpenAI-compatible provider request failed',
+  );
+};
+
+const mapOpenAiFailure = (
+  error: unknown,
+  runtime: ReturnType<typeof getAiChatRuntimeConfig>,
+): AppError => {
   if (error instanceof AppError) {
     return error;
   }
@@ -206,16 +304,49 @@ const mapOpenAiFailure = (error: unknown): AppError => {
       'The learning assistant returned an invalid response.',
       502,
       'AI_RESPONSE_INVALID',
+      error instanceof ZodError
+        ? { providerSchemaIssues: getAuthoringProviderSchemaIssues(error) }
+        : undefined,
     );
   }
 
-  const message =
-    error instanceof Error ? error.message.toLowerCase() : String(error);
-  if (message.includes('rate limit')) {
+  const failure = readOpenAiFailure(error);
+  logOpenAiAuthoringFailure(failure, runtime);
+  const message = failure.message.toLowerCase();
+
+  if (failure.status === 401 || failure.status === 403) {
+    return new AppError(
+      'The learning assistant is not configured correctly.',
+      503,
+      'AI_PROVIDER_AUTH_ERROR',
+      { status: failure.status, model: runtime.model },
+    );
+  }
+
+  if (failure.status === 400) {
+    return new AppError(
+      'The learning assistant request is not compatible with the configured model.',
+      502,
+      'AI_PROVIDER_REQUEST_INVALID',
+      { status: failure.status, model: runtime.model },
+    );
+  }
+
+  if (failure.status === 404) {
+    return new AppError(
+      'The configured learning assistant model is not available.',
+      503,
+      'AI_PROVIDER_MODEL_UNAVAILABLE',
+      { status: failure.status, model: runtime.model },
+    );
+  }
+
+  if (failure.status === 429 || message.includes('rate limit')) {
     return new AppError(
       'The learning assistant is temporarily busy. Please try again shortly.',
       429,
       'AI_PROVIDER_RATE_LIMITED',
+      { status: failure.status, model: runtime.model },
     );
   }
 
@@ -223,6 +354,7 @@ const mapOpenAiFailure = (error: unknown): AppError => {
     'The learning assistant is temporarily unavailable.',
     502,
     'AI_PROVIDER_ERROR',
+    { status: failure.status, model: runtime.model },
   );
 };
 
@@ -283,13 +415,83 @@ const readGeminiText = (response: { text?: string | null }) => {
   return text;
 };
 
-const readOpenAiText = (response: OpenAI.Chat.Completions.ChatCompletion) => {
-  const text = response.choices[0]?.message?.content?.trim();
+const logOpenAiAuthoringResponse = (
+  response: OpenAI.Chat.Completions.ChatCompletion,
+  runtime: ReturnType<typeof getAiChatRuntimeConfig>,
+  diagnosticStage?: string,
+) => {
+  if ((process.env.NODE_ENV ?? 'development') !== 'development') {
+    return;
+  }
+
+  const rawResponse = response as unknown as Record<string, unknown>;
+  const choices = Array.isArray(rawResponse.choices) ? rawResponse.choices : [];
+  const choice = choices[0] && typeof choices[0] === 'object'
+    ? (choices[0] as Record<string, unknown>)
+    : null;
+  const message = choice?.message && typeof choice.message === 'object'
+    ? (choice.message as Record<string, unknown>)
+    : null;
+  const content = message?.content;
+  const providerMetadata = rawResponse.provider ?? rawResponse.metadata ?? rawResponse.error ?? null;
+  let safeProviderMetadata: string | null = null;
+  if (providerMetadata != null) {
+    try {
+      safeProviderMetadata = truncateUpstreamDiagnostic(
+        typeof providerMetadata === 'string'
+          ? providerMetadata
+          : JSON.stringify(providerMetadata),
+      );
+    } catch {
+      safeProviderMetadata = '[unserializable provider metadata]';
+    }
+  }
+
+  logger.debug(
+    {
+      operation: 'ai_authoring_openai_compatible_response',
+      upstreamStatus: 200,
+      responseId: typeof rawResponse.id === 'string' ? rawResponse.id : null,
+      resolvedProviderModel:
+        typeof rawResponse.model === 'string' ? rawResponse.model : null,
+      configuredModel: runtime.model,
+      choiceCount: choices.length,
+      finishReason: typeof choice?.finish_reason === 'string' ? choice.finish_reason : null,
+      messageKeys: message ? Object.keys(message).slice(0, 20) : [],
+      messageContentType: typeof content,
+      messageContentLength: typeof content === 'string' ? content.length : 0,
+      messageContentEmpty: typeof content !== 'string' || content.trim().length === 0,
+      messageContentStartsWithJsonObject:
+        typeof content === 'string' ? content.trimStart().startsWith('{') : false,
+      messageHasReasoning: Boolean(message?.reasoning),
+      messageHasReasoningDetails: Boolean(message?.reasoning_details),
+      usageCompletionCount: response.usage?.completion_tokens ?? null,
+      providerErrorMetadata: safeProviderMetadata,
+      authoringStage: diagnosticStage ?? null,
+      authoringOperation:
+        diagnosticStage === 'COMPONENTS'
+          ? 'component_generation'
+          : diagnosticStage
+            ? 'scalar_generation'
+            : 'authoring_generation',
+    },
+    'AI authoring OpenAI-compatible provider response received',
+  );
+};
+
+const readOpenAiText = (
+  response: OpenAI.Chat.Completions.ChatCompletion,
+  runtime: ReturnType<typeof getAiChatRuntimeConfig>,
+  diagnosticStage?: string,
+) => {
+  logOpenAiAuthoringResponse(response, runtime, diagnosticStage);
+  const content = response.choices[0]?.message?.content;
+  const text = typeof content === 'string' ? content.trim() : '';
   if (!text) {
     throw new AppError(
-      'The learning assistant returned an invalid response.',
+      'The learning assistant returned an empty response. Please try again.',
       502,
-      'AI_RESPONSE_INVALID',
+      'AI_PROVIDER_EMPTY_RESPONSE',
     );
   }
   return text;
@@ -308,8 +510,8 @@ const getGeminiClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
-const getOpenAiClient = () => {
-  if (!env.openaiApiKey) {
+const getOpenAiClient = (runtime: ReturnType<typeof getAiChatRuntimeConfig>) => {
+  if (!runtime.openaiApiKey) {
     throw new AppError(
       'The learning assistant is temporarily unavailable.',
       503,
@@ -317,10 +519,101 @@ const getOpenAiClient = () => {
     );
   }
 
-  return new OpenAI({
-    apiKey: env.openaiApiKey,
-    timeout: env.aiChatTimeoutMs,
+  return openAiAuthoringClientFactoryOverride?.() ?? new OpenAI({
+    apiKey: runtime.openaiApiKey,
+    baseURL: runtime.openaiBaseUrl ?? undefined,
+    timeout: runtime.timeoutMs,
+    defaultHeaders: runtime.isOpenRouter
+      ? {
+          'HTTP-Referer': env.appPublicBaseUrl || 'http://localhost:4000',
+          'X-Title': 'ImpactLoop',
+        }
+      : undefined,
   });
+};
+
+const supportsAuthoringStrictStructuredOutput = (
+  runtime: ReturnType<typeof getAiChatRuntimeConfig>,
+) => runtime.isOpenRouter && /^openai\/gpt-4\.1-nano(?:$|[-:])/i.test(runtime.model);
+
+const toOpenAiCompatibleStructuredSchema = (
+  schema: unknown,
+  isRoot = true,
+): unknown => {
+  if (Array.isArray(schema)) {
+    return schema.map((item) => toOpenAiCompatibleStructuredSchema(item, false));
+  }
+  if (!schema || typeof schema !== 'object') {
+    return schema;
+  }
+
+  const record = schema as Record<string, unknown>;
+  const normalized = Object.fromEntries(
+    Object.entries(record).map(([key, value]) => [
+      // OpenAI Structured Outputs accepts anyOf but rejects Zod's discriminated-union oneOf.
+      // Both retain every branch generated from the source Zod validator.
+      key === 'oneOf' ? 'anyOf' : key,
+      toOpenAiCompatibleStructuredSchema(value, false),
+    ]),
+  );
+  const properties = record.properties;
+  if (!properties || typeof properties !== 'object' || Array.isArray(properties)) {
+    if (isRoot && Array.isArray(normalized.anyOf)) {
+      // The provider forbids a union at the root. Keep the generated discriminated
+      // union intact in an internal envelope and unwrap it before source Zod validation.
+      return {
+        type: 'object',
+        properties: { result: { anyOf: normalized.anyOf } },
+        required: ['result'],
+        additionalProperties: false,
+      };
+    }
+    return normalized;
+  }
+
+  const propertyNames = Object.keys(properties);
+  const required = Array.isArray(record.required)
+    ? record.required.filter((name): name is string => typeof name === 'string')
+    : [];
+  const requiredSet = new Set(required);
+  const normalizedProperties = normalized.properties as Record<string, unknown>;
+
+  return {
+    ...normalized,
+    properties: Object.fromEntries(
+      propertyNames.map((name) => [
+        name,
+        requiredSet.has(name)
+          ? normalizedProperties[name]
+          : { anyOf: [normalizedProperties[name], { type: 'null' }] },
+      ]),
+    ),
+    // OpenAI Structured Outputs requires all declared properties to be required.
+    // Optional Zod properties remain optional to the application as nullable transport fields.
+    required: propertyNames,
+  };
+};
+
+const buildAuthoringOpenAiResponseFormat = (
+  runtime: ReturnType<typeof getAiChatRuntimeConfig>,
+  structuredOutput?: { name: string; schema: unknown },
+) => {
+  if (supportsAuthoringStrictStructuredOutput(runtime) && structuredOutput) {
+    return {
+      response_format: {
+        type: 'json_schema' as const,
+        json_schema: {
+          name: structuredOutput.name,
+          strict: true,
+          schema: toOpenAiCompatibleStructuredSchema(structuredOutput.schema),
+        },
+      },
+    };
+  }
+
+  return runtime.openaiJsonMode
+    ? { response_format: { type: 'json_object' as const } }
+    : {};
 };
 
 /** Step plans need far more tokens than the chat default (1024). */
@@ -380,37 +673,42 @@ const callGeminiStructured = async (
 const callOpenAiStructured = async (
   systemInstruction: string,
   userPrompt: string,
-  options?: { maxOutputTokens?: number },
+  options?: {
+    maxOutputTokens?: number;
+    structuredOutput?: { name: string; schema: unknown };
+    diagnosticStage?: string;
+  },
 ) => {
   const startedAt = Date.now();
-  const client = getOpenAiClient();
-  const maxTokens = options?.maxOutputTokens ?? env.aiChatMaxOutputTokens;
+  const runtime = getAiChatRuntimeConfig();
+  const client = getOpenAiClient(runtime);
+  const maxTokens = options?.maxOutputTokens ?? runtime.maxOutputTokens;
 
   try {
     const response = await withTimeout(
       client.chat.completions.create({
-        model: env.aiChatModel,
+        model: runtime.model,
         temperature: 0.2,
         max_tokens: maxTokens,
-        response_format: { type: 'json_object' },
+        ...buildAuthoringOpenAiResponseFormat(runtime, options?.structuredOutput),
         messages: [
           { role: 'system', content: systemInstruction },
           { role: 'user', content: userPrompt },
         ],
       }),
-      env.aiChatTimeoutMs,
+      runtime.timeoutMs,
       'AI_PROVIDER_TIMEOUT',
     );
 
     return {
-      text: readOpenAiText(response),
-      model: response.model ?? env.aiChatModel,
+      text: readOpenAiText(response, runtime, options?.diagnosticStage),
+      model: response.model ?? runtime.model,
       inputTokens: response.usage?.prompt_tokens ?? null,
       outputTokens: response.usage?.completion_tokens ?? null,
       latencyMs: Date.now() - startedAt,
     };
   } catch (error) {
-    throw mapOpenAiFailure(error);
+    throw mapOpenAiFailure(error, runtime);
   }
 };
 
@@ -418,7 +716,11 @@ const invokeRealProvider = async (
   provider: RealProviderName,
   systemInstruction: string,
   userPrompt: string,
-  options?: { maxOutputTokens?: number },
+  options?: {
+    maxOutputTokens?: number;
+    structuredOutput?: { name: string; schema: unknown };
+    diagnosticStage?: string;
+  },
 ) => {
   if (invokerOverride) {
     invokerCallCountForTests += 1;
@@ -458,7 +760,13 @@ const invokeRealComponentProvider = async (
     };
   }
 
-  return invokeRealProvider(provider, systemInstruction, userPrompt);
+  return invokeRealProvider(provider, systemInstruction, userPrompt, {
+    structuredOutput: {
+      name: 'impactloop_authoring_component_list',
+      schema: componentListProviderJsonSchema,
+    },
+    diagnosticStage: 'COMPONENTS',
+  });
 };
 
 const invokeRealStepProvider = async (
@@ -488,6 +796,10 @@ const invokeRealScalarProvider = async (
   provider: RealProviderName,
   systemInstruction: string,
   userPrompt: string,
+  options?: {
+    structuredOutput?: { name: string; schema: unknown };
+    diagnosticStage?: string;
+  },
 ) => {
   if (scalarInvokerOverride) {
     scalarInvokerCallCountForTests += 1;
@@ -502,7 +814,7 @@ const invokeRealScalarProvider = async (
     };
   }
 
-  return invokeRealProvider(provider, systemInstruction, userPrompt);
+  return invokeRealProvider(provider, systemInstruction, userPrompt, options);
 };
 
 export const buildAuthoringClarificationPrompt = (
@@ -600,11 +912,17 @@ export const generateRealAuthoringClarification = async (
       provider,
       PROJECT_AUTHORING_CLARIFICATION_SYSTEM_POLICY,
       userPrompt,
+      {
+        structuredOutput: {
+          name: 'impactloop_authoring_clarification',
+          schema: aiAuthoringClarificationProviderJsonSchema,
+        },
+      },
     );
 
     let raw: unknown;
     try {
-      raw = extractJsonObject(response.text);
+      raw = parseStructuredProviderJson(response.text);
     } catch (error) {
       recordAuthoringValidationDiagnostic({
         provider,
@@ -644,11 +962,10 @@ export const generateRealAuthoringClarification = async (
     }
 
     throw provider === 'openai'
-      ? mapOpenAiFailure(error)
+      ? mapOpenAiFailure(error, getAiChatRuntimeConfig())
       : mapGeminiFailure(error);
   }
 };
-
 const providerComponentRoleSchema = z.enum(['MATERIAL', 'TOOL', 'CONSUMABLE']);
 const providerComponentSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -664,6 +981,13 @@ const componentListProviderResponseSchema = z.object({
   components: z.array(providerComponentSchema).min(1).max(30),
   explanation: z.string().trim().min(8).max(4000),
 });
+
+// This is the single transport schema for provider output. The mapped
+// SequentialComponent shape is intentionally derived only after this source
+// schema has validated the model response.
+const componentListProviderJsonSchema = z.toJSONSchema(
+  componentListProviderResponseSchema,
+);
 
 const stepPlanProviderResponseSchema = z.object({
   kind: z.literal('STEP_PLAN'),
@@ -2099,18 +2423,148 @@ export const parseStepPlanProviderJson = (text: string): unknown => {
 };
 
 const parseStructuredProviderJson = (text: string) => {
-  try {
-    return extractJsonObject(text);
-  } catch (error) {
+  const trimmed = text.trim();
+  if (!trimmed) {
     throw new AppError(
       'The learning assistant returned an invalid response.',
       502,
       'AI_RESPONSE_INVALID',
-      {
-        cause: error instanceof Error ? error.message : String(error),
-      },
     );
   }
+
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  const candidate = (fenced?.[1] ?? trimmed).trim();
+  const parse = (value: string): unknown | null => {
+    try {
+      return JSON.parse(value) as unknown;
+    } catch {
+      return null;
+    }
+  };
+
+  const direct = parse(candidate);
+  if (direct !== null) {
+    return direct;
+  }
+
+  const balanced = extractBalancedJsonObject(candidate);
+  if (balanced) {
+    const extracted = parse(balanced);
+    if (extracted !== null) {
+      return extracted;
+    }
+  }
+
+  throw new AppError(
+    'The learning assistant returned an invalid response.',
+    502,
+    'AI_RESPONSE_INVALID',
+    {
+      responseFailure: 'JSON_PARSE',
+      cause: 'Could not extract a valid JSON object from the provider response.',
+    },
+  );
+};
+
+const matchingStructuredSchemaBranch = (
+  value: unknown,
+  schema: Record<string, unknown>,
+): Record<string, unknown> => {
+  const alternatives = [schema.oneOf, schema.anyOf]
+    .find(Array.isArray) as Record<string, unknown>[] | undefined;
+  if (!alternatives || !value || typeof value !== 'object' || Array.isArray(value)) {
+    return schema;
+  }
+
+  const payload = value as Record<string, unknown>;
+  return alternatives.find((candidate) => {
+    const properties = candidate.properties;
+    if (!properties || typeof properties !== 'object' || Array.isArray(properties)) {
+      return false;
+    }
+    return Object.entries(properties as Record<string, unknown>).every(([key, property]) => {
+      if (!property || typeof property !== 'object' || Array.isArray(property)) {
+        return true;
+      }
+      const expected = (property as Record<string, unknown>).const;
+      return expected === undefined || payload[key] === expected;
+    });
+  }) ?? schema;
+};
+
+const normalizeStructuredOutputOptionalNulls = (
+  value: unknown,
+  sourceSchema: unknown,
+): unknown => {
+  if (!sourceSchema || typeof sourceSchema !== 'object' || Array.isArray(sourceSchema)) {
+    return value;
+  }
+
+  const schema = matchingStructuredSchemaBranch(
+    value,
+    sourceSchema as Record<string, unknown>,
+  );
+  if (Array.isArray(value)) {
+    return value.map((item) =>
+      normalizeStructuredOutputOptionalNulls(item, schema.items),
+    );
+  }
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  const properties = schema.properties;
+  if (!properties || typeof properties !== 'object' || Array.isArray(properties)) {
+    return value;
+  }
+
+  const required = new Set(
+    Array.isArray(schema.required)
+      ? schema.required.filter((name): name is string => typeof name === 'string')
+      : [],
+  );
+  const result: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    if (item === null && !required.has(key)) {
+      continue;
+    }
+    result[key] = normalizeStructuredOutputOptionalNulls(
+      item,
+      (properties as Record<string, unknown>)[key],
+    );
+  }
+  return result;
+};
+
+const unwrapStructuredOutputEnvelope = (value: unknown): unknown =>
+  value &&
+  typeof value === 'object' &&
+  !Array.isArray(value) &&
+  Object.prototype.hasOwnProperty.call(value, 'result')
+    ? (value as Record<string, unknown>).result
+    : value;
+
+const logComponentProviderValidationFailure = (input: {
+  provider: RealProviderName;
+  model: string | null;
+  failure: 'JSON_PARSE' | 'SCHEMA_VALIDATION' | 'QUALITY_VALIDATION';
+  issues?: Array<Record<string, unknown>>;
+}) => {
+  if ((process.env.NODE_ENV ?? 'development') !== 'development') {
+    return;
+  }
+
+  logger.warn(
+    {
+      operation: 'component_generation',
+      expectedAuthoringStage: 'COMPONENTS',
+      provider: input.provider,
+      model: input.model,
+      responseFailure: input.failure,
+      providerSchemaIssues: input.issues ?? [],
+    },
+    'AI authoring component response validation failed',
+  );
 };
 
 export const generateRealAuthoringComponentList = async (
@@ -2131,11 +2585,56 @@ export const generateRealAuthoringComponentList = async (
       PROJECT_AUTHORING_COMPONENT_LIST_SYSTEM_POLICY,
       userPrompt,
     );
-    const parsed = componentListProviderResponseSchema.parse(
-      parseStructuredProviderJson(response.text),
-    );
+    let rawProviderResponse: unknown;
+    try {
+      rawProviderResponse = normalizeStructuredOutputOptionalNulls(
+        unwrapStructuredOutputEnvelope(parseStructuredProviderJson(response.text)),
+        componentListProviderJsonSchema,
+      );
+    } catch (error) {
+      logComponentProviderValidationFailure({
+        provider,
+        model: response.model,
+        failure: 'JSON_PARSE',
+      });
+      throw error;
+    }
+
+    let parsed: z.infer<typeof componentListProviderResponseSchema>;
+    try {
+      parsed = componentListProviderResponseSchema.parse(rawProviderResponse);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const providerSchemaIssues = getAuthoringProviderSchemaIssues(
+          error,
+          rawProviderResponse,
+        );
+        logComponentProviderValidationFailure({
+          provider,
+          model: response.model,
+          failure: 'SCHEMA_VALIDATION',
+          issues: providerSchemaIssues,
+        });
+        throw new AppError(
+          'The learning assistant returned an invalid response.',
+          502,
+          'AI_RESPONSE_INVALID',
+          { providerSchemaIssues },
+        );
+      }
+      throw error;
+    }
     const components = parsed.components.map(mapProviderComponent);
-    assertParsedComponentListQuality(input, components);
+    try {
+      assertParsedComponentListQuality(input, components);
+    } catch (error) {
+      logComponentProviderValidationFailure({
+        provider,
+        model: response.model,
+        failure: 'QUALITY_VALIDATION',
+      });
+      throw error;
+    }
 
     return {
       provider,
@@ -2154,10 +2653,11 @@ export const generateRealAuthoringComponentList = async (
     if (error instanceof AppError) {
       throw error;
     }
-    throw provider === 'openai' ? mapOpenAiFailure(error) : mapGeminiFailure(error);
+    throw provider === 'openai'
+      ? mapOpenAiFailure(error, getAiChatRuntimeConfig())
+      : mapGeminiFailure(error);
   }
 };
-
 export const generateRealAuthoringStepPlan = async (
   input: RealAuthoringStepPlanInput,
   provider: RealProviderName,
@@ -2286,7 +2786,9 @@ export const generateRealAuthoringStepPlan = async (
         },
       );
     }
-    throw provider === 'openai' ? mapOpenAiFailure(error) : mapGeminiFailure(error);
+    throw provider === 'openai'
+      ? mapOpenAiFailure(error, getAiChatRuntimeConfig())
+      : mapGeminiFailure(error);
   }
 };
 
@@ -2320,6 +2822,48 @@ const scalarProviderResponseSchema = z.discriminatedUnion('kind', [
   scalarRevisedProposalSchema,
   scalarFollowUpSchema,
 ]);
+
+const scalarDifficultyProviderResponseSchema = z.discriminatedUnion('kind', [
+  scalarRevisedProposalSchema.extend({
+    stage: z.literal('DIFFICULTY'),
+    value: projectDifficultySchema,
+  }),
+  scalarFollowUpSchema,
+]);
+
+const scalarProviderContractForStage = (
+  stage: z.infer<typeof scalarStageSchema>,
+) => {
+  const schema = stage === 'DIFFICULTY'
+    ? scalarDifficultyProviderResponseSchema
+    : scalarProviderResponseSchema;
+
+  return {
+    schema,
+    jsonSchema: z.toJSONSchema(schema),
+  };
+};
+
+const logScalarProviderSchemaValidationFailure = (
+  error: ZodError,
+  provider: RealProviderName,
+  scalarStage: z.infer<typeof scalarStageSchema>,
+  response: unknown,
+) => {
+  if ((process.env.NODE_ENV ?? 'development') !== 'development') {
+    return;
+  }
+
+  logger.debug(
+    {
+      operation: 'ai_authoring_scalar_provider_schema',
+      provider,
+      scalarStage,
+      providerSchemaIssues: getAuthoringProviderSchemaIssues(error, response),
+    },
+    'AI authoring scalar provider schema validation failed',
+  );
+};
 
 export type RealAuthoringScalarInput = {
   locale: AiLocale;
@@ -2365,6 +2909,11 @@ export const PROJECT_AUTHORING_SCALAR_SYSTEM_POLICY = [
   'FULL_DESCRIPTION must be a meaningful project description respecting learner constraints.',
   'DIFFICULTY must be exactly BEGINNER, INTERMEDIATE, or ADVANCED.',
   'ESTIMATED_DURATION value must be a positive integer number of minutes.',
+  'Never translate machine-readable enum identifiers, even when the requested locale is Arabic.',
+  'Localize only human-facing fields such as explanation and question.',
+  'kind and stage must remain their canonical uppercase enum identifiers exactly.',
+  'For DIFFICULTY, value must be exactly BEGINNER, INTERMEDIATE, or ADVANCED; never localize it.',
+  'When repairing, preserve every already-valid machine-readable field exactly and correct only the reported issue.',
   'When learnerFeedback includes duration constraints (e.g. greater than 60 minutes), satisfy them.',
   'When suggestAnother is true, return a materially different value from currentProposal.',
   'Never copy learnerFeedback into value.',
@@ -2372,6 +2921,11 @@ export const PROJECT_AUTHORING_SCALAR_SYSTEM_POLICY = [
   'Return strict JSON only.',
   'For REVISED_PROPOSAL include keys: kind, stage, value, explanation.',
   'For FOLLOW_UP_QUESTION include keys: kind, question; optional explanation.',
+  'kind must be exactly REVISED_PROPOSAL or FOLLOW_UP_QUESTION.',
+  'REVISED_PROPOSAL.stage must be TITLE, SHORT_DESCRIPTION, FULL_DESCRIPTION, DIFFICULTY, or ESTIMATED_DURATION exactly.',
+  'REVISED_PROPOSAL.value must be a string or a positive integer; never quote numeric minutes.',
+  'REVISED_PROPOSAL.explanation must be a non-empty string.',
+  'FOLLOW_UP_QUESTION.question must be a non-empty string.',
   'Do not wrap JSON in markdown.',
 ].join('\n');
 
@@ -2392,7 +2946,9 @@ export const buildAuthoringScalarPrompt = (input: RealAuthoringScalarInput) =>
     requiredOutputShape: {
       kind: 'REVISED_PROPOSAL | FOLLOW_UP_QUESTION',
       stage: input.stage,
-      value: 'string or positive integer minutes',
+      value: input.stage === 'DIFFICULTY'
+        ? 'BEGINNER | INTERMEDIATE | ADVANCED (canonical token; never localized)'
+        : 'string or positive integer minutes',
       explanation: 'string',
       question: 'string when kind is FOLLOW_UP_QUESTION',
     },
@@ -2455,16 +3011,45 @@ export const generateRealAuthoringScalarProposal = async (
 ): Promise<RealAuthoringStructuredProviderResult<RealAuthoringScalarResult>> => {
   const startedAt = Date.now();
   const userPrompt = buildAuthoringScalarPrompt(input);
+  const providerContract = scalarProviderContractForStage(input.stage);
 
   try {
     const response = await invokeRealScalarProvider(
       provider,
       PROJECT_AUTHORING_SCALAR_SYSTEM_POLICY,
       userPrompt,
+      {
+        structuredOutput: {
+          name: 'impactloop_authoring_scalar_proposal',
+          schema: providerContract.jsonSchema,
+        },
+        diagnosticStage: input.stage,
+      },
     );
-    const parsed = scalarProviderResponseSchema.parse(
-      parseStructuredProviderJson(response.text),
+    let parsed: z.infer<typeof scalarProviderResponseSchema>;
+    const rawProviderResponse = normalizeStructuredOutputOptionalNulls(
+      unwrapStructuredOutputEnvelope(parseStructuredProviderJson(response.text)),
+      providerContract.jsonSchema,
     );
+    try {
+      parsed = providerContract.schema.parse(rawProviderResponse);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        logScalarProviderSchemaValidationFailure(
+          error,
+          provider,
+          input.stage,
+          rawProviderResponse,
+        );
+        throw new AppError(
+          'The learning assistant returned an invalid response.',
+          502,
+          'AI_RESPONSE_INVALID',
+          { providerSchemaIssues: getAuthoringProviderSchemaIssues(error, rawProviderResponse) },
+        );
+      }
+      throw error;
+    }
 
     if (parsed.kind === 'FOLLOW_UP_QUESTION') {
       return {
@@ -2512,8 +3097,8 @@ export const generateRealAuthoringScalarProposal = async (
     if (error instanceof AppError) {
       throw error;
     }
-    throw provider === 'openai' ? mapOpenAiFailure(error) : mapGeminiFailure(error);
+    throw provider === 'openai'
+      ? mapOpenAiFailure(error, getAiChatRuntimeConfig())
+      : mapGeminiFailure(error);
   }
 };
-
-export { setOpenAiChatClientFactoryForTests };

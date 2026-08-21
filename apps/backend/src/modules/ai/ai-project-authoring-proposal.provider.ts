@@ -6,6 +6,7 @@ import { ZodError } from 'zod';
 
 import {
   env,
+  getAiChatRuntimeConfig,
   getConfiguredGeminiApiKey,
   getGeminiChatModelCandidates,
   resolveAiChatProvider,
@@ -574,8 +575,8 @@ const getGeminiClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
-const getOpenAiClient = () => {
-  if (!env.openaiApiKey) {
+const getOpenAiClient = (runtime: ReturnType<typeof getAiChatRuntimeConfig>) => {
+  if (!runtime.openaiApiKey) {
     throw new AppError(
       'The learning assistant is temporarily unavailable.',
       503,
@@ -584,8 +585,15 @@ const getOpenAiClient = () => {
   }
 
   return new OpenAI({
-    apiKey: env.openaiApiKey,
-    timeout: env.aiChatTimeoutMs,
+    apiKey: runtime.openaiApiKey,
+    baseURL: runtime.openaiBaseUrl ?? undefined,
+    timeout: runtime.timeoutMs,
+    defaultHeaders: runtime.isOpenRouter
+      ? {
+          'HTTP-Referer': env.appPublicBaseUrl || 'http://localhost:4000',
+          'X-Title': 'ImpactLoop',
+        }
+      : undefined,
   });
 };
 
@@ -642,26 +650,29 @@ const callOpenAiStructured = async (
   userPrompt: string,
 ) => {
   const startedAt = Date.now();
-  const client = getOpenAiClient();
+  const runtime = getAiChatRuntimeConfig();
+  const client = getOpenAiClient(runtime);
 
   try {
     const response = await withTimeout(
       client.chat.completions.create({
-        model: env.aiChatModel,
+        model: runtime.model,
         temperature: 0.2,
         max_tokens: AUTHORING_PROPOSAL_MAX_OUTPUT_TOKENS,
-        response_format: { type: 'json_object' },
+        ...(runtime.openaiJsonMode
+          ? { response_format: { type: 'json_object' as const } }
+          : {}),
         messages: [
           { role: 'system', content: systemInstruction },
           { role: 'user', content: userPrompt },
         ],
       }),
-      env.aiChatTimeoutMs,
+      runtime.timeoutMs,
     );
 
     return {
       text: readOpenAiText(response),
-      model: response.model ?? env.aiChatModel,
+      model: response.model ?? runtime.model,
       inputTokens: response.usage?.prompt_tokens ?? null,
       outputTokens: response.usage?.completion_tokens ?? null,
       latencyMs: Date.now() - startedAt,

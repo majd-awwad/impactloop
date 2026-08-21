@@ -402,6 +402,11 @@ export const aiAuthoringClarificationProviderSchema = z.object({
   assistantText: z.string().trim().min(1).max(4000),
 });
 
+/** Reused for OpenAI-compatible strict structured output requests. */
+export const aiAuthoringClarificationProviderJsonSchema = z.toJSONSchema(
+  aiAuthoringClarificationProviderSchema,
+);
+
 export type AiAuthoringClarificationProviderResult = z.infer<
   typeof aiAuthoringClarificationProviderSchema
 >;

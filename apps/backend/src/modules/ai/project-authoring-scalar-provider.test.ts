@@ -169,6 +169,149 @@ describe('scalar authoring provider orchestration', () => {
     assert.equal((proposal.payload as { value: string | number }).value, 'Smart Door Alarm');
   });
 
+  test('scalar repair passes the exact provider schema issue into the next attempt', async () => {
+    process.env.AI_CHAT_PROVIDER = 'openai';
+    const { setResolvedAiChatProviderForTests } = await import('../../config/env.js');
+    const { setAuthoringRealScalarInvokerForTests } = await import(
+      './ai-project-authoring-real.provider.js'
+    );
+    const { generateSequentialStageDiscussionWithRepair } = await import(
+      './ai-project-authoring-sequential-discussion.provider.js'
+    );
+
+    setResolvedAiChatProviderForTests('openai');
+    const prompts: string[] = [];
+    let calls = 0;
+    setAuthoringRealScalarInvokerForTests(async ({ userPrompt }) => {
+      prompts.push(userPrompt);
+      calls += 1;
+      return {
+        text: calls === 1
+          ? JSON.stringify({
+              kind: 'REVISED_PROPOSAL',
+              stage: 'TITLE',
+              value: 'Arduino Door Alarm',
+              explanation: 42,
+            })
+          : JSON.stringify({
+              kind: 'REVISED_PROPOSAL',
+              stage: 'TITLE',
+              value: 'Arduino Door Alarm Kit',
+              explanation: 'The revised title is concise and specific to the project.',
+            }),
+        model: 'test-openai',
+        inputTokens: 1,
+        outputTokens: 1,
+      };
+    });
+
+    const reply = await generateSequentialStageDiscussionWithRepair({
+      ...baseContext,
+      stage: 'TITLE',
+      comment: '',
+      currentProposal: { value: 'Untitled project' },
+    });
+
+    assert.equal(reply.replyType, 'REVISED_SUGGESTION');
+    assert.equal(suggestionValue(reply), 'Arduino Door Alarm Kit');
+    assert.equal(prompts.length, 2);
+    assert.match(
+      prompts[1],
+      /explanation: expected string, received number \(invalid_type\)/,
+    );
+  });
+
+  test('DIFFICULTY repair preserves canonical enum tokens while localizing explanation', async () => {
+    process.env.AI_CHAT_PROVIDER = 'openai';
+    const { setResolvedAiChatProviderForTests } = await import('../../config/env.js');
+    const { setAuthoringRealScalarInvokerForTests } = await import(
+      './ai-project-authoring-real.provider.js'
+    );
+    const { generateSequentialStageDiscussionWithRepair } = await import(
+      './ai-project-authoring-sequential-discussion.provider.js'
+    );
+
+    setResolvedAiChatProviderForTests('openai');
+    const prompts: string[] = [];
+    const policies: string[] = [];
+    let calls = 0;
+    setAuthoringRealScalarInvokerForTests(async ({ userPrompt, systemInstruction }) => {
+      prompts.push(userPrompt);
+      policies.push(systemInstruction);
+      calls += 1;
+      return {
+        text: JSON.stringify({
+          kind: 'REVISED_PROPOSAL',
+          stage: 'DIFFICULTY',
+          value: calls === 1 ? 'مبتدئ' : 'BEGINNER',
+          explanation: calls === 1
+            ? 'هذا المشروع مناسب للمبتدئين.'
+            : 'هذا المشروع مناسب للمبتدئين ولا يحتاج إلى خبرة سابقة.',
+        }),
+        model: 'test-openai',
+        inputTokens: 1,
+        outputTokens: 1,
+      };
+    });
+
+    const reply = await generateSequentialStageDiscussionWithRepair({
+      ...baseContext,
+      locale: 'ar',
+      stage: 'DIFFICULTY',
+      comment: 'اجعل الشرح بالعربية.',
+      currentProposal: { value: 'INTERMEDIATE' },
+    });
+
+    assert.equal(calls, 2);
+    assert.equal(suggestionValue(reply), 'BEGINNER');
+    assert.match(policies[1] ?? '', /Never translate machine-readable enum identifiers/);
+    assert.match(policies[1] ?? '', /DIFFICULTY, value must be exactly BEGINNER, INTERMEDIATE, or ADVANCED/);
+    assert.match(
+      prompts[1] ?? '',
+      /value: expected BEGINNER \| INTERMEDIATE \| ADVANCED, received string/,
+    );
+    assert.match(prompts[1] ?? '', /canonical token; never localized/);
+  });
+
+  test('does not repair a valid DIFFICULTY response only because its explanation is English', async () => {
+    process.env.AI_CHAT_PROVIDER = 'openai';
+    const { setResolvedAiChatProviderForTests } = await import('../../config/env.js');
+    const { setAuthoringRealScalarInvokerForTests } = await import(
+      './ai-project-authoring-real.provider.js'
+    );
+    const { generateSequentialStageDiscussionWithRepair } = await import(
+      './ai-project-authoring-sequential-discussion.provider.js'
+    );
+
+    setResolvedAiChatProviderForTests('openai');
+    let calls = 0;
+    setAuthoringRealScalarInvokerForTests(async () => {
+      calls += 1;
+      return {
+        text: JSON.stringify({
+          kind: 'REVISED_PROPOSAL',
+          stage: 'DIFFICULTY',
+          value: 'BEGINNER',
+          explanation: 'This project is suitable for beginners and requires no prior experience.',
+        }),
+        model: 'test-openai',
+        inputTokens: 1,
+        outputTokens: 1,
+      };
+    });
+
+    const reply = await generateSequentialStageDiscussionWithRepair({
+      ...baseContext,
+      locale: 'ar',
+      stage: 'DIFFICULTY',
+      comment: 'أريد شرحًا واضحًا.',
+      currentProposal: { value: 'INTERMEDIATE' },
+    });
+
+    assert.equal(calls, 1);
+    assert.equal(suggestionValue(reply), 'BEGINNER');
+  });
+
   test('short description feedback creates revised suggestion', async () => {
     process.env.AI_CHAT_PROVIDER = 'gemini';
     const { setAuthoringRealScalarInvokerForTests } = await import(

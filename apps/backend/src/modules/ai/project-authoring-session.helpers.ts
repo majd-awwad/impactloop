@@ -32,6 +32,7 @@ import {
   validateAuthoringClarificationPolicy,
   type AuthoringClarificationContext,
 } from './ai-project-authoring-clarification.provider.js';
+import { formatAuthoringProviderSchemaRepairIssue } from './ai-project-authoring-clarification.shared.js';
 import {
   isAuthoringDraftPlaceholderDescription,
   isAuthoringDraftPlaceholderShortDescription,
@@ -3087,6 +3088,16 @@ const generateOverviewClarificationWithRepair = async (
     return true;
   };
 
+  const providerSchemaRepairIssue = (error: AppError): string | null => {
+    const details = error.details;
+    if (!details || typeof details !== 'object') {
+      return null;
+    }
+    return formatAuthoringProviderSchemaRepairIssue(
+      (details as { providerSchemaIssues?: unknown }).providerSchemaIssues,
+    );
+  };
+
   let providerResult!: Awaited<ReturnType<typeof generateAuthoringClarification>>;
   let clarification!: AiProjectAuthoringClarificationBlock;
   let usedRepair = false;
@@ -3115,7 +3126,7 @@ const generateOverviewClarificationWithRepair = async (
       error instanceof AppError && error.code === 'AI_AUTHORING_LANGUAGE_MISMATCH'
         ? `${ARABIC_LANGUAGE_REPAIR_ISSUE} ${error.message}`
         : error instanceof AppError
-          ? error.message
+          ? providerSchemaRepairIssue(error) ?? error.message
           : 'Provider output failed JSON or schema validation. Return strict JSON with clarification and assistantText. FREE_TEXT must use options: []. SINGLE_CHOICE needs 2-4 unique options.';
     try {
       ({ providerResult, clarification } = await runClarificationAttempt(
@@ -3585,20 +3596,6 @@ export const advanceSessionAfterStageWrite = async (input: {
   });
   const contentLocale = resolved.locale;
 
-  let nextProposal: Awaited<ReturnType<typeof createStageProposalTurn>> | null = null;
-  if (
-    input.completedStage !== 'COMPONENTS' &&
-    nextStage !== 'FINAL_REVIEW' &&
-    nextStage !== 'COMPLETE'
-  ) {
-    nextProposal = await createStageProposalTurn({
-      session: resolved.session,
-      project: refreshedProject,
-      locale: contentLocale,
-      stage: nextStage,
-    });
-  }
-
   let session = await projectAuthoringSessionRepository.acceptCurrentTurn({
     sessionId: resolved.session.id,
     expectedVersion: resolved.session.version,
@@ -3629,25 +3626,54 @@ export const advanceSessionAfterStageWrite = async (input: {
       project: refreshedProject,
       locale: contentLocale,
     });
-  } else if (nextProposal) {
-    session = await projectAuthoringSessionRepository.setCurrentTurn({
-      sessionId: session.id,
-      expectedVersion: session.version,
-      turn: {
-        id: randomUUID(),
-        sessionId: session.id,
+  } else if (nextStage !== 'FINAL_REVIEW' && nextStage !== 'COMPLETE') {
+    // The accepted proposal is already durable at this point.  Keep the
+    // external provider call outside a database transaction, then either
+    // attach the fully validated next turn or retain an explicit retryable
+    // generation-failed state.  A failed call must never leave an old turn
+    // whose baseProjectUpdatedAt is now stale after its patch was persisted.
+    try {
+      const nextProposal = await createStageProposalTurn({
+        session,
+        project: refreshedProject,
+        locale: contentLocale,
         stage: nextStage,
-        kind: turnKindForStage(nextStage),
-        status: 'PROPOSED',
-        payload: nextProposal.payload,
-        explanation: nextProposal.explanation,
-        baseProjectUpdatedAt: refreshedProject.updatedAt,
-      },
-      sessionPatch: {
-        status: 'WAITING_FOR_USER',
-        baseProjectUpdatedAt: refreshedProject.updatedAt,
-      },
-    });
+      });
+      session = await projectAuthoringSessionRepository.setCurrentTurn({
+        sessionId: session.id,
+        expectedVersion: session.version,
+        turn: {
+          id: randomUUID(),
+          sessionId: session.id,
+          stage: nextStage,
+          kind: turnKindForStage(nextStage),
+          status: 'PROPOSED',
+          payload: nextProposal.payload,
+          explanation: nextProposal.explanation,
+          baseProjectUpdatedAt: refreshedProject.updatedAt,
+        },
+        sessionPatch: {
+          status: 'WAITING_FOR_USER',
+          baseProjectUpdatedAt: refreshedProject.updatedAt,
+        },
+      });
+    } catch (error) {
+      await projectAuthoringSessionRepository.updateSession({
+        sessionId: session.id,
+        expectedVersion: session.version,
+        patch: {
+          stage: nextStage,
+          status: 'GENERATION_FAILED',
+          currentTurnId: null,
+          generationErrorCode:
+            error instanceof AppError
+              ? error.code
+              : 'AI_AUTHORING_STAGE_GENERATION_FAILED',
+          baseProjectUpdatedAt: refreshedProject.updatedAt,
+        },
+      });
+      throw error;
+    }
   } else if (nextStage === 'FINAL_REVIEW') {
     session = await projectAuthoringSessionRepository.updateSession({
       sessionId: session.id,

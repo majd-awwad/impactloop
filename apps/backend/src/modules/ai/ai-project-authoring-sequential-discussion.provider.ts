@@ -4,6 +4,7 @@ import { resolveAiChatProvider } from '../../config/env.js';
 import { AppError } from '../../utils/app-error.js';
 
 import type { AiProjectAuthoringTurnBlock } from './ai.content-blocks.js';
+import { formatAuthoringProviderSchemaRepairIssue } from './ai-project-authoring-clarification.shared.js';
 import {
   generateRealAuthoringScalarProposal,
   type RealAuthoringScalarInput,
@@ -997,11 +998,17 @@ export const generateSequentialStageDiscussionWithRepair = async (
   try {
     return await generateSequentialStageDiscussion(input);
   } catch (error) {
-    const violatedConstraint =
-      error instanceof AppError
-        ? (error.details as { violatedConstraint?: string } | undefined)?.violatedConstraint ??
-          error.message
-        : null;
+    const details = error instanceof AppError
+      ? (error.details as {
+          violatedConstraint?: string;
+          providerSchemaIssues?: unknown;
+        } | undefined)
+      : undefined;
+    const violatedConstraint = error instanceof AppError
+      ? formatAuthoringProviderSchemaRepairIssue(details?.providerSchemaIssues) ??
+        details?.violatedConstraint ??
+        error.message
+      : null;
 
     if (input.repairAttempt || !violatedConstraint) {
       throw error;

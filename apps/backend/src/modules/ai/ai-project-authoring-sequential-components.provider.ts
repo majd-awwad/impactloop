@@ -726,7 +726,14 @@ export const generateAlternativeSequentialComponentListWithRepair = async (
   try {
     return await generateAlternativeSequentialComponentList(input);
   } catch (error) {
-    if (input.repairAttempt) {
+    const repairable =
+      error instanceof AppError &&
+      [
+        'AI_RESPONSE_INVALID',
+        'AI_COMPONENT_PROPOSAL_INVALID',
+        'AI_COMPONENT_PROPOSAL_IDENTICAL',
+      ].includes(error.code);
+    if (input.repairAttempt || !repairable) {
       throw error;
     }
     return generateAlternativeSequentialComponentList({
@@ -744,7 +751,13 @@ export const generateSequentialComponentListWithRepair = async (
   try {
     return await generateSequentialComponentList(input);
   } catch (error) {
-    if (input.repairAttempt) {
+    // Regenerate once only when the provider did return a response that we can
+    // ask it to repair. Transport, timeout, auth, and rate-limit failures need
+    // normal retry semantics instead of a second identical network request.
+    const repairable =
+      error instanceof AppError &&
+      ['AI_RESPONSE_INVALID', 'AI_COMPONENT_PROPOSAL_INVALID'].includes(error.code);
+    if (input.repairAttempt || !repairable) {
       throw error;
     }
     return generateSequentialComponentList({

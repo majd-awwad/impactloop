@@ -62,8 +62,21 @@ export type AuthoringValidationDiagnostic = {
   provider: string;
   attempt: number;
   stage: AuthoringValidationStage;
-  issues: Array<{ path: string; code: string; message: string }>;
+  issues: Array<{
+    path: string;
+    code: string;
+    message: string;
+    expected?: string | null;
+    received?: string;
+  }>;
   policyReason?: string;
+};
+
+export type AuthoringProviderSchemaIssue = {
+  path: string;
+  expected: string | null;
+  received: string;
+  code: string;
 };
 
 let lastDiagnosticForTests: AuthoringValidationDiagnostic | null = null;
@@ -446,18 +459,113 @@ export const normalizeAuthoringProviderPayload = (
   };
 };
 
-const zodIssues = (error: ZodError) =>
-  error.issues.map((issue: ZodIssue) => ({
+const zodIssues = (error: ZodError) => {
+  const safeIssues = getAuthoringProviderSchemaIssues(error);
+  return error.issues.map((issue: ZodIssue, index) => ({
     path: issue.path.join('.') || '(root)',
     code: issue.code,
     message: issue.message,
+    expected: safeIssues[index]?.expected ?? null,
+    received: safeIssues[index]?.received ?? 'unknown',
   }));
+};
+
+const valueCategory = (value: unknown): string => {
+  if (value === null) {
+    return 'null';
+  }
+  if (Array.isArray(value)) {
+    return 'array';
+  }
+  return typeof value;
+};
+
+const receivedCategoryFromIssue = (
+  issue: ZodIssue,
+  raw: Record<string, unknown>,
+  response: unknown,
+): string => {
+  if (Object.prototype.hasOwnProperty.call(raw, 'input')) {
+    return valueCategory(raw.input);
+  }
+
+  let valueAtPath = response;
+  for (const pathSegment of issue.path) {
+    if (
+      valueAtPath == null ||
+      (typeof valueAtPath !== 'object' && !Array.isArray(valueAtPath))
+    ) {
+      valueAtPath = undefined;
+      break;
+    }
+    valueAtPath = (valueAtPath as Record<string | number, unknown>)[pathSegment];
+  }
+  if (valueAtPath !== undefined) {
+    return valueCategory(valueAtPath);
+  }
+
+  const received = issue.message.match(/received ([^,]+)$/i)?.[1]?.trim();
+  return received || 'unknown';
+};
+
+export const getAuthoringProviderSchemaIssues = (
+  error: ZodError,
+  response?: unknown,
+): AuthoringProviderSchemaIssue[] =>
+  error.issues.map((issue) => {
+    const raw = issue as unknown as Record<string, unknown>;
+    const values = Array.isArray(raw.values)
+      ? raw.values.filter((value): value is string => typeof value === 'string')
+      : [];
+    const expected = typeof raw.expected === 'string'
+      ? raw.expected
+      : values.length > 0
+        ? values.join(' | ')
+        : null;
+
+    return {
+      path: issue.path.join('.') || '(root)',
+      expected,
+      received: receivedCategoryFromIssue(issue, raw, response),
+      code: issue.code,
+    };
+  });
+
+export const formatAuthoringProviderSchemaRepairIssue = (
+  issues: unknown,
+): string | null => {
+  if (!Array.isArray(issues) || issues.length === 0) {
+    return null;
+  }
+
+  const rendered = issues.slice(0, 8).flatMap((issue) => {
+    if (!issue || typeof issue !== 'object') {
+      return [];
+    }
+    const value = issue as Record<string, unknown>;
+    return typeof value.path === 'string'
+      ? [`${value.path}: expected ${typeof value.expected === 'string' ? value.expected : 'the required schema type'}, received ${typeof value.received === 'string' ? value.received : 'an invalid value'} (${typeof value.code === 'string' ? value.code : 'validation_error'}).`]
+      : [];
+  });
+
+  return rendered.length > 0
+    ? `Fix these exact validation errors. ${rendered.join(' ')}`
+    : null;
+};
 
 export const recordAuthoringValidationDiagnostic = (
   diagnostic: AuthoringValidationDiagnostic,
 ) => {
   lastDiagnosticForTests = diagnostic;
-  if ((process.env.NODE_ENV ?? 'development') !== 'production') {
+  if ((process.env.NODE_ENV ?? 'development') === 'development') {
+    const providerSchemaIssues = diagnostic.stage === 'provider_schema'
+      ? diagnostic.issues.slice(0, 12).map((issue) => ({
+          path: issue.path,
+          expected: issue.expected ?? null,
+          received: issue.received ?? 'unknown',
+          code: issue.code,
+        }))
+      : [];
     logger.debug(
       {
         provider: diagnostic.provider,
@@ -465,7 +573,7 @@ export const recordAuthoringValidationDiagnostic = (
         stage: diagnostic.stage,
         issueCount: diagnostic.issues.length,
         policyReason: diagnostic.policyReason ?? null,
-        issues: diagnostic.issues.slice(0, 8),
+        providerSchemaIssues,
       },
       'Authoring clarification validation diagnostic',
     );
