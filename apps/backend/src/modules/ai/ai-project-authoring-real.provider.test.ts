@@ -835,6 +835,7 @@ describe('real authoring OpenAI-compatible provider', () => {
     );
 
     assert.doesNotMatch(lines.join(''), new RegExp(secret));
-    assert.match(lines.join(''), /\[redacted\]/);
+    assert.match(lines.join(''), /"upstreamMessageLength":/);
+    assert.match(lines.join(''), /"upstreamResponseBodyLength":/);
   });
 });

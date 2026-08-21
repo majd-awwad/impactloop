@@ -1045,6 +1045,7 @@ void main() {
       'AI_AUTHORING_CONTEXT_MISMATCH',
       'AI_AUTHORING_ACTION_NOT_ALLOWED',
       'AI_AUTHORING_PROPOSAL_STALE',
+      'AI_RESPONSE_INVALID',
       'AI_PROVIDER_RESPONSE_INVALID',
       'INVALID_ESTIMATED_DURATION',
       'AI_COMPONENT_SAVE_FAILED',
@@ -1093,6 +1094,39 @@ void main() {
         container.read(authoringWorkspaceControllerProvider).snapshot?.currentSuggestion?.turnId,
         'turn-reloaded',
       );
+    });
+
+    test('invalid AI response refreshes the persisted session before retry UI is shown', () async {
+      var loadCalls = 0;
+      final repository = ConfigurableAuthoringRepository(
+        startResponses: [
+          authoringSessionFixture(version: 1, turn: authoringTurnFixture(id: 'turn-a')),
+        ],
+        onLoad: (sessionId) async {
+          loadCalls += 1;
+          return authoringSessionFixture(version: 2, stage: 'COMPONENTS', turn: null);
+        },
+      );
+      repository.onAction = ({
+        required sessionId,
+        required action,
+        required expectedVersion,
+        turnId,
+        manualValue,
+        mode,
+        targetStage,
+      }) async {
+        throw const ApiException(
+          message: 'invalid provider response',
+          code: 'AI_RESPONSE_INVALID',
+        );
+      };
+      final container = _container(repository);
+      final controller = container.read(authoringWorkspaceControllerProvider.notifier);
+      await controller.activateAndLoad(projectId: 'project-1', conversationId: 'conv-1');
+      await controller.runAction(action: 'ACCEPT_TURN', turnId: 'turn-a');
+      expect(loadCalls, 1);
+      expect(container.read(authoringWorkspaceControllerProvider).snapshot?.session.stage, 'COMPONENTS');
     });
   });
 

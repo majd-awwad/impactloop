@@ -281,11 +281,11 @@ const logOpenAiAuthoringFailure = (
       upstreamStatus: failure.status,
       upstreamErrorCode: failure.code,
       upstreamErrorType: failure.type,
-      upstreamMessage: failure.message,
+      upstreamMessageLength: failure.message.length,
       configuredModel: runtime.model,
       resolvedProviderModel: null,
       requestEndpoint: `${runtime.openaiBaseUrl ?? 'https://api.openai.com/v1'}/chat/completions`,
-      upstreamResponseBody: failure.body,
+      upstreamResponseBodyLength: failure.body?.length ?? 0,
     },
     'AI authoring OpenAI-compatible provider request failed',
   );

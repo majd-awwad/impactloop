@@ -228,7 +228,7 @@ class AuthoringWorkspaceController extends Notifier<AuthoringWorkspaceState> {
   }
 
   Future<void> reload() async {
-    if (state.isLoading || state.isBusy) {
+    if (state.isLoading) {
       return;
     }
     final sessionId = state.key?.sessionId ?? state.response?.session.id;

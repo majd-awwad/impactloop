@@ -34,8 +34,9 @@ String aiErrorMessageForCode(String? code, String fallback) {
     case 'AI_PROVIDER_ERROR':
     case 'AI_PROVIDER_QUOTA_EXCEEDED':
     case 'AI_PROVIDER_MODEL_UNAVAILABLE':
-    case 'AI_RESPONSE_INVALID':
       return fallback;
+    case 'AI_RESPONSE_INVALID':
+      return 'The assistant returned an invalid response. The latest authoring state was refreshed; try generating the stage again.';
     case 'AI_PROVIDER_AUTH_ERROR':
       return fallback;
     case 'AI_AUTHORING_PROPOSAL_STALE':
