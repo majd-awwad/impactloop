@@ -4,6 +4,11 @@ export const LOCAL_DEMO_KEY_PREFIX = 'local-demo:';
 
 export const CASH_HANDOVER_DEMO_KEY = 'local-demo:cash-handover-v1';
 export const DRIVER_ON_THE_WAY_DEMO_KEY = 'local-demo:driver-ontheway-v1';
+export const SUPPLIER_OPERATIONS_DEMO_KEY = 'local-demo:supplier-operations-v1';
+export const DRIVER_FIGURE_357_GROUPED_DEMO_KEY =
+  'local-demo:driver-figure-357-grouped-v1';
+export const DRIVER_FIGURE_357_INCIDENT_DEMO_KEY =
+  'local-demo:driver-figure-357-incident-v1';
 export const ADMIN_AUDIT_DEMO_PREFIX = 'admin-audit-v1:';
 
 export const CASH_HANDOVER_PREFERRED_TITLES = [
@@ -15,6 +20,17 @@ export const CASH_HANDOVER_PREFERRED_TITLES = [
 
 export const DRIVER_ON_THE_WAY_PREFERRED_TITLES = [
   'Resistor Assortment Boxes',
+] as const;
+
+/** Delivery-eligible materials for Figure 3.57 (avoid CASH / ON_THE_WAY titles). */
+export const DRIVER_FIGURE_357_GROUPED_TITLES = [
+  'Assorted Jumper Wires Bundle',
+  'AA and 9V Battery Holders',
+] as const;
+
+export const DRIVER_FIGURE_357_INCIDENT_TITLES = [
+  'Copper-Clad PCB Offcuts',
+  'Mixed USB Data Cable Bundles',
 ] as const;
 
 export const TERMINAL_RESERVATION_STATUSES = [

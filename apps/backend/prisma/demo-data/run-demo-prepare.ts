@@ -18,6 +18,9 @@ import { prepareNotificationDemo } from './prepare/prepare-notifications.js';
 import { prepareCashHandoverDemo } from './prepare/prepare-cash-handover.js';
 import { prepareDriverOnTheWayDemo } from './prepare/prepare-driver-ontheway.js';
 import { prepareAdminAuditDemo } from './prepare/prepare-admin-audit.js';
+import { prepareLearningCheckDemo } from './prepare/prepare-learning-check.js';
+import { prepareSupplierOperationsDemo } from './prepare/prepare-supplier-operations.js';
+import { prepareDriverOperationsDemo } from './prepare/prepare-driver-operations.js';
 
 const STAGES = [
   {
@@ -54,6 +57,21 @@ const STAGES = [
     id: 'admin-audit',
     label: 'Admin audit log activity',
     run: prepareAdminAuditDemo,
+  },
+  {
+    id: 'learning-check',
+    label: 'Learning Check screenshot build',
+    run: prepareLearningCheckDemo,
+  },
+  {
+    id: 'supplier-operations',
+    label: 'Supplier verification, governance, pickup schedule',
+    run: prepareSupplierOperationsDemo,
+  },
+  {
+    id: 'driver-operations',
+    label: 'Driver profile, grouped history, incident history',
+    run: prepareDriverOperationsDemo,
   },
 ];
 

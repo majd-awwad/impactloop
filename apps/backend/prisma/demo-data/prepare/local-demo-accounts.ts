@@ -3,10 +3,12 @@ import { prisma } from '../../../src/database/prisma.js';
 const redact = (id: string) => `${id.slice(0, 6)}…${id.slice(-4)}`;
 
 export const MAJD_DRIVER_NAME = 'Majd Driver';
+export const MAJD_DRIVER_EMAIL = 'majd@driver.com';
 export const MAJD_LEARNER_NAME = 'Majd Learner';
 export const MAJD_LEARNER_EMAIL = 'majd@learner.com';
 export const ISRAA_LEARNER_EMAIL = 'israa@learner.com';
 export const MAJD_SUPPLIER_NAME = 'Majd Tech Reuse Workshop';
+export const MAJD_SUPPLIER_EMAIL = 'majd@supplier.com';
 export const ADMIN_EMAIL = 'admin@admin.com';
 
 export type NamedUserRow = {

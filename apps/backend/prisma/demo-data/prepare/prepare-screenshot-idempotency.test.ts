@@ -4,6 +4,11 @@ import { describe, test } from 'node:test';
 import { isReviewThreadComplete } from './prepare-reviews.js';
 import { shouldReuseEligibleHelpTarget } from './prepare-help-session.js';
 import { notificationHasDemoTag, NOTIFICATION_DEMO_TAG } from './prepare-notifications.js';
+import {
+  isLearningCheckDemoReady,
+  resolveLearningCheckDemoBuildAction,
+  shouldReuseLearningCheckBuild,
+} from './prepare-learning-check.js';
 
 describe('review demo idempotency', () => {
   test('a 5-star review plus the three-comment thread is considered complete', () => {
@@ -55,5 +60,83 @@ describe('notification demo idempotency', () => {
       true,
     );
     assert.equal(notificationHasDemoTag({ other: true }), false);
+  });
+});
+
+describe('learning-check demo readiness', () => {
+  test('requires an active build, READY session, and START/STEP/FINAL coverage', () => {
+    assert.equal(
+      isLearningCheckDemoReady({
+        hasActiveBuild: true,
+        sessionReady: true,
+        startCount: 2,
+        hasPlaceTheLedStepAssignment: true,
+        finalCount: 3,
+        buildCompleted: false,
+      }),
+      true,
+    );
+    assert.equal(
+      isLearningCheckDemoReady({
+        hasActiveBuild: true,
+        sessionReady: true,
+        startCount: 2,
+        hasPlaceTheLedStepAssignment: true,
+        finalCount: 3,
+        buildCompleted: true,
+      }),
+      false,
+    );
+    assert.equal(
+      isLearningCheckDemoReady({
+        hasActiveBuild: true,
+        sessionReady: true,
+        startCount: 0,
+        hasPlaceTheLedStepAssignment: true,
+        finalCount: 3,
+        buildCompleted: false,
+      }),
+      false,
+    );
+    assert.equal(
+      isLearningCheckDemoReady({
+        hasActiveBuild: true,
+        sessionReady: true,
+        startCount: 2,
+        hasPlaceTheLedStepAssignment: false,
+        finalCount: 3,
+        buildCompleted: false,
+      }),
+      false,
+    );
+  });
+
+  test('reuses an existing active Simple LED Circuit build', () => {
+    assert.equal(shouldReuseLearningCheckBuild('build-1'), true);
+    assert.equal(shouldReuseLearningCheckBuild(null), false);
+  });
+
+  test('starts a new attempt when the previous LED build is completed or archived', () => {
+    assert.equal(
+      resolveLearningCheckDemoBuildAction({
+        activeBuildId: 'active-1',
+        hasExistingBuild: true,
+      }),
+      'reuse-active',
+    );
+    assert.equal(
+      resolveLearningCheckDemoBuildAction({
+        activeBuildId: null,
+        hasExistingBuild: false,
+      }),
+      'start-first',
+    );
+    assert.equal(
+      resolveLearningCheckDemoBuildAction({
+        activeBuildId: null,
+        hasExistingBuild: true,
+      }),
+      'start-again',
+    );
   });
 });
