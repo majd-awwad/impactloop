@@ -12659,7 +12659,7 @@ abstract class AppLocalizations {
   /// No description provided for @supplierVerifySubmittedTitle.
   ///
   /// In en, this message translates to:
-  /// **'Supplier verification submitted'**
+  /// **'Verification request submitted'**
   String get supplierVerifySubmittedTitle;
 
   /// No description provided for @supplierVerifyLoadStatusFailed.
@@ -12671,7 +12671,7 @@ abstract class AppLocalizations {
   /// No description provided for @supplierVerifyPendingSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Your supplier account is waiting for admin approval. You will be able to publish materials after your account is approved.'**
+  /// **'Your supplier account is awaiting admin review. You will be able to publish materials after your account is approved.'**
   String get supplierVerifyPendingSubtitle;
 
   /// No description provided for @supplierVerifyStillWaitingApproval.
@@ -12679,6 +12679,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your supplier account is still waiting for admin approval.'**
   String get supplierVerifyStillWaitingApproval;
+
+  /// No description provided for @supplierVerifyAccountCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Account created'**
+  String get supplierVerifyAccountCreated;
+
+  /// No description provided for @supplierVerifyDocumentSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier document submitted'**
+  String get supplierVerifyDocumentSubmitted;
+
+  /// No description provided for @supplierVerifyReviewInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification under review'**
+  String get supplierVerifyReviewInProgress;
+
+  /// No description provided for @supplierVerifyDocumentReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification document received'**
+  String get supplierVerifyDocumentReceived;
 
   /// No description provided for @supplierVerifyRejectedTitle.
   ///

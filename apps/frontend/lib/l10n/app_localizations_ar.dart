@@ -7337,18 +7337,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get materialRequestsNav => 'طلبات المواد';
 
   @override
-  String get supplierVerifySubmittedTitle => 'تم إرسال تحقق المورد';
+  String get supplierVerifySubmittedTitle => 'تم إرسال طلب التحقق';
 
   @override
   String get supplierVerifyLoadStatusFailed => 'تعذّر تحميل حالة التحقق.';
 
   @override
   String get supplierVerifyPendingSubtitle =>
-      'حساب المورد بانتظار موافقة المسؤول. ستتمكن من نشر المواد بعد الموافقة على حسابك.';
+      'حساب المورد بانتظار مراجعة المسؤول. ستتمكن من نشر المواد بعد الموافقة على حسابك.';
 
   @override
   String get supplierVerifyStillWaitingApproval =>
       'حساب المورد لا يزال بانتظار موافقة المسؤول.';
+
+  @override
+  String get supplierVerifyAccountCreated => 'تم إنشاء الحساب';
+
+  @override
+  String get supplierVerifyDocumentSubmitted => 'تم إرسال ملف المورد';
+
+  @override
+  String get supplierVerifyReviewInProgress => 'التحقق قيد المراجعة';
+
+  @override
+  String get supplierVerifyDocumentReceived => 'تم رفع مستند التحقق';
 
   @override
   String get supplierVerifyRejectedTitle => 'تم رفض تحقق المورد';

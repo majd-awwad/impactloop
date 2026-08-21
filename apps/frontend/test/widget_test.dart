@@ -418,6 +418,37 @@ void main() {
     },
   );
 
+  testWidgets(
+    'supplier profile load and auth refresh do not duplicate navigator page keys',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1400, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final router = await pumpAuthenticatedRouter(
+        tester,
+        _testUser(roles: const ['SUPPLIER'], activeRole: 'SUPPLIER'),
+      );
+
+      router.go('/supplier/profile');
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        '/supplier/profile',
+      );
+
+      router.push('/supplier/profile');
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        '/supplier/profile',
+      );
+    },
+  );
+
   testWidgets('logged out users are redirected from /home to /login', (
     tester,
   ) async {

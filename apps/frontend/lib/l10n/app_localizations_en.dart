@@ -7424,7 +7424,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get materialRequestsNav => 'Material requests';
 
   @override
-  String get supplierVerifySubmittedTitle => 'Supplier verification submitted';
+  String get supplierVerifySubmittedTitle => 'Verification request submitted';
 
   @override
   String get supplierVerifyLoadStatusFailed =>
@@ -7432,11 +7432,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supplierVerifyPendingSubtitle =>
-      'Your supplier account is waiting for admin approval. You will be able to publish materials after your account is approved.';
+      'Your supplier account is awaiting admin review. You will be able to publish materials after your account is approved.';
 
   @override
   String get supplierVerifyStillWaitingApproval =>
       'Your supplier account is still waiting for admin approval.';
+
+  @override
+  String get supplierVerifyAccountCreated => 'Account created';
+
+  @override
+  String get supplierVerifyDocumentSubmitted => 'Supplier document submitted';
+
+  @override
+  String get supplierVerifyReviewInProgress => 'Verification under review';
+
+  @override
+  String get supplierVerifyDocumentReceived => 'Verification document received';
 
   @override
   String get supplierVerifyRejectedTitle => 'Supplier verification rejected';
