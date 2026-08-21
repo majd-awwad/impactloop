@@ -753,6 +753,8 @@ class _AiSequentialAuthoringPanelState
                   padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.sm),
                   child: _AuthoringSyncFailedBanner(
                     onReload: () => workspace.reload(),
+                    isReloading: workspaceState.isLoading ||
+                        workspaceState.activeAction == 'RELOAD_DRAFT',
                   ),
                 ),
               if (saveSuccessVisible)
@@ -2250,9 +2252,13 @@ class _AuthoringErrorBanner extends StatelessWidget {
 }
 
 class _AuthoringSyncFailedBanner extends StatelessWidget {
-  const _AuthoringSyncFailedBanner({required this.onReload});
+  const _AuthoringSyncFailedBanner({
+    required this.onReload,
+    required this.isReloading,
+  });
 
   final VoidCallback onReload;
+  final bool isReloading;
 
   @override
   Widget build(BuildContext context) {
@@ -2276,8 +2282,14 @@ class _AuthoringSyncFailedBanner extends StatelessWidget {
               ),
             ),
             TextButton(
-              onPressed: onReload,
-              child: Text(AiL10n.authoringSequentialReloadDraft.resolve(context)),
+              onPressed: isReloading ? null : onReload,
+              child: isReloading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(AiL10n.authoringSequentialReloadDraft.resolve(context)),
             ),
           ],
         ),

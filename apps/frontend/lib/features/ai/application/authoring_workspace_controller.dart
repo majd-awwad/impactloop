@@ -228,6 +228,9 @@ class AuthoringWorkspaceController extends Notifier<AuthoringWorkspaceState> {
   }
 
   Future<void> reload() async {
+    if (state.isLoading || state.isBusy) {
+      return;
+    }
     final sessionId = state.key?.sessionId ?? state.response?.session.id;
     final key = state.key;
     if (sessionId == null || key == null) {
@@ -237,9 +240,14 @@ class AuthoringWorkspaceController extends Notifier<AuthoringWorkspaceState> {
     final workspaceGen = state.workspaceGeneration;
     state = state.copyWith(
       lifecycle: AuthoringWorkspaceLifecycle.loading,
+      isBusy: true,
+      activeAction: 'RELOAD_DRAFT',
       clearActionError: true,
     );
     try {
+      // The session load reads the owning persisted project and returns its
+      // canonical draft. It is intentionally read-only: no new session or
+      // draft is created by this recovery action.
       final response = await _repository.loadAuthoringSession(sessionId: sessionId);
       if (!_matchesGeneration(generation, key, workspaceGen)) {
         return;
@@ -247,14 +255,21 @@ class AuthoringWorkspaceController extends Notifier<AuthoringWorkspaceState> {
       _applyResponse(response, generation: generation);
       _ingestConversationMessages(response);
       state = state.copyWith(lifecycle: AuthoringWorkspaceLifecycle.ready);
+      _scheduleSaveSyncCheck(response);
     } on ApiException catch (error) {
       if (!_matchesGeneration(generation, key, workspaceGen)) {
         return;
       }
       state = state.copyWith(
-        lifecycle: AuthoringWorkspaceLifecycle.failed,
+        // Keep the existing workspace and local draft visible when a recovery
+        // fetch fails. The localized action error is rendered in place.
+        lifecycle: AuthoringWorkspaceLifecycle.ready,
         actionError: _mapError(error),
       );
+    } finally {
+      if (_matchesGeneration(generation, key, workspaceGen)) {
+        state = state.copyWith(isBusy: false, clearActiveAction: true);
+      }
     }
   }
 
@@ -838,6 +853,7 @@ class AuthoringWorkspaceController extends Notifier<AuthoringWorkspaceState> {
         code == 'AI_AUTHORING_TURN_SUPERSEDED' ||
         code == 'AI_AUTHORING_CONTEXT_MISMATCH' ||
         code == 'AI_AUTHORING_PROPOSAL_STALE' ||
+        code == 'AI_RESPONSE_INVALID' ||
         code == 'AI_AUTHORING_STEP_GENERATION_FAILED' ||
         code == 'AI_AUTHORING_STEP_GENERATION_TIMEOUT' ||
         code == 'AI_PROVIDER_TIMEOUT';

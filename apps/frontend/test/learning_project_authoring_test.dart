@@ -763,6 +763,50 @@ void main() {
     expect(find.text('Your project space is ready'), findsNothing);
   });
 
+  testWidgets('mobile RTL authoring toolbar wraps without RenderFlex overflow', (
+    tester,
+  ) async {
+    final previousOnError = FlutterError.onError;
+    final overflowErrors = <String>[];
+    FlutterError.onError = (details) {
+      final message = '${details.exception}\n${details.summary}';
+      if (message.contains('RenderFlex overflowed') ||
+          message.contains('overflowed by')) {
+        overflowErrors.add(message);
+        return;
+      }
+      previousOnError?.call(details);
+    };
+    addTearDown(() => FlutterError.onError = previousOnError);
+
+    tester.view.resetPhysicalSize();
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final repository = _AuthoringTestRepository(
+      categories: const [],
+      draftSubmission: _draftSubmission(
+        title:
+            'مشروع إنذار باب أردوينو تعليمي طويل لاختبار التفاف عنوان مساحة العمل على شاشة الهاتف',
+      ),
+    );
+    final aiRepository = _RecordingAiRepository();
+
+    await tester.pumpWidget(
+      _wrap(
+        const SizedBox.shrink(),
+        repository: repository,
+        aiRepository: aiRepository,
+        locale: const Locale('ar'),
+        initialLocation: learningProjectAuthoringRoute('project-1'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(overflowErrors, isEmpty);
+  });
+
   testWidgets('full-screen assistant bootstraps clarification and enables composer', (
     tester,
   ) async {

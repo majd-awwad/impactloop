@@ -1662,6 +1662,7 @@ class _AuthoringWorkspaceToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
     final wide = isWideAuthoringLayout(context);
+    final compact = MediaQuery.sizeOf(context).width < 600;
 
     return Material(
       color: palette.cardSurface,
@@ -1675,85 +1676,138 @@ class _AuthoringWorkspaceToolbar extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: palette.borderSubtle)),
         ),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: LearningAuthoringL10n.back.resolve(context),
-              onPressed: onBack,
-              icon: const Icon(Icons.arrow_back_rounded),
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    LearningAuthoringL10n.workspaceTitle.resolve(context),
-                    style: AppTextStyles.title(
-                      context,
-                    ).copyWith(color: palette.textPrimary),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Row(
-                    children: [
-                      AppStatusBadge(
-                        label: LearningAuthoringL10n.draftStatus.resolve(
-                          context,
-                        ),
-                        tone: AppStatusTone.neutral,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      ValueListenableBuilder<AuthoringWorkspaceSaveState>(
-                        valueListenable: saveStateListenable,
-                        builder: (context, saveState, _) =>
-                            _SaveStateChip(saveState: saveState),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: ContentDirectionalText(
-                          projectTitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.label(
-                            context,
-                          ).copyWith(color: palette.textSecondary),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            if (showAssistantAction)
-              wide
-                  ? TextButton.icon(
-                      onPressed: onToggleAssistant,
-                      icon: Icon(
-                        assistantPanelOpen
-                            ? Icons.close_fullscreen_rounded
-                            : Icons.auto_awesome_outlined,
-                      ),
-                      label: Text(
-                        assistantPanelOpen
-                            ? LearningAuthoringL10n.collapseAssistant.resolve(
-                                context,
-                              )
-                            : LearningAuthoringL10n.showAssistant.resolve(
-                                context,
-                              ),
-                      ),
-                    )
-                  : FilledButton.icon(
-                      onPressed: onOpenAssistant,
-                      icon: const Icon(Icons.auto_awesome_outlined),
-                      label: Text(
-                        LearningAuthoringL10n.openAiAssistant.resolve(context),
-                      ),
-                    ),
-          ],
-        ),
+        child: compact
+            ? _buildCompactToolbar(context, palette)
+            : _buildWideToolbar(context, palette, wide),
       ),
     );
   }
+
+  Widget _buildWideToolbar(
+    BuildContext context,
+    LearningUiPalette palette,
+    bool wide,
+  ) => Row(
+    children: [
+      IconButton(
+        tooltip: LearningAuthoringL10n.back.resolve(context),
+        onPressed: onBack,
+        icon: const Icon(Icons.arrow_back_rounded),
+      ),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              LearningAuthoringL10n.workspaceTitle.resolve(context),
+              style: AppTextStyles.title(context).copyWith(color: palette.textPrimary),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Row(
+              children: [
+                AppStatusBadge(
+                  label: LearningAuthoringL10n.draftStatus.resolve(context),
+                  tone: AppStatusTone.neutral,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                ValueListenableBuilder<AuthoringWorkspaceSaveState>(
+                  valueListenable: saveStateListenable,
+                  builder: (context, saveState, _) =>
+                      _SaveStateChip(saveState: saveState),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: ContentDirectionalText(
+                    projectTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.label(
+                      context,
+                    ).copyWith(color: palette.textSecondary),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      if (showAssistantAction)
+        wide
+            ? TextButton.icon(
+                onPressed: onToggleAssistant,
+                icon: Icon(
+                  assistantPanelOpen
+                      ? Icons.close_fullscreen_rounded
+                      : Icons.auto_awesome_outlined,
+                ),
+                label: Text(
+                  assistantPanelOpen
+                      ? LearningAuthoringL10n.collapseAssistant.resolve(context)
+                      : LearningAuthoringL10n.showAssistant.resolve(context),
+                ),
+              )
+            : FilledButton.icon(
+                onPressed: onOpenAssistant,
+                icon: const Icon(Icons.auto_awesome_outlined),
+                label: Text(LearningAuthoringL10n.openAiAssistant.resolve(context)),
+              ),
+    ],
+  );
+
+  Widget _buildCompactToolbar(BuildContext context, LearningUiPalette palette) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Row(
+        children: [
+          IconButton(
+            tooltip: LearningAuthoringL10n.back.resolve(context),
+            onPressed: onBack,
+            icon: const Icon(Icons.arrow_back_rounded),
+          ),
+          Expanded(
+            child: Text(
+              LearningAuthoringL10n.workspaceTitle.resolve(context),
+              style: AppTextStyles.title(context).copyWith(color: palette.textPrimary),
+              softWrap: true,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: AppSpacing.xs),
+      Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.xs,
+        children: [
+          AppStatusBadge(
+            label: LearningAuthoringL10n.draftStatus.resolve(context),
+            tone: AppStatusTone.neutral,
+          ),
+          ValueListenableBuilder<AuthoringWorkspaceSaveState>(
+            valueListenable: saveStateListenable,
+            builder: (context, saveState, _) => _SaveStateChip(saveState: saveState),
+          ),
+        ],
+      ),
+      const SizedBox(height: AppSpacing.xs),
+      ContentDirectionalText(
+        projectTitle,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: AppTextStyles.label(context).copyWith(color: palette.textSecondary),
+      ),
+      if (showAssistantAction) ...[
+        const SizedBox(height: AppSpacing.sm),
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: FilledButton.icon(
+            onPressed: onOpenAssistant,
+            icon: const Icon(Icons.auto_awesome_outlined),
+            label: Text(LearningAuthoringL10n.openAiAssistant.resolve(context)),
+          ),
+        ),
+      ],
+    ],
+  );
 }
 
 class _SaveStateChip extends StatelessWidget {

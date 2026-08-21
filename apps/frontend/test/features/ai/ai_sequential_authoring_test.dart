@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,9 +11,12 @@ import 'package:frontend/features/ai/application/authoring_workspace_controller.
 import 'package:frontend/features/ai/data/ai_repository.dart';
 import 'package:frontend/features/ai/domain/ai_helpers.dart';
 import 'package:frontend/features/ai/domain/ai_models.dart';
+import 'package:frontend/features/ai/domain/authoring_session_models.dart';
 import 'package:frontend/features/ai/presentation/l10n/ai_l10n.dart';
 import 'package:frontend/features/ai/presentation/widgets/ai_content_blocks.dart';
 import 'package:frontend/features/ai/presentation/widgets/ai_sequential_authoring_panel.dart';
+
+import 'support/authoring_workspace_fixtures.dart';
 
 void main() {
   group('AiAuthoringSession model', () {
@@ -1041,7 +1046,7 @@ void main() {
       });
     }
 
-    Future<void> pumpPanel(WidgetTester tester) async {
+    Future<ProviderContainer> pumpPanel(WidgetTester tester) async {
       repository.sequentialSnapshot = componentSnapshot();
       await tester.pumpWidget(
         ProviderScope(
@@ -1081,8 +1086,9 @@ void main() {
             conversationId: 'conv-panel',
             snapshot: repository.sequentialSnapshot!,
             sessionId: 'sess-components',
-          );
+      );
       await tester.pumpAndSettle();
+      return container;
     }
 
     testWidgets('shows saved and proposed component labels with accept action', (tester) async {
@@ -1095,6 +1101,95 @@ void main() {
       expect(find.textContaining('Arduino Uno'), findsOneWidget);
       expect(find.text('COMPONENTS'), findsNothing);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('reload draft fetches the persisted session once and replaces stale components', (
+      tester,
+    ) async {
+      repository.pendingAuthoringSessionLoad = Completer<AuthoringSessionResponse>();
+      repository.loadedAuthoringSession = authoringSessionFixture(
+        projectId: 'proj-1',
+        conversationId: 'conv-panel',
+        sessionId: 'sess-components',
+        version: 2,
+        stage: 'COMPONENTS',
+        turn: authoringTurnFixture(
+          id: 'turn-components-reloaded',
+          stage: 'COMPONENTS',
+          payload: const {
+            'components': [
+              {
+                'componentName': 'Soil moisture sensor',
+                'materialType': 'Sensor',
+                'quantity': 1,
+                'unit': 'piece',
+                'componentRole': 'REQUIRED_MATERIAL',
+                'isRequired': true,
+                'canBeSubstituted': false,
+              },
+            ],
+          },
+        ),
+        canonicalProject: canonicalProjectFixture(
+          projectId: 'proj-1',
+          updatedAt: '2026-07-17T12:10:00.000Z',
+          components: const [
+            AiAuthoringProposalComponent(
+              id: 'comp-saved',
+              componentName: 'Soil moisture sensor',
+              materialType: 'Sensor',
+              quantity: 1,
+              unit: 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              isRequired: true,
+              canBeSubstituted: false,
+            ),
+          ],
+        ),
+      );
+      final container = await pumpPanel(tester);
+      container.read(authoringSaveSyncFailedProvider.notifier).markFailed();
+      await tester.pump();
+
+      final reloadNotice =
+          find.text('Components were saved on the server. Reload the draft.');
+      final panelScroll = find.descendant(
+        of: find.byType(AiSequentialAuthoringPanel),
+        matching: find.byType(Scrollable),
+      ).first;
+      await tester.scrollUntilVisible(reloadNotice, 300, scrollable: panelScroll);
+      expect(reloadNotice, findsOneWidget);
+      await tester.tap(find.text(AiL10n.authoringSequentialReloadDraft.en));
+      await tester.pump();
+      await container.read(authoringWorkspaceControllerProvider.notifier).reload();
+      expect(repository.authoringSessionLoadCalls, 1);
+
+      repository.pendingAuthoringSessionLoad!.complete(repository.loadedAuthoringSession);
+      await tester.pumpAndSettle();
+
+      final savedComponent = find.textContaining('Soil moisture sensor');
+      await tester.drag(panelScroll, const Offset(0, 600));
+      await tester.pumpAndSettle();
+      expect(savedComponent, findsWidgets);
+      expect(find.textContaining('Ultrasonic sensor'), findsNothing);
+      expect(repository.authoringSessionLoadCalls, 1);
+      expect(repository.authoringSessionStartCalls, 0);
+
+      final update = container.read(authoringCanonicalProjectUpdateProvider);
+      container
+          .read(authoringWorkspaceControllerProvider.notifier)
+          .acknowledgeEditorSynchronized(
+            ScopedAuthoringEditorMirror(
+              projectId: update!.projectId,
+              canonicalUpdatedAt: update.canonicalUpdatedAt,
+              snapshot: update.snapshot,
+            ),
+          );
+      await tester.pump();
+      expect(
+        find.text('Components were saved on the server. Reload the draft.'),
+        findsNothing,
+      );
     });
 
     testWidgets('shows one-by-one and suggest another actions without overflow', (tester) async {
@@ -1744,6 +1839,31 @@ class _SequentialMockRepository implements AiRepository {
   String? lastSequentialTurnId;
   Object? lastSequentialManualValue;
   ApiException? nextSequentialError;
+  AuthoringSessionResponse? loadedAuthoringSession;
+  Completer<AuthoringSessionResponse>? pendingAuthoringSessionLoad;
+  var authoringSessionLoadCalls = 0;
+  var authoringSessionStartCalls = 0;
+
+  @override
+  Future<AuthoringSessionResponse> startAuthoringSession({
+    required String conversationId,
+  }) async {
+    authoringSessionStartCalls += 1;
+    return loadedAuthoringSession ??
+        authoringSessionFixture(conversationId: conversationId);
+  }
+
+  @override
+  Future<AuthoringSessionResponse> loadAuthoringSession({
+    required String sessionId,
+  }) async {
+    authoringSessionLoadCalls += 1;
+    final pending = pendingAuthoringSessionLoad;
+    if (pending != null) {
+      return pending.future;
+    }
+    return loadedAuthoringSession ?? authoringSessionFixture(sessionId: sessionId);
+  }
 
   @override
   Future<AiAuthoringSnapshot?> loadSequentialAuthoringState({
