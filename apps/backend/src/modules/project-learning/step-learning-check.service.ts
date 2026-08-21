@@ -9,6 +9,7 @@ import {
   learningAssignmentDetailInclude,
   type StepLearningAssignmentRecord,
 } from './build-learning-session.repository.js';
+import { setupLearningSessionForBuild } from './build-learning-session-setup.service.js';
 import {
   skipLearningAssignment,
   submitLearningAnswerAttempt,
@@ -87,37 +88,33 @@ const loadStepLearningCheckContext = async (input: {
     throw new AppError('Project step not found.', 404, 'PROJECT_STEP_NOT_FOUND');
   }
 
-  const stepProgress = await prisma.projectBuildStepProgress.findUnique({
-    where: {
-      buildId_projectStepId: {
-        buildId: build.id,
-        projectStepId: step.id,
-      },
-    },
-    select: {
-      completedAt: true,
-    },
-  });
-
-  const isStepCompleted = stepProgress?.completedAt != null;
-
-  const assignment = await findOwnedStepLearningAssignment({
+  let assignment = await findOwnedStepLearningAssignment({
     buildId: build.id,
     learnerId: input.learnerId,
     projectStepId: input.stepId,
   });
 
+  if (!assignment) {
+    await setupLearningSessionForBuild({
+      buildId: build.id,
+      learnerId: input.learnerId,
+    });
+    assignment = await findOwnedStepLearningAssignment({
+      buildId: build.id,
+      learnerId: input.learnerId,
+      projectStepId: input.stepId,
+    });
+  }
+
   return {
     build,
     step,
-    isStepCompleted,
     assignment,
   };
 };
 
 const assertStepCheckAccessible = (input: {
   assignment: StepLearningAssignmentRecord | null;
-  isStepCompleted: boolean;
 }) => {
   if (!input.assignment) {
     throw new AppError(
@@ -142,14 +139,6 @@ const assertStepCheckAccessible = (input: {
       'LEARNING_ASSIGNMENT_STEP_MISMATCH',
     );
   }
-
-  if (!input.isStepCompleted) {
-    throw new AppError(
-      'Complete this step before opening the learning check.',
-      409,
-      'STEP_NOT_COMPLETED',
-    );
-  }
 };
 
 const mapStepCheck = (
@@ -171,14 +160,6 @@ export const getStepLearningCheckForBuild = async (input: {
 
   if (!context.assignment) {
     return null;
-  }
-
-  if (!context.isStepCompleted) {
-    throw new AppError(
-      'Complete this step before opening the learning check.',
-      409,
-      'STEP_NOT_COMPLETED',
-    );
   }
 
   if (context.assignment.stage !== 'STEP') {
@@ -216,7 +197,6 @@ export const viewStepLearningCheckHint = async (input: {
   assertBuildAllowsStepCheckMutation(context.build.status);
   assertStepCheckAccessible({
     assignment: context.assignment,
-    isStepCompleted: context.isStepCompleted,
   });
 
   const assignment = await viewLearningAssignmentHint({
@@ -258,7 +238,6 @@ export const submitStepLearningCheckAnswer = async (input: {
   assertBuildAllowsStepCheckMutation(context.build.status);
   assertStepCheckAccessible({
     assignment: context.assignment,
-    isStepCompleted: context.isStepCompleted,
   });
 
   const assignment = context.assignment!;
@@ -317,7 +296,6 @@ export const skipStepLearningCheck = async (input: {
   assertBuildAllowsStepCheckMutation(context.build.status);
   assertStepCheckAccessible({
     assignment: context.assignment,
-    isStepCompleted: context.isStepCompleted,
   });
 
   const assignment = await skipLearningAssignment({
@@ -341,7 +319,6 @@ export const getStepLearningCheckAiHandoff = async (input: {
   const context = await loadStepLearningCheckContext(input);
   assertStepCheckAccessible({
     assignment: context.assignment,
-    isStepCompleted: context.isStepCompleted,
   });
 
   const assignment = context.assignment!;

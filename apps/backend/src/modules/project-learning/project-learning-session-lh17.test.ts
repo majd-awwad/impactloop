@@ -11,6 +11,7 @@ import {
   updateProjectBuildItemById,
 } from '../learning-projects/learning-projects.service.js';
 import { setupLearningSessionForBuild } from './build-learning-session-setup.service.js';
+import { getOwnedLearningSessionForBuild } from './build-learning-session.service.js';
 import { setProjectLearningPackGeneratorForTests } from './project-learning-pack-generator.factory.js';
 import { uniqueLearningTestEmail, uniqueLearningTestPhone } from './project-learning-test-ids.js';
 import { MockProjectLearningPackGeneratorProvider } from './project-learning-pack-generator.mock.provider.js';
@@ -233,22 +234,101 @@ describe('project learning step checkpoints LH-17', () => {
     assert.equal(stepLearningCheckDtoExcludesCorrectAnswerBeforeSubmission(check), true);
   });
 
-  test('incomplete step rejects active STEP check', async () => {
+  test('current incomplete step still returns assigned STEP check', async () => {
     const author = await createAuthor();
     const learner = await createLearner('incomplete');
     const project = await createPublishedProject(author.id);
     await prepareReadyBuildWithSession(learner.id, project.id);
 
-    await assert.rejects(
-      () =>
-        getStepLearningCheckForBuild({
-          projectId: project.id,
-          stepId: project.steps[0]!.id,
-          learnerId: learner.id,
-        }),
-      (error: unknown) =>
-        error instanceof AppError && error.code === 'STEP_NOT_COMPLETED',
+    const check = await getStepLearningCheckForBuild({
+      projectId: project.id,
+      stepId: project.steps[0]!.id,
+      learnerId: learner.id,
+    });
+
+    assert.ok(check);
+    assert.equal(check.stage, 'STEP');
+    assert.equal(check.stepId, project.steps[0]!.id);
+    assert.equal(check.uiState, 'NOT_ATTEMPTED');
+    assert.ok((check.question.options?.length ?? 0) >= 2);
+  });
+
+  test('missing session is recovered without duplicating assignments', async () => {
+    const author = await createAuthor();
+    const learner = await createLearner('recover');
+    const project = await createPublishedProject(author.id);
+    const build = await startProjectBuildById(project.id, learner.id);
+    ids.builds.push(build.id);
+
+    for (const item of build.items) {
+      await updateProjectBuildItemById(project.id, learner.id, item.id, {
+        status: 'ALREADY_OWNED',
+        learnerNote: null,
+      });
+    }
+
+    const first = await getStepLearningCheckForBuild({
+      projectId: project.id,
+      stepId: project.steps[0]!.id,
+      learnerId: learner.id,
+    });
+    assert.ok(first);
+    assert.equal(first.stage, 'STEP');
+    assert.equal(first.stepId, project.steps[0]!.id);
+
+    const session = await getOwnedLearningSessionForBuild(build.id, learner.id);
+    assert.ok(session);
+    const startCount = session.assignments.filter((item) => item.stage === 'START').length;
+    const stepCount = session.assignments.filter((item) => item.stage === 'STEP').length;
+    const finalCount = session.assignments.filter((item) => item.stage === 'FINAL').length;
+    assert.ok(startCount >= 1);
+    assert.ok(stepCount >= 1);
+    assert.ok(finalCount >= 1);
+    assert.ok(
+      session.assignments.some(
+        (item) => item.stage === 'STEP' && item.projectStepId === project.steps[0]!.id,
+      ),
     );
+
+    const assignmentIds = session.assignments.map((item) => item.id).sort();
+    const second = await getStepLearningCheckForBuild({
+      projectId: project.id,
+      stepId: project.steps[0]!.id,
+      learnerId: learner.id,
+    });
+    assert.ok(second);
+    assert.equal(second.assignmentId, first.assignmentId);
+
+    const rerun = await getOwnedLearningSessionForBuild(build.id, learner.id);
+    assert.equal(rerun?.id, session.id);
+    assert.deepEqual(
+      rerun?.assignments.map((item) => item.id).sort(),
+      assignmentIds,
+    );
+  });
+
+  test('STEP assignment maps to the requested project step', async () => {
+    const author = await createAuthor();
+    const learner = await createLearner('step-map');
+    const project = await createPublishedProject(author.id);
+    await prepareReadyBuildWithSession(learner.id, project.id);
+
+    const first = await getStepLearningCheckForBuild({
+      projectId: project.id,
+      stepId: project.steps[0]!.id,
+      learnerId: learner.id,
+    });
+    const second = await getStepLearningCheckForBuild({
+      projectId: project.id,
+      stepId: project.steps[1]!.id,
+      learnerId: learner.id,
+    });
+
+    assert.ok(first);
+    assert.ok(second);
+    assert.equal(first.stepId, project.steps[0]!.id);
+    assert.equal(second.stepId, project.steps[1]!.id);
+    assert.notEqual(first.assignmentId, second.assignmentId);
   });
 
   test('STEP hint returns localized hint without answer attempt', async () => {
