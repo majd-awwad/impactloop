@@ -205,7 +205,18 @@ Future<AdminInvitationCreateResult?> _resendInvitation(
     );
     return result;
   } catch (error) {
+    ref.invalidate(adminInvitationsProvider);
     if (!context.mounted) return null;
+    if (error is ApiException && error.code == 'EMAIL_DELIVERY_FAILED') {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Invitation was saved, but the email could not be delivered. Update the mail configuration, then resend it from the invitations list.',
+          ),
+        ),
+      );
+      return null;
+    }
     messenger.showSnackBar(
       SnackBar(content: Text(AdminL10n.of(context).localizedError(error))),
     );
@@ -2256,6 +2267,19 @@ class _CreateInvitationDialogState
     } catch (error) {
       if (!mounted) return;
       setState(() => _submitting = false);
+
+      if (error is ApiException && error.code == 'EMAIL_DELIVERY_FAILED') {
+        widget.onCreated();
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Invitation was saved, but the email could not be delivered. Update the mail configuration, then resend it from the invitations list.',
+            ),
+          ),
+        );
+        return;
+      }
 
       if (error is ApiException &&
           error.code == 'DUPLICATE_PENDING_INVITATION') {

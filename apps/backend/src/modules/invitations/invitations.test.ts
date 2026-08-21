@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
+import type { Request, Response } from 'express';
 
+import { createAdminInvitation } from '../admin/admin-invitations.controller.js';
 import type { EmailInvitationProvider } from './email/email-invitation-provider.js';
 import {
   getEmailInvitationProviderName,
@@ -22,6 +24,7 @@ import { prisma } from '../../database/prisma.js';
 import { hashPassword } from '../../utils/password.js';
 import { hashToken } from '../../utils/token.js';
 import { AppError } from '../../utils/app-error.js';
+import { buildInvitationEmailContent } from './email/mock-email-invitation-provider.js';
 
 const TEST_MARKER = '[test-invitations]';
 
@@ -77,6 +80,31 @@ class RecordingEmailProvider implements EmailInvitationProvider {
     };
   }
 }
+
+const createResponseRecorder = (): {
+  response: Response;
+  getStatusCode: () => number;
+  getBody: () => unknown;
+} => {
+  let statusCode = 200;
+  let body: unknown;
+  const response = {
+    status(code: number) {
+      statusCode = code;
+      return this;
+    },
+    json(payload: unknown) {
+      body = payload;
+      return this;
+    },
+  } as unknown as Response;
+
+  return {
+    response,
+    getStatusCode: () => statusCode,
+    getBody: () => body,
+  };
+};
 
 before(() => {
   process.env.EMAIL_PROVIDER = 'mock';
@@ -199,6 +227,94 @@ describe('admin email invitations', () => {
     const stored = await prisma.roleInvitation.findUnique({ where: { id: created.id } });
     assert.equal(stored?.sendStatus, 'FAILED');
     assert.equal(stored?.sendError, 'SMTP connection failed');
+  });
+
+  test('API reports a delivery failure while retaining the invitation for resend', async () => {
+    const provider = new RecordingEmailProvider();
+    provider.mode = 'failure';
+    setEmailInvitationProviderForTests(provider);
+    const admin = await createAdminUser();
+    const email = `${TEST_MARKER}-api-delivery-failure-${Date.now()}@impactloop.test`;
+    const { response, getStatusCode, getBody } = createResponseRecorder();
+
+    await assert.rejects(
+      () =>
+        createAdminInvitation(
+          {
+            auth: { sub: admin.id },
+            body: {
+              role: 'DRIVER',
+              recipientEmail: email,
+              expiresInMinutes: 60,
+            },
+          } as Request,
+          response,
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 424);
+        assert.equal(error.code, 'EMAIL_DELIVERY_FAILED');
+        return true;
+      },
+    );
+
+    assert.equal(getStatusCode(), 200);
+    assert.equal(getBody(), undefined);
+
+    const stored = await prisma.roleInvitation.findFirst({
+      where: { targetEmail: email.toLowerCase(), targetRole: 'DRIVER' },
+    });
+    ids.invitations.push(stored!.id);
+    assert.equal(stored?.sendStatus, 'FAILED');
+    assert.equal(stored?.sendError, 'SMTP connection failed');
+  });
+
+  test('real-provider API response does not expose the raw invitation link', async () => {
+    const provider = new RecordingEmailProvider();
+    setEmailInvitationProviderForTests(provider);
+    const previousProvider = process.env.EMAIL_PROVIDER;
+    process.env.EMAIL_PROVIDER = 'smtp';
+    const admin = await createAdminUser();
+    const { response, getStatusCode, getBody } = createResponseRecorder();
+
+    try {
+      await createAdminInvitation(
+        {
+          auth: { sub: admin.id },
+          body: {
+            role: 'ADMIN',
+            recipientEmail: `${TEST_MARKER}-api-admin-${Date.now()}@impactloop.test`,
+            expiresInMinutes: 60,
+          },
+        } as Request,
+        response,
+      );
+    } finally {
+      process.env.EMAIL_PROVIDER = previousProvider ?? 'mock';
+    }
+
+    assert.equal(getStatusCode(), 201);
+    const body = getBody() as { data: Record<string, unknown> };
+    ids.invitations.push(body.data.id as string);
+    assert.equal(body.data.inviteLink, undefined);
+    assert.equal(provider.lastPayload?.role, 'ADMIN');
+    assert.match(provider.lastPayload?.inviteLink ?? '', /\/invite\/accept\?token=/);
+  });
+
+  test('invitation email includes a safe acceptance button and copyable fallback link', () => {
+    const content = buildInvitationEmailContent({
+      recipientEmail: 'invitee@impactloop.test',
+      role: 'DRIVER',
+      inviteLink: 'https://app.impactloop.test/invite/accept?token=opaque-token',
+      expiresAt: new Date('2026-08-22T12:00:00.000Z'),
+    });
+
+    assert.match(content.subject, /ImpactLoop invitation/i);
+    assert.match(content.text, /Driver/);
+    assert.match(content.text, /invite\/accept\?token=opaque-token/);
+    assert.match(content.html, />Accept invitation</);
+    assert.match(content.html, /If the button does not work/);
+    assert.match(content.html, /invite\/accept\?token=opaque-token/);
   });
 
   test('tokenHash stored and raw token not stored', async () => {

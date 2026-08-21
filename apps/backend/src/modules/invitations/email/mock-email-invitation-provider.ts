@@ -9,6 +9,14 @@ import type {
 const formatRoleLabel = (role: string): string =>
   role.charAt(0) + role.slice(1).toLowerCase();
 
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 const buildPlainText = (payload: EmailInvitationPayload): string => {
   const roleLabel = formatRoleLabel(payload.role);
   const expiresAt = payload.expiresAt.toISOString();
@@ -31,8 +39,9 @@ const buildPlainText = (payload: EmailInvitationPayload): string => {
 };
 
 const buildHtml = (payload: EmailInvitationPayload): string => {
-  const roleLabel = formatRoleLabel(payload.role);
-  const expiresAt = payload.expiresAt.toISOString();
+  const roleLabel = escapeHtml(formatRoleLabel(payload.role));
+  const expiresAt = escapeHtml(payload.expiresAt.toISOString());
+  const inviteLink = escapeHtml(payload.inviteLink);
 
   return `<!DOCTYPE html>
 <html>
@@ -40,8 +49,10 @@ const buildHtml = (payload: EmailInvitationPayload): string => {
     <p>Hello,</p>
     <p>You have been invited to join ImpactLoop as a <strong>${roleLabel}</strong>.</p>
     <p>Complete your registration using this secure link:</p>
-    <p><a href="${payload.inviteLink}">${payload.inviteLink}</a></p>
+    <p><a href="${inviteLink}" style="display: inline-block; padding: 12px 18px; background: #0f766e; color: #ffffff; text-decoration: none; border-radius: 6px;">Accept invitation</a></p>
     <p>This invitation expires at:<br /><strong>${expiresAt}</strong></p>
+    <p>If the button does not work, copy and paste this link into your browser:</p>
+    <p><a href="${inviteLink}">${inviteLink}</a></p>
     <p>If you were not expecting this invitation, you can ignore this email.</p>
     <p>ImpactLoop Team</p>
   </body>

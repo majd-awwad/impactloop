@@ -78,7 +78,7 @@ Invitation links are generated as:
 
 If `APP_PUBLIC_BASE_URL` is missing, invitation creation fails with `APP_PUBLIC_BASE_URL is not configured`.
 
-If `EMAIL_PROVIDER=smtp` and SMTP variables are missing, the invitation is stored but email send returns `sendStatus=FAILED` with a visible `sendError`.
+If `EMAIL_PROVIDER=smtp` and SMTP variables are missing or the provider rejects delivery, the invitation is stored with `sendStatus=FAILED` and the endpoint returns `424 EMAIL_DELIVERY_FAILED`. The Admin UI refreshes the invitation list and directs the admin to fix mail configuration and resend; it never reports that the email was sent.
 
 ## Local testing without SMTP (mock)
 
