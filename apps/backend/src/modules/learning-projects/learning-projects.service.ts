@@ -1495,7 +1495,7 @@ export const getMyProjectBuildById = async (
 
     if (repairedCount > 0 || terminalRepair.repairedCount > 0) {
       build =
-        (await learningProjectsRepository.findProjectBuild(id, userId)) ??
+        (await learningProjectsRepository.findProjectBuild(id, userId, buildId)) ??
         build;
     }
   }

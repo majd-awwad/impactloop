@@ -21,6 +21,31 @@ class UpdateCompletionStoryPayload {
   }
 }
 
+class UpdateLearningCompletionReflectionPayload {
+  const UpdateLearningCompletionReflectionPayload({
+    this.goalOutcome,
+    this.confidenceAfter,
+    this.finalReflection,
+  });
+
+  final LearningGoalOutcome? goalOutcome;
+  final int? confidenceAfter;
+  final String? finalReflection;
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (goalOutcome != null)
+        'goalOutcome': switch (goalOutcome!) {
+          LearningGoalOutcome.achieved => 'ACHIEVED',
+          LearningGoalOutcome.partiallyAchieved => 'PARTIALLY_ACHIEVED',
+          LearningGoalOutcome.notYetAchieved => 'NOT_YET_ACHIEVED',
+        },
+      'confidenceAfter': ?confidenceAfter,
+      'finalReflection': ?finalReflection,
+    };
+  }
+}
+
 class LearnerBuildsApi {
   const LearnerBuildsApi(this._client);
 
@@ -85,6 +110,19 @@ class LearnerBuildsApi {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>('$_buildsPath/$buildId/archive'),
       LearningHubApiMapper.fromBuildJson,
+    );
+  }
+
+  Future<LearningCompletionReflectionResult> updateLearningCompletionReflection(
+    String buildId,
+    UpdateLearningCompletionReflectionPayload payload,
+  ) {
+    return unwrapApiResponse(
+      _client.patch<Map<String, dynamic>>(
+        '$_buildsPath/$buildId/learning-session/completion-reflection',
+        data: payload.toJson(),
+      ),
+      LearningHubApiMapper.fromLearningCompletionReflectionJson,
     );
   }
 

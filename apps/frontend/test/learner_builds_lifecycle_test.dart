@@ -372,6 +372,27 @@ void main() {
     expect(message, isNot(contains('Something went wrong')));
     expect(message, LearnerBuildsL10n.uploadUnsupportedType.en);
   });
+
+  test('completion reflection targets the displayed build attempt', () async {
+    final adapter = _CompletionReflectionAdapter();
+    final api = LearnerBuildsApi(Dio()..httpClientAdapter = adapter);
+
+    await api.updateLearningCompletionReflection(
+      'completed-attempt-1',
+      const UpdateLearningCompletionReflectionPayload(
+        goalOutcome: LearningGoalOutcome.achieved,
+        confidenceAfter: 5,
+        finalReflection: 'Updated completed attempt reflection.',
+      ),
+    );
+
+    expect(
+      adapter.path,
+      '/api/learner/builds/completed-attempt-1/learning-session/completion-reflection',
+    );
+    expect(adapter.data['finalReflection'], 'Updated completed attempt reflection.');
+    expect(adapter.data['goalOutcome'], 'ACHIEVED');
+  });
 }
 
 class _TestAuthController extends AuthController {
@@ -417,6 +438,31 @@ class _CompletionPhotoUploadAdapter implements HttpClientAdapter {
     formData = options.data as FormData?;
     return ResponseBody.fromString(
       '{"success":true,"data":{"photo":{"id":"photo-1","imageUrl":"/api/learner/builds/build-1/completion-story/photos/photo-1/content","sortOrder":0}}}',
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+}
+
+class _CompletionReflectionAdapter implements HttpClientAdapter {
+  String? path;
+  Map<String, dynamic> data = const {};
+
+  @override
+  void close({bool force = false}) {}
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    path = options.path;
+    data = Map<String, dynamic>.from(options.data as Map);
+    return ResponseBody.fromString(
+      '{"success":true,"data":{"session":{"id":"session-1","buildId":"completed-attempt-1","packId":"pack-1","assignments":[]}}}',
       200,
       headers: {
         Headers.contentTypeHeader: [Headers.jsonContentType],

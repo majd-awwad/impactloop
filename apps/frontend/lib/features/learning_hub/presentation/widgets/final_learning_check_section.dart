@@ -9,6 +9,8 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../ai/application/ai_assistant_shell_provider.dart';
+import '../../../learner_builds/application/learner_builds_providers.dart';
+import '../../../learner_builds/data/learner_builds_api.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../application/learning_session_providers.dart';
 import '../../domain/models/project_build.dart';
@@ -1236,14 +1238,17 @@ class _LearningReflectionSectionState
     });
     try {
       await ref
-          .read(learningHubRepositoryProvider)
+          .read(learnerBuildsApiProvider)
           .updateLearningCompletionReflection(
-            widget.projectId,
-            goalOutcome: _goalOutcome,
-            confidenceAfter: _confidenceAfter,
-            finalReflection: _reflectionController.text,
+            widget.buildRecord.id,
+            UpdateLearningCompletionReflectionPayload(
+              goalOutcome: _goalOutcome,
+              confidenceAfter: _confidenceAfter,
+              finalReflection: _reflectionController.text,
+            ),
           );
       ref.invalidate(buildLearningSessionProvider(widget.projectId));
+      ref.invalidate(projectBuildByIdProvider(widget.buildRecord.id));
       if (mounted) {
         setState(() => _saved = true);
       }

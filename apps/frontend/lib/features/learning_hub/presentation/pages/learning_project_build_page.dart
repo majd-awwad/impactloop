@@ -54,10 +54,12 @@ class LearningProjectBuildPage extends ConsumerStatefulWidget {
   const LearningProjectBuildPage({
     super.key,
     required this.projectId,
+    this.buildId,
     this.recommendationImpressionId,
   });
 
   final String projectId;
+  final String? buildId;
   final String? recommendationImpressionId;
 
   @override
@@ -75,6 +77,11 @@ class _LearningProjectBuildPageState
 
   static final Map<String, Future<void>> _guideOpenRequests =
       <String, Future<void>>{};
+
+  FutureProvider<ProjectBuild?> get _buildProvider =>
+      widget.buildId == null
+      ? projectBuildProvider(widget.projectId)
+      : projectBuildByIdProvider(widget.buildId!);
 
   bool _isStarting = false;
   bool _isLifecycleActionInFlight = false;
@@ -99,7 +106,7 @@ class _LearningProjectBuildPageState
   late final ProjectBuildRefreshCoordinator _refreshCoordinator =
       ProjectBuildRefreshCoordinator(
         onRefresh: () {
-          ref.invalidate(projectBuildProvider(widget.projectId));
+          ref.invalidate(_buildProvider);
         },
       );
   late final ProjectBuildRefreshController _buildRefreshController =
@@ -165,9 +172,9 @@ class _LearningProjectBuildPageState
 
   Future<void> _refreshBuild() {
     return _refreshCoordinator.requestRefreshAsync(() async {
-      ref.invalidate(projectBuildProvider(widget.projectId));
+      ref.invalidate(_buildProvider);
       try {
-        await ref.read(projectBuildProvider(widget.projectId).future);
+        await ref.read(_buildProvider.future);
       } catch (_) {
         // Provider surfaces fetch errors in the UI.
       }
@@ -178,6 +185,7 @@ class _LearningProjectBuildPageState
   void didUpdateWidget(covariant LearningProjectBuildPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.projectId != widget.projectId ||
+        oldWidget.buildId != widget.buildId ||
         oldWidget.recommendationImpressionId !=
             widget.recommendationImpressionId) {
       _refreshBuild();
@@ -499,7 +507,7 @@ class _LearningProjectBuildPageState
       final updated = await ref
           .read(learningHubRepositoryProvider)
           .completeBuildStep(widget.projectId, stepId);
-      ref.invalidate(projectBuildProvider(widget.projectId));
+      ref.invalidate(_buildProvider);
       ref.invalidate(buildLearningSessionProvider(widget.projectId));
 
       ProjectBuildStepView? completedStep;
@@ -664,7 +672,7 @@ class _LearningProjectBuildPageState
                 widget.projectId,
                 build.stepProgress.currentStep!.stepId,
               );
-          ref.invalidate(projectBuildProvider(widget.projectId));
+          ref.invalidate(_buildProvider);
           ref.invalidate(buildLearningSessionProvider(widget.projectId));
           if (mounted) {
             final closeAction = await showFinalLearningCheckSheet(
@@ -709,7 +717,7 @@ class _LearningProjectBuildPageState
       onOpenAi: () => _openBuildGuide(build),
     );
     ref.invalidate(buildLearningSessionProvider(widget.projectId));
-    ref.invalidate(projectBuildProvider(widget.projectId));
+    ref.invalidate(_buildProvider);
     ref.invalidate(learnerPortfolioProvider);
     if (!mounted || closeAction == null) {
       return;
@@ -744,9 +752,9 @@ class _LearningProjectBuildPageState
     try {
       await action();
       invalidateLearnerBuildsAndHome(ref);
-      ref.invalidate(projectBuildProvider(widget.projectId));
+      ref.invalidate(_buildProvider);
       ref.invalidate(learningProjectProvider(widget.projectId));
-      await ref.read(projectBuildProvider(widget.projectId).future);
+      await ref.read(_buildProvider.future);
     } catch (error) {
       if (mounted) {
         final languageCode = Localizations.localeOf(context).languageCode;
@@ -829,11 +837,19 @@ class _LearningProjectBuildPageState
     );
   }
 
-  Future<void> _buildAgain(ProjectBuild build) {
-    return _runLifecycleAction(
-      () => buildProjectAgain(ref, build.projectId),
+  Future<void> _buildAgain(ProjectBuild build) async {
+    var createdNewAttempt = false;
+    await _runLifecycleAction(
+      () async {
+        final nextBuild = await buildProjectAgain(ref, build.projectId);
+        createdNewAttempt = true;
+        return nextBuild;
+      },
       errorAction: ProjectBuildLifecycleErrorAction.buildAgain,
     );
+    if (createdNewAttempt && mounted && widget.buildId != null) {
+      context.go(learnerProjectBuildRoute(widget.projectId));
+    }
   }
 
   void _scrollToLearningReflection() {
@@ -942,7 +958,7 @@ class _LearningProjectBuildPageState
       return;
     }
     _buildCompletionCelebrationShown = true;
-    ref.invalidate(projectBuildProvider(widget.projectId));
+    ref.invalidate(_buildProvider);
     ref.invalidate(buildLearningSessionProvider(widget.projectId));
     invalidateLearnerBuildsLists(ref);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1371,7 +1387,7 @@ class _LearningProjectBuildPageState
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
 
-    ref.listen(projectBuildProvider(widget.projectId), (previous, next) {
+    ref.listen(_buildProvider, (previous, next) {
       next.whenData((build) {
         if (!mounted) {
           return;
@@ -1385,7 +1401,7 @@ class _LearningProjectBuildPageState
       });
     });
 
-    final buildAsync = ref.watch(projectBuildProvider(widget.projectId));
+    final buildAsync = ref.watch(_buildProvider);
     buildAsync.whenData((build) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -1411,7 +1427,7 @@ class _LearningProjectBuildPageState
                       'Check that the backend is running, then try again.',
                   actionLabel: 'Try again',
                   onAction: () =>
-                      ref.invalidate(projectBuildProvider(widget.projectId)),
+                      ref.invalidate(_buildProvider),
                 ),
                 data: (build) {
                   if (build == null) {

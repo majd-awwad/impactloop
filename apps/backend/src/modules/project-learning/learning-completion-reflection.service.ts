@@ -18,6 +18,8 @@ const GOAL_OUTCOMES = new Set([
 export type UpdateCompletionReflectionInput = {
   projectId: string;
   learnerId: string;
+  /** Required by history/portfolio callers to bind the mutation to one attempt. */
+  buildId?: string;
   goalOutcome?: ProjectBuildLearningGoalOutcome | null;
   confidenceAfter?: number | null;
   finalReflection?: string | null;
@@ -26,7 +28,11 @@ export type UpdateCompletionReflectionInput = {
 export const updateLearningCompletionReflection = async (
   input: UpdateCompletionReflectionInput,
 ) => {
-  const build = await findProjectBuild(input.projectId, input.learnerId);
+  const build = await findProjectBuild(
+    input.projectId,
+    input.learnerId,
+    input.buildId,
+  );
   if (!build) {
     throw new AppError('Project build not found.', 404, 'BUILD_NOT_FOUND');
   }

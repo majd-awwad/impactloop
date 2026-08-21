@@ -952,6 +952,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
           return LearningProjectBuildPage(
             projectId: projectId,
+            buildId: state.uri.queryParameters['buildId'],
             recommendationImpressionId: _recommendationImpressionIdFromExtra(
               state.extra,
             ),

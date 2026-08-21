@@ -3,6 +3,9 @@ import type { Request, Response } from 'express';
 import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { readValidatedParams, readValidatedQuery } from '../../middlewares/validate.middleware.js';
 import { successResponse } from '../../utils/api-response.js';
+import { findOwnedBuildById } from '../learning-projects/project-build-lifecycle.js';
+import { updateLearningCompletionReflection } from '../project-learning/learning-completion-reflection.service.js';
+import type { CompletionReflectionBody } from '../project-learning/project-learning.validation.js';
 
 import {
   archiveLearnerBuild,
@@ -99,6 +102,36 @@ export const updateCompletionStoryHandler = async (req: Request, res: Response) 
   );
 
   res.json(successResponse('Completion story updated successfully', { story }));
+};
+
+export const updateLearnerBuildCompletionReflectionHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { buildId } = readValidatedParams<{ buildId: string }>(req);
+  const build = await findOwnedBuildById(buildId, req.auth!.sub);
+  if (!build) {
+    res.status(404).json({
+      success: false,
+      message: 'Project build not found.',
+      error: { code: 'BUILD_NOT_FOUND', requestId: 'unknown' },
+    });
+    return;
+  }
+
+  const body = req.body as CompletionReflectionBody;
+  const result = await updateLearningCompletionReflection({
+    projectId: build.projectId,
+    buildId: build.id,
+    learnerId: req.auth!.sub,
+    goalOutcome: body.goalOutcome,
+    confidenceAfter: body.confidenceAfter,
+    finalReflection: body.finalReflection,
+  });
+
+  res.json(
+    successResponse('Learning completion reflection updated successfully', result),
+  );
 };
 
 export const uploadCompletionPhotoHandler = async (req: Request, res: Response) => {

@@ -44,7 +44,9 @@ class LearnerBuildListCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.push('/learning/${item.projectId}/build'),
+        onTap: () => context.push(
+          learnerProjectBuildRoute(item.projectId, buildId: item.id),
+        ),
         borderRadius: AppRadius.lgAll,
         child: Container(
           padding: const EdgeInsetsDirectional.all(AppSpacing.md),

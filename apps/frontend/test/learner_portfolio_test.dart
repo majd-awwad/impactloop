@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:frontend/app/router/navigation_extensions.dart';
 import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/learner_builds/application/learner_builds_providers.dart';
@@ -181,6 +182,107 @@ void main() {
     expect(find.text('It worked on the first sunny day.'), findsOneWidget);
     expect(find.text('4 of 4 steps completed'), findsNothing);
   });
+
+  testWidgets(
+    'portfolio opens the completed attempt instead of a newer project attempt',
+    (tester) async {
+      final completedItem = LearnerBuildListItem(
+        id: 'build-complete',
+        projectId: 'project-1',
+        attemptNumber: 1,
+        status: ProjectBuildStatus.completed,
+        project: const LearnerBuildListProject(
+          id: 'project-1',
+          title: 'Solar charger',
+          shortDescription: 'Completed portfolio entry',
+        ),
+        startedAt: DateTime(2026, 1, 1),
+        updatedAt: DateTime(2026, 2, 1),
+        completedAt: DateTime(2026, 2, 1),
+      );
+      final completedBuild = ProjectBuild(
+        id: completedItem.id,
+        projectId: completedItem.projectId,
+        status: ProjectBuildStatus.completed,
+        isReadOnly: true,
+        project: const ProjectBuildProject(
+          id: 'project-1',
+          title: 'Completed kit',
+          shortDescription: 'Done',
+        ),
+        progress: const ProjectBuildProgress(total: 1, ready: 1, percent: 100),
+        materialReadiness: const ProjectBuildMaterialReadiness(
+          ready: 1,
+          linked: 1,
+          reserved: 0,
+          missing: 0,
+          total: 1,
+        ),
+        stepProgress: const ProjectBuildStepProgress(
+          completed: 1,
+          total: 1,
+          percent: 100,
+          steps: [],
+          nextAction: ProjectBuildNextAction.buildCompleted,
+        ),
+        items: const [],
+      );
+      var completedAttemptFetches = 0;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(_TestAuthController.new),
+            learnerPortfolioProvider.overrideWith(
+              (ref) async => LearnerBuildListResult(
+                items: [completedItem],
+                page: 1,
+                limit: 20,
+                total: 1,
+                totalPages: 1,
+              ),
+            ),
+            projectBuildByIdProvider(completedItem.id).overrideWith((ref) async {
+              completedAttemptFetches += 1;
+              return completedBuild;
+            }),
+            myNotificationUnreadCountProvider.overrideWith(
+              () => _ZeroUnreadCount(),
+            ),
+          ],
+          child: MaterialApp.router(
+            routerConfig: GoRouter(
+              routes: [
+                GoRoute(
+                  path: learnerPortfolioRoute,
+                  builder: (context, state) => const PortfolioPage(),
+                ),
+                GoRoute(
+                  path: '/learning/:id/build',
+                  builder: (context, state) => LearningProjectBuildPage(
+                    projectId: state.pathParameters['id']!,
+                    buildId: state.uri.queryParameters['buildId'],
+                  ),
+                ),
+              ],
+              initialLocation: learnerPortfolioRoute,
+            ),
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('en')],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Solar charger'));
+      await tester.pumpAndSettle();
+
+      expect(completedAttemptFetches, 1);
+    },
+  );
 
   testWidgets('completed build page shows read-only notice', (tester) async {
     final completedBuild = ProjectBuild(

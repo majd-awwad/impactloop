@@ -419,9 +419,14 @@ describe('project build lifecycle LH-10–13', () => {
     assert.equal(pausedStart.id, first.id);
     assert.equal(pausedStart.status, 'PAUSED');
 
+    const firstCompletedAt = new Date('2026-08-20T10:00:00.000Z');
     await prisma.projectBuild.update({
       where: { id: first.id },
-      data: { status: 'COMPLETED', completedAt: new Date(), pausedAt: null },
+      data: {
+        status: 'COMPLETED',
+        completedAt: firstCompletedAt,
+        pausedAt: null,
+      },
     });
 
     const second = await startProjectBuildAgainById(project.id, learner.id);
@@ -430,11 +435,61 @@ describe('project build lifecycle LH-10–13', () => {
     assert.equal(second.status, 'IN_PROGRESS');
     assert.notEqual(second.id, first.id);
 
+    const portfolioWhileRetrying = await getLearnerPortfolio({
+      learnerId: learner.id,
+      page: 1,
+      limit: 20,
+    });
+    assert.deepEqual(
+      portfolioWhileRetrying.items.map((item) => item.id),
+      [first.id],
+      'an in-progress retry must not hide the completed portfolio attempt',
+    );
+
+    const allBuildsWhileRetrying = await getLearnerBuildsList({
+      learnerId: learner.id,
+      page: 1,
+      limit: 20,
+    });
+    assert.equal(allBuildsWhileRetrying.pagination.total, 2);
+    assert.equal(allBuildsWhileRetrying.items.length, 2);
+
+    const completedBuildsWhileRetrying = await getLearnerBuildsList({
+      learnerId: learner.id,
+      status: 'COMPLETED',
+      page: 1,
+      limit: 20,
+    });
+    assert.equal(completedBuildsWhileRetrying.pagination.total, 1);
+    assert.deepEqual(
+      completedBuildsWhileRetrying.items.map((item) => item.id),
+      [first.id],
+    );
+
     await assert.rejects(
       () => startProjectBuildAgainById(project.id, learner.id),
       (error: unknown) =>
         error instanceof AppError && error.code === 'BUILD_ALREADY_ACTIVE',
     );
+
+    const secondCompletedAt = new Date('2026-08-20T11:00:00.000Z');
+    await prisma.projectBuild.update({
+      where: { id: second.id },
+      data: { status: 'COMPLETED', completedAt: secondCompletedAt },
+    });
+
+    const portfolioAfterRetryCompletion = await getLearnerPortfolio({
+      learnerId: learner.id,
+      page: 1,
+      limit: 20,
+    });
+    assert.equal(portfolioAfterRetryCompletion.pagination.total, 2);
+    assert.deepEqual(
+      portfolioAfterRetryCompletion.items.map((item) => item.id),
+      [second.id, first.id],
+      'the portfolio is attempt-based and retains both completed attempts',
+    );
+
   });
 
   test('completion story and snapshot for completed build', async () => {

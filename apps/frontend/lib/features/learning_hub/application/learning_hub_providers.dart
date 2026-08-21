@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_client.dart';
+import '../../../core/network/api_response.dart';
 import '../../materials/data/models/category.dart';
 import '../data/learning_project_draft_storage.dart';
+import '../data/learning_hub_api_mapper.dart';
 import '../domain/learning_project_repository.dart';
 import '../domain/learning_projects_result.dart';
 import '../domain/models/learning_project.dart';
@@ -73,6 +76,17 @@ final myLearningProjectSubmissionProvider = FutureProvider.autoDispose
 final projectBuildProvider = FutureProvider.autoDispose
     .family<ProjectBuild?, String>((ref, projectId) async {
       return ref.watch(learningHubRepositoryProvider).fetchMyBuild(projectId);
+    });
+
+/// Loads an owned build attempt by immutable id for portfolio/history views.
+final projectBuildByIdProvider = FutureProvider.autoDispose
+    .family<ProjectBuild?, String>((ref, buildId) async {
+      return unwrapApiResponse(
+        ref.watch(apiClientProvider).get<Map<String, dynamic>>(
+          '/api/learner/builds/$buildId',
+        ),
+        LearningHubApiMapper.fromBuildJson,
+      );
     });
 
 final smartBuildPlanProvider = FutureProvider.autoDispose

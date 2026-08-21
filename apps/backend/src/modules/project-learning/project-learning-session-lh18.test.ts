@@ -7,6 +7,7 @@ import { AppError } from '../../utils/app-error.js';
 
 import {
   completeProjectBuildStepById,
+  startProjectBuildAgainById,
   startProjectBuildById,
   updateProjectBuildItemById,
 } from '../learning-projects/learning-projects.service.js';
@@ -525,6 +526,59 @@ describe('project learning final check LH-18', () => {
       (error: unknown) =>
         error instanceof AppError && error.code === 'INVALID_CONFIDENCE',
     );
+  });
+
+  test('completion reflection remains bound to its completed attempt after build again', async () => {
+    const author = await createAuthor();
+    const learner = await createLearner('reflection-attempt-identity');
+    const project = await createPublishedProject(author.id);
+    const { build: firstAttempt } = await prepareCompletedBuildWithSession(
+      learner.id,
+      project.id,
+    );
+
+    await updateLearningCompletionReflection({
+      projectId: project.id,
+      buildId: firstAttempt.id,
+      learnerId: learner.id,
+      finalReflection: 'First completed reflection.',
+    });
+
+    const secondAttempt = await startProjectBuildAgainById(
+      project.id,
+      learner.id,
+    );
+    ids.builds.push(secondAttempt.id);
+    assert.equal(secondAttempt.status, 'IN_PROGRESS');
+
+    const result = await updateLearningCompletionReflection({
+      projectId: project.id,
+      buildId: firstAttempt.id,
+      learnerId: learner.id,
+      finalReflection: 'Updated first completed reflection.',
+    });
+    assert.equal(result.session.buildId, firstAttempt.id);
+    assert.equal(
+      result.session.finalReflection,
+      'Updated first completed reflection.',
+    );
+
+    const [firstSession, reloadedSecondAttempt] = await Promise.all([
+      prisma.projectBuildLearningSession.findUniqueOrThrow({
+        where: { buildId: firstAttempt.id },
+        select: { finalReflection: true },
+      }),
+      prisma.projectBuild.findUniqueOrThrow({
+        where: { id: secondAttempt.id },
+        select: { status: true, completedAt: true },
+      }),
+    ]);
+    assert.equal(
+      firstSession.finalReflection,
+      'Updated first completed reflection.',
+    );
+    assert.equal(reloadedSecondAttempt.status, 'IN_PROGRESS');
+    assert.equal(reloadedSecondAttempt.completedAt, null);
   });
 
   test('reflection rejected for in-progress build', async () => {

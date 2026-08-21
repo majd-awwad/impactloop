@@ -19,6 +19,7 @@ import {
   pauseLearnerBuildHandler,
   resumeLearnerBuildHandler,
   updateCompletionStoryHandler,
+  updateLearnerBuildCompletionReflectionHandler,
   updateProjectBuildNotebookHandler,
   uploadCompletionPhotoHandler,
 } from './learner-builds.controller.js';
@@ -30,6 +31,7 @@ import {
   updateCompletionStorySchema,
 } from './learner-builds.validation.js';
 import { updateProjectBuildNotebookSchema } from './learner-build-notebook.validation.js';
+import { completionReflectionBodySchema } from '../project-learning/project-learning.validation.js';
 
 export const learnerBuildsRouter = Router();
 
@@ -104,6 +106,16 @@ learnerBuildsRouter.patch(
   validate(learnerBuildIdParamSchema, 'params'),
   validate(updateCompletionStorySchema),
   asyncHandler(updateCompletionStoryHandler),
+);
+
+learnerBuildsRouter.patch(
+  '/builds/:buildId/learning-session/completion-reflection',
+  privateNoStoreMiddleware,
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learnerBuildIdParamSchema, 'params'),
+  validate(completionReflectionBodySchema),
+  asyncHandler(updateLearnerBuildCompletionReflectionHandler),
 );
 
 learnerBuildsRouter.post(

@@ -70,6 +70,16 @@ String learningProjectPublicDetailRoute(
   ).toString();
 }
 
+/// Canonical project build route. Supplying [buildId] opens that exact attempt.
+String learnerProjectBuildRoute(String projectId, {String? buildId}) {
+  final path = '/learning/$projectId/build';
+  if (buildId == null || buildId.trim().isEmpty) {
+    return path;
+  }
+  return Uri(path: path, queryParameters: {'buildId': buildId.trim()})
+      .toString();
+}
+
 /// Canonical private project notebook route for a specific build attempt.
 String learnerBuildNotebookRoute(String buildId, {String? pageId}) {
   final base = '/learner/builds/$buildId/notebook';
