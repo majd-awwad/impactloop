@@ -626,14 +626,15 @@ export const refreshAuthSession = async (
     jti: tokenId,
   });
 
-  const user = await authRepository.rotateRefreshToken({
+  const rotated = await authRepository.rotateRefreshToken({
     userId: payload.sub,
     tokenHash: hashToken(refreshToken),
     successorTokenHash: hashToken(newRefreshToken),
     successorExpiresAt: getRefreshTokenExpiry(),
+    target: storedToken.user.email,
   });
 
-  if (!user) {
+  if (!rotated) {
     throw new AppError(
       'Refresh token is invalid or revoked',
       401,
@@ -641,6 +642,7 @@ export const refreshAuthSession = async (
     );
   }
 
+  const user = storedToken.user;
   const roles = user.roles.map((assignment) => assignment.role);
   const accessToken = signAccessToken({
     sub: user.id,

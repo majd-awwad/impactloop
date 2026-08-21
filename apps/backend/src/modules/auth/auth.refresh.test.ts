@@ -7,6 +7,7 @@ import { hashPassword } from '../../utils/password.js';
 import { hashToken } from '../../utils/token.js';
 import { verifyAccessToken } from '../../utils/jwt.js';
 
+import * as authRepository from './auth.repository.js';
 import { loginUser, refreshAuthSession } from './auth.service.js';
 
 const TEST_MARKER = 'test-auth-refresh';
@@ -121,6 +122,51 @@ describe('auth refresh', () => {
       where: { tokenHash: hashToken(session.refreshToken) },
     });
     assert.ok(oldStored?.usedAt);
+  });
+
+  test('rotation transaction does not reload user profiles before creating successor', async () => {
+    const originalTransaction = prisma.$transaction.bind(prisma);
+    let userReadAttempted = false;
+    let createdTarget: string | null = null;
+
+    prisma.$transaction = (async (
+      callback: (tx: {
+        authToken: {
+          updateMany: () => Promise<{ count: number }>;
+          create: (input: { data: { target: string } }) => Promise<void>;
+        };
+        user: { findUnique: () => Promise<never> };
+      }) => Promise<unknown>,
+    ) => callback({
+      authToken: {
+        updateMany: async () => ({ count: 1 }),
+        create: async (input) => {
+          createdTarget = input.data.target;
+        },
+      },
+      user: {
+        findUnique: async () => {
+          userReadAttempted = true;
+          throw new Error('user/profile reload must stay outside token rotation');
+        },
+      },
+    })) as typeof prisma.$transaction;
+
+    try {
+      const rotated = await authRepository.rotateRefreshToken({
+        userId: 'refresh-user',
+        tokenHash: 'old-token-hash',
+        successorTokenHash: 'new-token-hash',
+        successorExpiresAt: new Date(Date.now() + 60_000),
+        target: 'refresh-user@impactloop.test',
+      });
+
+      assert.equal(rotated, true);
+      assert.equal(userReadAttempted, false);
+      assert.equal(createdTarget, 'refresh-user@impactloop.test');
+    } finally {
+      prisma.$transaction = originalTransaction;
+    }
   });
 
   test('refresh token rotation is atomic on repository failure', async () => {

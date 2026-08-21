@@ -261,7 +261,8 @@ export const rotateRefreshToken = async (input: {
   tokenHash: string;
   successorTokenHash: string;
   successorExpiresAt: Date;
-}): Promise<UserWithRolesAndProfiles | null> => {
+  target: string;
+}): Promise<boolean> => {
   return prisma.$transaction(async (tx) => {
     const claim = await tx.authToken.updateMany({
       where: {
@@ -275,16 +276,7 @@ export const rotateRefreshToken = async (input: {
     });
 
     if (claim.count !== 1) {
-      return null;
-    }
-
-    const user = await tx.user.findUnique({
-      where: { id: input.userId },
-      include: userWithRolesAndProfilesInclude,
-    });
-
-    if (!user) {
-      throw new Error('User not found');
+      return false;
     }
 
     await tx.authToken.create({
@@ -292,12 +284,12 @@ export const rotateRefreshToken = async (input: {
         userId: input.userId,
         tokenHash: input.successorTokenHash,
         tokenType: 'REFRESH_TOKEN',
-        target: user.email,
+        target: input.target,
         expiresAt: input.successorExpiresAt,
       },
     });
 
-    return user;
+    return true;
   });
 };
 
