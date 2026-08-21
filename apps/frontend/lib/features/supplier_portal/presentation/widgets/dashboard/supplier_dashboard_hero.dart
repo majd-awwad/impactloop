@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../../app/router/navigation_extensions.dart';
 import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
 import '../../../../../shared/widgets/app_status_badge.dart';
@@ -139,7 +139,7 @@ class _HeroContent extends StatelessWidget {
           runSpacing: mobile ? AppSpacing.xs : AppSpacing.sm,
           children: [
             FilledButton.icon(
-              onPressed: () => context.push('/supplier/materials/new'),
+              onPressed: () => context.goShellTabOrPush('/supplier/materials/new'),
               style: AppStatusButtonStyle.filled(
                 context,
                 AppStatusTone.primary,
@@ -152,7 +152,7 @@ class _HeroContent extends StatelessWidget {
               label: Text(context.s.addMaterial),
             ),
             OutlinedButton.icon(
-              onPressed: () => context.push('/supplier/reservations'),
+              onPressed: () => context.goShellTabOrPush('/supplier/reservations'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: colors.textPrimary,
                 side: BorderSide(

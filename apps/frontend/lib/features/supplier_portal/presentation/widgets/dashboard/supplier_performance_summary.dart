@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../../app/router/navigation_extensions.dart';
 import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
 import '../../../data/models/supplier_dashboard.dart';
@@ -280,7 +280,7 @@ class _RequestsInsight extends StatelessWidget {
         title: context.s.requestsNeedAttention,
         message: context.s.pendingRequestsMessage(pending),
         actionLabel: context.s.reviewRequests,
-        onAction: () => context.push('/supplier/reservations'),
+        onAction: () => context.goShellTabOrPush('/supplier/reservations'),
       );
     }
 
@@ -320,7 +320,7 @@ class _PickupInsight extends StatelessWidget {
           ? context.s.pickupLocationMissing
           : context.s.completeProfileForPickup,
       actionLabel: context.s.updateProfile,
-      onAction: () => context.push('/supplier/profile'),
+      onAction: () => context.goShellTabOrPush('/supplier/profile'),
     );
   }
 }
@@ -345,15 +345,15 @@ class _GrowReuseInsight extends StatelessWidget {
     if (activeMaterials > 0 && reusedMaterials == 0) {
       message = context.s.growReuseActiveListings;
       actionLabel = compact ? null : context.s.viewMaterials;
-      onAction = compact ? null : () => context.push('/supplier/materials');
+      onAction = compact ? null : () => context.goShellTabOrPush('/supplier/materials');
     } else if (reusedMaterials > 0) {
       message = context.s.growReuseStarting;
       actionLabel = compact ? null : context.s.viewMaterials;
-      onAction = compact ? null : () => context.push('/supplier/materials');
+      onAction = compact ? null : () => context.goShellTabOrPush('/supplier/materials');
     } else {
       message = context.s.growReuseEmpty;
       actionLabel = compact ? null : context.s.addMaterial;
-      onAction = compact ? null : () => context.push('/supplier/materials/new');
+      onAction = compact ? null : () => context.goShellTabOrPush('/supplier/materials/new');
     }
 
     return _InsightShell(
@@ -420,7 +420,7 @@ class _HighDemandInsight extends StatelessWidget {
       title: context.s.highDemandMaterialsTitle,
       message: context.s.strongDemandInsight,
       actionLabel: context.s.viewMaterials,
-      onAction: () => context.push('/supplier/materials'),
+      onAction: () => context.goShellTabOrPush('/supplier/materials'),
     );
   }
 }
@@ -436,7 +436,7 @@ class _EngagementInsight extends StatelessWidget {
       title: context.s.statTotalViews,
       message: context.s.improveEngagementInsight,
       actionLabel: context.s.viewMaterials,
-      onAction: () => context.push('/supplier/materials'),
+      onAction: () => context.goShellTabOrPush('/supplier/materials'),
     );
   }
 }
@@ -452,7 +452,7 @@ class _AddMaterialInsight extends StatelessWidget {
       title: context.s.addMaterial,
       message: context.s.addFirstMaterialInsight,
       actionLabel: context.s.addMaterial,
-      onAction: () => context.push('/supplier/materials/new'),
+      onAction: () => context.goShellTabOrPush('/supplier/materials/new'),
     );
   }
 }

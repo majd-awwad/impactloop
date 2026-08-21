@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../../app/router/navigation_extensions.dart';
 import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
 import '../../../../../shared/widgets/app_section_card.dart';
@@ -241,7 +242,7 @@ class _InsightTile extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           TextButton.icon(
-            onPressed: () => context.push(spec.route),
+            onPressed: () => context.goShellTabOrPush(spec.route),
             style: TextButton.styleFrom(
               foregroundColor: spec.accent,
               padding: EdgeInsets.zero,

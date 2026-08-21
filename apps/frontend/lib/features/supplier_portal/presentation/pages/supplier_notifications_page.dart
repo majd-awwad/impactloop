@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../data/models/supplier_action_notification.dart';
 import '../controllers/supplier_notifications_providers.dart';
@@ -137,7 +137,7 @@ class _SupplierNotificationsPageState
           showSupplierInfoSnackBar(context, l.noActionAvailable);
           return;
         }
-        context.push(route);
+        context.goShellTabOrPush(route);
       } catch (_) {
         if (context.mounted) {
           showSupplierErrorSnackBar(context, context.s.notificationsLoadError);

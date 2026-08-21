@@ -4,7 +4,6 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -401,7 +400,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
             title: l.completeProfileFirst,
             message: l.completeProfileFirstMessage,
             buttonLabel: l.goToProfile,
-            onPressed: () => context.push('/supplier/profile'),
+            onPressed: () => context.goShellTabOrPush('/supplier/profile'),
           );
         }
         final pickupLocation = profile.supplier!.defaultPickupLocation;
@@ -410,7 +409,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
             title: l.setPickupLocation,
             message: l.setPickupLocationMessage,
             buttonLabel: l.editSupplierProfile,
-            onPressed: () => context.push('/supplier/profile'),
+            onPressed: () => context.goShellTabOrPush('/supplier/profile'),
           );
         }
         return categories.when(
@@ -436,7 +435,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         title: l.profileLoadError,
         message: l.profileLoadErrorMessage,
         buttonLabel: l.goToProfile,
-        onPressed: () => context.push('/supplier/profile'),
+        onPressed: () => context.goShellTabOrPush('/supplier/profile'),
       ),
     );
   }

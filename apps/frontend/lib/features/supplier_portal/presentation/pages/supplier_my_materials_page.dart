@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
@@ -176,7 +177,7 @@ class _SupplierMyMaterialsPageState
                 children: [
                   _PageHeader(
                     actionLabel: l.navAddMaterial,
-                    onAction: () => context.push('/supplier/materials/new'),
+                    onAction: () => context.goShellTabOrPush('/supplier/materials/new'),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   materialsAsync.when(
@@ -263,7 +264,7 @@ class _SupplierMyMaterialsPageState
                           if (result.pagination.totalItems == 0)
                             _EmptyState(
                               onAdd: () =>
-                                  context.push('/supplier/materials/new'),
+                                  context.goShellTabOrPush('/supplier/materials/new'),
                             )
                           else if (result.items.isEmpty)
                             _FilteredEmptyState(onClear: _clearFilters)

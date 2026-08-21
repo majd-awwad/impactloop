@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../../app/router/navigation_extensions.dart';
 import '../../../../../app/theme/app_radius.dart';
 import '../../../../../core/format/localized_formatters.dart';
 import '../../../../../l10n/l10n.dart';
@@ -59,7 +59,7 @@ class SupplierDashboardRecentActivityPanel extends StatelessWidget {
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: TextButton.icon(
-              onPressed: () => context.push(_footerRoute),
+              onPressed: () => context.goShellTabOrPush(_footerRoute),
               icon: Icon(
                 _footerRoute == '/supplier/reservations'
                     ? Icons.inbox_outlined

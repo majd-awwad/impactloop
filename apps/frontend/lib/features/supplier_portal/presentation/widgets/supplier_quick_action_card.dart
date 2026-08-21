@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 
@@ -25,7 +25,7 @@ class SupplierQuickActionCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.push(route),
+        onTap: () => context.goShellTabOrPush(route),
         borderRadius: AppRadius.lgAll,
         hoverColor: context.supplierColors.chipSelected.withValues(alpha: 0.28),
         child: Ink(

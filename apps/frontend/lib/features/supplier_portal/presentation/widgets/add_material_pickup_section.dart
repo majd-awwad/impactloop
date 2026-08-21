@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../materials/data/models/create_material_request.dart';
 import '../../data/models/reverse_geocode_result.dart';
@@ -405,7 +405,7 @@ class AddMaterialPickupSectionState
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: TextButton.icon(
-              onPressed: () => context.push('/supplier/profile'),
+              onPressed: () => context.goShellTabOrPush('/supplier/profile'),
               icon: const Icon(Icons.edit_location_alt_outlined, size: 18),
               label: Text(l.editPickupInProfile),
             ),

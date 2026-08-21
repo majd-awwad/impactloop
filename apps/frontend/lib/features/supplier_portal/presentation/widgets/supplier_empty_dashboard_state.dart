@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
@@ -34,7 +34,7 @@ class SupplierEmptyDashboardState extends StatelessWidget {
             width: 280,
             child: AppPrimaryButton(
               label: context.s.addFirstMaterial,
-              onPressed: () => context.push('/supplier/materials/new'),
+              onPressed: () => context.goShellTabOrPush('/supplier/materials/new'),
             ),
           ),
         ],
@@ -74,7 +74,7 @@ class SupplierMissingProfileCard extends StatelessWidget {
             width: 240,
             child: AppPrimaryButton(
               label: context.s.completeProfile,
-              onPressed: () => context.push('/supplier/profile'),
+              onPressed: () => context.goShellTabOrPush('/supplier/profile'),
             ),
           ),
         ],

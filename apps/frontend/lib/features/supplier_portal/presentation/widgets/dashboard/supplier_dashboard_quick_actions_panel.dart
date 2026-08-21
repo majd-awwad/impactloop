@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../../app/router/navigation_extensions.dart';
 import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
 import '../../../../../shared/widgets/app_section_card.dart';
@@ -128,7 +128,7 @@ class _DashboardQuickActionTile extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.push(action.route),
+        onTap: () => context.goShellTabOrPush(action.route),
         borderRadius: AppRadius.lgAll,
         hoverColor: action.accent.withValues(alpha: 0.08),
         splashColor: action.accent.withValues(alpha: 0.12),
