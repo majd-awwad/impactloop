@@ -45,8 +45,7 @@ class AuthShell extends StatelessWidget {
 
     final viewportSize = MediaQuery.sizeOf(context);
     final isMobile = viewportSize.width < AppSpacing.authLayoutBreakpoint;
-    final useSplitLayout =
-        viewportSize.width >= _splitBreakpoint && viewportSize.height >= 760;
+    final useSplitLayout = viewportSize.width >= _splitBreakpoint;
     final useCompactSpacing = viewportSize.height < 820;
     final colors = AuthUiPalette.of(context);
 
