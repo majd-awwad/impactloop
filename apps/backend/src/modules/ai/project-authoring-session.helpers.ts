@@ -47,6 +47,7 @@ import {
   computeStepPlanQualityRequirements,
   evaluateStepPlanQuality,
   buildStepQualityRepairIssue,
+  type StepPlanQualityIssue,
   type StepPlanQualityRequirements,
 } from './ai-project-authoring-real.provider.js';
 import { resolveAiChatProvider } from '../../config/env.js';
@@ -526,7 +527,10 @@ export const buildStepAuthoringContext = async (input: {
   uiLocale: AiLocale;
   userComment?: string | null;
   repairAttempt?: boolean;
+  repairAttemptNumber?: number;
   repairIssue?: string | null;
+  repairQualityIssues?: StepPlanQualityIssue[];
+  repairPlan?: SequentialStep[];
   previousInvalidOutput?: string | null;
   sessionRecord?: ProjectAuthoringSessionWithTurn | null;
 }): Promise<StepListContext> => {
@@ -694,7 +698,10 @@ export const buildStepAuthoringContext = async (input: {
     } as StepListContext['clarification'],
     recentAnswers: augmentedRecentAnswers,
     repairAttempt: input.repairAttempt ?? false,
+    repairAttemptNumber: input.repairAttemptNumber,
     repairIssue: input.repairIssue ?? null,
+    repairQualityIssues: input.repairQualityIssues,
+    repairPlan: input.repairPlan,
     previousInvalidOutput: input.previousInvalidOutput ?? null,
     qualityRequirements,
   };
@@ -939,6 +946,7 @@ export const validateAuthoringStepPlanForSession = (input: {
       ok: false;
       code: string;
       issues: string[];
+      qualityIssues?: StepPlanQualityIssue[];
       unknownComponents?: string[];
       requiredMinimum?: number;
       receivedSteps?: number;
@@ -1029,20 +1037,44 @@ export const validateAuthoringStepPlanForSession = (input: {
     /^اختبر النتيجة\.?$/,
   ];
   const qualityIssues: string[] = [];
-  for (const step of sequential) {
+  const structuredQualityIssues: StepPlanQualityIssue[] = [];
+  for (let index = 0; index < sequential.length; index += 1) {
+    const step = sequential[index]!;
     const description = step.description.trim();
     if (description.length < 48) {
-      qualityIssues.push(`Step "${step.title}" needs a more detailed description.`);
+      const message = `Step "${step.title}" needs a more detailed description.`;
+      qualityIssues.push(message);
+      structuredQualityIssues.push({
+        code: 'INSUFFICIENT_IMPLEMENTATION_GUIDANCE',
+        message,
+        expected:
+          'Use a recognized concrete learner action and at least 48 characters of implementation guidance, including relevant component or tool names where appropriate.',
+        stepIndex: index,
+        stepOrder: index + 1,
+        stepTitle: step.title,
+      });
     }
     if (shallowPatterns.some((pattern) => pattern.test(description))) {
-      qualityIssues.push(`Step "${step.title}" description is too generic.`);
+      const message = `Step "${step.title}" description is too generic.`;
+      qualityIssues.push(message);
+      structuredQualityIssues.push({
+        code: 'GENERIC_STEP_DESCRIPTION',
+        message,
+        expected:
+          'Describe a project-specific learner action, how and where to perform it, and a clear result or checkpoint.',
+        stepIndex: index,
+        stepOrder: index + 1,
+        stepTitle: step.title,
+      });
     }
   }
   if (qualityIssues.length > 0) {
     return {
       ok: false,
-      code: 'AI_AUTHORING_STEP_GENERATION_FAILED',
+      code: 'AI_AUTHORING_STEP_QUALITY_INVALID',
       issues: qualityIssues,
+      qualityIssues: structuredQualityIssues,
+      receivedSteps: sequential.length,
     };
   }
 
@@ -1072,6 +1104,7 @@ export const validateAuthoringStepPlanForSession = (input: {
       ok: false,
       code: 'AI_AUTHORING_STEP_QUALITY_INVALID',
       issues: qualityEvaluation.issues,
+      qualityIssues: qualityEvaluation.qualityIssues,
       requiredMinimum: qualityEvaluation.requiredMinimum,
       receivedSteps: qualityEvaluation.receivedSteps,
       missingPhases: qualityEvaluation.missingPhases,
@@ -2020,7 +2053,29 @@ export const componentsFromPayload = (payload: Record<string, unknown>) => {
 
 export const stepsFromPayload = (payload: Record<string, unknown>) => {
   const steps = payload.steps;
-  return Array.isArray(steps) ? steps : [];
+  if (!Array.isArray(steps)) {
+    return [];
+  }
+  return steps.map((step) => {
+    const record = step && typeof step === 'object' ? (step as Record<string, unknown>) : {};
+    const referencedComponentIds = Array.isArray(record.referencedComponentIds)
+      ? record.referencedComponentIds.filter(
+          (componentRef): componentRef is string => typeof componentRef === 'string',
+        )
+      : Array.isArray(record.componentRefs)
+        ? record.componentRefs.filter(
+            (componentRef): componentRef is string => typeof componentRef === 'string',
+          )
+        : [];
+    return {
+      ...record,
+      title: typeof record.title === 'string' ? record.title : '',
+      description: typeof record.description === 'string' ? record.description : '',
+      ...(referencedComponentIds.length > 0
+        ? { componentRefs: referencedComponentIds }
+        : {}),
+    };
+  });
 };
 
 export const readTrustedComponentList = (
@@ -2311,18 +2366,26 @@ export const tryGenerateStepPlan = async (input: {
   let capturedStepQualityRequirements: StepPlanQualityRequirements | undefined;
 
   const generateValidatedPlan = async (
-    repairAttempt: boolean,
-    repairIssue?: string | null,
-    previousInvalidOutput?: string | null,
+    options: {
+      repairAttemptNumber: number;
+      repairIssue?: string | null;
+      repairQualityIssues?: StepPlanQualityIssue[];
+      repairPlan?: SequentialStep[];
+      previousInvalidOutput?: string | null;
+    },
   ) => {
+    const repairAttempt = options.repairAttemptNumber > 0;
     const context = await buildStepAuthoringContext({
       project: input.project,
       conversationId: sessionRecord.conversationId,
       sessionId: sessionRecord.id,
       uiLocale: contentLocale,
       repairAttempt,
-      repairIssue,
-      previousInvalidOutput,
+      repairAttemptNumber: options.repairAttemptNumber || undefined,
+      repairIssue: options.repairIssue,
+      repairQualityIssues: options.repairQualityIssues,
+      repairPlan: options.repairPlan,
+      previousInvalidOutput: options.previousInvalidOutput,
       sessionRecord,
     });
     capturedStepQualityRequirements = context.qualityRequirements;
@@ -2335,13 +2398,12 @@ export const tryGenerateStepPlan = async (input: {
       provider: resolveAiChatProvider(),
       componentCount: context.components.length,
       contentLocale: context.locale,
-      repairAttempt,
+      repairAttempt: options.repairAttemptNumber,
       requestedStepCount: context.requestedStepCount,
       requiredStepCount: capturedStepQualityRequirements?.minimumMeaningfulSteps ?? null,
     });
-    // One provider attempt per call. Bounded repair is handled by the outer
-    // try/catch below so Retry = 1 request + at most 1 repair, with the exact
-    // first-response issues and raw invalid output fed into the repair prompt.
+    // One provider request per call. The bounded outer loop carries the exact
+    // structured issues and latest full plan into at most two targeted repairs.
     const generated = await generateSequentialStepList(context);
     const validated = validateAuthoringStepPlanForSession({
       project: input.project,
@@ -2369,6 +2431,8 @@ export const tryGenerateStepPlan = async (input: {
             : {}),
           ...(validated.receivedSteps != null ? { receivedSteps: validated.receivedSteps } : {}),
           ...(validated.missingPhases ? { missingPhases: validated.missingPhases } : {}),
+          ...(validated.qualityIssues ? { qualityIssues: validated.qualityIssues } : {}),
+          invalidSteps: generated.steps,
         },
       );
     }
@@ -2379,82 +2443,122 @@ export const tryGenerateStepPlan = async (input: {
     };
   };
 
-  let repairAttempted = false;
+  const maximumRepairAttempts = 2;
+  let repairAttemptsUsed = 0;
   try {
-    let plan: Awaited<ReturnType<typeof generateValidatedPlan>>;
+    let plan: Awaited<ReturnType<typeof generateValidatedPlan>> | undefined;
+    let currentError: unknown;
     try {
-      plan = await generateValidatedPlan(false);
-    } catch (firstError) {
-      if (!isRepairableStepGenerationError(firstError)) {
-        throw firstError;
+      plan = await generateValidatedPlan({ repairAttemptNumber: 0 });
+    } catch (initialError) {
+      currentError = initialError;
+    }
+
+    while (!plan && repairAttemptsUsed < maximumRepairAttempts) {
+      if (!isRepairableStepGenerationError(currentError)) {
+        throw currentError;
       }
-      repairAttempted = true;
-      const previousInvalidOutput =
-        firstError instanceof AppError &&
-        firstError.details &&
-        typeof firstError.details === 'object' &&
-        typeof (firstError.details as { previousInvalidOutput?: unknown })
-          .previousInvalidOutput === 'string'
-          ? (firstError.details as { previousInvalidOutput: string }).previousInvalidOutput
-          : null;
-      const unknownComponents =
-        firstError instanceof AppError &&
-        firstError.details &&
-        typeof firstError.details === 'object' &&
-        Array.isArray((firstError.details as { unknownComponents?: unknown }).unknownComponents)
-          ? (firstError.details as { unknownComponents: string[] }).unknownComponents
-          : [];
-      const qualityDetails =
-        firstError instanceof AppError &&
-        firstError.details &&
-        typeof firstError.details === 'object'
-          ? (firstError.details as {
-              issues?: string[];
-              requiredMinimum?: number;
-              receivedSteps?: number;
-              missingPhases?: string[];
-            })
+      repairAttemptsUsed += 1;
+      const repairError = currentError;
+      const errorDetails =
+        repairError instanceof AppError &&
+        repairError.details &&
+        typeof repairError.details === 'object'
+          ? (repairError.details as Record<string, unknown>)
           : {};
+      const previousInvalidOutput =
+        typeof errorDetails.previousInvalidOutput === 'string'
+          ? errorDetails.previousInvalidOutput
+          : null;
+      const unknownComponents = Array.isArray(errorDetails.unknownComponents)
+        ? errorDetails.unknownComponents.filter(
+            (component): component is string => typeof component === 'string',
+          )
+        : [];
+      const qualityIssues = Array.isArray(errorDetails.qualityIssues)
+        ? (errorDetails.qualityIssues as StepPlanQualityIssue[])
+        : [];
+      const invalidSteps = Array.isArray(errorDetails.invalidSteps)
+        ? (errorDetails.invalidSteps as SequentialStep[])
+        : undefined;
+      const issues = Array.isArray(errorDetails.issues)
+        ? errorDetails.issues.filter((issue): issue is string => typeof issue === 'string')
+        : [];
+      const missingPhases = Array.isArray(errorDetails.missingPhases)
+        ? errorDetails.missingPhases.filter(
+            (phase): phase is string => typeof phase === 'string',
+          )
+        : [];
+      const receivedSteps =
+        typeof errorDetails.receivedSteps === 'number'
+          ? errorDetails.receivedSteps
+          : invalidSteps?.length;
       const issueParts = [
-        firstError instanceof AppError &&
-        firstError.code === 'AI_AUTHORING_STEP_QUALITY_INVALID' &&
+        repairError instanceof AppError &&
+        repairError.code === 'AI_AUTHORING_STEP_QUALITY_INVALID' &&
         capturedStepQualityRequirements
           ? buildStepQualityRepairIssue({
               requirements: capturedStepQualityRequirements,
-              receivedSteps: qualityDetails.receivedSteps ?? 0,
-              issues: qualityDetails.issues ?? [firstError.message],
-              missingPhases: qualityDetails.missingPhases ?? [],
+              receivedSteps: receivedSteps ?? 0,
+              issues: issues.length > 0 ? issues : [repairError.message],
+              qualityIssues,
+              missingPhases,
+              steps: invalidSteps,
             })
-          : firstError instanceof AppError
-            ? firstError.message
+          : repairError instanceof AppError
+            ? repairError.message
             : 'Step plan was invalid.',
         contentLocale === 'ar' ? ARABIC_LANGUAGE_REPAIR_ISSUE : null,
         unknownComponents.length > 0
           ? `Unknown componentRefs: ${JSON.stringify(unknownComponents)}`
           : null,
-        firstError instanceof AppError &&
-        Array.isArray((firstError.details as { issues?: unknown })?.issues) &&
-        firstError.code !== 'AI_AUTHORING_STEP_QUALITY_INVALID'
-          ? `Issues: ${JSON.stringify((firstError.details as { issues: unknown }).issues).slice(0, 1500)}`
+        repairError instanceof AppError &&
+        issues.length > 0 &&
+        repairError.code !== 'AI_AUTHORING_STEP_QUALITY_INVALID'
+          ? `Issues: ${JSON.stringify(issues).slice(0, 1500)}`
           : null,
       ].filter(Boolean);
+      const failingStepIndexes = [
+        ...new Set(
+          qualityIssues
+            .flatMap((issue) => [issue.stepIndex, ...(issue.relatedStepIndexes ?? [])])
+            .filter((index): index is number => index != null),
+        ),
+      ];
       logStepGenerationEvent('step_generation_provider_failed', {
         sessionId: sessionRecord.id,
         learningProjectId: input.project.id,
         conversationId: sessionRecord.conversationId,
         version: expectedVersion,
         provider: resolveAiChatProvider(),
-        errorCode: firstError instanceof AppError ? firstError.code : 'UNKNOWN',
+        errorCode: repairError instanceof AppError ? repairError.code : 'UNKNOWN',
         qualityIssueCode:
-          qualityDetails.issues?.[0]?.split(':', 1)[0] ??
-          (firstError instanceof AppError ? firstError.code : 'UNKNOWN'),
+          qualityIssues[0]?.code ??
+          issues[0]?.split(':', 1)[0] ??
+          (repairError instanceof AppError ? repairError.code : 'UNKNOWN'),
+        qualityIssueCodes: qualityIssues.map((issue) => issue.code),
+        failingStepIndexes,
         requiredStepCount: capturedStepQualityRequirements?.minimumMeaningfulSteps ?? null,
-        returnedStepCount: qualityDetails.receivedSteps ?? null,
-        repairAttempt: 1,
+        returnedStepCount: receivedSteps ?? null,
+        repairAttempt: repairAttemptsUsed,
         repairSucceeded: false,
         hasPreviousInvalidOutput: Boolean(previousInvalidOutput),
       });
-      plan = await generateValidatedPlan(true, issueParts.join(' '), previousInvalidOutput);
+      try {
+        plan = await generateValidatedPlan({
+          repairAttemptNumber: repairAttemptsUsed,
+          repairIssue: issueParts.join(' '),
+          repairQualityIssues: qualityIssues,
+          repairPlan: invalidSteps,
+          previousInvalidOutput,
+        });
+      } catch (nextError) {
+        currentError = nextError;
+      }
+    }
+
+    if (!plan) {
+      throw currentError;
     }
 
     const { payloadSteps, sequential } = serializeAuthoringStepPlanPayload(plan.steps);
@@ -2494,12 +2598,12 @@ export const tryGenerateStepPlan = async (input: {
       conversationId: sessionRecord.conversationId,
       version: session.version,
       source: 'provider',
-      repairAttempted,
+      repairAttempted: repairAttemptsUsed > 0,
       stepCount: payloadSteps.length,
       requiredStepCount: capturedStepQualityRequirements?.minimumMeaningfulSteps ?? null,
-      repairAttempt: repairAttempted ? 1 : 0,
-      repairedStepCount: repairAttempted ? payloadSteps.length : null,
-      repairSucceeded: repairAttempted,
+      repairAttempt: repairAttemptsUsed,
+      repairedStepCount: repairAttemptsUsed > 0 ? payloadSteps.length : null,
+      repairSucceeded: repairAttemptsUsed > 0,
       currentTurnId: turnId,
     });
 
@@ -2541,8 +2645,9 @@ export const tryGenerateStepPlan = async (input: {
         finalQualityDetails.issues?.[0]?.split(':', 1)[0] ?? errorCode,
       requiredStepCount: capturedStepQualityRequirements?.minimumMeaningfulSteps ?? null,
       returnedStepCount: finalQualityDetails.receivedSteps ?? null,
-      repairAttempt: repairAttempted ? 1 : 0,
-      repairedStepCount: repairAttempted ? finalQualityDetails.receivedSteps ?? null : null,
+      repairAttempt: repairAttemptsUsed,
+      repairedStepCount:
+        repairAttemptsUsed > 0 ? finalQualityDetails.receivedSteps ?? null : null,
       repairSucceeded: false,
     });
 
@@ -3510,6 +3615,7 @@ export const buildStepItemTurn = (input: {
       total: workingSteps.length,
       title: step.title,
       description: step.description,
+      referencedComponentIds: step.componentRefs ?? [],
     },
     explanation:
       input.locale === 'ar'

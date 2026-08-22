@@ -17,11 +17,14 @@ import {
   validateComponentList,
 } from './ai-project-authoring-sequential-components.provider.js';
 import {
+  resolveComponentReference,
   validateComponentStepConsistency,
   type SequentialComponent as PolicySequentialComponent,
+  type StepComponentConsistencyIssue,
 } from './ai-project-authoring-sequential.policy.js';
 import {
   generateAlternativeSequentialStepPlanWithRepair,
+  repairSequentialStepListForConsistency,
   validateStepList,
 } from './ai-project-authoring-sequential-steps.provider.js';
 import { generateAlternativeStageDiscussionWithRepair } from './ai-project-authoring-sequential-discussion.provider.js';
@@ -211,6 +214,97 @@ const saveStepsToProject = async (input: {
   }
 };
 
+const repairPersistedAiStepReferences = async (input: {
+  project: ProjectRecord;
+  sessionRecord: NonNullable<
+    Awaited<ReturnType<typeof projectAuthoringSessionRepository.findByIdForOwner>>
+  >;
+  locale: AiLocale;
+  steps: SequentialStep[];
+  components: PolicySequentialComponent[];
+  consistencyIssues: StepComponentConsistencyIssue[];
+}) => {
+  const referenceIssues = input.consistencyIssues.filter(
+    (issue) =>
+      issue.code === 'UNKNOWN_COMPONENT_REFERENCE' ||
+      issue.code === 'AMBIGUOUS_COMPONENT_REFERENCE',
+  );
+  if (
+    referenceIssues.length === 0 ||
+    referenceIssues.length !== input.consistencyIssues.length
+  ) {
+    throw new AppError(
+      input.consistencyIssues.map((issue) => issue.message).join(' '),
+      409,
+      'AI_STEP_COMPONENT_INCONSISTENT',
+    );
+  }
+
+  const context = await buildStepAuthoringContext({
+    project: input.project,
+    conversationId: input.sessionRecord.conversationId,
+    sessionId: input.sessionRecord.id,
+    uiLocale: input.locale,
+    sessionRecord: input.sessionRecord,
+  });
+  const repaired = await repairSequentialStepListForConsistency({
+    ...context,
+    invalidSteps: input.steps,
+    consistencyIssues: referenceIssues,
+    mismatchSource: 'persisted-ai-step-state',
+  });
+  if (repaired.steps.length !== input.steps.length) {
+    throw new AppError(
+      'Step reference repair changed the persisted Step count.',
+      409,
+      'AI_STEP_COMPONENT_INCONSISTENT',
+    );
+  }
+
+  const failingIndexes = new Set(
+    referenceIssues
+      .map((issue) => issue.stepIndex)
+      .filter((stepIndex): stepIndex is number => stepIndex != null),
+  );
+  const mergedSteps = input.steps.map((step, stepIndex) => {
+    if (!failingIndexes.has(stepIndex)) {
+      return step;
+    }
+    const validExistingRefs = (step.componentRefs ?? []).filter((componentRef) => {
+      const resolution = resolveComponentReference(componentRef, input.components).resolution;
+      return resolution !== 'UNKNOWN' && resolution !== 'AMBIGUOUS';
+    });
+    const repairedRefs = repaired.steps[stepIndex]?.componentRefs ?? [];
+    return {
+      ...step,
+      componentRefs: [...new Set([...validExistingRefs, ...repairedRefs])],
+    };
+  });
+
+  const consistency = validateComponentStepConsistency({
+    components: input.components,
+    steps: mergedSteps,
+    constraints: [],
+  });
+  if (!consistency.ok) {
+    throw new AppError(
+      consistency.issues.join(' '),
+      409,
+      consistency.code,
+      {
+        issues: consistency.issues,
+        consistencyIssues: consistency.consistencyIssues,
+        mismatchSource: 'persisted-ai-step-state',
+        canonicalComponentIds: input.components
+          .map((component) => component.id)
+          .filter((id): id is string => Boolean(id)),
+      },
+    );
+  }
+
+  return mergedSteps;
+};
+
 const handleAcceptCurrent = async (input: {
   userId: string;
   sessionRecord: Awaited<ReturnType<typeof projectAuthoringSessionRepository.findByIdForOwner>>;
@@ -360,6 +454,7 @@ const handleAcceptCurrent = async (input: {
     const workingSteps = [...stepState.workingSteps];
     const index = Number(payload.index);
     workingSteps[index] = {
+      ...workingSteps[index],
       title: String(payload.title),
       description: String(payload.description),
     };
@@ -508,15 +603,34 @@ const handleAcceptCurrent = async (input: {
     (turn.stage === 'STEPS_OVERVIEW' || turn.stage === 'STEP_REVIEW') &&
     (stepState?.awaitingFinalSave || stepState?.mode === 'FULL_PLAN' || !stepState)
   ) {
-    const steps = readTrustedStepList(sessionRecord, turn);
+    let steps = readTrustedStepList(sessionRecord, turn) as SequentialStep[];
     const components = projectComponentsAsSequential(
       input.project,
     ) as PolicySequentialComponent[];
+    const consistency = validateComponentStepConsistency({
+      components,
+      steps,
+      constraints: [],
+    });
+    if (!consistency.ok) {
+      const aiGeneratedPersistedPlan = turn.kind === 'STEP_PLAN';
+      if (!aiGeneratedPersistedPlan) {
+        throw new AppError(consistency.issues.join(' '), 409, consistency.code);
+      }
+      steps = await repairPersistedAiStepReferences({
+        project: input.project,
+        sessionRecord,
+        locale: input.locale,
+        steps,
+        components,
+        consistencyIssues: consistency.consistencyIssues,
+      });
+    }
     await saveStepsToProject({
       userId: input.userId,
       project: input.project,
       session: sessionRecord,
-      steps: steps as SequentialStep[],
+      steps,
       components,
       locale: input.locale,
     });
@@ -628,10 +742,7 @@ const handleSaveManual = async (input: {
       );
     }
     const steps = validateStepList(
-      (input.body.manualValue as Array<{ title: string; description: string }>).map((step) => ({
-        title: String(step.title),
-        description: String(step.description),
-      })),
+      stepsFromPayload({ steps: input.body.manualValue }) as SequentialStep[],
     );
     const consistency = validateComponentStepConsistency({
       components: projectComponentsAsSequential(input.project) as PolicySequentialComponent[],

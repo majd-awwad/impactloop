@@ -10,6 +10,7 @@ import {
   generateSequentialStepList,
   generateSequentialStepListWithRepair,
   generateStepStageReply,
+  repairSequentialStepListForConsistency,
 } from './ai-project-authoring-sequential-steps.provider.js';
 
 const clarification = {
@@ -760,7 +761,7 @@ ${JSON.stringify({
     setAuthoringRealStepInvokerForTests(null);
   });
 
-  test('Arabic detailed provider steps pass semantic quality validation', async () => {
+  test('eight concrete meaningful steps pass semantic quality validation immediately', async () => {
     process.env.AI_CHAT_PROVIDER = 'gemini';
     const { setAuthoringRealStepInvokerForTests } = await import(
       './ai-project-authoring-real.provider.js'
@@ -1281,6 +1282,13 @@ ${JSON.stringify({
           instruction?: string;
           noPadding?: string;
         };
+        concreteGuidanceContract?: {
+          minimumDescriptionCharacters?: number;
+          requiresConcreteAction?: boolean;
+          requiresRelevantComponentOrToolWhereAppropriate?: boolean;
+          requiresObservableCheckpoint?: boolean;
+          vagueStandaloneDescriptionsForbidden?: string[];
+        };
       };
     };
     assert.equal(payload.stepPlanQualityRequirements?.minimumMeaningfulSteps, 8);
@@ -1302,6 +1310,29 @@ ${JSON.stringify({
       payload.stepPlanQualityRequirements?.hardCountContract?.noPadding ?? '',
       /duplicating|rewording/i,
     );
+    assert.equal(
+      payload.stepPlanQualityRequirements?.concreteGuidanceContract
+        ?.minimumDescriptionCharacters,
+      48,
+    );
+    assert.equal(
+      payload.stepPlanQualityRequirements?.concreteGuidanceContract?.requiresConcreteAction,
+      true,
+    );
+    assert.equal(
+      payload.stepPlanQualityRequirements?.concreteGuidanceContract
+        ?.requiresRelevantComponentOrToolWhereAppropriate,
+      true,
+    );
+    assert.equal(
+      payload.stepPlanQualityRequirements?.concreteGuidanceContract
+        ?.requiresObservableCheckpoint,
+      true,
+    );
+    assert.ok(
+      payload.stepPlanQualityRequirements?.concreteGuidanceContract
+        ?.vagueStandaloneDescriptionsForbidden?.includes('test the system'),
+    );
     const requirements = computeStepPlanQualityRequirements({
       locale: 'ar',
       ideaText: 'بدي أعمل مصباح ليلي ذكي باستخدام Arduino Uno وLDR وLED',
@@ -1320,6 +1351,300 @@ ${JSON.stringify({
     assert.equal(transportSchema.properties?.steps?.minItems, 8);
     assert.equal(transportSchema.properties?.steps?.maxItems, requirements.safeMaximum);
     assert.doesNotMatch(capturedPrompts[0]!, /target exactly 8/i);
+    setAuthoringRealStepInvokerForTests(null);
+  });
+
+  test('persisted AI stale reference uses bounded repair with the current canonical catalog', async () => {
+    process.env.AI_CHAT_PROVIDER = 'gemini';
+    const { setAuthoringRealStepInvokerForTests } = await import(
+      './ai-project-authoring-real.provider.js'
+    );
+    const invalidSteps = detailedProviderSteps('Persisted stale').map((step, index) => ({
+      ...step,
+      componentRefs: index === 0 ? ['retired-component-id'] : step.componentRefs,
+    }));
+    const prompts: string[] = [];
+    let calls = 0;
+    setAuthoringRealStepInvokerForTests(async ({ userPrompt }) => {
+      calls += 1;
+      prompts.push(userPrompt);
+      return {
+        text: JSON.stringify({
+          kind: 'STEP_PLAN',
+          steps: detailedProviderSteps('Persisted repaired'),
+          explanation: 'Replaced the stale reference with current canonical IDs.',
+        }),
+        model: 'test-gemini',
+        inputTokens: 1,
+        outputTokens: 1,
+      };
+    });
+
+    const repaired = await repairSequentialStepListForConsistency({
+      locale: 'en',
+      ideaText: 'Arduino LDR night light with LED on breadboard',
+      projectTitle: 'Night light',
+      projectShortDescription: 'Beginner Arduino',
+      projectDescription: 'LDR controlled LED',
+      difficulty: 'BEGINNER',
+      estimatedMinutes: 90,
+      components: ldrComponents,
+      clarification,
+      recentAnswers: [],
+      invalidSteps,
+      consistencyIssues: [
+        {
+          code: 'UNKNOWN_COMPONENT_REFERENCE',
+          message:
+            'Step "Persisted stale prepare components" references unknown component ID "retired-component-id".',
+          stepIndex: 0,
+          stepOrder: 1,
+          stepTitle: 'Persisted stale prepare components',
+          componentRef: 'retired-component-id',
+          canonicalComponentId: null,
+          canonicalComponentName: null,
+          resolution: 'UNKNOWN',
+        },
+      ],
+      mismatchSource: 'stale-ai-step-state',
+    });
+
+    assert.equal(calls, 1);
+    assert.ok(repaired.steps[0]?.componentRefs?.includes('comp-arduino'));
+    const repairPayload = JSON.parse(prompts[0]!) as {
+      allowedComponentRefs?: string[];
+      repairInstructions?: {
+        consistencyIssues?: Array<{ componentRef?: string; stepIndex?: number }>;
+        failingStepIndexes?: number[];
+      };
+    };
+    assert.ok(
+      repairPayload.allowedComponentRefs?.includes('comp-arduino'),
+    );
+    assert.deepEqual(repairPayload.repairInstructions?.failingStepIndexes, [0]);
+    assert.equal(
+      repairPayload.repairInstructions?.consistencyIssues?.[0]?.componentRef,
+      'retired-component-id',
+    );
+    setAuthoringRealStepInvokerForTests(null);
+  });
+
+  test('one vague step triggers targeted repair while preserving the other seven steps', async () => {
+    process.env.AI_CHAT_PROVIDER = 'gemini';
+    const { setAuthoringRealStepInvokerForTests } = await import(
+      './ai-project-authoring-real.provider.js'
+    );
+    const initialSteps = detailedProviderSteps('Targeted');
+    initialSteps[4] = {
+      ...initialSteps[4]!,
+      description: 'راجع الدائرة بشكل عام قبل المتابعة إلى الخطوة التالية.',
+    };
+    const repairedSteps = initialSteps.map((step, index) =>
+      index === 4
+        ? {
+            ...step,
+            description:
+              'وصّل White LED مع مقاومة 220 ohm resistor على Breadboard ثم تحقق أن اتجاه القطبين صحيح قبل تشغيل Arduino Uno.',
+          }
+        : step,
+    );
+    const prompts: string[] = [];
+    let calls = 0;
+    setAuthoringRealStepInvokerForTests(async ({ userPrompt }) => {
+      calls += 1;
+      prompts.push(userPrompt);
+      return {
+        text: JSON.stringify({
+          kind: 'STEP_PLAN',
+          steps: calls === 1 ? initialSteps : repairedSteps,
+          explanation: calls === 1 ? 'One vague step.' : 'Targeted repair.',
+        }),
+        model: 'test-gemini',
+        inputTokens: 1,
+        outputTokens: 1,
+      };
+    });
+
+    const generated = await generateSequentialStepListWithRepair({
+      locale: 'ar',
+      ideaText: 'بدي أعمل مصباح ليلي ذكي باستخدام Arduino Uno وLDR وLED',
+      projectTitle: 'مصباح ليلي',
+      projectShortDescription: 'مشروع مبتدئ',
+      projectDescription: 'مصباح ليلي بدون Relay',
+      difficulty: 'BEGINNER',
+      estimatedMinutes: 300,
+      components: ldrComponents,
+      clarification,
+      recentAnswers: [],
+    });
+
+    assert.equal(calls, 2);
+    assert.equal(generated.steps.length, 8);
+    assert.equal(generated.steps[0]?.title, initialSteps[0]?.title);
+    assert.equal(generated.steps[7]?.description, initialSteps[7]?.description);
+    assert.equal(generated.steps[4]?.description, repairedSteps[4]?.description);
+    const repairPayload = JSON.parse(prompts[1]!) as {
+      repairInstructions?: {
+        repairAttempt?: number;
+        failingStepIndexes?: number[];
+        qualityIssues?: Array<{
+          stepIndex?: number;
+          stepTitle?: string;
+          code?: string;
+          expected?: string;
+        }>;
+        currentPlan?: Array<{ stepIndex?: number; title?: string; description?: string }>;
+        preserveValidContent?: string;
+        targetedRewrite?: string;
+      };
+    };
+    assert.equal(repairPayload.repairInstructions?.repairAttempt, 1);
+    assert.deepEqual(repairPayload.repairInstructions?.failingStepIndexes, [4]);
+    assert.ok(
+      repairPayload.repairInstructions?.qualityIssues?.some(
+        (issue) =>
+          issue.stepIndex === 4 &&
+          issue.code === 'INSUFFICIENT_IMPLEMENTATION_GUIDANCE' &&
+          /48 characters/i.test(issue.expected ?? ''),
+      ),
+    );
+    assert.equal(repairPayload.repairInstructions?.currentPlan?.length, 8);
+    assert.equal(repairPayload.repairInstructions?.currentPlan?.[0]?.title, initialSteps[0]?.title);
+    assert.match(
+      repairPayload.repairInstructions?.currentPlan?.[0]?.description ?? '',
+      /Disconnect USB before rewiring/i,
+    );
+    assert.match(
+      repairPayload.repairInstructions?.preserveValidContent ?? '',
+      /preserve all steps not identified/i,
+    );
+    assert.match(repairPayload.repairInstructions?.targetedRewrite ?? '', /full plan/i);
+    setAuthoringRealStepInvokerForTests(null);
+  });
+
+  test('first targeted repair may remain vague and second targeted repair succeeds', async () => {
+    process.env.AI_CHAT_PROVIDER = 'gemini';
+    const { setAuthoringRealStepInvokerForTests } = await import(
+      './ai-project-authoring-real.provider.js'
+    );
+    const vagueSteps = detailedProviderSteps('Two pass');
+    vagueSteps[3] = {
+      ...vagueSteps[3]!,
+      description: 'راجع النظام بشكل عام قبل المتابعة إلى الخطوة التالية.',
+    };
+    const validSteps = vagueSteps.map((step, index) =>
+      index === 3
+        ? {
+            ...step,
+            description:
+              'وصّل LDR photoresistor ومقاومة 10k ohm resistor على Breadboard إلى Analog A0 ثم تحقق أن القراءة تتغير بين الضوء والظلام.',
+          }
+        : step,
+    );
+    const prompts: string[] = [];
+    let calls = 0;
+    setAuthoringRealStepInvokerForTests(async ({ userPrompt }) => {
+      calls += 1;
+      prompts.push(userPrompt);
+      return {
+        text: JSON.stringify({
+          kind: 'STEP_PLAN',
+          steps: calls < 3 ? vagueSteps : validSteps,
+          explanation: calls < 3 ? 'Still vague.' : 'Concrete now.',
+        }),
+        model: 'test-gemini',
+        inputTokens: 1,
+        outputTokens: 1,
+      };
+    });
+
+    const generated = await generateSequentialStepListWithRepair({
+      locale: 'ar',
+      ideaText: 'بدي أعمل مصباح ليلي ذكي باستخدام Arduino Uno وLDR وLED',
+      projectTitle: 'مصباح ليلي',
+      projectShortDescription: 'مشروع مبتدئ',
+      projectDescription: 'مصباح ليلي بدون Relay',
+      difficulty: 'BEGINNER',
+      estimatedMinutes: 300,
+      components: ldrComponents,
+      clarification,
+      recentAnswers: [],
+    });
+
+    assert.equal(calls, 3);
+    assert.equal(generated.steps[3]?.description, validSteps[3]?.description);
+    const secondRepair = JSON.parse(prompts[2]!) as {
+      repairInstructions?: {
+        repairAttempt?: number;
+        failingStepIndexes?: number[];
+        currentPlan?: Array<{ description?: string }>;
+      };
+    };
+    assert.equal(secondRepair.repairInstructions?.repairAttempt, 2);
+    assert.deepEqual(secondRepair.repairInstructions?.failingStepIndexes, [3]);
+    assert.equal(
+      secondRepair.repairInstructions?.currentPlan?.[3]?.description,
+      'راجع النظام بشكل عام قبل المتابعة إلى الخطوة التالية.',
+    );
+    setAuthoringRealStepInvokerForTests(null);
+  });
+
+  test('two invalid targeted repairs end with the controlled semantic quality error', async () => {
+    process.env.AI_CHAT_PROVIDER = 'gemini';
+    const { setAuthoringRealStepInvokerForTests } = await import(
+      './ai-project-authoring-real.provider.js'
+    );
+    const vagueSteps = detailedProviderSteps('Bounded vague');
+    vagueSteps[2] = {
+      ...vagueSteps[2]!,
+      description: 'راجع الدائرة بشكل عام قبل المتابعة إلى الخطوة التالية.',
+    };
+    let calls = 0;
+    setAuthoringRealStepInvokerForTests(async () => {
+      calls += 1;
+      return {
+        text: JSON.stringify({
+          kind: 'STEP_PLAN',
+          steps: vagueSteps,
+          explanation: 'Still invalid.',
+        }),
+        model: 'test-gemini',
+        inputTokens: 1,
+        outputTokens: 1,
+      };
+    });
+
+    await assert.rejects(
+      () =>
+        generateSequentialStepListWithRepair({
+          locale: 'ar',
+          ideaText: 'بدي أعمل مصباح ليلي ذكي باستخدام Arduino Uno وLDR وLED',
+          projectTitle: 'مصباح ليلي',
+          projectShortDescription: 'مشروع مبتدئ',
+          projectDescription: 'مصباح ليلي بدون Relay',
+          difficulty: 'BEGINNER',
+          estimatedMinutes: 300,
+          components: ldrComponents,
+          clarification,
+          recentAnswers: [],
+        }),
+      (error: unknown) => {
+        if (!(error instanceof AppError) || error.code !== 'AI_AUTHORING_STEP_QUALITY_INVALID') {
+          return false;
+        }
+        const details = error.details as {
+          qualityIssues?: Array<{ stepIndex?: number; code?: string }>;
+        };
+        return Boolean(
+          details.qualityIssues?.some(
+            (issue) =>
+              issue.stepIndex === 2 &&
+              issue.code === 'INSUFFICIENT_IMPLEMENTATION_GUIDANCE',
+          ),
+        );
+      },
+    );
+    assert.equal(calls, 3);
     setAuthoringRealStepInvokerForTests(null);
   });
 
@@ -1376,16 +1701,24 @@ ${JSON.stringify({
     const repairPayload = JSON.parse(repairPrompts[0]!) as {
       repairIssue?: string | null;
       previousInvalidOutput?: string | null;
-      repairInstructions?: { preserveValidContent?: string } | null;
+      repairInstructions?: {
+        preserveValidContent?: string;
+        currentPlan?: Array<{ title?: string }>;
+      } | null;
     };
     assert.match(repairPayload.repairIssue ?? '', /at least 8 meaningful steps/i);
     assert.doesNotMatch(repairPayload.repairIssue ?? '', /at least 6 meaningful steps/i);
     assert.match(repairPayload.repairIssue ?? '', /previous response contained 7/i);
     assert.match(repairPayload.repairIssue ?? '', /preserve every valid/i);
-    assert.match(repairPayload.previousInvalidOutput ?? '', /Seven only step 1/i);
+    assert.equal(repairPayload.previousInvalidOutput, null);
+    assert.equal(repairPayload.repairInstructions?.currentPlan?.length, 7);
+    assert.match(
+      repairPayload.repairInstructions?.currentPlan?.[0]?.title ?? '',
+      /Seven only step 1/i,
+    );
     assert.match(
       repairPayload.repairInstructions?.preserveValidContent ?? '',
-      /preserve valid, distinct steps/i,
+      /preserve all steps not identified/i,
     );
     setAuthoringRealStepInvokerForTests(null);
   });
@@ -1447,7 +1780,7 @@ ${JSON.stringify({
         return details.requiredMinimum === 8 && details.receivedSteps === 7;
       },
     );
-    assert.equal(calls, 2);
+    assert.equal(calls, 3);
     setAuthoringRealStepInvokerForTests(null);
   });
 
@@ -1495,7 +1828,7 @@ ${JSON.stringify({
       (error: unknown) =>
         error instanceof AppError && error.code === 'AI_AUTHORING_STEP_QUALITY_INVALID',
     );
-    assert.equal(calls, 2);
+    assert.equal(calls, 3);
     setAuthoringRealStepInvokerForTests(null);
   });
 

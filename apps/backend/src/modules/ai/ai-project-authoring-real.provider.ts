@@ -20,6 +20,7 @@ import type { SequentialStage } from './ai-project-authoring-sequential.policy.j
 import type {
   SequentialComponent,
   SequentialStep,
+  StepComponentConsistencyIssue,
 } from './ai-project-authoring-sequential.policy.js';
 import { MAX_PROPOSAL_STEPS } from './ai-project-authoring-proposal.policy.js';
 import { reindexWorkingSteps } from './ai-project-authoring-sequential.policy.js';
@@ -1134,6 +1135,28 @@ export type StepPlanQualityRequirements = {
   requiresArabicSteps: boolean;
 };
 
+export type StepPlanQualityIssueCode =
+  | 'ARABIC_STEP_LANGUAGE_REQUIRED'
+  | 'INSUFFICIENT_STEP_COUNT'
+  | 'EXCESSIVE_STEP_COUNT'
+  | 'DUPLICATE_STEP_TITLE'
+  | 'DUPLICATE_STEP_DESCRIPTION'
+  | 'MISSING_REQUIRED_PHASES'
+  | 'GENERIC_STEP_DESCRIPTION'
+  | 'INSUFFICIENT_IMPLEMENTATION_GUIDANCE'
+  | 'MISSING_HARDWARE_CONTEXT'
+  | 'MISSING_SUCCESS_CHECKPOINT';
+
+export type StepPlanQualityIssue = {
+  code: StepPlanQualityIssueCode;
+  message: string;
+  expected: string;
+  stepIndex: number | null;
+  stepOrder: number | null;
+  stepTitle: string | null;
+  relatedStepIndexes?: number[];
+};
+
 export type StepPlanQualityContext = {
   locale: AiLocale;
   ideaText: string;
@@ -1508,6 +1531,7 @@ export type StepPlanQualityEvaluation =
   | {
       ok: false;
       issues: string[];
+      qualityIssues: StepPlanQualityIssue[];
       requiredMinimum: number;
       receivedSteps: number;
       missingPhases: string[];
@@ -1518,7 +1542,41 @@ export const evaluateStepPlanQuality = (
   requirements: StepPlanQualityRequirements,
   components: SequentialComponent[],
 ): StepPlanQualityEvaluation => {
-  const issues: string[] = [];
+  const qualityIssues: StepPlanQualityIssue[] = [];
+  const addPlanIssue = (
+    code: StepPlanQualityIssueCode,
+    message: string,
+    expected: string,
+    relatedStepIndexes?: number[],
+  ) => {
+    qualityIssues.push({
+      code,
+      message,
+      expected,
+      stepIndex: null,
+      stepOrder: null,
+      stepTitle: null,
+      ...(relatedStepIndexes ? { relatedStepIndexes } : {}),
+    });
+  };
+  const addStepIssue = (
+    index: number,
+    code: StepPlanQualityIssueCode,
+    message: string,
+    expected: string,
+    relatedStepIndexes?: number[],
+  ) => {
+    const step = steps[index]!;
+    qualityIssues.push({
+      code,
+      message,
+      expected,
+      stepIndex: index,
+      stepOrder: index + 1,
+      stepTitle: step.title,
+      ...(relatedStepIndexes ? { relatedStepIndexes } : {}),
+    });
+  };
   const planText = steps.map((step) => `${step.title} ${step.description}`).join('\n');
   const receivedSteps = steps.length;
 
@@ -1527,25 +1585,42 @@ export const evaluateStepPlanQuality = (
       ARABIC_SCRIPT_PATTERN.test(`${step.title} ${step.description}`),
     ).length;
     if (arabicSteps < Math.ceil(steps.length / 2)) {
-      issues.push('Arabic projects require Arabic step titles and descriptions.');
+      addPlanIssue(
+        'ARABIC_STEP_LANGUAGE_REQUIRED',
+        'Arabic projects require Arabic step titles and descriptions.',
+        'Write at least half of the step titles and descriptions in Arabic while preserving machine-readable fields.',
+      );
     }
   }
 
   if (receivedSteps < requirements.minimumMeaningfulSteps) {
-    issues.push(
+    addPlanIssue(
+      'INSUFFICIENT_STEP_COUNT',
       `INSUFFICIENT_STEP_COUNT: Project complexity requires at least ${requirements.minimumMeaningfulSteps} meaningful steps; received ${receivedSteps}.`,
+      `Return at least ${requirements.minimumMeaningfulSteps} distinct, meaningful steps without padding.`,
     );
   }
 
   if (receivedSteps > requirements.safeMaximum) {
-    issues.push(
+    addPlanIssue(
+      'EXCESSIVE_STEP_COUNT',
       `Step plan exceeds the safe maximum of ${requirements.safeMaximum} steps without justification.`,
+      `Keep the plan at or below ${requirements.safeMaximum} meaningful steps.`,
     );
   }
 
   const titleKeys = steps.map((step) => normalizeStepTitleKey(step.title));
   if (new Set(titleKeys).size !== titleKeys.length) {
-    issues.push('Duplicate or near-duplicate step titles are not allowed.');
+    const duplicateIndexes = titleKeys
+      .map((title, index) => ({ title, index }))
+      .filter(({ title }, _, all) => all.filter((entry) => entry.title === title).length > 1)
+      .map(({ index }) => index);
+    addPlanIssue(
+      'DUPLICATE_STEP_TITLE',
+      'Duplicate or near-duplicate step titles are not allowed.',
+      'Give every step a distinct title and primary learning objective.',
+      duplicateIndexes,
+    );
   }
 
   for (let index = 0; index < steps.length; index += 1) {
@@ -1556,8 +1631,12 @@ export const evaluateStepPlanQuality = (
         normalizedDescription === otherDescription ||
         descriptionSimilarity(steps[index]!.description, steps[other]!.description) >= 0.95
       ) {
-        issues.push(
+        addStepIssue(
+          other,
+          'DUPLICATE_STEP_DESCRIPTION',
           `Steps "${steps[index]!.title}" and "${steps[other]!.title}" are too similar.`,
+          'Rewrite the later step so it performs a distinct action with a distinct checkpoint.',
+          [index, other],
         );
       }
     }
@@ -1568,16 +1647,24 @@ export const evaluateStepPlanQuality = (
   if (receivedSteps >= requirements.minimumMeaningfulSteps && phasesRequired > 0) {
     const coveredCount = requirements.requiredPhases.length - missingPhases.length;
     if (coveredCount < phasesRequired) {
-      issues.push(
+      addPlanIssue(
+        'MISSING_REQUIRED_PHASES',
         `MISSING_REQUIRED_PHASES: Step plan is missing required implementation phases: ${missingPhases.slice(0, 6).join(', ')}.`,
+        `Cover enough required phases for this project: ${missingPhases.slice(0, 6).join(', ')}.`,
       );
     }
   }
 
-  for (const step of steps) {
+  for (let index = 0; index < steps.length; index += 1) {
+    const step = steps[index]!;
     const description = step.description.trim();
     if (SHALLOW_STEP_DESCRIPTION_PATTERNS.some((pattern) => pattern.test(description))) {
-      issues.push(`Step "${step.title}" description is too generic.`);
+      addStepIssue(
+        index,
+        'GENERIC_STEP_DESCRIPTION',
+        `Step "${step.title}" description is too generic.`,
+        'Describe a project-specific learner action, how and where to perform it, and a clear result or checkpoint.',
+      );
     }
     const hasAction =
       ENGLISH_STEP_ACTION_PATTERN.test(description) ||
@@ -1599,20 +1686,36 @@ export const evaluateStepPlanQuality = (
       description.length >= 48 &&
       (hasAction || referencesComponent || /[A-Za-z0-9]{2,}|[\u0600-\u06FF]{3,}/.test(description));
     if (!hasAction || !hasImplementationGuidance) {
-      issues.push(`Step "${step.title}" needs concrete action and implementation guidance.`);
+      addStepIssue(
+        index,
+        'INSUFFICIENT_IMPLEMENTATION_GUIDANCE',
+        `Step "${step.title}" needs concrete action and implementation guidance.`,
+        'Use a recognized concrete learner action and at least 48 characters of implementation guidance, including relevant component or tool names where appropriate.',
+      );
     }
     if (requirements.projectType === 'HARDWARE_ELECTRONICS' && !referencesHardware) {
-      issues.push(`Step "${step.title}" must reference project components or hardware context.`);
+      addStepIssue(
+        index,
+        'MISSING_HARDWARE_CONTEXT',
+        `Step "${step.title}" must reference project components or hardware context.`,
+        'Reference a canonical project component or the relevant hardware context in the description.',
+      );
     }
     if (!hasOutcome && description.length < 64) {
-      issues.push(`Step "${step.title}" should explain how to confirm success.`);
+      addStepIssue(
+        index,
+        'MISSING_SUCCESS_CHECKPOINT',
+        `Step "${step.title}" should explain how to confirm success.`,
+        'Add an observable expected result or checkpoint that tells the learner how to verify success.',
+      );
     }
   }
 
-  if (issues.length > 0) {
+  if (qualityIssues.length > 0) {
     return {
       ok: false,
-      issues,
+      issues: qualityIssues.map((issue) => issue.message),
+      qualityIssues,
       requiredMinimum: requirements.minimumMeaningfulSteps,
       receivedSteps,
       missingPhases,
@@ -1630,9 +1733,11 @@ export const assertStepPlanQuality = (
   if (!evaluation.ok) {
     throw new AppError(evaluation.issues.join(' '), 502, 'AI_AUTHORING_STEP_QUALITY_INVALID', {
       issues: evaluation.issues,
+      qualityIssues: evaluation.qualityIssues,
       requiredMinimum: evaluation.requiredMinimum,
       receivedSteps: evaluation.receivedSteps,
       missingPhases: evaluation.missingPhases,
+      invalidSteps: steps,
     });
   }
 };
@@ -1643,6 +1748,7 @@ export const buildStepQualityRepairIssue = (input: {
   issues: string[];
   missingPhases: string[];
   steps?: SequentialStep[];
+  qualityIssues?: StepPlanQualityIssue[];
 }) => {
   const range = `${input.requirements.preferredRangeMin}-${input.requirements.preferredRangeMax}`;
   const missingPhaseText =
@@ -1670,8 +1776,11 @@ export const buildStepQualityRepairIssue = (input: {
       ? `Overloaded steps detected: ${overloadedText}`
       : 'Give each major implementation phase its own beginner-friendly step when needed.',
     missingPhaseText,
+    input.qualityIssues?.length
+      ? `Structured validator issues: ${JSON.stringify(input.qualityIssues).slice(0, 2400)}`
+      : null,
     `Issues: ${JSON.stringify(input.issues).slice(0, 1200)}`,
-  ].join(' ');
+  ].filter(Boolean).join(' ');
 };
 
 const assertParsedStepPlanQuality = (
@@ -1729,7 +1838,11 @@ export type RealAuthoringStepPlanInput = {
   components: SequentialComponent[];
   clarification: AiProjectAuthoringClarificationBlock;
   repairAttempt: boolean;
+  repairAttemptNumber?: number;
   repairIssue?: string | null;
+  repairQualityIssues?: StepPlanQualityIssue[];
+  repairConsistencyIssues?: StepComponentConsistencyIssue[];
+  repairPlan?: SequentialStep[];
   previousInvalidOutput?: string | null;
   suggestAnother?: boolean;
   previousSteps?: SequentialStep[];
@@ -1779,15 +1892,21 @@ export const PROJECT_AUTHORING_STEP_PLAN_SYSTEM_POLICY = [
   'Do not split one trivial action into multiple fake steps.',
   'Do not combine independent major phases (wiring, coding, upload, calibration, testing) into one overloaded step.',
   'Each step needs: order (positive integer), title, description, safetyNote (null when unused), componentRefs (array of allowed catalog ids or exact catalog names).',
+  'For electrical, heat, cutting, soldering, or other tool hazards, provide a specific safetyNote; otherwise use null. Preserve valid safety constraints during repair.',
   'componentRefs must reference only values from allowedComponentRefs in the prompt. Prefer catalog id when present; exact catalog name is also accepted.',
   'Do not invent database IDs. Do not invent unrelated components.',
-  'Each description must explain: what to do, how/where, why it is needed, and how to verify success.',
+  'Each description must use a concrete learner action verb and explain what to do, how/where to do it, why it is needed, and how to verify success.',
+  'Each description must contain at least 48 characters of implementation guidance. Name the relevant canonical component, tool, pin, location, value, or project object where appropriate.',
+  'Descriptions shorter than 64 characters must explicitly include an observable success checkpoint using confirmation language such as verify, confirm, check, should, until, expect, تأكد, تحقق, يجب, حتى, النتيجة, or بنجاح.',
+  'Never use vague standalone descriptions such as prepare the circuit, test the system, configure the sensor, finish the project, connect the circuit/components, write the code, test the project, build the project, or prepare the materials.',
   'Reject shallow one-line instructions. Long vague paragraphs are also invalid.',
   'Do not split one trivial action into multiple fake steps.',
   'Respect learner constraints, exclusions, and difficulty level.',
   'Match content language to the learner idea and messages, not UI locale alone.',
   'For Arabic projects, write Arabic titles/descriptions while keeping natural technical terms (Arduino, LDR, LED, Breadboard, USB).',
   'Do not invent unrelated software, finance, or database workflows for hardware projects.',
+  'Keep steps in logical implementation order. Preserve canonical componentRefs and machine-readable enum values exactly; localization applies only to human-readable content.',
+  'When repairAttempt is true, use repairInstructions.qualityIssues and repairInstructions.currentPlan to rewrite only failing steps unless a dependency requires an adjacent change. Preserve every valid step, its order, componentRefs, and safety constraints, then return the full plan for revalidation.',
   'Return strict JSON only with keys: kind, steps, explanation.',
   'kind must be STEP_PLAN.',
   'Do not wrap JSON in markdown. Do not include prose outside the JSON object.',
@@ -2163,6 +2282,7 @@ const mapProviderSteps = (
       {
         unknownComponents,
         ambiguousComponents: resolved.ambiguous,
+        invalidSteps: mapped,
         issues: [
           ...resolved.unknown.map(
             (ref) => `Step plan references unknown component "${ref}".`,
@@ -2246,12 +2366,37 @@ export const buildAuthoringStepPlanPrompt = (input: RealAuthoringStepPlanInput) 
   ]);
   const repairInstructions = input.repairAttempt
     ? {
+        repairAttempt: input.repairAttemptNumber ?? 1,
         mustFix: input.repairIssue ?? 'Previous step plan was invalid.',
-        previousInvalidOutput: input.previousInvalidOutput ?? null,
+        qualityIssues: input.repairQualityIssues ?? [],
+        consistencyIssues: input.repairConsistencyIssues ?? [],
+        failingStepIndexes: [
+          ...new Set(
+            [
+              ...(input.repairQualityIssues ?? []).flatMap((issue) => [
+                issue.stepIndex,
+                ...(issue.relatedStepIndexes ?? []),
+              ]),
+              ...(input.repairConsistencyIssues ?? []).map((issue) => issue.stepIndex),
+            ]
+              .filter((index): index is number => index != null),
+          ),
+        ],
+        currentPlan: input.repairPlan?.map((step, index) => ({
+          stepIndex: index,
+          order: index + 1,
+          title: step.title,
+          description: step.description,
+          componentRefs: step.componentRefs ?? [],
+        })) ?? null,
+        previousInvalidOutput:
+          input.repairPlan?.length ? null : input.previousInvalidOutput ?? null,
         doNotRepeat:
           'Do not repeat unknown componentRefs, invalid JSON structure, field names, language, shallow steps, or an insufficient step count. Return one complete schema-valid STEP_PLAN object using only saved catalog ids or exact catalog names/aliases.',
         preserveValidContent:
-          'Preserve valid, distinct steps from the previous proposal where possible, then add or revise only what is needed to satisfy the reported quality rules. Do not alter accepted project fields.',
+          'Preserve all steps not identified by failingStepIndexes, including their order, titles, descriptions, componentRefs, and safety constraints. Rewrite only failing steps unless a dependency requires a nearby adjustment. Do not alter accepted project fields.',
+        targetedRewrite:
+          'For each failing step, satisfy its exact structured validator issue and expected field. Return the complete plan and expect the full plan to be validated again.',
         language:
           input.locale === 'ar'
             ? 'Write Arabic titles and descriptions. Keep natural English technical terms where appropriate.'
@@ -2322,7 +2467,35 @@ export const buildAuthoringStepPlanPrompt = (input: RealAuthoringStepPlanInput) 
             : null,
       },
       detailContract:
-        'Each step must include concrete action, project-specific component/object, implementation guidance, purpose or expected result, and verification guidance.',
+        'Each description must use a recognized concrete learner action, contain at least 48 characters of implementation guidance, name the relevant project component/tool/object where appropriate, and include an observable expected result or checkpoint. If shorter than 64 characters it must use explicit confirmation language.',
+      concreteGuidanceContract: {
+        minimumDescriptionCharacters: 48,
+        requiresConcreteAction: true,
+        englishActionExamples: [
+          'connect', 'wire', 'upload', 'open', 'place', 'read', 'test', 'adjust',
+          'write', 'attach', 'insert', 'solder', 'mount', 'prepare', 'inspect',
+          'set', 'define', 'build', 'install', 'control', 'add', 'choose', 'turn',
+          'verify', 'calibrate', 'record',
+        ],
+        arabicActionExamples: [
+          'وصّل', 'ثبّت', 'ضع', 'اربط', 'اكتب', 'عرّف', 'اقرأ', 'ارفع', 'اختبر',
+          'عاير', 'تحقق', 'سجّل', 'جهّز', 'فحص', 'اضبط', 'اختر', 'شغّل', 'ركّب', 'أدخل',
+        ],
+        requiresRelevantComponentOrToolWhereAppropriate: true,
+        requiresObservableCheckpoint: true,
+        vagueStandaloneDescriptionsForbidden: [
+          'prepare the circuit',
+          'test the system',
+          'configure the sensor',
+          'finish the project',
+          'connect the circuit',
+          'connect the components',
+          'write the code',
+          'test the project',
+          'build the project',
+          'prepare the materials',
+        ],
+      },
       hardCountContract: {
         minimumMeaningfulSteps: qualityRequirements.minimumMeaningfulSteps,
         instruction: `Return at least ${qualityRequirements.minimumMeaningfulSteps} distinct, actionable, meaningful steps. Do not return fewer than ${qualityRequirements.minimumMeaningfulSteps}.`,
@@ -2341,7 +2514,8 @@ export const buildAuthoringStepPlanPrompt = (input: RealAuthoringStepPlanInput) 
     feedback: input.feedback ?? null,
     repairAttempt: input.repairAttempt,
     repairIssue: input.repairIssue ?? null,
-    previousInvalidOutput: input.previousInvalidOutput ?? null,
+    previousInvalidOutput:
+      input.repairPlan?.length ? null : input.previousInvalidOutput ?? null,
     repairInstructions,
     requiredOutputShape: {
       kind: 'STEP_PLAN',

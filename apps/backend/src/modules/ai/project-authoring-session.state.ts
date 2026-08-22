@@ -78,6 +78,7 @@ export type AuthoringSessionResponse = z.infer<typeof authoringSessionResponseSc
 export type SequentialStep = {
   title: string;
   description: string;
+  componentRefs?: string[];
 };
 
 export type ComponentWorkingState = {

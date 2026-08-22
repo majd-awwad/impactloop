@@ -13,6 +13,7 @@ import {
   assertStepPlanQuality,
   buildStepQualityRepairIssue,
   type RealAuthoringStepPlanInput,
+  type StepPlanQualityIssue,
   type StepPlanQualityRequirements,
 } from './ai-project-authoring-real.provider.js';
 import {
@@ -20,6 +21,7 @@ import {
   validateComponentStepConsistency,
   type SequentialComponent,
   type SequentialStep,
+  type StepComponentConsistencyIssue,
 } from './ai-project-authoring-sequential.policy.js';
 import type { AiLocale } from './ai.types.js';
 
@@ -75,7 +77,11 @@ export type StepListContext = {
   requestedStepCount?: number | null;
   requestedComponentCount?: number | null;
   repairAttempt?: boolean;
+  repairAttemptNumber?: number;
   repairIssue?: string | null;
+  repairQualityIssues?: StepPlanQualityIssue[];
+  repairConsistencyIssues?: StepComponentConsistencyIssue[];
+  repairPlan?: SequentialStep[];
   previousInvalidOutput?: string | null;
   qualityRequirements?: StepPlanQualityRequirements;
 };
@@ -262,6 +268,18 @@ const assertStepPlanConsistency = (input: StepListContext, steps: SequentialStep
   const resolved = applyResolvedComponentRefsToSteps(steps, input.components);
   if (resolved.unknown.length > 0 || resolved.ambiguous.length > 0) {
     const unknownComponents = [...resolved.unknown, ...resolved.ambiguous];
+    const rawConsistency = validateComponentStepConsistency({
+      components: input.components,
+      steps,
+      constraints: [],
+    });
+    const consistencyIssues = rawConsistency.ok
+      ? []
+      : rawConsistency.consistencyIssues.filter(
+          (issue) =>
+            issue.code === 'UNKNOWN_COMPONENT_REFERENCE' ||
+            issue.code === 'AMBIGUOUS_COMPONENT_REFERENCE',
+        );
     throw new AppError(
       `Step plan references unknown components: ${unknownComponents.join(', ')}`,
       409,
@@ -269,6 +287,12 @@ const assertStepPlanConsistency = (input: StepListContext, steps: SequentialStep
       {
         unknownComponents,
         ambiguousComponents: resolved.ambiguous,
+        consistencyIssues,
+        invalidSteps: steps,
+        mismatchSource: input.repairAttempt ? 'provider-repair-output' : 'provider-output',
+        canonicalComponentIds: input.components
+          .map((component) => component.id)
+          .filter((id): id is string => Boolean(id)),
         issues: [
           ...resolved.unknown.map(
             (ref) => `Step plan references unknown component "${ref}".`,
@@ -294,6 +318,14 @@ const assertStepPlanConsistency = (input: StepListContext, steps: SequentialStep
     if (filteredIssues.length > 0) {
       throw new AppError(filteredIssues.join(' '), 409, 'AI_STEP_COMPONENT_INCONSISTENT', {
         issues: filteredIssues,
+        consistencyIssues: consistency.consistencyIssues.filter((issue) =>
+          filteredIssues.includes(issue.message),
+        ),
+        invalidSteps: resolved.steps,
+        mismatchSource: input.repairAttempt ? 'provider-repair-output' : 'provider-output',
+        canonicalComponentIds: input.components
+          .map((component) => component.id)
+          .filter((id): id is string => Boolean(id)),
       });
     }
   }
@@ -531,7 +563,11 @@ const toRealStepInput = (
   components: input.components,
   clarification: input.clarification,
   repairAttempt: input.repairAttempt ?? false,
+  repairAttemptNumber: input.repairAttemptNumber,
   repairIssue: input.repairIssue ?? null,
+  repairQualityIssues: input.repairQualityIssues,
+  repairConsistencyIssues: input.repairConsistencyIssues,
+  repairPlan: input.repairPlan,
   previousInvalidOutput: input.previousInvalidOutput ?? null,
   suggestAnother: input.suggestAnother,
   previousSteps: input.previousSteps,
@@ -548,6 +584,102 @@ const readPreviousInvalidOutput = (error: unknown): string | null => {
   return typeof details.previousInvalidOutput === 'string'
     ? details.previousInvalidOutput
     : null;
+};
+
+type StepRepairErrorDetails = {
+  issues: string[];
+  qualityIssues: StepPlanQualityIssue[];
+  consistencyIssues: StepComponentConsistencyIssue[];
+  invalidSteps: SequentialStep[] | undefined;
+  requiredMinimum?: number;
+  receivedSteps?: number;
+  missingPhases: string[];
+  unknownComponents: string[];
+  mismatchSource: string | null;
+  canonicalComponentIds: string[];
+};
+
+const readStepRepairErrorDetails = (error: unknown): StepRepairErrorDetails => {
+  const details =
+    error instanceof AppError && error.details && typeof error.details === 'object'
+      ? (error.details as Record<string, unknown>)
+      : {};
+  return {
+    issues: Array.isArray(details.issues)
+      ? details.issues.filter((issue): issue is string => typeof issue === 'string')
+      : [],
+    qualityIssues: Array.isArray(details.qualityIssues)
+      ? (details.qualityIssues as StepPlanQualityIssue[])
+      : [],
+    consistencyIssues: Array.isArray(details.consistencyIssues)
+      ? (details.consistencyIssues as StepComponentConsistencyIssue[])
+      : [],
+    invalidSteps: Array.isArray(details.invalidSteps)
+      ? (details.invalidSteps as SequentialStep[])
+      : undefined,
+    requiredMinimum:
+      typeof details.requiredMinimum === 'number' ? details.requiredMinimum : undefined,
+    receivedSteps:
+      typeof details.receivedSteps === 'number' ? details.receivedSteps : undefined,
+    missingPhases: Array.isArray(details.missingPhases)
+      ? details.missingPhases.filter((phase): phase is string => typeof phase === 'string')
+      : [],
+    unknownComponents: Array.isArray(details.unknownComponents)
+      ? details.unknownComponents.filter(
+          (component): component is string => typeof component === 'string',
+        )
+      : [],
+    mismatchSource:
+      typeof details.mismatchSource === 'string' ? details.mismatchSource : null,
+    canonicalComponentIds: Array.isArray(details.canonicalComponentIds)
+      ? details.canonicalComponentIds.filter(
+          (componentId): componentId is string => typeof componentId === 'string',
+        )
+      : [],
+  };
+};
+
+const buildStepRepairRequest = (input: {
+  error: unknown;
+  requirements: StepPlanQualityRequirements;
+  repairAttempt: number;
+}) => {
+  const details = readStepRepairErrorDetails(input.error);
+  const issueParts = [
+    input.error instanceof AppError &&
+    input.error.code === 'AI_AUTHORING_STEP_QUALITY_INVALID'
+      ? buildStepQualityRepairIssue({
+          requirements: input.requirements,
+          receivedSteps: details.receivedSteps ?? details.invalidSteps?.length ?? 0,
+          issues: details.issues.length > 0 ? details.issues : [input.error.message],
+          qualityIssues: details.qualityIssues,
+          missingPhases: details.missingPhases,
+          steps: details.invalidSteps,
+        })
+      : input.error instanceof AppError
+        ? input.error.message
+        : 'Step plan was invalid.',
+    details.unknownComponents.length > 0
+      ? `Unknown componentRefs: ${JSON.stringify(details.unknownComponents)}`
+      : null,
+    input.error instanceof AppError &&
+    details.issues.length > 0 &&
+    input.error.code !== 'AI_AUTHORING_STEP_QUALITY_INVALID'
+      ? `Issues: ${JSON.stringify(details.issues).slice(0, 1500)}`
+      : null,
+  ].filter(Boolean);
+  return {
+    details,
+    repairInput: {
+      repairAttempt: true as const,
+      repairAttemptNumber: input.repairAttempt,
+      repairIssue: issueParts.join(' '),
+      repairQualityIssues: details.qualityIssues,
+      repairConsistencyIssues: details.consistencyIssues,
+      repairPlan: details.invalidSteps,
+      previousInvalidOutput: readPreviousInvalidOutput(input.error),
+    },
+  };
 };
 
 const REPAIRABLE_STEP_GENERATION_CODES = new Set([
@@ -578,6 +710,18 @@ const logStepRepairDiagnostic = (input: {
     input.error instanceof AppError && input.error.details && typeof input.error.details === 'object'
       ? (input.error.details as { issues?: string[]; receivedSteps?: number })
       : {};
+  const repairDetails = readStepRepairErrorDetails(input.error);
+  const failingStepIndexes = [
+    ...new Set(
+      [
+        ...repairDetails.qualityIssues.flatMap((issue) => [
+          issue.stepIndex,
+          ...(issue.relatedStepIndexes ?? []),
+        ]),
+        ...repairDetails.consistencyIssues.map((issue) => issue.stepIndex),
+      ].filter((index): index is number => index != null),
+    ),
+  ];
   logger.info(
     {
       operation: 'ai_authoring_step_repair',
@@ -585,6 +729,18 @@ const logStepRepairDiagnostic = (input: {
       qualityIssueCode:
         details.issues?.[0]?.split(':', 1)[0] ??
         (input.error instanceof AppError ? input.error.code : 'UNKNOWN'),
+      qualityIssueCodes: repairDetails.qualityIssues.map((issue) => issue.code),
+      consistencyIssueCodes: repairDetails.consistencyIssues.map((issue) => issue.code),
+      failingStepIndexes,
+      failingComponentRefs: [
+        ...new Set(
+          repairDetails.consistencyIssues
+            .map((issue) => issue.componentRef)
+            .filter((componentRef): componentRef is string => Boolean(componentRef)),
+        ),
+      ],
+      canonicalComponentIds: repairDetails.canonicalComponentIds,
+      componentMismatchSource: repairDetails.mismatchSource,
       requiredStepCount: input.requirements.minimumMeaningfulSteps,
       returnedStepCount: details.receivedSteps ?? null,
       repairAttempt: input.repairAttempt,
@@ -627,6 +783,34 @@ const invokeConfiguredStepProvider = async (
 
   const steps = validateStepList(result.steps);
   const consistentSteps = assertStepPlanConsistency(input, steps);
+  const referenceRepairIssues = (input.repairConsistencyIssues ?? []).filter(
+    (issue) =>
+      issue.code === 'UNKNOWN_COMPONENT_REFERENCE' ||
+      issue.code === 'AMBIGUOUS_COMPONENT_REFERENCE',
+  );
+  for (const issue of referenceRepairIssues) {
+    if (issue.stepIndex == null) {
+      continue;
+    }
+    const repairedStep = consistentSteps[issue.stepIndex];
+    if (!repairedStep?.componentRefs?.length) {
+      throw new AppError(
+        `Step "${repairedStep?.title ?? issue.stepTitle ?? issue.stepOrder}" must replace the invalid component reference with a current canonical component reference.`,
+        409,
+        'AI_STEP_COMPONENT_INCONSISTENT',
+        {
+          issues: [issue.message],
+          consistencyIssues: [issue],
+          invalidSteps: consistentSteps,
+          unknownComponents: issue.componentRef ? [issue.componentRef] : [],
+          mismatchSource: 'provider-repair-output',
+          canonicalComponentIds: input.components
+            .map((component) => component.id)
+            .filter((id): id is string => Boolean(id)),
+        },
+      );
+    }
+  }
   assertDetailedStepQuality(input, consistentSteps);
   return { steps: consistentSteps, explanation: result.explanation };
 };
@@ -643,11 +827,61 @@ export const generateSequentialStepListWithRepair = async (
     feedback?: string | null;
   },
 ): Promise<{ steps: SequentialStep[]; explanation: string }> => {
+  const repairFromError = async (initialError: unknown) => {
+    const maximumRepairAttempts = 2;
+    if (!isRepairableStepGenerationError(initialError)) {
+      throw initialError;
+    }
+    const requirements = resolveQualityRequirements(input);
+    let currentError: unknown = initialError;
+    for (let repairAttempt = 1; repairAttempt <= maximumRepairAttempts; repairAttempt += 1) {
+      const request = buildStepRepairRequest({
+        error: currentError,
+        requirements,
+        repairAttempt,
+      });
+      logStepRepairDiagnostic({
+        error: currentError,
+        requirements,
+        repairAttempt,
+        repairSucceeded: false,
+      });
+      try {
+        const repaired = await generateSequentialStepList({
+          ...input,
+          ...request.repairInput,
+        });
+        logStepRepairDiagnostic({
+          error: currentError,
+          requirements,
+          repairAttempt,
+          repairedStepCount: repaired.steps.length,
+          repairSucceeded: true,
+        });
+        return repaired;
+      } catch (repairError) {
+        logStepRepairDiagnostic({
+          error: repairError,
+          requirements,
+          repairAttempt,
+          repairSucceeded: false,
+        });
+        if (
+          repairAttempt === maximumRepairAttempts ||
+          !isRepairableStepGenerationError(repairError)
+        ) {
+          throw repairError;
+        }
+        currentError = repairError;
+      }
+    }
+    throw currentError;
+  };
   try {
     return await generateSequentialStepList(input);
-  } catch (error) {
+  } catch (initialError) {
     if (input.repairAttempt) {
-      if (error instanceof AppError && error.code === 'AI_PROVIDER_TIMEOUT') {
+      if (initialError instanceof AppError && initialError.code === 'AI_PROVIDER_TIMEOUT') {
         throw new AppError(
           input.locale === 'ar'
             ? 'انتهت مهلة إنشاء خطة الخطوات. حاول مرة أخرى.'
@@ -656,8 +890,8 @@ export const generateSequentialStepListWithRepair = async (
           'AI_AUTHORING_STEP_GENERATION_TIMEOUT',
         );
       }
-      throw error instanceof AppError
-        ? error
+      throw initialError instanceof AppError
+        ? initialError
         : new AppError(
             input.locale === 'ar'
               ? 'تعذّر إنشاء خطة خطوات صالحة.'
@@ -666,64 +900,81 @@ export const generateSequentialStepListWithRepair = async (
             'AI_AUTHORING_STEP_GENERATION_FAILED',
           );
     }
-    if (!isRepairableStepGenerationError(error)) {
-      throw error;
-    }
-    const previousInvalidOutput = readPreviousInvalidOutput(error);
-    const qualityDetails =
-      error instanceof AppError && error.details && typeof error.details === 'object'
-        ? (error.details as {
-            issues?: string[];
-            requiredMinimum?: number;
-            receivedSteps?: number;
-            missingPhases?: string[];
-          })
-        : {};
-    const requirements = resolveQualityRequirements(input);
-    const unknownComponents =
-      error instanceof AppError &&
-      error.details &&
-      typeof error.details === 'object' &&
-      Array.isArray((error.details as { unknownComponents?: unknown }).unknownComponents)
-        ? (error.details as { unknownComponents: string[] }).unknownComponents
-        : [];
-    const issueParts = [
-      error instanceof AppError && error.code === 'AI_AUTHORING_STEP_QUALITY_INVALID'
-        ? buildStepQualityRepairIssue({
-            requirements,
-            receivedSteps: qualityDetails.receivedSteps ?? 0,
-            issues: qualityDetails.issues ?? [error.message],
-            missingPhases: qualityDetails.missingPhases ?? [],
-          })
-        : error instanceof AppError
-          ? error.message
-          : 'Step plan was invalid.',
-      unknownComponents.length > 0
-        ? `Unknown componentRefs: ${JSON.stringify(unknownComponents)}`
-        : null,
-      error instanceof AppError &&
-      Array.isArray((error.details as { issues?: unknown })?.issues) &&
-      error.code !== 'AI_AUTHORING_STEP_QUALITY_INVALID'
-        ? `Issues: ${JSON.stringify((error.details as { issues: unknown }).issues).slice(0, 1500)}`
-        : null,
-    ].filter(Boolean);
-    logStepRepairDiagnostic({
-      error,
+    return repairFromError(initialError);
+  }
+};
+
+export const repairSequentialStepListForConsistency = async (
+  input: StepListContext & {
+    invalidSteps: SequentialStep[];
+    consistencyIssues: StepComponentConsistencyIssue[];
+    mismatchSource: 'persisted-ai-step-state' | 'stale-ai-step-state';
+  },
+): Promise<{ steps: SequentialStep[]; explanation: string }> => {
+  const referenceIssues = input.consistencyIssues.filter(
+    (issue) =>
+      issue.code === 'UNKNOWN_COMPONENT_REFERENCE' ||
+      issue.code === 'AMBIGUOUS_COMPONENT_REFERENCE',
+  );
+  if (referenceIssues.length === 0) {
+    throw new AppError(
+      'Persisted Step plan has a component consistency conflict that cannot be repaired automatically.',
+      409,
+      'AI_STEP_COMPONENT_INCONSISTENT',
+      {
+        issues: input.consistencyIssues.map((issue) => issue.message),
+        consistencyIssues: input.consistencyIssues,
+        invalidSteps: input.invalidSteps,
+        mismatchSource: input.mismatchSource,
+        canonicalComponentIds: input.components
+          .map((component) => component.id)
+          .filter((id): id is string => Boolean(id)),
+      },
+    );
+  }
+
+  const initialError = new AppError(
+    referenceIssues.map((issue) => issue.message).join(' '),
+    409,
+    'AI_STEP_COMPONENT_INCONSISTENT',
+    {
+      issues: referenceIssues.map((issue) => issue.message),
+      consistencyIssues: referenceIssues,
+      invalidSteps: input.invalidSteps,
+      unknownComponents: referenceIssues
+        .map((issue) => issue.componentRef)
+        .filter((componentRef): componentRef is string => Boolean(componentRef)),
+      mismatchSource: input.mismatchSource,
+      canonicalComponentIds: input.components
+        .map((component) => component.id)
+        .filter((id): id is string => Boolean(id)),
+    },
+  );
+
+  const maximumRepairAttempts = 2;
+  const requirements = resolveQualityRequirements(input);
+  let currentError: unknown = initialError;
+  for (let repairAttempt = 1; repairAttempt <= maximumRepairAttempts; repairAttempt += 1) {
+    const request = buildStepRepairRequest({
+      error: currentError,
       requirements,
-      repairAttempt: 1,
+      repairAttempt,
+    });
+    logStepRepairDiagnostic({
+      error: currentError,
+      requirements,
+      repairAttempt,
       repairSucceeded: false,
     });
     try {
       const repaired = await generateSequentialStepList({
         ...input,
-        repairAttempt: true,
-        repairIssue: issueParts.join(' '),
-        previousInvalidOutput,
+        ...request.repairInput,
       });
       logStepRepairDiagnostic({
-        error,
+        error: currentError,
         requirements,
-        repairAttempt: 1,
+        repairAttempt,
         repairedStepCount: repaired.steps.length,
         repairSucceeded: true,
       });
@@ -732,12 +983,19 @@ export const generateSequentialStepListWithRepair = async (
       logStepRepairDiagnostic({
         error: repairError,
         requirements,
-        repairAttempt: 1,
+        repairAttempt,
         repairSucceeded: false,
       });
-      throw repairError;
+      if (
+        repairAttempt === maximumRepairAttempts ||
+        !isRepairableStepGenerationError(repairError)
+      ) {
+        throw repairError;
+      }
+      currentError = repairError;
     }
   }
+  throw currentError;
 };
 
 export const classifyStepStageIntent = (comment: string): StepStageIntent => {

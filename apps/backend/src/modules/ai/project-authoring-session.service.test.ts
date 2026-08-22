@@ -497,6 +497,405 @@ describe('project authoring persisted session', () => {
     assert.equal(reviewed.currentTurn?.stage, 'STEP_REVIEW');
   });
 
+  test('Arabic component names do not falsely block finalized Steps from reaching FINAL_REVIEW', async () => {
+    const { randomUUID } = await import('node:crypto');
+    const { runPersistedAuthoringSessionAction } = await import(
+      './project-authoring-session.service.js'
+    );
+    const { learner, conversation, project } = await createDraftPair('arabic-step-finalize');
+    await prisma.learningProject.update({
+      where: { id: project.id },
+      data: {
+        title: 'نظام ري ذكي',
+        shortDescription: 'نظام ري للمبتدئين',
+        description: 'نظام يراقب رطوبة التربة ويشغل مضخة الري عند الحاجة.',
+      },
+    });
+    const componentNames = [
+      'حساس رطوبة التربة',
+      'لوحة أردوينو أونو',
+      'مضخة ري صغيرة',
+      'أنابيب مياه صغيرة',
+      'مفتاح كهربائي أو ريليه',
+      'مزود طاقة 5 فولت',
+      'أسلاك توصيل',
+      'لوحة تجريبية (Breadboard)',
+    ];
+    await prisma.projectRequiredComponent.createMany({
+      data: componentNames.map((componentName) => ({
+        id: randomUUID(),
+        projectId: project.id,
+        componentName,
+        materialType: 'Electronics',
+        quantity: 1,
+        unit: 'piece',
+        componentRole: 'REQUIRED_MATERIAL' as const,
+        isRequired: true,
+        canBeSubstituted: false,
+        searchKeywords: [],
+      })),
+    });
+    const refreshedProject = await prisma.learningProject.findUniqueOrThrow({
+      where: { id: project.id },
+    });
+    const sessionId = randomUUID();
+    const turnId = randomUUID();
+    const steps = [
+      {
+        title: 'تجهيز مساحة العمل',
+        description:
+          'جهّز جميع المكوّنات على سطح جاف ثم تحقق من سلامة الأسلاك ومصدر الطاقة قبل التوصيل.',
+      },
+      {
+        title: 'توصيل النظام واختباره',
+        description:
+          'وصّل الحساس واللوحة والمضخة ثم شغّل النظام وتحقق من استجابة الري عند انخفاض الرطوبة.',
+      },
+    ];
+    await prisma.projectAuthoringSession.create({
+      data: {
+        id: sessionId,
+        conversationId: conversation.id,
+        learningProjectId: project.id,
+        ownerId: learner.id,
+        stage: 'STEPS_OVERVIEW',
+        status: 'WAITING_FOR_USER',
+        version: 1,
+        baseProjectUpdatedAt: refreshedProject.updatedAt,
+        completedStages: [
+          'TITLE',
+          'SHORT_DESCRIPTION',
+          'FULL_DESCRIPTION',
+          'DIFFICULTY',
+          'ESTIMATED_DURATION',
+          'COMPONENTS',
+        ],
+        stepReviewMode: 'STEP_BY_STEP',
+        stepWorkingState: {
+          mode: 'STEP_BY_STEP',
+          workingSteps: steps,
+          currentIndex: 0,
+          acceptedIndexes: [0, 1],
+          awaitingFinalSave: true,
+          sourceTurnId: turnId,
+        },
+      },
+    });
+    await prisma.projectAuthoringTurn.create({
+      data: {
+        id: turnId,
+        sessionId,
+        stage: 'STEPS_OVERVIEW',
+        kind: 'STEP_PLAN',
+        status: 'PROPOSED',
+        payload: {
+          steps: steps.map((step, index) => ({
+            ...step,
+            order: index + 1,
+            referencedComponentIds: [],
+          })),
+        },
+        explanation: 'الخطة جاهزة للحفظ النهائي.',
+        baseProjectUpdatedAt: refreshedProject.updatedAt,
+      },
+    });
+    await prisma.projectAuthoringSession.update({
+      where: { id: sessionId },
+      data: { currentTurnId: turnId },
+    });
+
+    const accepted = await runPersistedAuthoringSessionAction(learner.id, sessionId, {
+      action: 'FINALIZE_STEPS',
+      expectedVersion: 1,
+      turnId,
+    });
+    assert.equal(accepted.session.stage, 'FINAL_REVIEW');
+    assert.equal(accepted.canonicalProject.steps.length, 2);
+    assert.deepEqual(
+      accepted.canonicalProject.steps.map((step) => step.title),
+      steps.map((step) => step.title),
+    );
+  });
+
+  test('a project/component change after Step generation marks the persisted plan stale without rewriting it', async () => {
+    const { randomUUID } = await import('node:crypto');
+    const { AppError } = await import('../../utils/app-error.js');
+    const { runPersistedAuthoringSessionAction } = await import(
+      './project-authoring-session.service.js'
+    );
+    const { learner, conversation, project } = await createDraftPair('stale-steps');
+    const componentId = randomUUID();
+    await prisma.projectRequiredComponent.create({
+      data: {
+        id: componentId,
+        projectId: project.id,
+        componentName: 'Arduino Uno',
+        materialType: 'Electronics',
+        quantity: 1,
+        unit: 'piece',
+        componentRole: 'REQUIRED_MATERIAL',
+        isRequired: true,
+        canBeSubstituted: false,
+        searchKeywords: [],
+      },
+    });
+    const staleBase = project.updatedAt;
+    const sessionId = randomUUID();
+    const turnId = randomUUID();
+    const originalSteps = [
+      {
+        title: 'Prepare the board',
+        description:
+          'Prepare the Arduino board on a dry work surface and verify that its pins are undamaged.',
+        componentRefs: [componentId],
+      },
+      {
+        title: 'Verify the setup',
+        description:
+          'Inspect the completed setup carefully and confirm that the board remains disconnected from power.',
+        componentRefs: [componentId],
+      },
+    ];
+    await prisma.projectAuthoringSession.create({
+      data: {
+        id: sessionId,
+        conversationId: conversation.id,
+        learningProjectId: project.id,
+        ownerId: learner.id,
+        stage: 'STEPS_OVERVIEW',
+        status: 'WAITING_FOR_USER',
+        version: 1,
+        baseProjectUpdatedAt: staleBase,
+        completedStages: [
+          'TITLE',
+          'SHORT_DESCRIPTION',
+          'FULL_DESCRIPTION',
+          'DIFFICULTY',
+          'ESTIMATED_DURATION',
+          'COMPONENTS',
+        ],
+        stepReviewMode: 'FULL_PLAN',
+        stepWorkingState: {
+          mode: 'FULL_PLAN',
+          workingSteps: originalSteps,
+          currentIndex: 0,
+          acceptedIndexes: [],
+          awaitingFinalSave: true,
+          sourceTurnId: turnId,
+        },
+      },
+    });
+    await prisma.projectAuthoringTurn.create({
+      data: {
+        id: turnId,
+        sessionId,
+        stage: 'STEPS_OVERVIEW',
+        kind: 'STEP_PLAN',
+        status: 'PROPOSED',
+        payload: {
+          steps: originalSteps.map((step, index) => ({
+            ...step,
+            order: index + 1,
+            referencedComponentIds: step.componentRefs,
+          })),
+        },
+        explanation: 'Plan generated before the component revision.',
+        baseProjectUpdatedAt: staleBase,
+      },
+    });
+    await prisma.projectAuthoringSession.update({
+      where: { id: sessionId },
+      data: { currentTurnId: turnId },
+    });
+    await prisma.learningProject.update({
+      where: { id: project.id },
+      data: { shortDescription: 'The accepted Components were revised after Step generation.' },
+    });
+
+    await assert.rejects(
+      () =>
+        runPersistedAuthoringSessionAction(learner.id, sessionId, {
+          action: 'FINALIZE_STEPS',
+          expectedVersion: 1,
+          turnId,
+        }),
+      (error: unknown) =>
+        error instanceof AppError && error.code === 'AI_AUTHORING_PROPOSAL_STALE',
+    );
+    const storedTurn = await prisma.projectAuthoringTurn.findUniqueOrThrow({
+      where: { id: turnId },
+    });
+    assert.deepEqual(
+      (storedTurn.payload as { steps: unknown[] }).steps,
+      originalSteps.map((step, index) => ({
+        ...step,
+        order: index + 1,
+        referencedComponentIds: step.componentRefs,
+      })),
+    );
+    assert.equal(
+      await prisma.projectStep.count({ where: { projectId: project.id } }),
+      0,
+    );
+  });
+
+  test('finalizing an AI plan repairs a stale component ID and preserves Step text', async () => {
+    const { randomUUID } = await import('node:crypto');
+    const { runPersistedAuthoringSessionAction } = await import(
+      './project-authoring-session.service.js'
+    );
+    const { setAuthoringRealStepInvokerForTests } = await import(
+      './ai-project-authoring-real.provider.js'
+    );
+    const { learner, conversation, project } = await createDraftPair('repair-stale-step-ref');
+    await prisma.learningProject.update({
+      where: { id: project.id },
+      data: {
+        title: 'Arduino LDR night light',
+        shortDescription: 'Beginner Arduino light-sensing project',
+        description:
+          'Build an Arduino night light that reads an LDR and turns on an LED in darkness.',
+      },
+    });
+    const componentId = randomUUID();
+    await prisma.projectRequiredComponent.create({
+      data: {
+        id: componentId,
+        projectId: project.id,
+        componentName: 'Arduino Uno',
+        materialType: 'Electronics',
+        quantity: 1,
+        unit: 'piece',
+        componentRole: 'REQUIRED_MATERIAL',
+        isRequired: true,
+        canBeSubstituted: false,
+        searchKeywords: ['arduino'],
+      },
+    });
+    const currentProject = await prisma.learningProject.findUniqueOrThrow({
+      where: { id: project.id },
+    });
+    const descriptions = [
+      'Prepare the Arduino Uno on a clean surface, inspect every pin for damage, and verify that USB power is disconnected before wiring.',
+      'Review the Arduino Uno input and output plan, record the intended pin assignments, and verify that each assignment matches the build goal.',
+      'Place the Arduino Uno beside the work area with clear cable paths, then verify that the board cannot short against loose metal objects.',
+      'Connect the input wiring to the Arduino Uno carefully, inspect every terminal, and verify continuity before attaching any power source.',
+      'Connect the output wiring to the Arduino Uno with correct polarity, then verify that no conductor bridges two adjacent pins.',
+      'Open Arduino IDE, define the selected Arduino Uno pins as constants, and verify that every code identifier matches the physical wiring.',
+      'Upload the sketch to Arduino Uno, read the serial output, adjust the control threshold, and verify repeatable responses across several trials.',
+      'Test the complete Arduino Uno project under normal conditions, record the observed result, and verify stable behavior before finalizing the build.',
+    ];
+    const originalSteps = descriptions.map((description, index) => ({
+      title: `Original learner-reviewed Step ${index + 1}`,
+      description,
+      componentRefs: [index === 0 ? 'retired-component-id' : componentId],
+    }));
+    const repairedProviderSteps = originalSteps.map((step, index) => ({
+      order: index + 1,
+      title: step.title,
+      description: step.description,
+      safetyNote: null,
+      componentRefs: [componentId],
+    }));
+    const sessionId = randomUUID();
+    const turnId = randomUUID();
+    await prisma.projectAuthoringSession.create({
+      data: {
+        id: sessionId,
+        conversationId: conversation.id,
+        learningProjectId: project.id,
+        ownerId: learner.id,
+        stage: 'STEPS_OVERVIEW',
+        status: 'WAITING_FOR_USER',
+        version: 1,
+        baseProjectUpdatedAt: currentProject.updatedAt,
+        completedStages: [
+          'TITLE',
+          'SHORT_DESCRIPTION',
+          'FULL_DESCRIPTION',
+          'DIFFICULTY',
+          'ESTIMATED_DURATION',
+          'COMPONENTS',
+        ],
+        stepReviewMode: 'FULL_PLAN',
+        stepWorkingState: {
+          mode: 'FULL_PLAN',
+          workingSteps: originalSteps,
+          currentIndex: 0,
+          acceptedIndexes: [],
+          awaitingFinalSave: true,
+          sourceTurnId: turnId,
+        },
+      },
+    });
+    await prisma.projectAuthoringTurn.create({
+      data: {
+        id: turnId,
+        sessionId,
+        stage: 'STEPS_OVERVIEW',
+        kind: 'STEP_PLAN',
+        status: 'PROPOSED',
+        payload: {
+          steps: originalSteps.map((step, index) => ({
+            order: index + 1,
+            title: step.title,
+            description: step.description,
+            referencedComponentIds: step.componentRefs,
+          })),
+        },
+        explanation: 'AI plan awaiting final save.',
+        baseProjectUpdatedAt: currentProject.updatedAt,
+      },
+    });
+    await prisma.projectAuthoringSession.update({
+      where: { id: sessionId },
+      data: { currentTurnId: turnId },
+    });
+
+    const previousProvider = process.env.AI_CHAT_PROVIDER;
+    process.env.AI_CHAT_PROVIDER = 'openai';
+    let providerCalls = 0;
+    setAuthoringRealStepInvokerForTests(async () => {
+      providerCalls += 1;
+      return {
+        text: JSON.stringify({
+          kind: 'STEP_PLAN',
+          steps: repairedProviderSteps,
+          explanation: 'Replaced only the stale canonical reference.',
+        }),
+        model: 'test-openai',
+        inputTokens: 1,
+        outputTokens: 1,
+      };
+    });
+    try {
+      const accepted = await runPersistedAuthoringSessionAction(learner.id, sessionId, {
+        action: 'FINALIZE_STEPS',
+        expectedVersion: 1,
+        turnId,
+      });
+      assert.equal(providerCalls, 1);
+      assert.equal(accepted.session.stage, 'FINAL_REVIEW');
+      assert.deepEqual(
+        accepted.canonicalProject.steps.map((step) => ({
+          title: step.title,
+          description: step.description,
+        })),
+        originalSteps.map((step) => ({
+          title: step.title,
+          description: step.description,
+        })),
+      );
+    } finally {
+      setAuthoringRealStepInvokerForTests(null);
+      if (previousProvider === undefined) {
+        delete process.env.AI_CHAT_PROVIDER;
+      } else {
+        process.env.AI_CHAT_PROVIDER = previousProvider;
+      }
+    }
+  });
+
   test('start on existing STEPS session without current turn does not reset to TITLE', async () => {
     const { randomUUID } = await import('node:crypto');
     const { startPersistedAuthoringSession } = await import('./project-authoring-session.service.js');
@@ -675,7 +1074,7 @@ describe('project authoring persisted session', () => {
     }
   });
 
-  test('regenerate failed Steps repairs seven steps to eight and continues to final review', async () => {
+  test('regenerate failed Steps uses count repair then targeted semantic repair and continues to final review', async () => {
     const { randomUUID } = await import('node:crypto');
     const { runPersistedAuthoringSessionAction } = await import(
       './project-authoring-session.service.js'
@@ -802,13 +1201,34 @@ describe('project authoring persisted session', () => {
     const previousProvider = process.env.AI_CHAT_PROVIDER;
     process.env.AI_CHAT_PROVIDER = 'openai';
     let calls = 0;
-    setAuthoringRealStepInvokerForTests(async () => {
+    const prompts: string[] = [];
+    const vagueEightSteps = providerSteps.map((step, index) =>
+      index === 4
+        ? {
+            ...step,
+            description:
+              'Review the system generally before continuing to the next project step.',
+          }
+        : step,
+    );
+    setAuthoringRealStepInvokerForTests(async ({ userPrompt }) => {
       calls += 1;
+      prompts.push(userPrompt);
       return {
         text: JSON.stringify({
           kind: 'STEP_PLAN',
-          steps: calls === 1 ? providerSteps.slice(0, 7) : providerSteps,
-          explanation: calls === 1 ? 'Seven-step draft.' : 'Repaired eight-step plan.',
+          steps:
+            calls === 1
+              ? providerSteps.slice(0, 7)
+              : calls === 2
+                ? vagueEightSteps
+                : providerSteps,
+          explanation:
+            calls === 1
+              ? 'Seven-step draft.'
+              : calls === 2
+                ? 'Eight steps with one vague instruction.'
+                : 'Targeted concrete eight-step plan.',
         }),
         model: 'openai/gpt-4.1-nano',
         inputTokens: 1,
@@ -821,7 +1241,28 @@ describe('project authoring persisted session', () => {
         action: 'REGENERATE_FAILED_STAGE',
         expectedVersion: 1,
       });
-      assert.equal(calls, 2);
+      assert.equal(calls, 3);
+      const secondRepairPayload = JSON.parse(prompts[2]!) as {
+        repairInstructions?: {
+          repairAttempt?: number;
+          failingStepIndexes?: number[];
+          qualityIssues?: Array<{ code?: string; stepIndex?: number }>;
+          currentPlan?: Array<{ description?: string }>;
+        };
+      };
+      assert.equal(secondRepairPayload.repairInstructions?.repairAttempt, 2);
+      assert.deepEqual(secondRepairPayload.repairInstructions?.failingStepIndexes, [4]);
+      assert.ok(
+        secondRepairPayload.repairInstructions?.qualityIssues?.some(
+          (issue) =>
+            issue.code === 'INSUFFICIENT_IMPLEMENTATION_GUIDANCE' &&
+            issue.stepIndex === 4,
+        ),
+      );
+      assert.equal(
+        secondRepairPayload.repairInstructions?.currentPlan?.[4]?.description,
+        'Review the system generally before continuing to the next project step.',
+      );
       assert.equal(regenerated.session.stage, 'STEPS_OVERVIEW');
       assert.equal(regenerated.session.status, 'WAITING_FOR_USER');
       assert.equal(regenerated.currentTurn?.kind, 'STEP_PLAN');

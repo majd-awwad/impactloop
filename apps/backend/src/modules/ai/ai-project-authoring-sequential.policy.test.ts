@@ -11,6 +11,8 @@ import type {
 import {
   catalogAllowsProseTerm,
   expandComponentAliases,
+  normalizeComponentIdentity,
+  resolveComponentReference,
   validateComponentStepConsistency,
 } from './ai-project-authoring-sequential.policy.js';
 import {
@@ -120,7 +122,56 @@ describe('component-step consistency policy', () => {
     assert.equal(result.ok, false);
     if (!result.ok) {
       assert.match(result.issues.join(' '), /unknown component id/i);
+      assert.deepEqual(
+        result.consistencyIssues.map((issue) => ({
+          code: issue.code,
+          stepIndex: issue.stepIndex,
+          componentRef: issue.componentRef,
+          resolution: issue.resolution,
+        })),
+        [
+          {
+            code: 'UNKNOWN_COMPONENT_REFERENCE',
+            stepIndex: 0,
+            componentRef: 'comp-soil',
+            resolution: 'UNKNOWN',
+          },
+        ],
+      );
     }
+  });
+
+  test('distinct Arabic canonical names retain identity and valid IDs pass', () => {
+    const arabicCatalog = [
+      { ...ldrCatalog[0]!, id: 'comp-sensor', componentName: 'حساس رطوبة التربة' },
+      { ...ldrCatalog[1]!, id: 'comp-board', componentName: 'لوحة أردوينو أونو' },
+      { ...ldrCatalog[2]!, id: 'comp-pump', componentName: 'مضخة ري صغيرة' },
+    ];
+    assert.deepEqual(
+      arabicCatalog.map((component) => normalizeComponentIdentity(component.componentName)),
+      ['حساس رطوبة التربة', 'لوحة أردوينو أونو', 'مضخة ري صغيرة'],
+    );
+
+    const result = validateComponentStepConsistency({
+      components: arabicCatalog,
+      steps: [
+        {
+          title: 'توصيل الحساس',
+          description: 'وصّل الحساس باللوحة ثم تحقق من ظهور قراءة مستقرة قبل المتابعة.',
+          componentRefs: ['comp-sensor', 'comp-board'],
+        },
+      ],
+    });
+    assert.equal(result.ok, true);
+  });
+
+  test('Arabic display-name normalization resolves to the stable canonical component', () => {
+    const arabicCatalog = [
+      { ...ldrCatalog[0]!, id: 'comp-board', componentName: 'لوحة أردوينو أونو' },
+    ];
+    const resolution = resolveComponentReference('لوحة أردوينو أونو', arabicCatalog);
+    assert.equal(resolution.resolution, 'NORMALIZED_NAME');
+    assert.equal(resolution.component?.id, 'comp-board');
   });
 
   test('forbidden soil-moisture prose is rejected for LDR catalog', () => {

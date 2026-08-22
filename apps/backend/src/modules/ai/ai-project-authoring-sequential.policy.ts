@@ -79,15 +79,46 @@ export type ComponentStepConsistencyResult =
       ok: false;
       code: 'AI_STEP_COMPONENT_INCONSISTENT';
       issues: string[];
+      consistencyIssues: StepComponentConsistencyIssue[];
     };
 
-const normalizeName = (value: string) =>
+export type ComponentReferenceResolution =
+  | 'CANONICAL_ID'
+  | 'EXACT_NAME'
+  | 'NORMALIZED_NAME'
+  | 'ALIAS'
+  | 'AMBIGUOUS'
+  | 'UNKNOWN';
+
+export type StepComponentConsistencyIssue = {
+  code:
+    | 'DUPLICATE_COMPONENT_NAME'
+    | 'UNKNOWN_COMPONENT_REFERENCE'
+    | 'AMBIGUOUS_COMPONENT_REFERENCE'
+    | 'FORBIDDEN_COMPONENT_MENTION'
+    | 'COMPONENT_CONSTRAINT_VIOLATION'
+    | 'EMPTY_STEP_PLAN'
+    | 'EMPTY_STEP';
+  message: string;
+  stepIndex: number | null;
+  stepOrder: number | null;
+  stepTitle: string | null;
+  componentRef: string | null;
+  canonicalComponentId: string | null;
+  canonicalComponentName: string | null;
+  resolution: ComponentReferenceResolution | null;
+};
+
+export const normalizeComponentIdentity = (value: string) =>
   value
+    .normalize('NFKC')
     .trim()
     .toLowerCase()
     .replace(/[Ωω]/g, 'ohm')
-    .replace(/[^a-z0-9\s-]/g, ' ')
-    .replace(/\s+/g, ' ');
+    .replace(/\p{M}+/gu, '')
+    .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 const COMPONENT_ALIAS_GROUPS: string[][] = [
   ['ldr', 'photoresistor', 'light dependent resistor', 'light-dependent resistor'],
@@ -121,7 +152,7 @@ const FORBIDDEN_PROSE_TERMS: Array<{ pattern: RegExp; label: string }> = [
 ];
 
 export const expandComponentAliases = (componentName: string): string[] => {
-  const normalized = normalizeName(componentName);
+  const normalized = normalizeComponentIdentity(componentName);
   const aliases = new Set<string>([normalized]);
   for (const group of COMPONENT_ALIAS_GROUPS) {
     if (group.some((alias) => normalized.includes(alias) || alias.includes(normalized))) {
@@ -140,13 +171,13 @@ export const catalogAllowsProseTerm = (
   term: string,
   components: SequentialComponent[],
 ): boolean => {
-  const normalizedTerm = normalizeName(term);
+  const normalizedTerm = normalizeComponentIdentity(term);
   return components.some((component) =>
     expandComponentAliases(component.componentName).some(
       (alias) =>
         normalizedTerm.includes(alias) ||
         alias.includes(normalizedTerm) ||
-        normalizeName(component.componentName).includes(normalizedTerm),
+        normalizeComponentIdentity(component.componentName).includes(normalizedTerm),
     ),
   );
 };
@@ -154,43 +185,77 @@ export const catalogAllowsProseTerm = (
 const stepUsesStructuredRefs = (steps: SequentialStep[]) =>
   steps.some((step) => (step.componentRefs?.length ?? 0) > 0);
 
-const componentRefMatchesCatalog = (
+export const resolveComponentReference = (
   componentRef: string,
   components: SequentialComponent[],
-  catalogIds: Set<string>,
-) => {
-  if (catalogIds.has(componentRef)) {
-    return true;
+): {
+  resolution: ComponentReferenceResolution;
+  component: SequentialComponent | null;
+} => {
+  const canonicalIdMatches = components.filter(
+    (component) => component.id?.trim() === componentRef.trim(),
+  );
+  if (canonicalIdMatches.length === 1) {
+    return { resolution: 'CANONICAL_ID', component: canonicalIdMatches[0]! };
   }
-  const normalizedRef = normalizeName(componentRef);
-  return components.some((component) => {
-    const normalizedName = normalizeName(component.componentName);
-    if (normalizedRef === normalizedName) {
-      return true;
-    }
-    const aliases = expandComponentAliases(component.componentName);
-    return aliases.some(
+  const exactNameMatches = components.filter(
+    (component) => component.componentName.trim() === componentRef.trim(),
+  );
+  if (exactNameMatches.length === 1) {
+    return { resolution: 'EXACT_NAME', component: exactNameMatches[0]! };
+  }
+  const normalizedRef = normalizeComponentIdentity(componentRef);
+  const normalizedNameMatches = components.filter(
+    (component) => normalizeComponentIdentity(component.componentName) === normalizedRef,
+  );
+  if (normalizedNameMatches.length === 1) {
+    return { resolution: 'NORMALIZED_NAME', component: normalizedNameMatches[0]! };
+  }
+  if (normalizedNameMatches.length > 1) {
+    return { resolution: 'AMBIGUOUS', component: null };
+  }
+  const aliasMatches = components.filter((component) =>
+    expandComponentAliases(component.componentName).some(
       (alias) =>
         normalizedRef === alias ||
         normalizedRef.includes(alias) ||
         alias.includes(normalizedRef),
-    );
-  });
+    ),
+  );
+  if (aliasMatches.length === 1) {
+    return { resolution: 'ALIAS', component: aliasMatches[0]! };
+  }
+  return {
+    resolution: aliasMatches.length > 1 ? 'AMBIGUOUS' : 'UNKNOWN',
+    component: null,
+  };
 };
 
 const collectForbiddenProseIssues = (
-  stepText: string,
+  steps: SequentialStep[],
   components: SequentialComponent[],
-): string[] => {
-  const issues: string[] = [];
-  for (const forbidden of FORBIDDEN_PROSE_TERMS) {
-    if (!forbidden.pattern.test(stepText)) {
-      continue;
-    }
-    if (!catalogAllowsProseTerm(forbidden.label, components)) {
-      issues.push(
-        `Step plan references "${forbidden.label}" which is not in the saved component list.`,
-      );
+): StepComponentConsistencyIssue[] => {
+  const issues: StepComponentConsistencyIssue[] = [];
+  for (let stepIndex = 0; stepIndex < steps.length; stepIndex += 1) {
+    const step = steps[stepIndex]!;
+    const stepText = `${step.title} ${step.description}`.toLowerCase();
+    for (const forbidden of FORBIDDEN_PROSE_TERMS) {
+      if (!forbidden.pattern.test(stepText)) {
+        continue;
+      }
+      if (!catalogAllowsProseTerm(forbidden.label, components)) {
+        issues.push({
+          code: 'FORBIDDEN_COMPONENT_MENTION',
+          message: `Step plan references "${forbidden.label}" which is not in the saved component list.`,
+          stepIndex,
+          stepOrder: stepIndex + 1,
+          stepTitle: step.title,
+          componentRef: forbidden.label,
+          canonicalComponentId: null,
+          canonicalComponentName: null,
+          resolution: 'UNKNOWN',
+        });
+      }
     }
   }
   return issues;
@@ -201,37 +266,54 @@ export const validateComponentStepConsistency = (input: {
   steps: SequentialStep[];
   constraints?: string[];
 }): ComponentStepConsistencyResult => {
-  const issues: string[] = [];
+  const consistencyIssues: StepComponentConsistencyIssue[] = [];
   const componentNames = input.components.map((component) =>
-    normalizeName(component.componentName),
+    normalizeComponentIdentity(component.componentName),
   );
   const uniqueNames = new Set(componentNames);
   if (uniqueNames.size !== componentNames.length) {
-    issues.push('Duplicate component names are not allowed.');
+    consistencyIssues.push({
+      code: 'DUPLICATE_COMPONENT_NAME',
+      message: 'Duplicate component names are not allowed.',
+      stepIndex: null,
+      stepOrder: null,
+      stepTitle: null,
+      componentRef: null,
+      canonicalComponentId: null,
+      canonicalComponentName: null,
+      resolution: null,
+    });
   }
-
-  const catalogIds = new Set(
-    input.components
-      .map((component) => component.id?.trim())
-      .filter((id): id is string => Boolean(id)),
-  );
   const stepText = input.steps
     .map((step) => `${step.title} ${step.description}`.toLowerCase())
     .join(' ');
 
   if (stepUsesStructuredRefs(input.steps)) {
-    for (const step of input.steps) {
+    for (let stepIndex = 0; stepIndex < input.steps.length; stepIndex += 1) {
+      const step = input.steps[stepIndex]!;
       for (const componentRef of step.componentRefs ?? []) {
-        if (!componentRefMatchesCatalog(componentRef, input.components, catalogIds)) {
-          issues.push(
-            `Step "${step.title}" references unknown component ID "${componentRef}".`,
-          );
+        const resolved = resolveComponentReference(componentRef, input.components);
+        if (resolved.resolution === 'UNKNOWN' || resolved.resolution === 'AMBIGUOUS') {
+          consistencyIssues.push({
+            code:
+              resolved.resolution === 'AMBIGUOUS'
+                ? 'AMBIGUOUS_COMPONENT_REFERENCE'
+                : 'UNKNOWN_COMPONENT_REFERENCE',
+            message: `Step "${step.title}" references ${resolved.resolution === 'AMBIGUOUS' ? 'ambiguous' : 'unknown'} component ID "${componentRef}".`,
+            stepIndex,
+            stepOrder: stepIndex + 1,
+            stepTitle: step.title,
+            componentRef,
+            canonicalComponentId: null,
+            canonicalComponentName: null,
+            resolution: resolved.resolution,
+          });
         }
       }
     }
-    issues.push(...collectForbiddenProseIssues(stepText, input.components));
+    consistencyIssues.push(...collectForbiddenProseIssues(input.steps, input.components));
   } else {
-    issues.push(...collectForbiddenProseIssues(stepText, input.components));
+    consistencyIssues.push(...collectForbiddenProseIssues(input.steps, input.components));
   }
 
   for (const constraint of input.constraints ?? []) {
@@ -245,27 +327,59 @@ export const validateComponentStepConsistency = (input: {
           component.componentName.toLowerCase().includes('pump'),
         ) || stepText.includes('pump');
       if (mentionsPump) {
-        issues.push('Steps or components still reference a pump despite the no-pump constraint.');
+        consistencyIssues.push({
+          code: 'COMPONENT_CONSTRAINT_VIOLATION',
+          message: 'Steps or components still reference a pump despite the no-pump constraint.',
+          stepIndex: null,
+          stepOrder: null,
+          stepTitle: null,
+          componentRef: 'pump',
+          canonicalComponentId: null,
+          canonicalComponentName: null,
+          resolution: null,
+        });
       }
     }
   }
 
   if (input.steps.length === 0) {
-    issues.push('At least one build step is required.');
+    consistencyIssues.push({
+      code: 'EMPTY_STEP_PLAN',
+      message: 'At least one build step is required.',
+      stepIndex: null,
+      stepOrder: null,
+      stepTitle: null,
+      componentRef: null,
+      canonicalComponentId: null,
+      canonicalComponentName: null,
+      resolution: null,
+    });
   }
 
   const emptyStep = input.steps.find(
     (step) => step.title.trim().length === 0 || step.description.trim().length === 0,
   );
   if (emptyStep) {
-    issues.push('Every step must have a title and description.');
+    const stepIndex = input.steps.indexOf(emptyStep);
+    consistencyIssues.push({
+      code: 'EMPTY_STEP',
+      message: 'Every step must have a title and description.',
+      stepIndex,
+      stepOrder: stepIndex + 1,
+      stepTitle: emptyStep.title || null,
+      componentRef: null,
+      canonicalComponentId: null,
+      canonicalComponentName: null,
+      resolution: null,
+    });
   }
 
-  if (issues.length > 0) {
+  if (consistencyIssues.length > 0) {
     return {
       ok: false,
       code: 'AI_STEP_COMPONENT_INCONSISTENT',
-      issues,
+      issues: consistencyIssues.map((issue) => issue.message),
+      consistencyIssues,
     };
   }
 
