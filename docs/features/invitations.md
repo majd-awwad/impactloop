@@ -1,126 +1,49 @@
-# Invitations Feature
+# Invitations
 
-**Sources inspected:** `apps/backend/src/modules/invitations/*`, `apps/backend/src/modules/admin/*`, `apps/backend/src/app.ts`, `apps/backend/prisma/schema.prisma`, `apps/frontend/lib/features/invitations/`, `apps/frontend/lib/features/admin_portal/`, `apps/frontend/lib/app/router/app_router.dart`, `docs/backend/api-catalog.md`, `docs/frontend/routes-map.md`, `docs/product/implementation-status.md`
+ImpactLoop invitations grant an operational role to the account whose email is
+named by the invitation. They support both a new account and an existing
+multi-role account.
 
-## Purpose
+## Active invitation roles
 
-Invite users into invitation-only operational roles: `DRIVER`, `MODERATOR`, and `ADMIN`.
+- `DRIVER`
+- `ADMIN`
 
-Public registration remains limited to `LEARNER` and `SUPPLIER`. Invitation tokens must never be stored raw; the database stores token hashes.
+`MODERATOR` remains in the database and historical invitation records for
+compatibility, but new moderator invitations cannot be created, resent, issued,
+or accepted.
 
-## Current status
+## Flow
 
-| Area | Status | Notes |
-|------|--------|-------|
-| Create invitation | **Implemented** | Admin UI + `/api/admin/invitations` |
-| List invitations | **Implemented** | Admin UI + `/api/admin/invitations` |
-| Resend invitation | **Implemented** | Admin UI + `/api/admin/invitations/:id/resend` |
-| Revoke invitation | **Implemented** | Admin UI + `/api/admin/invitations/:id/revoke` |
-| Validate token | **Implemented** | Public `/api/invitations/validate/:token` |
-| Accept invitation | **Implemented** | Public `/api/invitations/accept`; Flutter `/invite/accept` |
-| Driver profile on accept | **Implemented** | Driver invitations create `DriverProfile` |
-| Email delivery | **Partial** | Mock or SMTP provider depending on environment |
-| Moderator portal after accept | **Not implemented** | `MODERATOR` role exists, but no workspace |
-| Admin portal after accept | **Partial** | `/admin` portal exists |
-| Driver portal after accept | **Partial** | `/driver` portal exists |
+1. An authenticated `ADMIN` creates a role invitation for an email address.
+2. The service stores a SHA-256 hash of a random opaque token and emails the
+   raw token in `/invite/accept?token=...`.
+3. The public preview endpoint identifies whether the email has no account, an
+   existing logged-out account, the matching authenticated account, or a
+   different authenticated account.
+4. A new email completes account registration. The invitation creates one user
+   with the invited role; drivers also receive a `DriverProfile`.
+5. An existing matching account uses the authenticated acceptance endpoint.
+   Its role assignment is inserted safely without replacing any previous role.
+   A driver profile is created only when required and missing.
+6. The invitation is consumed atomically with the role/profile mutation.
 
-**Overall:** **Implemented** for invitation creation/list/revoke/resend/validate/accept. Post-accept role experiences vary by role.
+New-account acceptance does not create a session. The person signs in after the
+success screen. Existing-account acceptance refreshes access claims and
+`/auth/me` so the new role is visible immediately.
 
-## Main flow
+## API
 
-1. Admin creates an invitation for `DRIVER`, `MODERATOR`, or `ADMIN`.
-2. Backend stores `role_invitations.token_hash`; raw token is only used for delivery or dev/mock response.
-3. Invitee opens `/invite/accept?token=...`.
-4. Flutter validates the token through `GET /api/invitations/validate/:token`.
-5. Invitee submits account details.
-6. `POST /api/invitations/accept` creates the user, assigns the invited role, marks the invitation accepted, and creates driver profile when applicable. **It does not issue auth tokens** — Flutter shows success and routes to `/login`.
-7. `DRIVER` invitation acceptance also creates a driver profile.
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| GET | `/api/invitations/validate?token=` | Optional | Token preview and safe account state |
+| POST | `/api/invitations/accept` | No | Create a new account and consume invite |
+| POST | `/api/invitations/accept-existing` | Required | Add the database invitation role to matching account |
+| GET | `/api/admin/invitations` | ADMIN | List invitation history |
+| POST | `/api/admin/invitations` | ADMIN | Create a driver/admin invitation |
+| POST | `/api/admin/invitations/:id/issue-link` | ADMIN | Rotate active invitation link |
+| POST | `/api/admin/invitations/:id/resend` | ADMIN | Rotate and resend active invitation |
+| PATCH | `/api/admin/invitations/:id/revoke` | ADMIN | Revoke an unused invitation |
 
-See [invitation-flow](../flows/invitation-flow.md).
-
-## Frontend files
-
-| Area | Path |
-|------|------|
-| Public accept UI | `apps/frontend/lib/features/invitations/presentation/pages/invite_accept_page.dart` |
-| Invitation data | `apps/frontend/lib/features/invitations/data/*` |
-| Admin UI | `apps/frontend/lib/features/admin_portal/presentation/pages/admin_invitations_page.dart` |
-| Admin data | `apps/frontend/lib/features/admin_portal/data/admin_invitations_api.dart` |
-| Routes | `/invite/accept`, `/admin/invitations` |
-
-## Backend files
-
-| File | Role |
-|------|------|
-| `modules/invitations/invitations.routes.ts` | Public validate/accept and legacy create route |
-| `modules/invitations/invitations.controller.ts` | Public invitation handlers |
-| `modules/invitations/invitations.service.ts` | Create, validate, accept, session creation |
-| `modules/invitations/invitations.repository.ts` | Prisma access and accept transaction |
-| `modules/invitations/invitations.validation.ts` | Zod schemas |
-| `modules/admin/admin-invitations.controller.ts` | Admin list/create/resend/revoke handlers |
-| `modules/admin/admin.routes.ts` | `/api/admin/invitations*` routes |
-
-## API endpoints
-
-Public invitation endpoints:
-
-| Method | Path | Auth |
-|--------|------|------|
-| GET | `/api/invitations/validate/:token` | Public |
-| POST | `/api/invitations/accept` | Public |
-
-Admin invitation endpoints:
-
-| Method | Path | Auth |
-|--------|------|------|
-| GET | `/api/admin/invitations` | ADMIN |
-| POST | `/api/admin/invitations` | ADMIN |
-| POST | `/api/admin/invitations/:id/resend` | ADMIN |
-| PATCH | `/api/admin/invitations/:id/revoke` | ADMIN |
-
-Legacy/admin-compatible endpoint:
-
-| Method | Path | Auth |
-|--------|------|------|
-| POST | `/api/invitations` | ADMIN |
-
-### Create body (summary)
-
-`targetRole`: `DRIVER` | `MODERATOR` | `ADMIN`; optional `targetEmail`, `targetPhone`, `notes`.
-
-### Accept body (summary)
-
-`token`, `displayName`, `email`, `password`, optional `phone`. Targeted email/phone invitations must match when set.
-
-## Database tables
-
-| Table | Role |
-|-------|------|
-| `role_invitations` | Pending/used invitations (`token_hash`, target role/contact, expiry, send status, lifecycle status) |
-| `users`, `user_roles` | Created on accept |
-| `driver_profiles` | Created on accept for `DRIVER` invitations |
-| `auth_tokens` | Refresh session on accept |
-
-Enums: `RoleInvitationTargetRole`, `RoleInvitationStatus`, `RoleInvitationSendStatus` — see [enums](../database/enums.md).
-
-## Role outcomes
-
-| Invited role | After accept |
-|--------------|--------------|
-| `DRIVER` | User can access partial driver portal |
-| `MODERATOR` | Role assigned, but no moderator portal exists |
-| `ADMIN` | User can access partial admin portal |
-
-## Known gaps / Needs verification
-
-- Production email/SMS delivery configuration depends on environment; mock provider may expose dev token behavior.
-- Production value of invitation expiry needs environment verification.
-- Moderator role has no post-login workspace.
-- Admin resend/revoke behavior should be manually tested against email provider configuration before production.
-
-## Related docs
-
-- [Roles and capabilities](roles-and-capabilities.md)
-- [Auth](auth.md)
-- [Admin](admin.md)
-- [Invitation flow](../flows/invitation-flow.md)
+The authenticated acceptance request never supplies an authoritative email,
+role, or user ID. Those values come from the session and the stored invitation.

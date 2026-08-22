@@ -477,8 +477,8 @@ class _InvitationsPageHeader extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           l.t(
-            'Send secure email invitation links for drivers, moderators, and admins.',
-            'أرسل روابط دعوة آمنة عبر البريد الإلكتروني للسائقين والمشرفين والمسؤولين.',
+            'Send secure email invitation links for drivers and administrators.',
+            'أرسل روابط دعوة آمنة عبر البريد الإلكتروني للسائقين والمسؤولين.',
           ),
           style: AdminTypography.pageSubtitle(palette),
         ),
@@ -689,10 +689,6 @@ class _FiltersPanel extends StatelessWidget {
                 DropdownMenuEntry(
                   value: 'DRIVER',
                   label: l.t('Driver', 'سائق'),
-                ),
-                DropdownMenuEntry(
-                  value: 'MODERATOR',
-                  label: l.t('Moderator', 'مشرف'),
                 ),
                 DropdownMenuEntry(value: 'ADMIN', label: l.t('Admin', 'مسؤول')),
               ],
@@ -963,8 +959,8 @@ class _InvitationsResultsContainer extends ConsumerWidget {
                     'حاول تعديل البحث أو عوامل التصفية.',
                   )
                 : l.t(
-                    'Send your first invitation to onboard a driver, moderator, or admin.',
-                    'أرسل أول دعوة لإضافة سائق أو مشرف أو مسؤول.',
+                    'Send your first invitation to onboard a driver or administrator.',
+                    'أرسل أول دعوة لإضافة سائق أو مسؤول.',
                   ),
             style: AdminTypography.pageSubtitle(palette),
           ),
@@ -2341,17 +2337,41 @@ class _CreateInvitationDialogState
                 key: ValueKey('role-$_role'),
                 initialValue: _role,
                 decoration: InputDecoration(labelText: l.t('Role', 'الدور')),
-                items: const [
-                  DropdownMenuItem(value: 'DRIVER', child: Text('Driver')),
+                items: [
                   DropdownMenuItem(
-                    value: 'MODERATOR',
-                    child: Text('Moderator'),
+                    value: 'DRIVER',
+                    child: Text(l.t('Driver', 'سائق')),
                   ),
-                  DropdownMenuItem(value: 'ADMIN', child: Text('Admin')),
+                  DropdownMenuItem(
+                    value: 'ADMIN',
+                    child: Text(l.t('Administrator', 'مسؤول')),
+                  ),
                 ],
                 onChanged: _submitting
                     ? null
                     : (value) => setState(() => _role = value!),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _role == 'ADMIN'
+                      ? Theme.of(context).colorScheme.errorContainer
+                      : Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: AppRadius.mdAll,
+                ),
+                child: Text(
+                  _role == 'ADMIN'
+                      ? l.t(
+                          'Administrator access can manage platform operations. Send this invitation only to a trusted person.',
+                          'صلاحيات المسؤول تسمح بإدارة عمليات المنصة. أرسل هذه الدعوة لشخص موثوق فقط.',
+                        )
+                      : l.t(
+                          'Add a user to the delivery team and enable pickup and delivery work.',
+                          'إضافة مستخدم إلى فريق التوصيل وإتاحة مهام الاستلام والتسليم.',
+                        ),
+                ),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<int>(

@@ -24,6 +24,7 @@ import {
 } from './invitations.status.js';
 import type {
   AcceptInvitationInput,
+  AcceptExistingInvitationInput,
   AdminCreateInvitationInput,
 } from './invitations.validation.js';
 
@@ -58,12 +59,47 @@ export type ValidateInvitationResult = {
   role?: RoleInvitationTargetRole;
   recipientEmail?: string;
   expiresAt?: string;
+  accountState?: InvitationAccountState;
+  requiresDriverProfile?: boolean;
   reason?: string;
 };
+
+export type InvitationAccountState =
+  | 'INVALID'
+  | 'EXPIRED'
+  | 'REVOKED'
+  | 'ALREADY_ACCEPTED'
+  | 'NEW_ACCOUNT'
+  | 'EXISTING_ACCOUNT_LOGGED_OUT'
+  | 'EXISTING_ACCOUNT_READY'
+  | 'WRONG_AUTHENTICATED_ACCOUNT'
+  | 'ALREADY_HAS_ROLE'
+  | 'UNSUPPORTED_ROLE';
 
 export type AcceptInvitationResult = {
   role: RoleInvitationTargetRole;
   userId: string;
+};
+
+export type AcceptExistingInvitationResult = {
+  role: RoleInvitationTargetRole;
+  alreadyHadRole: boolean;
+  driverProfileCreated: boolean;
+};
+
+const ACTIVE_INVITATION_ROLES = new Set<RoleInvitationTargetRole>([
+  'DRIVER',
+  'ADMIN',
+]);
+
+const assertActiveInvitationRole = (role: RoleInvitationTargetRole): void => {
+  if (!ACTIVE_INVITATION_ROLES.has(role)) {
+    throw new AppError(
+      'This invitation role is no longer available.',
+      400,
+      'INVITATION_ROLE_UNAVAILABLE',
+    );
+  }
 };
 
 const assertInviteLinkConfiguration = (): void => {
@@ -162,6 +198,7 @@ export const issueInvitationLinkForAdmin = async (
       COMMON_ERROR_CODES.validationError,
     );
   }
+  assertActiveInvitationRole(invitation.targetRole);
 
   const rawToken = generateOpaqueToken();
   await invitationsRepository.rotateInvitationTokenHashOnly({
@@ -201,9 +238,24 @@ export const createEmailInvitation = async (
   input: AdminCreateInvitationInput,
 ): Promise<InvitationCreateResult> => {
   assertInviteLinkConfiguration();
+  assertActiveInvitationRole(input.role);
 
   const recipientEmail = input.recipientEmail.trim().toLowerCase();
 
+  const existingRecipient = await authRepository.findUserByEmailWithRoles(
+    recipientEmail,
+  );
+  if (
+    existingRecipient?.roles.some(
+      (assignment) => assignment.role === input.role,
+    )
+  ) {
+    throw new AppError(
+      'The invited account already has this role.',
+      409,
+      'INVITATION_ROLE_ALREADY_GRANTED',
+    );
+  }
   await invitationsRepository.clearInactiveInvitationActiveKeys(
     recipientEmail,
     input.role,
@@ -287,6 +339,7 @@ export const resendEmailInvitation = async (
       COMMON_ERROR_CODES.validationError,
     );
   }
+  assertActiveInvitationRole(invitation.targetRole);
 
   if (!invitation.targetEmail) {
     throw new AppError(
@@ -391,7 +444,7 @@ const assertInvitationUsable = async (token: string) => {
     throw new AppError(
       'Invalid invitation',
       400,
-      COMMON_ERROR_CODES.validationError,
+      'INVITATION_INVALID',
     );
   }
 
@@ -399,7 +452,7 @@ const assertInvitationUsable = async (token: string) => {
     throw new AppError(
       'Invitation already used',
       400,
-      COMMON_ERROR_CODES.validationError,
+      'INVITATION_ALREADY_ACCEPTED',
     );
   }
 
@@ -407,7 +460,7 @@ const assertInvitationUsable = async (token: string) => {
     throw new AppError(
       'Invitation revoked',
       400,
-      COMMON_ERROR_CODES.validationError,
+      'INVITATION_REVOKED',
     );
   }
 
@@ -415,7 +468,7 @@ const assertInvitationUsable = async (token: string) => {
     throw new AppError(
       'Invitation expired',
       400,
-      COMMON_ERROR_CODES.validationError,
+      'INVITATION_EXPIRED',
     );
   }
 
@@ -424,20 +477,94 @@ const assertInvitationUsable = async (token: string) => {
 
 export const validateInvitationToken = async (
   token: string,
+  authenticatedUserId?: string,
 ): Promise<ValidateInvitationResult> => {
   try {
     const invitation = await assertInvitationUsable(token);
 
+    if (!ACTIVE_INVITATION_ROLES.has(invitation.targetRole)) {
+      return {
+        valid: false,
+        accountState: 'UNSUPPORTED_ROLE',
+        reason: 'This invitation role is no longer available.',
+      };
+    }
+
+    if (!invitation.targetEmail) {
+      return {
+        valid: false,
+        reason: 'Invitation is missing recipient email',
+      };
+    }
+
+    const existingRecipient = await authRepository.findUserByEmailWithRoles(
+      invitation.targetEmail,
+    );
+
+    if (!authenticatedUserId) {
+      return {
+        valid: true,
+        role: invitation.targetRole,
+        recipientEmail: invitation.targetEmail,
+        expiresAt: invitation.expiresAt.toISOString(),
+        accountState: existingRecipient
+            ? 'EXISTING_ACCOUNT_LOGGED_OUT'
+            : 'NEW_ACCOUNT',
+        requiresDriverProfile:
+          invitation.targetRole === 'DRIVER' &&
+          existingRecipient?.driverProfile == null,
+      };
+    }
+
+    const authenticatedUser = await authRepository.findUserByIdWithRoles(
+      authenticatedUserId,
+    );
+    if (!authenticatedUser) {
+      return {
+        valid: false,
+        reason: 'Authentication required',
+      };
+    }
+
+    if (
+      authenticatedUser.email.trim().toLowerCase() !==
+      invitation.targetEmail.trim().toLowerCase()
+    ) {
+      return {
+        valid: true,
+        role: invitation.targetRole,
+        recipientEmail: invitation.targetEmail,
+        expiresAt: invitation.expiresAt.toISOString(),
+        accountState: 'WRONG_AUTHENTICATED_ACCOUNT',
+      };
+    }
+
+    const alreadyHasRole = authenticatedUser.roles.some(
+      (assignment) => assignment.role === invitation.targetRole,
+    );
+
     return {
       valid: true,
       role: invitation.targetRole,
-      recipientEmail: invitation.targetEmail ?? undefined,
+      recipientEmail: invitation.targetEmail,
       expiresAt: invitation.expiresAt.toISOString(),
+      accountState: alreadyHasRole
+          ? 'ALREADY_HAS_ROLE'
+          : 'EXISTING_ACCOUNT_READY',
+      requiresDriverProfile:
+        invitation.targetRole === 'DRIVER' &&
+        authenticatedUser.driverProfile == null,
     };
   } catch (error) {
     if (error instanceof AppError) {
       return {
         valid: false,
+        accountState: {
+          INVITATION_INVALID: 'INVALID',
+          INVITATION_ALREADY_ACCEPTED: 'ALREADY_ACCEPTED',
+          INVITATION_REVOKED: 'REVOKED',
+          INVITATION_EXPIRED: 'EXPIRED',
+        }[error.code] as InvitationAccountState | undefined,
         reason: error.message,
       };
     }
@@ -446,9 +573,19 @@ export const validateInvitationToken = async (
   }
 };
 
+type DriverProfileInvitationInput = Pick<
+  AcceptInvitationInput,
+  | 'phone'
+  | 'city'
+  | 'area'
+  | 'addressLine'
+  | 'transportationType'
+  | 'availabilityNote'
+>;
+
 const validateAcceptPayloadForRole = (
   invitationRole: RoleInvitationTargetRole,
-  input: AcceptInvitationInput,
+  input: DriverProfileInvitationInput,
 ): void => {
   if (invitationRole === 'DRIVER') {
     if (!input.phone || !input.city || !input.area || !input.transportationType) {
@@ -470,6 +607,7 @@ export const acceptInvitation = async (
   input: AcceptInvitationInput,
 ): Promise<AcceptInvitationResult> => {
   const invitation = await assertInvitationUsable(input.token);
+  assertActiveInvitationRole(invitation.targetRole);
 
   if (!invitation.targetEmail) {
     throw new AppError(
@@ -538,4 +676,54 @@ export const acceptInvitation = async (
     role: invitation.targetRole,
     userId: user.id,
   };
+};
+
+export const acceptInvitationForExistingUser = async (
+  userId: string,
+  input: AcceptExistingInvitationInput,
+): Promise<AcceptExistingInvitationResult> => {
+  const invitation = await assertInvitationUsable(input.token);
+  assertActiveInvitationRole(invitation.targetRole);
+
+  if (!invitation.targetEmail) {
+    throw new AppError(
+      'Invitation is missing recipient email',
+      400,
+      COMMON_ERROR_CODES.validationError,
+    );
+  }
+
+  const user = await authRepository.findUserByIdWithRoles(userId);
+  if (!user) {
+    throw new AppError('User not found', 404, COMMON_ERROR_CODES.notFound);
+  }
+
+  if (user.email.trim().toLowerCase() !== invitation.targetEmail.trim().toLowerCase()) {
+    throw new AppError(
+      'This invitation belongs to a different account',
+      403,
+      'INVITATION_ACCOUNT_MISMATCH',
+    );
+  }
+
+  const needsDriverProfile =
+    invitation.targetRole === 'DRIVER' && user.driverProfile == null;
+  if (needsDriverProfile) {
+    validateAcceptPayloadForRole(invitation.targetRole, input);
+  }
+
+  return invitationsRepository.acceptInvitationForExistingUserTransaction({
+    invitationId: invitation.id,
+    userId,
+    driverProfile: needsDriverProfile
+      ? {
+          phone: input.phone!,
+          city: input.city!,
+          area: input.area!,
+          addressLine: input.addressLine,
+          transportationType: input.transportationType!,
+          availabilityNote: input.availabilityNote,
+        }
+      : undefined,
+  });
 };

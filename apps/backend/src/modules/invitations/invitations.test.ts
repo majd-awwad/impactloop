@@ -12,6 +12,7 @@ import {
 import * as invitationsRepository from './invitations.repository.js';
 import {
   acceptInvitation,
+  acceptInvitationForExistingUser,
   createEmailInvitation,
   getInvitationForAdmin,
   issueInvitationLinkForAdmin,
@@ -24,6 +25,7 @@ import { prisma } from '../../database/prisma.js';
 import { hashPassword } from '../../utils/password.js';
 import { hashToken } from '../../utils/token.js';
 import { AppError } from '../../utils/app-error.js';
+import { COMMON_ERROR_CODES } from '../../contracts/errors/common-error-codes.js';
 import { buildInvitationEmailContent } from './email/mock-email-invitation-provider.js';
 
 const TEST_MARKER = '[test-invitations]';
@@ -196,7 +198,7 @@ describe('admin email invitations', () => {
     const admin = await createAdminUser();
 
     const created = await createEmailInvitation(admin.id, {
-      role: 'MODERATOR',
+      role: 'DRIVER',
       recipientEmail: `${TEST_MARKER}-moderator@impactloop.test`,
       expiresInMinutes: 30,
     });
@@ -309,8 +311,8 @@ describe('admin email invitations', () => {
       expiresAt: new Date('2026-08-22T12:00:00.000Z'),
     });
 
-    assert.match(content.subject, /ImpactLoop invitation/i);
-    assert.match(content.text, /Driver/);
+    assert.match(content.subject, /كسائق/);
+    assert.match(content.text, /كسائق/);
     assert.match(content.text, /invite\/accept\?token=opaque-token/);
     assert.match(content.html, />Accept invitation</);
     assert.match(content.html, /If the button does not work/);
@@ -363,7 +365,7 @@ describe('admin email invitations', () => {
     const admin = await createAdminUser();
 
     const created = await createEmailInvitation(admin.id, {
-      role: 'MODERATOR',
+      role: 'DRIVER',
       recipientEmail: `${TEST_MARKER}-revoke@impactloop.test`,
       expiresInMinutes: 60,
     });
@@ -379,7 +381,7 @@ describe('admin email invitations', () => {
     const admin = await createAdminUser();
 
     const created = await createEmailInvitation(admin.id, {
-      role: 'MODERATOR',
+      role: 'ADMIN',
       recipientEmail: `${TEST_MARKER}-used-revoke@impactloop.test`,
       expiresInMinutes: 60,
     });
@@ -521,33 +523,22 @@ describe('admin email invitations', () => {
     assert.equal(profile?.availability, 'OFFLINE');
   });
 
-  test('accept MODERATOR creates user and MODERATOR role', async () => {
+  test('new MODERATOR invitation creation is rejected', async () => {
     const provider = new RecordingEmailProvider();
     setEmailInvitationProviderForTests(provider);
     const admin = await createAdminUser();
 
-    const email = `${TEST_MARKER}-moderator-accept@impactloop.test`;
-    const created = await createEmailInvitation(admin.id, {
-      role: 'MODERATOR',
-      recipientEmail: email,
-      expiresInMinutes: 60,
-    });
-    ids.invitations.push(created.id);
-
-    const token = new URL(created.inviteLink).searchParams.get('token')!;
-    const accepted = await acceptInvitation({
-      token,
-      fullName: 'Moderator User',
-      email,
-      password: 'Password123!',
-      confirmPassword: 'Password123!',
-    });
-    ids.users.push(accepted.userId);
-
-    const roles = await prisma.userRoleAssignment.findMany({
-      where: { userId: accepted.userId },
-    });
-    assert.deepEqual(roles.map((role) => role.role), ['MODERATOR']);
+    await assert.rejects(
+      () =>
+        createEmailInvitation(admin.id, {
+          role: 'MODERATOR' as never,
+          recipientEmail: `${TEST_MARKER}-moderator-accept@impactloop.test`,
+          expiresInMinutes: 60,
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'INVITATION_ROLE_UNAVAILABLE',
+    );
   });
 
   test('accept ADMIN creates user and ADMIN role', async () => {
@@ -586,7 +577,7 @@ describe('admin email invitations', () => {
 
     const email = `${TEST_MARKER}-double-accept@impactloop.test`;
     const created = await createEmailInvitation(admin.id, {
-      role: 'MODERATOR',
+      role: 'ADMIN',
       recipientEmail: email,
       expiresInMinutes: 60,
     });
@@ -641,6 +632,210 @@ describe('admin email invitations', () => {
       /does not match/,
     );
   });
+
+  test('existing learner accepts ADMIN without replacing existing roles', async () => {
+    const provider = new RecordingEmailProvider();
+    setEmailInvitationProviderForTests(provider);
+    const admin = await createAdminUser();
+    const email = `${TEST_MARKER}-existing-admin-${Date.now()}@impactloop.test`;
+    const learner = await prisma.user.create({
+      data: {
+        displayName: 'Existing learner',
+        email,
+        passwordHash: await hashPassword('Password123!'),
+        accountStatus: 'ACTIVE',
+        roles: { create: [{ role: 'LEARNER', isPrimary: true }] },
+      },
+    });
+    ids.users.push(learner.id);
+    const created = await createEmailInvitation(admin.id, {
+      role: 'ADMIN',
+      recipientEmail: email,
+      expiresInMinutes: 60,
+    });
+    ids.invitations.push(created.id);
+
+    const token = new URL(created.inviteLink).searchParams.get('token')!;
+    await acceptInvitationForExistingUser(learner.id, { token });
+
+    const roles = await prisma.userRoleAssignment.findMany({
+      where: { userId: learner.id },
+      orderBy: { role: 'asc' },
+    });
+    assert.deepEqual(
+      roles.map((item) => item.role).sort(),
+      ['ADMIN', 'LEARNER'],
+    );
+    const refreshedLearner = await prisma.user.findUniqueOrThrow({
+      where: { id: learner.id },
+    });
+    assert.equal(refreshedLearner.displayName, 'Existing learner');
+  });
+
+  test('existing user with an already-granted role consumes the invitation idempotently', async () => {
+    const provider = new RecordingEmailProvider();
+    setEmailInvitationProviderForTests(provider);
+    const admin = await createAdminUser();
+    const email = `${TEST_MARKER}-already-role-${Date.now()}@impactloop.test`;
+    const learner = await prisma.user.create({
+      data: {
+        displayName: 'Already assigned learner',
+        email,
+        passwordHash: await hashPassword('Password123!'),
+        accountStatus: 'ACTIVE',
+        roles: { create: [{ role: 'LEARNER', isPrimary: true }] },
+      },
+    });
+    ids.users.push(learner.id);
+    const created = await createEmailInvitation(admin.id, {
+      role: 'ADMIN',
+      recipientEmail: email,
+      expiresInMinutes: 60,
+    });
+    ids.invitations.push(created.id);
+    await prisma.userRoleAssignment.create({
+      data: { userId: learner.id, role: 'ADMIN', isPrimary: false },
+    });
+
+    const token = new URL(created.inviteLink).searchParams.get('token')!;
+    const accepted = await acceptInvitationForExistingUser(learner.id, { token });
+    assert.equal(accepted.alreadyHadRole, true);
+    assert.equal(
+      await prisma.userRoleAssignment.count({
+        where: { userId: learner.id, role: 'ADMIN' },
+      }),
+      1,
+    );
+    const invitation = await prisma.roleInvitation.findUniqueOrThrow({
+      where: { id: created.id },
+    });
+    assert.equal(invitation.status, 'ACCEPTED');
+  });
+
+  test('existing DRIVER acceptance requires profile fields when no profile exists', async () => {
+    const provider = new RecordingEmailProvider();
+    setEmailInvitationProviderForTests(provider);
+    const admin = await createAdminUser();
+    const email = `${TEST_MARKER}-driver-fields-${Date.now()}@impactloop.test`;
+    const learner = await prisma.user.create({
+      data: {
+        displayName: 'Driver fields learner',
+        email,
+        passwordHash: await hashPassword('Password123!'),
+        accountStatus: 'ACTIVE',
+        roles: { create: [{ role: 'LEARNER', isPrimary: true }] },
+      },
+    });
+    ids.users.push(learner.id);
+    const created = await createEmailInvitation(admin.id, {
+      role: 'DRIVER',
+      recipientEmail: email,
+      expiresInMinutes: 60,
+    });
+    ids.invitations.push(created.id);
+    const token = new URL(created.inviteLink).searchParams.get('token')!;
+
+    await assert.rejects(
+      () => acceptInvitationForExistingUser(learner.id, { token }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === COMMON_ERROR_CODES.validationError,
+    );
+    assert.equal(
+      await prisma.driverProfile.count({ where: { userId: learner.id } }),
+      0,
+    );
+  });
+
+  test('existing multi-role account accepts DRIVER and creates one driver profile', async () => {
+    const provider = new RecordingEmailProvider();
+    setEmailInvitationProviderForTests(provider);
+    const admin = await createAdminUser();
+    const email = `${TEST_MARKER}-existing-driver-${Date.now()}@impactloop.test`;
+    const learner = await prisma.user.create({
+      data: {
+        displayName: 'Existing multi role user',
+        email,
+        passwordHash: await hashPassword('Password123!'),
+        accountStatus: 'ACTIVE',
+        roles: {
+          create: [
+            { role: 'LEARNER', isPrimary: true },
+            { role: 'SUPPLIER', isPrimary: false },
+          ],
+        },
+      },
+    });
+    ids.users.push(learner.id);
+    const created = await createEmailInvitation(admin.id, {
+      role: 'DRIVER',
+      recipientEmail: email,
+      expiresInMinutes: 60,
+    });
+    ids.invitations.push(created.id);
+
+    const token = new URL(created.inviteLink).searchParams.get('token')!;
+    const accepted = await acceptInvitationForExistingUser(learner.id, {
+      token,
+      phone: '+970599000222',
+      city: 'Nablus',
+      area: 'Rafidia',
+      transportationType: 'CAR',
+    });
+    assert.equal(accepted.driverProfileCreated, true);
+
+    const roles = await prisma.userRoleAssignment.findMany({
+      where: { userId: learner.id },
+      orderBy: { role: 'asc' },
+    });
+    assert.deepEqual(
+      roles.map((item) => item.role).sort(),
+      ['DRIVER', 'LEARNER', 'SUPPLIER'],
+    );
+    assert.equal(
+      await prisma.driverProfile.count({ where: { userId: learner.id } }),
+      1,
+    );
+  });
+
+  test('wrong authenticated account cannot accept an existing invitation', async () => {
+    const provider = new RecordingEmailProvider();
+    setEmailInvitationProviderForTests(provider);
+    const admin = await createAdminUser();
+    const invitedEmail = `${TEST_MARKER}-target-${Date.now()}@impactloop.test`;
+    const invited = await prisma.user.create({
+      data: {
+        displayName: 'Invited learner',
+        email: invitedEmail,
+        passwordHash: await hashPassword('Password123!'),
+        accountStatus: 'ACTIVE',
+        roles: { create: [{ role: 'LEARNER', isPrimary: true }] },
+      },
+    });
+    const wrong = await prisma.user.create({
+      data: {
+        displayName: 'Wrong user',
+        email: `${TEST_MARKER}-wrong-${Date.now()}@impactloop.test`,
+        passwordHash: await hashPassword('Password123!'),
+        accountStatus: 'ACTIVE',
+        roles: { create: [{ role: 'LEARNER', isPrimary: true }] },
+      },
+    });
+    ids.users.push(invited.id, wrong.id);
+    const created = await createEmailInvitation(admin.id, {
+      role: 'ADMIN',
+      recipientEmail: invitedEmail,
+      expiresInMinutes: 60,
+    });
+    ids.invitations.push(created.id);
+
+    const token = new URL(created.inviteLink).searchParams.get('token')!;
+    await assert.rejects(
+      () => acceptInvitationForExistingUser(wrong.id, { token }),
+      (error: unknown) =>
+        error instanceof AppError && error.code === 'INVITATION_ACCOUNT_MISMATCH',
+    );
+  });
 });
 
 describe('admin invitation duplicate prevention', () => {
@@ -650,7 +845,7 @@ describe('admin invitation duplicate prevention', () => {
     const admin = await createAdminUser();
 
     const created = await createEmailInvitation(admin.id, {
-      role: 'MODERATOR',
+      role: 'ADMIN',
       recipientEmail: `${TEST_MARKER}-unique-${Date.now()}@impactloop.test`,
       expiresInMinutes: 60,
     });
@@ -767,7 +962,7 @@ describe('admin invitation duplicate prevention', () => {
     const email = `${TEST_MARKER}-revoked-${Date.now()}@impactloop.test`;
 
     const created = await createEmailInvitation(admin.id, {
-      role: 'MODERATOR',
+      role: 'ADMIN',
       recipientEmail: email,
       expiresInMinutes: 60,
     });
@@ -775,7 +970,7 @@ describe('admin invitation duplicate prevention', () => {
     await revokeInvitation(created.id);
 
     const second = await createEmailInvitation(admin.id, {
-      role: 'MODERATOR',
+      role: 'ADMIN',
       recipientEmail: email,
       expiresInMinutes: 60,
     });

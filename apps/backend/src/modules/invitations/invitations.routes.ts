@@ -5,16 +5,19 @@ import {
   type RateLimitPolicy,
 } from '../../middlewares/rate-limit.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
+import { authMiddleware, optionalAuthMiddleware } from '../../middlewares/auth.middleware.js';
 import { asyncHandler } from '../../utils/async-handler.js';
 import { hashToken } from '../../utils/token.js';
 
 import {
   acceptRoleInvitation,
+  acceptRoleInvitationForExistingUser,
   validateRoleInvitation,
 } from './invitations.controller.js';
 
 import {
   acceptInvitationSchema,
+  acceptExistingInvitationSchema,
   invitationTokenQuerySchema,
 } from './invitations.validation.js';
 
@@ -79,6 +82,7 @@ const acceptInvitationTokenRateLimit = createRateLimitMiddleware({
 
 invitationsRouter.get(
   '/validate',
+  optionalAuthMiddleware,
   validateInvitationIpRateLimit,
   validate(invitationTokenQuerySchema, 'query'),
   validateInvitationTokenRateLimit,
@@ -91,4 +95,13 @@ invitationsRouter.post(
   validate(acceptInvitationSchema),
   acceptInvitationTokenRateLimit,
   asyncHandler(acceptRoleInvitation),
+);
+
+invitationsRouter.post(
+  '/accept-existing',
+  authMiddleware,
+  acceptInvitationIpRateLimit,
+  validate(acceptExistingInvitationSchema),
+  acceptInvitationTokenRateLimit,
+  asyncHandler(acceptRoleInvitationForExistingUser),
 );

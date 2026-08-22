@@ -343,3 +343,142 @@ export const acceptInvitationTransaction = async (input: {
     return user;
   });
 };
+
+export const acceptInvitationForExistingUserTransaction = async (input: {
+  invitationId: string;
+  userId: string;
+  driverProfile?: {
+    phone: string;
+    city: string;
+    area: string;
+    addressLine?: string;
+    transportationType: TransportationType;
+    availabilityNote?: string;
+  };
+}): Promise<{
+  role: RoleInvitationTargetRole;
+  alreadyHadRole: boolean;
+  driverProfileCreated: boolean;
+}> => {
+  return prisma.$transaction(async (tx) => {
+    const invitation = await tx.roleInvitation.findUnique({
+      where: { id: input.invitationId },
+    });
+
+    if (
+      !invitation ||
+      invitation.status !== 'PENDING' ||
+      invitation.usedAt ||
+      invitation.revokedAt ||
+      invitation.expiresAt <= new Date() ||
+      !invitation.targetEmail
+    ) {
+      throw new AppError(
+        'Invitation is no longer active',
+        409,
+        'INVITATION_NOT_ACTIVE',
+      );
+    }
+
+    const user = await tx.user.findUnique({
+      where: { id: input.userId },
+      include: {
+        roles: true,
+        driverProfile: true,
+      },
+    });
+
+    if (!user) {
+      throw new AppError('User not found', 404, COMMON_ERROR_CODES.notFound);
+    }
+
+    if (user.email.trim().toLowerCase() !== invitation.targetEmail.trim().toLowerCase()) {
+      throw new AppError(
+        'This invitation belongs to a different account',
+        403,
+        'INVITATION_ACCOUNT_MISMATCH',
+      );
+    }
+
+    const alreadyHadRole = user.roles.some(
+      (assignment) => assignment.role === invitation.targetRole,
+    );
+    let driverProfileCreated = false;
+
+    if (invitation.targetRole === 'DRIVER' && !user.driverProfile) {
+      if (!input.driverProfile) {
+        throw new AppError(
+          'Driver profile information is required',
+          400,
+          'INVITATION_DRIVER_PROFILE_REQUIRED',
+        );
+      }
+
+      await tx.driverProfile.create({
+        data: {
+          userId: user.id,
+          displayName: user.displayName,
+          phone: input.driverProfile.phone,
+          city: input.driverProfile.city,
+          area: input.driverProfile.area,
+          addressLine: input.driverProfile.addressLine,
+          transportationType: input.driverProfile.transportationType,
+          availabilityNote: input.driverProfile.availabilityNote,
+          vehicleType: input.driverProfile.transportationType,
+          status: 'ACTIVE',
+          availability: 'OFFLINE',
+          acceptingNewJobs: false,
+        },
+      });
+      driverProfileCreated = true;
+    }
+
+    if (!alreadyHadRole) {
+      await tx.userRoleAssignment.upsert({
+        where: {
+          userId_role: {
+            userId: user.id,
+            role: invitation.targetRole,
+          },
+        },
+        create: {
+          userId: user.id,
+          role: invitation.targetRole,
+          isPrimary: false,
+          assignedBy: invitation.invitedBy,
+        },
+        update: {},
+      });
+    }
+
+    const invitationUpdate = await tx.roleInvitation.updateMany({
+      where: {
+        id: invitation.id,
+        status: 'PENDING',
+        usedAt: null,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      data: {
+        status: 'ACCEPTED',
+        usedAt: new Date(),
+        usedByUserId: user.id,
+        ...clearRoleInvitationActiveKey,
+      },
+    });
+
+    if (invitationUpdate.count !== 1) {
+      throw new AppError(
+        'Invitation is no longer active',
+        409,
+        'INVITATION_NOT_ACTIVE',
+      );
+    }
+
+    return {
+      role: invitation.targetRole,
+      alreadyHadRole,
+      driverProfileCreated,
+    };
+  });
+};

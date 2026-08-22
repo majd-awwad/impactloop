@@ -2,12 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../core/format/localized_formatters.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/l10n/driver_ui_labels.dart';
-import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_navigation.dart';
+import '../../../auth/presentation/widgets/auth_form_card.dart';
+import '../../../auth/presentation/widgets/auth_entry_branding_panel.dart';
+import '../../../auth/presentation/widgets/auth_header.dart';
+import '../../../auth/presentation/widgets/auth_password_field.dart';
+import '../../../auth/presentation/widgets/auth_shell.dart';
+import '../../../auth/presentation/widgets/auth_text_field.dart';
 import '../../data/invite_accept_providers.dart';
 import '../../data/models/invite_accept_models.dart';
 
@@ -21,223 +28,316 @@ class InviteAcceptPage extends ConsumerStatefulWidget {
 }
 
 class _InviteAcceptPageState extends ConsumerState<InviteAcceptPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _fullNameController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _areaController = TextEditingController();
-  final _addressController = TextEditingController();
-  final _availabilityController = TextEditingController();
+  final _newAccountKey = GlobalKey<FormState>();
+  final _existingDriverKey = GlobalKey<FormState>();
+  final _fullName = TextEditingController();
+  final _password = TextEditingController();
+  final _confirmPassword = TextEditingController();
+  final _phone = TextEditingController();
+  final _city = TextEditingController();
+  final _area = TextEditingController();
+  final _address = TextEditingController();
+  final _availability = TextEditingController();
   String _transportationType = 'CAR';
   bool _submitting = false;
-  bool _completed = false;
   String? _completedRole;
+  bool _completedExisting = false;
 
   @override
   void dispose() {
-    _fullNameController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    _phoneController.dispose();
-    _cityController.dispose();
-    _areaController.dispose();
-    _addressController.dispose();
-    _availabilityController.dispose();
+    for (final controller in [
+      _fullName,
+      _password,
+      _confirmPassword,
+      _phone,
+      _city,
+      _area,
+      _address,
+      _availability,
+    ]) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
-  Future<void> _submit(InviteValidationResult validation) async {
-    if (!_formKey.currentState!.validate()) return;
-
+  Future<void> _acceptNew(InviteValidationResult invite) async {
+    if (!_newAccountKey.currentState!.validate()) return;
     setState(() => _submitting = true);
-
     try {
-      final result = await ref
-          .read(inviteAcceptRepositoryProvider)
-          .acceptInvitation(
+      final result = await ref.read(inviteAcceptRepositoryProvider).acceptInvitation(
             InviteAcceptRequest(
               token: widget.token,
-              fullName: _fullNameController.text.trim(),
-              email: validation.recipientEmail!,
-              password: _passwordController.text,
-              confirmPassword: _confirmPasswordController.text,
-              phone: _phoneController.text.trim().isEmpty
-                  ? null
-                  : _phoneController.text.trim(),
-              city: _cityController.text.trim().isEmpty
-                  ? null
-                  : _cityController.text.trim(),
-              area: _areaController.text.trim().isEmpty
-                  ? null
-                  : _areaController.text.trim(),
-              addressLine: _addressController.text.trim().isEmpty
-                  ? null
-                  : _addressController.text.trim(),
-              transportationType: validation.role == 'DRIVER'
-                  ? _transportationType
-                  : null,
-              availabilityNote: _availabilityController.text.trim().isEmpty
-                  ? null
-                  : _availabilityController.text.trim(),
+              fullName: _fullName.text.trim(),
+              email: invite.recipientEmail!,
+              password: _password.text,
+              confirmPassword: _confirmPassword.text,
+              phone: _optional(_phone),
+              city: _optional(_city),
+              area: _optional(_area),
+              addressLine: _optional(_address),
+              transportationType:
+                  invite.role == 'DRIVER' ? _transportationType : null,
+              availabilityNote: _optional(_availability),
             ),
           );
-
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _completed = true;
         _completedRole = result.role;
+        _completedExisting = false;
       });
     } catch (error) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(localizedApiErrorMessage(error, context.l10n)),
-        ),
-      );
+      _showError(error);
+      ref.invalidate(inviteValidationProvider(widget.token));
     }
+  }
+
+  Future<void> _acceptExisting(InviteValidationResult invite) async {
+    final needsProfile =
+        invite.role == 'DRIVER' && invite.requiresDriverProfile;
+    if (needsProfile && !_existingDriverKey.currentState!.validate()) return;
+    setState(() => _submitting = true);
+    try {
+      final result = await ref
+          .read(inviteAcceptRepositoryProvider)
+          .acceptExistingInvitation(
+            InviteExistingAcceptRequest(
+              token: widget.token,
+              phone: needsProfile ? _optional(_phone) : null,
+              city: needsProfile ? _optional(_city) : null,
+              area: needsProfile ? _optional(_area) : null,
+              addressLine: needsProfile ? _optional(_address) : null,
+              transportationType: needsProfile ? _transportationType : null,
+              availabilityNote: needsProfile ? _optional(_availability) : null,
+            ),
+          );
+      await ref.read(authControllerProvider.notifier).refresh();
+      await ref.read(authControllerProvider.notifier).refreshCurrentUser();
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _completedRole = result.role;
+        _completedExisting = true;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      _showError(error);
+      ref.invalidate(inviteValidationProvider(widget.token));
+    }
+  }
+
+  String? _optional(TextEditingController controller) {
+    final value = controller.text.trim();
+    return value.isEmpty ? null : value;
+  }
+
+  void _showError(Object error) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(localizedApiErrorMessage(error, context.l10n))),
+    );
+  }
+
+  String _loginTarget() {
+    final destination = Uri(
+      path: inviteAcceptRoute,
+      queryParameters: {'token': widget.token},
+    ).toString();
+    return '$loginRoute?from=${Uri.encodeQueryComponent(destination)}';
+  }
+
+  Future<void> _switchAccount() async {
+    await ref.read(authControllerProvider.notifier).logout();
+    if (mounted) context.go(_loginTarget());
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-
+    Widget content;
     if (widget.token.trim().isEmpty) {
-      return _InviteScaffold(child: Text(l10n.inviteInvalidLink));
-    }
-
-    if (_completed) {
-      return _InviteScaffold(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(l10n.inviteRegistrationCompleted),
-            if (_completedRole != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                l10n.inviteRoleLabel(_inviteRoleLabel(_completedRole!, l10n)),
-              ),
-            ],
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: () => context.go(loginRoute),
-              style: AppStatusButtonStyle.filled(
-                context,
-                AppStatusTone.primary,
-              ),
-              child: Text(l10n.goToSignIn),
-            ),
-          ],
-        ),
+      content = _MessagePanel(message: l10n.inviteInvalidLink);
+    } else if (_completedRole != null) {
+      content = _CompletionPanel(
+        role: _completedRole!,
+        existingAccount: _completedExisting,
+      );
+    } else {
+      final preview = ref.watch(inviteValidationProvider(widget.token));
+      content = preview.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, _) => _MessagePanel(message: l10n.inviteInvalidOrExpired),
+        data: _buildInvitationState,
       );
     }
 
-    final validationAsync = ref.watch(inviteValidationProvider(widget.token));
-
-    return _InviteScaffold(
-      child: validationAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) =>
-            Text(localizedApiErrorMessage(error, context.l10n)),
-        data: (validation) {
-          if (!validation.valid || validation.role == null) {
-            return Text(
-              validation.reason ?? l10n.inviteInvalidOrExpired,
-            );
-          }
-
-          final expiresLabel = validation.expiresAt == null
-              ? null
-              : LocalizedFormatters(l10n).dateTime(validation.expiresAt!);
-
-          return _InviteForm(
-            validation: validation,
-            expiresLabel: expiresLabel,
-            formKey: _formKey,
-            fullNameController: _fullNameController,
-            passwordController: _passwordController,
-            confirmPasswordController: _confirmPasswordController,
-            phoneController: _phoneController,
-            cityController: _cityController,
-            areaController: _areaController,
-            addressController: _addressController,
-            availabilityController: _availabilityController,
-            transportationType: _transportationType,
-            submitting: _submitting,
-            onTransportationChanged: (value) =>
-                setState(() => _transportationType = value),
-            onSubmit: () => _submit(validation),
-          );
-        },
+    return AuthShell(
+      brandingVariant: AuthEntryBrandingVariant.register,
+      showSignIn: false,
+      showCreateAccount: false,
+      formStageTone: AuthFormStageTone.subtle,
+      formContent: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AuthHeader(
+            title: l10n.inviteAcceptTitle,
+            subtitle: l10n.inviteExistingAccountBody,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AuthFormCard(child: content),
+        ],
       ),
+    );
+  }
+
+  Widget _buildInvitationState(InviteValidationResult invite) {
+    final l10n = context.l10n;
+    if (!invite.valid || invite.role == null || invite.recipientEmail == null) {
+      return _MessagePanel(message: _invalidInvitationMessage(invite, l10n));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _InvitationSummary(invite: invite),
+        const SizedBox(height: AppSpacing.md),
+        switch (invite.accountState) {
+          'NEW_ACCOUNT' => _NewAccountForm(
+              formKey: _newAccountKey,
+              invite: invite,
+              fullName: _fullName,
+              password: _password,
+              confirmPassword: _confirmPassword,
+              phone: _phone,
+              city: _city,
+              area: _area,
+              address: _address,
+              availability: _availability,
+              transportationType: _transportationType,
+              submitting: _submitting,
+              onTransportationChanged: (value) =>
+                  setState(() => _transportationType = value),
+              onSubmit: () => _acceptNew(invite),
+            ),
+          'EXISTING_ACCOUNT_LOGGED_OUT' => _LoggedOutExistingPanel(
+              onLogin: () => context.go(_loginTarget()),
+            ),
+          'WRONG_AUTHENTICATED_ACCOUNT' => _WrongAccountPanel(
+              email: invite.recipientEmail!,
+              onSwitch: _switchAccount,
+            ),
+          'ALREADY_HAS_ROLE' when !invite.requiresDriverProfile =>
+            _AlreadyGrantedPanel(
+              submitting: _submitting,
+              onComplete: () => _acceptExisting(invite),
+            ),
+          'EXISTING_ACCOUNT_READY' || 'ALREADY_HAS_ROLE' => _ExistingAccountForm(
+              formKey: _existingDriverKey,
+              invite: invite,
+              phone: _phone,
+              city: _city,
+              area: _area,
+              address: _address,
+              availability: _availability,
+              transportationType: _transportationType,
+              submitting: _submitting,
+              onTransportationChanged: (value) =>
+                  setState(() => _transportationType = value),
+              onSubmit: () => _acceptExisting(invite),
+            ),
+          _ => _MessagePanel(message: l10n.inviteInvalidOrExpired),
+        },
+      ],
     );
   }
 }
 
-String _inviteRoleLabel(String role, AppLocalizations l10n) {
-  return switch (role.trim().toUpperCase()) {
-    'DRIVER' => l10n.driver,
-    'SUPPLIER' => l10n.supplier,
-    'LEARNER' => l10n.learner,
-    _ => role,
-  };
-}
+String _invalidInvitationMessage(
+  InviteValidationResult invite,
+  AppLocalizations l10n,
+) => switch (invite.accountState) {
+  'EXPIRED' => l10n.inviteExpired,
+  'REVOKED' => l10n.inviteRevoked,
+  'ALREADY_ACCEPTED' => l10n.inviteAlreadyAccepted,
+  'UNSUPPORTED_ROLE' => l10n.inviteUnsupportedRole,
+  _ => l10n.inviteInvalidLink,
+};
 
-class _InviteScaffold extends StatelessWidget {
-  const _InviteScaffold({required this.child});
+String _roleLabel(String role, BuildContext context) => switch (role) {
+      'DRIVER' => context.l10n.inviteRoleDriver,
+      'ADMIN' => context.l10n.inviteRoleAdmin,
+      _ => context.l10n.inviteUnsupportedRole,
+    };
 
-  final Widget child;
+class _InvitationSummary extends StatelessWidget {
+  const _InvitationSummary({required this.invite});
+  final InviteValidationResult invite;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.inviteAcceptTitle)),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: SingleChildScrollView(child: child),
-          ),
+    final l10n = context.l10n;
+    final expiry = invite.expiresAt == null
+        ? null
+        : LocalizedFormatters(l10n).dateTime(invite.expiresAt!);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color:
+            Theme.of(context).colorScheme.primaryContainer.withValues(alpha: .45),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.inviteSummaryTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text('${l10n.inviteEmailLabel}: ${invite.recipientEmail}'),
+            Text(
+              '${l10n.inviteRoleLabelFriendly}: '
+              '${_roleLabel(invite.role!, context)}',
+            ),
+            if (expiry != null) Text(l10n.inviteExpires(expiry)),
+          ],
         ),
       ),
     );
   }
 }
 
-class _InviteForm extends StatelessWidget {
-  const _InviteForm({
-    required this.validation,
-    required this.expiresLabel,
+class _NewAccountForm extends StatelessWidget {
+  const _NewAccountForm({
     required this.formKey,
-    required this.fullNameController,
-    required this.passwordController,
-    required this.confirmPasswordController,
-    required this.phoneController,
-    required this.cityController,
-    required this.areaController,
-    required this.addressController,
-    required this.availabilityController,
+    required this.invite,
+    required this.fullName,
+    required this.password,
+    required this.confirmPassword,
+    required this.phone,
+    required this.city,
+    required this.area,
+    required this.address,
+    required this.availability,
     required this.transportationType,
     required this.submitting,
     required this.onTransportationChanged,
     required this.onSubmit,
   });
 
-  final InviteValidationResult validation;
-  final String? expiresLabel;
   final GlobalKey<FormState> formKey;
-  final TextEditingController fullNameController;
-  final TextEditingController passwordController;
-  final TextEditingController confirmPasswordController;
-  final TextEditingController phoneController;
-  final TextEditingController cityController;
-  final TextEditingController areaController;
-  final TextEditingController addressController;
-  final TextEditingController availabilityController;
+  final InviteValidationResult invite;
+  final TextEditingController fullName;
+  final TextEditingController password;
+  final TextEditingController confirmPassword;
+  final TextEditingController phone;
+  final TextEditingController city;
+  final TextEditingController area;
+  final TextEditingController address;
+  final TextEditingController availability;
   final String transportationType;
   final bool submitting;
   final ValueChanged<String> onTransportationChanged;
@@ -246,146 +346,327 @@ class _InviteForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final driverLabels = DriverUiLabels(l10n);
-    final isDriver = validation.role == 'DRIVER';
-
+    final driver = invite.role == 'DRIVER';
     return Form(
       key: formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            l10n.inviteInvitedRole(
-              _inviteRoleLabel(validation.role!, l10n),
-            ),
-          ),
-          if (expiresLabel != null) ...[
-            const SizedBox(height: 8),
-            Text(l10n.inviteExpires(expiresLabel!)),
-          ],
-          const SizedBox(height: 8),
-          TextFormField(
-            initialValue: validation.recipientEmail,
-            readOnly: true,
-            decoration: InputDecoration(labelText: l10n.email),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: fullNameController,
-            decoration: InputDecoration(labelText: l10n.inviteFullName),
-            validator: (value) => (value == null || value.trim().length < 2)
+          AuthTextField(
+            controller: fullName,
+            label: l10n.inviteFullName,
+            validator: (value) => value == null || value.trim().length < 2
                 ? l10n.inviteFieldRequired
                 : null,
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: passwordController,
-            obscureText: true,
-            decoration: InputDecoration(labelText: l10n.password),
-            validator: (value) => (value == null || value.length < 8)
+          const SizedBox(height: AppSpacing.sm),
+          AuthPasswordField(
+            controller: password,
+            label: l10n.password,
+            validator: (value) => value == null || value.length < 8
                 ? l10n.passwordMinLength
                 : null,
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: confirmPasswordController,
-            obscureText: true,
-            decoration: InputDecoration(labelText: l10n.confirmPassword),
-            validator: (value) => value != passwordController.text
+          const SizedBox(height: AppSpacing.sm),
+          AuthPasswordField(
+            controller: confirmPassword,
+            label: l10n.confirmPassword,
+            validator: (value) => value != password.text
                 ? l10n.passwordsDoNotMatch
                 : null,
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: phoneController,
-            decoration: InputDecoration(
-              labelText: isDriver ? l10n.invitePhone : l10n.invitePhoneOptional,
-            ),
-            validator: (value) {
-              if (isDriver && (value == null || value.trim().length < 5)) {
-                return l10n.driverPhoneRequired;
-              }
-              return null;
-            },
-          ),
-          if (isDriver) ...[
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: cityController,
-              decoration: InputDecoration(labelText: l10n.city),
-              validator: (value) => (value == null || value.trim().isEmpty)
-                  ? l10n.inviteFieldRequired
-                  : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: areaController,
-              decoration: InputDecoration(labelText: l10n.area),
-              validator: (value) => (value == null || value.trim().isEmpty)
-                  ? l10n.inviteFieldRequired
-                  : null,
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              key: ValueKey('transport-$transportationType'),
-              initialValue: transportationType,
-              decoration: InputDecoration(
-                labelText: l10n.driverTransportationType,
-              ),
-              items: [
-                DropdownMenuItem(
-                  value: 'CAR',
-                  child: Text(driverLabels.transportType('CAR')),
-                ),
-                DropdownMenuItem(
-                  value: 'MOTORCYCLE',
-                  child: Text(driverLabels.transportType('MOTORCYCLE')),
-                ),
-                DropdownMenuItem(
-                  value: 'BICYCLE',
-                  child: Text(driverLabels.transportType('BICYCLE')),
-                ),
-                DropdownMenuItem(
-                  value: 'WALKING',
-                  child: Text(driverLabels.transportType('WALKING')),
-                ),
-              ],
-              onChanged: submitting
-                  ? null
-                  : (value) {
-                      if (value != null) onTransportationChanged(value);
-                    },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: addressController,
-              decoration: InputDecoration(
-                labelText: l10n.driverAddressLineOptional,
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: availabilityController,
-              decoration: InputDecoration(
-                labelText: l10n.driverAvailabilityNoteOptional,
-              ),
-              maxLines: 2,
+          if (driver) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _DriverProfileFields(
+              phone: phone,
+              city: city,
+              area: area,
+              address: address,
+              availability: availability,
+              transportationType: transportationType,
+              submitting: submitting,
+              onTransportationChanged: onTransportationChanged,
             ),
           ],
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.md),
           FilledButton(
             onPressed: submitting ? null : onSubmit,
-            style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
             child: submitting
                 ? const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Text(l10n.inviteCompleteRegistration),
+                : Text(
+                    driver
+                        ? l10n.inviteCreateDriverAndAccept
+                        : l10n.inviteCreateAdminAndAccept,
+                  ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ExistingAccountForm extends ConsumerWidget {
+  const _ExistingAccountForm({
+    required this.formKey,
+    required this.invite,
+    required this.phone,
+    required this.city,
+    required this.area,
+    required this.address,
+    required this.availability,
+    required this.transportationType,
+    required this.submitting,
+    required this.onTransportationChanged,
+    required this.onSubmit,
+  });
+
+  final GlobalKey<FormState> formKey;
+  final InviteValidationResult invite;
+  final TextEditingController phone;
+  final TextEditingController city;
+  final TextEditingController area;
+  final TextEditingController address;
+  final TextEditingController availability;
+  final String transportationType;
+  final bool submitting;
+  final ValueChanged<String> onTransportationChanged;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final user = ref.watch(authControllerProvider).user;
+    final requiresProfile =
+        invite.role == 'DRIVER' && invite.requiresDriverProfile;
+    return Form(
+      key: formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.inviteExistingAccountTitle,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 6),
+          Text(l10n.inviteExistingAccountBody),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            '${l10n.inviteCurrentRoles}: '
+            '${user?.roles.map((role) => _roleLabel(role, context)).join(', ') ?? ''}',
+          ),
+          Text('${l10n.inviteNewRole}: ${_roleLabel(invite.role!, context)}'),
+          if (invite.role == 'ADMIN') ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              l10n.inviteAdminWarning,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
+          if (requiresProfile) ...[
+            const SizedBox(height: AppSpacing.md),
+            _DriverProfileFields(
+              phone: phone,
+              city: city,
+              area: area,
+              address: address,
+              availability: availability,
+              transportationType: transportationType,
+              submitting: submitting,
+              onTransportationChanged: onTransportationChanged,
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          FilledButton(
+            onPressed: submitting ? null : onSubmit,
+            child: submitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(
+                    requiresProfile
+                        ? l10n.inviteCompleteDriverAndAccept
+                        : l10n.inviteAddAdminRole,
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DriverProfileFields extends StatelessWidget {
+  const _DriverProfileFields({
+    required this.phone,
+    required this.city,
+    required this.area,
+    required this.address,
+    required this.availability,
+    required this.transportationType,
+    required this.submitting,
+    required this.onTransportationChanged,
+  });
+  final TextEditingController phone;
+  final TextEditingController city;
+  final TextEditingController area;
+  final TextEditingController address;
+  final TextEditingController availability;
+  final String transportationType;
+  final bool submitting;
+  final ValueChanged<String> onTransportationChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final labels = DriverUiLabels(l10n);
+    String? requiredValue(String? value) =>
+        value == null || value.trim().isEmpty ? l10n.inviteFieldRequired : null;
+    return Column(
+      children: [
+        AuthTextField(
+          controller: phone,
+          label: l10n.invitePhone,
+          validator: requiredValue,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        AuthTextField(controller: city, label: l10n.city, validator: requiredValue),
+        const SizedBox(height: AppSpacing.sm),
+        AuthTextField(controller: area, label: l10n.area, validator: requiredValue),
+        const SizedBox(height: AppSpacing.sm),
+        DropdownButtonFormField<String>(
+          initialValue: transportationType,
+          decoration: InputDecoration(labelText: l10n.driverTransportationType),
+          items: ['CAR', 'MOTORCYCLE', 'BICYCLE', 'WALKING']
+              .map(
+                (value) => DropdownMenuItem(
+                  value: value,
+                  child: Text(labels.transportType(value)),
+                ),
+              )
+              .toList(growable: false),
+          onChanged: submitting
+              ? null
+              : (value) {
+                  if (value != null) onTransportationChanged(value);
+                },
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        AuthTextField(controller: address, label: l10n.driverAddressLineOptional),
+        const SizedBox(height: AppSpacing.sm),
+        AuthTextField(
+          controller: availability,
+          label: l10n.driverAvailabilityNoteOptional,
+        ),
+      ],
+    );
+  }
+}
+
+class _LoggedOutExistingPanel extends StatelessWidget {
+  const _LoggedOutExistingPanel({required this.onLogin});
+  final VoidCallback onLogin;
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            context.l10n.inviteExistingAccountTitle,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(context.l10n.inviteExistingAccountBody),
+          const SizedBox(height: AppSpacing.md),
+          FilledButton(
+            onPressed: onLogin,
+            child: Text(context.l10n.inviteLoginToAccept),
+          ),
+        ],
+      );
+}
+
+class _WrongAccountPanel extends StatelessWidget {
+  const _WrongAccountPanel({required this.email, required this.onSwitch});
+  final String email;
+  final Future<void> Function() onSwitch;
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            context.l10n.inviteWrongAccountTitle,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(context.l10n.inviteWrongAccountBody(email)),
+          const SizedBox(height: AppSpacing.md),
+          FilledButton(
+            onPressed: onSwitch,
+            child: Text(context.l10n.inviteSwitchAccount),
+          ),
+        ],
+      );
+}
+
+class _AlreadyGrantedPanel extends StatelessWidget {
+  const _AlreadyGrantedPanel({
+    required this.submitting,
+    required this.onComplete,
+  });
+  final bool submitting;
+  final VoidCallback onComplete;
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(context.l10n.inviteAlreadyHasRole),
+          const SizedBox(height: AppSpacing.md),
+          FilledButton(
+            onPressed: submitting ? null : onComplete,
+            child: Text(context.l10n.inviteConfirmInvitation),
+          ),
+        ],
+      );
+}
+
+class _MessagePanel extends StatelessWidget {
+  const _MessagePanel({required this.message});
+  final String message;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        child: Text(message),
+      );
+}
+
+class _CompletionPanel extends StatelessWidget {
+  const _CompletionPanel({required this.role, required this.existingAccount});
+  final String role;
+  final bool existingAccount;
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final target = role == 'ADMIN' ? adminPortalRoute : driverPortalRoute;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          existingAccount ? l10n.inviteRoleAdded : l10n.inviteRegistrationCompleted,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        FilledButton(
+          onPressed: () => context.go(existingAccount ? target : loginRoute),
+          child: Text(
+            existingAccount
+                ? (role == 'ADMIN' ? l10n.inviteGoToAdmin : l10n.inviteGoToDriver)
+                : l10n.goToSignIn,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -12,4 +12,8 @@ class InviteAcceptRepository {
 
   Future<InviteAcceptResult> acceptInvitation(InviteAcceptRequest request) =>
       _api.acceptInvitation(request);
+
+  Future<InviteExistingAcceptResult> acceptExistingInvitation(
+    InviteExistingAcceptRequest request,
+  ) => _api.acceptExistingInvitation(request);
 }

@@ -1,165 +1,62 @@
-# Invitation Flow
+# Invitation flow
 
-**Sources inspected:** `apps/backend/src/modules/invitations/*`, `apps/backend/src/modules/admin/*`, `apps/backend/src/modules/auth/*`, `apps/frontend/lib/features/invitations/`, `apps/frontend/lib/features/admin_portal/`, `docs/features/invitations.md`
+## Creation
 
-## Trigger
+An `ADMIN` submits `POST /api/admin/invitations` with a normalized recipient
+email, `DRIVER` or `ADMIN`, and a permitted expiry. The backend rejects
+`LEARNER`, `SUPPLIER`, and newly issued `MODERATOR` invitations. A recipient
+who already has the requested role is rejected; an existing recipient missing
+the role is valid.
 
-An **ADMIN** user needs to onboard a **DRIVER**, **MODERATOR**, or **ADMIN** account outside public LEARNER/SUPPLIER registration.
+The service creates a pending record in `role_invitations`, stores only the
+token hash, and sends the acceptance URL.
 
-**Prerequisite:** Admin user has `ADMIN` role. Admin accounts are invitation-only.
+## Preview and account state
 
----
+`GET /api/invitations/validate?token=...` validates token lifecycle and returns
+the target email/role plus one of these states:
 
-## Flow — Create invitation (admin)
+- `NEW_ACCOUNT`
+- `EXISTING_ACCOUNT_LOGGED_OUT`
+- `EXISTING_ACCOUNT_READY`
+- `WRONG_AUTHENTICATED_ACCOUNT`
+- `ALREADY_HAS_ROLE`
+- `UNSUPPORTED_ROLE` for historical moderator invitations
 
-### Trigger
+The endpoint receives optional authentication only to decide UI state. The
+acceptance endpoints independently enforce every authorization decision.
 
-Authenticated ADMIN creates an invitation from the admin invitations page or API.
+## New account
 
-### User path
+The public `POST /api/invitations/accept` accepts new-account profile data.
+It uses the invitation’s email and role, rejects an already registered email,
+creates the user and invited role, creates `DriverProfile` for drivers, and
+consumes the invitation in one transaction. The success screen sends the user
+to sign in; no auth session is issued.
 
-Admin opens `/admin/invitations`, fills target role/contact details, and submits the invitation.
+## Existing account
 
-### Frontend path
+For a logged-out existing account, the client routes to:
 
-`AdminInvitationsPage` uses `admin_invitations_api.dart` and invalidates the admin invitation list after successful create/resend/revoke.
+```text
+/login?from=/invite/accept?token=...
+```
 
-### Backend path
+The login route already validates this as an internal target. After login, the
+client returns to the invitation preview.
 
-1. Preferred route: `POST /api/admin/invitations` — `authMiddleware` + `requireRoles('ADMIN')`.
-2. Legacy/admin-compatible route: `POST /api/invitations`.
-3. `createInvitation` generates opaque token, stores `hashToken(rawToken)` in `role_invitations`.
-4. Email/mock provider attempts delivery when configured.
-5. Response returns invitation summary; mock/dev behavior may expose delivery token metadata for local testing.
+`POST /api/invitations/accept-existing` requires a current session. It derives
+the user ID from that session and checks the normalized session email against
+the invitation target. It then safely adds the stored role, preserves all
+existing roles, creates a missing driver profile only when complete validated
+driver fields are supplied, and consumes the invitation transactionally.
 
-### Database changes
+If the matching account already owns the role, acceptance remains idempotent:
+no duplicate `user_roles` row is created and the invitation can be completed.
 
-Insert `role_invitations` (`status: PENDING`, `expires_at` from `env.invitationExpiresIn`).
+## Lifecycle and legacy moderation
 
-### Success state
-
-`201` with invitation metadata.
-
-### Error states
-
-- 401/403 if not authenticated ADMIN
-- Validation errors on body (invalid role, email format, etc.)
-
-### Files involved
-
-`admin.routes.ts`, `admin-invitations.controller.ts`, `invitations.routes.ts`, `invitations.controller.ts`, `invitations.service.ts`, `invitations.repository.ts`, `utils/token.ts`
-
----
-
-## Flow — Validate token (pre-accept)
-
-### Trigger
-
-Prospective invitee opens `/invite/accept?token=...`.
-
-### User path
-
-Flutter checks whether token is still valid and which role/contact it targets before showing the accept form.
-
-### Frontend path
-
-`InviteAcceptPage` reads the token query parameter and calls the invitation validation API.
-
-### Backend path
-
-`GET /api/invitations/validate/:token` → `validateInvitationToken` → lookup pending, non-expired invitation by token hash.
-
-### Database changes
-
-Read-only.
-
-### Success state
-
-`{ valid: true, targetRole, targetEmail?, expiresAt? }` or `{ valid: false }`.
-
-### Error states
-
-Invalid/expired token → `valid: false` (not necessarily HTTP error).
-
-### Files involved
-
-`invitations.routes.ts`, `invitations.service.ts`, `invitations.repository.ts`
-
----
-
-## Flow — Accept invitation (register invited role)
-
-### Trigger
-
-Invitee submits account details from `/invite/accept`.
-
-### User path
-
-Invitee completes display name, email, password, and optional phone fields. Targeted email/phone invitations must match the invitation.
-
-### Frontend path
-
-`InviteAcceptPage` submits the accept payload through the invitations data layer.
-
-### Backend path
-
-1. `POST /api/invitations/accept` (public, no JWT).
-2. Resolve pending invitation by token hash.
-3. Validate email/phone match invitation targets when provided.
-4. Reject if email/phone already registered (`409 CONFLICT`).
-5. `acceptInvitationTransaction`: create `users` + `user_roles`, mark invitation used.
-6. If target role is `DRIVER`, create `driver_profiles`.
-7. Response returns `{ role }` only — **no** access/refresh tokens (user must log in separately).
-
-### Database changes
-
-Insert `users`, `user_roles`; insert `driver_profiles` for driver invitations; update `role_invitations` (`status`, `used_at`, `used_by_user_id`). No `auth_tokens` row on accept.
-
-### Success state
-
-`201` with `{ role }`. Flutter `InviteAcceptPage` links to `/login`.
-
-### Error states
-
-| Condition | Response |
-|-----------|----------|
-| Invalid/expired token | 400 `VALIDATION_ERROR` |
-| Email mismatch | 400 `VALIDATION_ERROR` |
-| Phone mismatch | 400 `VALIDATION_ERROR` |
-| Email already exists | 409 `CONFLICT` |
-| Phone already exists | 409 `CONFLICT` |
-
-### Files involved
-
-`invitations.service.ts`, `invitations.repository.ts`, `auth.service.ts`, `auth.repository.ts`
-
----
-
-## Admin manage invitations
-
-Implemented under `/admin/invitations`:
-
-- List invitations.
-- Resend invitation.
-- Revoke invitation.
-
-Backend routes:
-
-- `GET /api/admin/invitations`
-- `POST /api/admin/invitations/:id/resend`
-- `PATCH /api/admin/invitations/:id/revoke`
-
-## Not implemented / partial
-
-- Moderator post-accept portal.
-- Full admin audit trail for invitation operations.
-- Production email/SMS behavior needs environment verification.
-- Driver and admin portals are partial role experiences after accept.
-
----
-
-## Open questions
-
-- Production distribution behavior when email provider is not configured?
-- Should validate endpoint rate-limit token guessing?
-- What moderator onboarding/workspace should exist after accept?
+Expiry, revocation, prior use, and invalid tokens are rejected before any role
+or profile write. Resend and issue-link operations rotate token hashes. Pending
+historical moderator invitations are displayed but cannot be renewed or
+accepted; admins may revoke them.

@@ -9090,6 +9090,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'This invitation link is invalid, expired, revoked, or already used.';
 
   @override
+  String get inviteExpired =>
+      'This invitation link has expired. Ask an administrator to send a new invitation.';
+
+  @override
+  String get inviteRevoked =>
+      'This invitation has been revoked. Ask an administrator if you need a new invitation.';
+
+  @override
+  String get inviteAlreadyAccepted =>
+      'This invitation has already been accepted.';
+
+  @override
   String get inviteCompleteRegistration => 'Complete registration';
 
   @override
@@ -9100,6 +9112,96 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get invitePhoneOptional => 'Phone (optional)';
+
+  @override
+  String get inviteRoleDriver => 'Driver';
+
+  @override
+  String get inviteRoleAdmin => 'Administrator';
+
+  @override
+  String get inviteExistingAccountTitle =>
+      'You already have an ImpactLoop account';
+
+  @override
+  String get inviteExistingAccountBody =>
+      'Sign in with the account linked to this invitation to add the role.';
+
+  @override
+  String get inviteLoginToAccept => 'Sign in to accept invitation';
+
+  @override
+  String get inviteCurrentRoles => 'Current roles';
+
+  @override
+  String get inviteNewRole => 'New role';
+
+  @override
+  String get inviteAddAdminRole => 'Add administrator role';
+
+  @override
+  String get inviteCompleteDriverAndAccept =>
+      'Complete driver details and accept invitation';
+
+  @override
+  String get inviteCreateAdminAndAccept =>
+      'Create account and accept administrator invitation';
+
+  @override
+  String get inviteCreateDriverAndAccept =>
+      'Create account and accept driver invitation';
+
+  @override
+  String get inviteWrongAccountTitle =>
+      'This invitation is linked to a different account';
+
+  @override
+  String inviteWrongAccountBody(Object email) {
+    return 'This invitation is linked to $email. Sign in with that account to accept it.';
+  }
+
+  @override
+  String get inviteSwitchAccount => 'Switch account';
+
+  @override
+  String get inviteAlreadyHasRole =>
+      'This role is already available on your account.';
+
+  @override
+  String get inviteRoleAdded => 'The new role has been added to your account.';
+
+  @override
+  String get inviteGoToAdmin => 'Go to Admin Portal';
+
+  @override
+  String get inviteGoToDriver => 'Go to Driver Workspace';
+
+  @override
+  String get inviteUnsupportedRole => 'This invitation is no longer available.';
+
+  @override
+  String get inviteAdminWarning =>
+      'Administrator access can manage platform operations. Send this invitation only to a trusted person.';
+
+  @override
+  String get inviteDriverDescription =>
+      'Add a user to the delivery team and enable pickup and delivery work.';
+
+  @override
+  String get inviteAdminDescription =>
+      'Grant a user administrative access to manage the platform.';
+
+  @override
+  String get inviteEmailLabel => 'Invited email';
+
+  @override
+  String get inviteRoleLabelFriendly => 'Invited role';
+
+  @override
+  String get inviteSummaryTitle => 'Invitation details';
+
+  @override
+  String get inviteConfirmInvitation => 'Complete invitation';
 
   @override
   String get inviteFieldRequired => 'Required';

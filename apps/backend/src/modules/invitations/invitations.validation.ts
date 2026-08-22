@@ -2,7 +2,9 @@ import { z } from 'zod';
 
 import { bodyEmailSchema } from '../../utils/zod-helpers.js';
 
-export const INVITATION_TARGET_ROLES = ['DRIVER', 'MODERATOR', 'ADMIN'] as const;
+// MODERATOR remains in the database enum for historical compatibility, but it
+// is no longer a role that can be provisioned through new invitations.
+export const INVITATION_TARGET_ROLES = ['DRIVER', 'ADMIN'] as const;
 
 export const INVITATION_EXPIRY_MINUTES = [30, 60, 1440] as const;
 
@@ -15,7 +17,7 @@ export const TRANSPORTATION_TYPES = [
 
 export const adminCreateInvitationSchema = z.object({
   role: z.enum(INVITATION_TARGET_ROLES, {
-    error: 'Invitation role must be DRIVER, MODERATOR, or ADMIN',
+    error: 'Invitation role must be DRIVER or ADMIN',
   }),
   recipientEmail: bodyEmailSchema(),
   expiresInMinutes: z.union([
@@ -62,3 +64,17 @@ export const acceptInvitationSchema = z
 
 export type AdminCreateInvitationInput = z.infer<typeof adminCreateInvitationSchema>;
 export type AcceptInvitationInput = z.infer<typeof acceptInvitationSchema>;
+
+export const acceptExistingInvitationSchema = z.object({
+  token: z.string().min(1),
+  phone: z.string().trim().min(5).max(30).optional(),
+  city: z.string().trim().min(2).max(100).optional(),
+  area: z.string().trim().min(2).max(100).optional(),
+  addressLine: z.string().trim().max(200).optional(),
+  transportationType: z.enum(TRANSPORTATION_TYPES).optional(),
+  availabilityNote: z.string().trim().max(500).optional(),
+});
+
+export type AcceptExistingInvitationInput = z.infer<
+  typeof acceptExistingInvitationSchema
+>;

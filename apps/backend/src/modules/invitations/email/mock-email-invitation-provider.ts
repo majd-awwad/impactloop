@@ -6,8 +6,29 @@ import type {
   EmailSendResult,
 } from './email-invitation-provider.js';
 
-const formatRoleLabel = (role: string): string =>
-  role.charAt(0) + role.slice(1).toLowerCase();
+const invitationCopyForRole = (role: string) => {
+  switch (role) {
+    case 'DRIVER':
+      return {
+        subject: 'دعوة للانضمام إلى ImpactLoop كسائق',
+        roleLabel: 'سائق',
+        description:
+          'تمت دعوتك للانضمام إلى ImpactLoop كسائق والمشاركة في عمليات الاستلام والتسليم.',
+      };
+    case 'ADMIN':
+      return {
+        subject: 'دعوة للانضمام إلى ImpactLoop كمسؤول',
+        roleLabel: 'مسؤول',
+        description: 'تمت دعوتك للانضمام إلى ImpactLoop بصلاحيات مسؤول.',
+      };
+    default:
+      return {
+        subject: 'ImpactLoop invitation',
+        roleLabel: role,
+        description: 'You have been invited to join ImpactLoop.',
+      };
+  }
+};
 
 const escapeHtml = (value: string): string =>
   value
@@ -18,13 +39,13 @@ const escapeHtml = (value: string): string =>
     .replace(/'/g, '&#39;');
 
 const buildPlainText = (payload: EmailInvitationPayload): string => {
-  const roleLabel = formatRoleLabel(payload.role);
+  const copy = invitationCopyForRole(payload.role);
   const expiresAt = payload.expiresAt.toISOString();
 
   return [
     'Hello,',
     '',
-    `You have been invited to join ImpactLoop as a ${roleLabel}.`,
+    copy.description,
     '',
     'Complete your registration using this secure link:',
     payload.inviteLink,
@@ -39,7 +60,9 @@ const buildPlainText = (payload: EmailInvitationPayload): string => {
 };
 
 const buildHtml = (payload: EmailInvitationPayload): string => {
-  const roleLabel = escapeHtml(formatRoleLabel(payload.role));
+  const copy = invitationCopyForRole(payload.role);
+  const roleLabel = escapeHtml(copy.roleLabel);
+  const description = escapeHtml(copy.description);
   const expiresAt = escapeHtml(payload.expiresAt.toISOString());
   const inviteLink = escapeHtml(payload.inviteLink);
 
@@ -47,7 +70,8 @@ const buildHtml = (payload: EmailInvitationPayload): string => {
 <html>
   <body style="font-family: Arial, sans-serif; color: #111827; line-height: 1.5;">
     <p>Hello,</p>
-    <p>You have been invited to join ImpactLoop as a <strong>${roleLabel}</strong>.</p>
+    <p>${description}</p>
+    <p><strong>${roleLabel}</strong></p>
     <p>Complete your registration using this secure link:</p>
     <p><a href="${inviteLink}" style="display: inline-block; padding: 12px 18px; background: #0f766e; color: #ffffff; text-decoration: none; border-radius: 6px;">Accept invitation</a></p>
     <p>This invitation expires at:<br /><strong>${expiresAt}</strong></p>
@@ -60,9 +84,9 @@ const buildHtml = (payload: EmailInvitationPayload): string => {
 };
 
 export const buildInvitationEmailContent = (payload: EmailInvitationPayload) => {
-  const roleLabel = formatRoleLabel(payload.role);
+  const copy = invitationCopyForRole(payload.role);
   return {
-    subject: `ImpactLoop invitation: complete your ${roleLabel} registration`,
+    subject: copy.subject,
     text: buildPlainText(payload),
     html: buildHtml(payload),
   };

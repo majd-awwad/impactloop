@@ -8995,6 +8995,17 @@ class AppLocalizationsAr extends AppLocalizations {
       'رابط الدعوة هذا غير صالح أو منتهٍ أو ملغى أو مستخدم بالفعل.';
 
   @override
+  String get inviteExpired =>
+      'انتهت صلاحية رابط الدعوة هذا. اطلب من المسؤول إرسال دعوة جديدة.';
+
+  @override
+  String get inviteRevoked =>
+      'تم إلغاء هذه الدعوة. تواصل مع المسؤول إذا كنت تحتاج إلى دعوة جديدة.';
+
+  @override
+  String get inviteAlreadyAccepted => 'تم قبول هذه الدعوة بالفعل.';
+
+  @override
   String get inviteCompleteRegistration => 'إكمال التسجيل';
 
   @override
@@ -9005,6 +9016,91 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get invitePhoneOptional => 'الهاتف (اختياري)';
+
+  @override
+  String get inviteRoleDriver => 'سائق';
+
+  @override
+  String get inviteRoleAdmin => 'مسؤول';
+
+  @override
+  String get inviteExistingAccountTitle => 'لديك حساب ImpactLoop بالفعل';
+
+  @override
+  String get inviteExistingAccountBody =>
+      'سجّل الدخول بالحساب المرتبط بهذه الدعوة لإضافة الدور.';
+
+  @override
+  String get inviteLoginToAccept => 'تسجيل الدخول لقبول الدعوة';
+
+  @override
+  String get inviteCurrentRoles => 'الأدوار الحالية';
+
+  @override
+  String get inviteNewRole => 'الدور الجديد';
+
+  @override
+  String get inviteAddAdminRole => 'إضافة دور المسؤول';
+
+  @override
+  String get inviteCompleteDriverAndAccept =>
+      'إكمال بيانات السائق وقبول الدعوة';
+
+  @override
+  String get inviteCreateAdminAndAccept => 'إنشاء الحساب وقبول دعوة المسؤول';
+
+  @override
+  String get inviteCreateDriverAndAccept => 'إنشاء الحساب وقبول دعوة السائق';
+
+  @override
+  String get inviteWrongAccountTitle => 'هذه الدعوة مرتبطة بحساب مختلف';
+
+  @override
+  String inviteWrongAccountBody(Object email) {
+    return 'هذه الدعوة مرتبطة بالبريد $email. سجّل الدخول بالحساب المرتبط بهذه الدعوة لقبولها.';
+  }
+
+  @override
+  String get inviteSwitchAccount => 'تبديل الحساب';
+
+  @override
+  String get inviteAlreadyHasRole => 'هذا الدور متاح بالفعل في حسابك.';
+
+  @override
+  String get inviteRoleAdded => 'تمت إضافة الدور الجديد إلى حسابك.';
+
+  @override
+  String get inviteGoToAdmin => 'الانتقال إلى بوابة المسؤول';
+
+  @override
+  String get inviteGoToDriver => 'الانتقال إلى مساحة السائق';
+
+  @override
+  String get inviteUnsupportedRole => 'هذه الدعوة لم تعد متاحة.';
+
+  @override
+  String get inviteAdminWarning =>
+      'صلاحيات المسؤول تسمح بإدارة عمليات المنصة. أرسل هذه الدعوة لشخص موثوق فقط.';
+
+  @override
+  String get inviteDriverDescription =>
+      'إضافة مستخدم إلى فريق التوصيل وإتاحة مهام الاستلام والتسليم.';
+
+  @override
+  String get inviteAdminDescription =>
+      'منح مستخدم صلاحيات إدارية لإدارة المنصة.';
+
+  @override
+  String get inviteEmailLabel => 'البريد المدعو';
+
+  @override
+  String get inviteRoleLabelFriendly => 'الدور المدعو';
+
+  @override
+  String get inviteSummaryTitle => 'تفاصيل الدعوة';
+
+  @override
+  String get inviteConfirmInvitation => 'إتمام الدعوة';
 
   @override
   String get inviteFieldRequired => 'مطلوب';

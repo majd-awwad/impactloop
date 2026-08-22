@@ -74,4 +74,35 @@ class InviteAcceptApi {
       throw mapDioException(error);
     }
   }
+
+  Future<InviteExistingAcceptResult> acceptExistingInvitation(
+    InviteExistingAcceptRequest request,
+  ) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        '/api/invitations/accept-existing',
+        data: request.toJson(),
+      );
+      final body = response.data;
+
+      if (body == null || body['success'] != true) {
+        final errorBody = body?['error'];
+        throw ApiException(
+          message: body?['message'] as String? ?? 'Accept failed',
+          code: errorBody is Map<String, dynamic>
+              ? errorBody['code'] as String?
+              : null,
+        );
+      }
+
+      final data = body['data'];
+      if (data is! Map<String, dynamic>) {
+        throw const ApiException(message: 'Unexpected accept response');
+      }
+
+      return InviteExistingAcceptResult.fromJson(data);
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
 }

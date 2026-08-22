@@ -15352,6 +15352,24 @@ abstract class AppLocalizations {
   /// **'This invitation link is invalid, expired, revoked, or already used.'**
   String get inviteInvalidOrExpired;
 
+  /// No description provided for @inviteExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'This invitation link has expired. Ask an administrator to send a new invitation.'**
+  String get inviteExpired;
+
+  /// No description provided for @inviteRevoked.
+  ///
+  /// In en, this message translates to:
+  /// **'This invitation has been revoked. Ask an administrator if you need a new invitation.'**
+  String get inviteRevoked;
+
+  /// No description provided for @inviteAlreadyAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'This invitation has already been accepted.'**
+  String get inviteAlreadyAccepted;
+
   /// No description provided for @inviteCompleteRegistration.
   ///
   /// In en, this message translates to:
@@ -15375,6 +15393,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Phone (optional)'**
   String get invitePhoneOptional;
+
+  /// No description provided for @inviteRoleDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver'**
+  String get inviteRoleDriver;
+
+  /// No description provided for @inviteRoleAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Administrator'**
+  String get inviteRoleAdmin;
+
+  /// No description provided for @inviteExistingAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You already have an ImpactLoop account'**
+  String get inviteExistingAccountTitle;
+
+  /// No description provided for @inviteExistingAccountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with the account linked to this invitation to add the role.'**
+  String get inviteExistingAccountBody;
+
+  /// No description provided for @inviteLoginToAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to accept invitation'**
+  String get inviteLoginToAccept;
+
+  /// No description provided for @inviteCurrentRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'Current roles'**
+  String get inviteCurrentRoles;
+
+  /// No description provided for @inviteNewRole.
+  ///
+  /// In en, this message translates to:
+  /// **'New role'**
+  String get inviteNewRole;
+
+  /// No description provided for @inviteAddAdminRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Add administrator role'**
+  String get inviteAddAdminRole;
+
+  /// No description provided for @inviteCompleteDriverAndAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete driver details and accept invitation'**
+  String get inviteCompleteDriverAndAccept;
+
+  /// No description provided for @inviteCreateAdminAndAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account and accept administrator invitation'**
+  String get inviteCreateAdminAndAccept;
+
+  /// No description provided for @inviteCreateDriverAndAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account and accept driver invitation'**
+  String get inviteCreateDriverAndAccept;
+
+  /// No description provided for @inviteWrongAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This invitation is linked to a different account'**
+  String get inviteWrongAccountTitle;
+
+  /// No description provided for @inviteWrongAccountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This invitation is linked to {email}. Sign in with that account to accept it.'**
+  String inviteWrongAccountBody(Object email);
+
+  /// No description provided for @inviteSwitchAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch account'**
+  String get inviteSwitchAccount;
+
+  /// No description provided for @inviteAlreadyHasRole.
+  ///
+  /// In en, this message translates to:
+  /// **'This role is already available on your account.'**
+  String get inviteAlreadyHasRole;
+
+  /// No description provided for @inviteRoleAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'The new role has been added to your account.'**
+  String get inviteRoleAdded;
+
+  /// No description provided for @inviteGoToAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Admin Portal'**
+  String get inviteGoToAdmin;
+
+  /// No description provided for @inviteGoToDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Driver Workspace'**
+  String get inviteGoToDriver;
+
+  /// No description provided for @inviteUnsupportedRole.
+  ///
+  /// In en, this message translates to:
+  /// **'This invitation is no longer available.'**
+  String get inviteUnsupportedRole;
+
+  /// No description provided for @inviteAdminWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Administrator access can manage platform operations. Send this invitation only to a trusted person.'**
+  String get inviteAdminWarning;
+
+  /// No description provided for @inviteDriverDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a user to the delivery team and enable pickup and delivery work.'**
+  String get inviteDriverDescription;
+
+  /// No description provided for @inviteAdminDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Grant a user administrative access to manage the platform.'**
+  String get inviteAdminDescription;
+
+  /// No description provided for @inviteEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Invited email'**
+  String get inviteEmailLabel;
+
+  /// No description provided for @inviteRoleLabelFriendly.
+  ///
+  /// In en, this message translates to:
+  /// **'Invited role'**
+  String get inviteRoleLabelFriendly;
+
+  /// No description provided for @inviteSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation details'**
+  String get inviteSummaryTitle;
+
+  /// No description provided for @inviteConfirmInvitation.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete invitation'**
+  String get inviteConfirmInvitation;
 
   /// No description provided for @inviteFieldRequired.
   ///

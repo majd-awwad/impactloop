@@ -1,6 +1,7 @@
 import type {
   AuthTokenType,
   LearnerProfile,
+  DriverProfile,
   Location,
   OrganizationProfile,
   Prisma,
@@ -26,6 +27,7 @@ export type SupplierProfileWithLocation = SupplierProfile & {
 export type UserWithRolesAndProfiles = User & {
   roles: UserRoleAssignment[];
   learnerProfile: LearnerProfile | null;
+  driverProfile: DriverProfile | null;
   supplierProfile: SupplierProfileWithLocation | null;
 };
 
@@ -88,6 +90,7 @@ export type BecomeLearnerInput = {
 const userWithRolesAndProfilesInclude = {
   roles: true,
   learnerProfile: true,
+  driverProfile: true,
   supplierProfile: {
     include: {
       defaultPickupLocation: true,
