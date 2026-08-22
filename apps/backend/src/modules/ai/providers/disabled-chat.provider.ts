@@ -12,6 +12,7 @@ import type {
 
 export class DisabledAiChatProvider implements AiChatProvider {
   readonly name = 'disabled';
+  readonly supportsImageInputs = false;
 
   private throwDisabled(): never {
     throw new AppError(

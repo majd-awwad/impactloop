@@ -1244,6 +1244,7 @@ describe('admin learning projects AI review', () => {
     generate?: (
       input: AiChatGenerateAnswerInput,
     ) => ReturnType<AiChatProvider['generateGeneralLearningAnswer']>;
+    supportsImageInputs?: boolean;
   }) => {
     const state = {
       lastGenerateInput: null as AiChatGenerateAnswerInput | null,
@@ -1252,6 +1253,7 @@ describe('admin learning projects AI review', () => {
 
     const provider: AiChatProvider & typeof state = {
       name: 'mock',
+      supportsImageInputs: overrides?.supportsImageInputs ?? true,
       get lastGenerateInput() {
         return state.lastGenerateInput;
       },
@@ -1408,11 +1410,16 @@ describe('admin learning projects AI review', () => {
       'history',
       'locale',
       'scopeClassification',
+      'structuredOutput',
       'userMessage',
     ]);
     assert.equal(spy.lastGenerateInput!.locale, 'en');
     assert.equal(spy.lastGenerateInput!.scopeClassification, 'DOMAIN_KNOWLEDGE');
     assert.deepEqual(spy.lastGenerateInput!.history, []);
+    assert.equal(
+      spy.lastGenerateInput!.structuredOutput?.name,
+      'impactloop_admin_learning_project_ai_review',
+    );
     assert.ok(
       spy.lastGenerateInput!.userMessage.includes(ADMIN_PROJECT_REVIEW_MARKER),
     );
@@ -2667,6 +2674,31 @@ describe('admin learning projects AI review', () => {
         MINIMAL_JPEG.toString('base64'),
       );
       assert.equal(spy.lastGenerateInput.imageInputs[0]?.sourceLabel, 'Project image 1');
+    });
+
+    test('an image review rejects a provider whose configured model lacks image capability', async () => {
+      const spy = createSpyProvider({ supportsImageInputs: false });
+      setAiChatProviderForTests(spy);
+      const author = await createLearnerUser();
+      const category = await createProjectCategory();
+      const project = await createLearningProject({
+        suffix: 'ai-image-provider-unsupported',
+        status: 'PENDING_REVIEW',
+        authorId: author.id,
+        categoryId: category.id,
+      });
+      await attachProjectImage(project.id, '/uploads/materials/unsupported.jpg', 0);
+      setAdminReviewImageLoaderDepsForTests({
+        readLocalFile: async () => MINIMAL_JPEG,
+      });
+
+      await assert.rejects(
+        () => runAiReview(project.id, 'en'),
+        (error: unknown) =>
+          error instanceof AppError &&
+          error.code === 'AI_REVIEW_IMAGE_PROVIDER_UNSUPPORTED',
+      );
+      assert.equal(spy.generateCalls, 0);
     });
 
     test('provider receives image bytes not only image URL inside text prompt', async () => {

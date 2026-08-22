@@ -26,6 +26,7 @@ const mockUsage = () => ({
 
 export class MockAiChatProvider implements AiChatProvider {
   readonly name = 'mock';
+  readonly supportsImageInputs = true;
 
   async classifyScope(
     input: AiChatClassifyScopeInput,

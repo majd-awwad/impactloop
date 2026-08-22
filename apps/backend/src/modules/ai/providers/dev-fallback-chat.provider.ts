@@ -23,12 +23,14 @@ const shouldUseDevFallback = (error: unknown): boolean =>
 
 export class DevFallbackAiChatProvider implements AiChatProvider {
   readonly name: string;
+  readonly supportsImageInputs: boolean;
 
   constructor(
     private readonly primary: AiChatProvider,
     private readonly fallback: AiChatProvider,
   ) {
     this.name = `${primary.name}-with-${fallback.name}-fallback`;
+    this.supportsImageInputs = primary.supportsImageInputs;
   }
 
   private async withFallback<T>(

@@ -25,12 +25,18 @@ export type AiChatImageInput = {
   sourceLabel: string;
 };
 
+export type AiChatStructuredOutput = {
+  name: string;
+  schema: unknown;
+};
+
 export type AiChatGenerateAnswerInput = {
   locale: AiLocale;
   userMessage: string;
   history: BoundedHistoryMessage[];
   scopeClassification: string;
   imageInputs?: AiChatImageInput[];
+  structuredOutput?: AiChatStructuredOutput;
   trustedSystemContext?: string;
 };
 
@@ -41,6 +47,12 @@ export type AiChatClassifyScopeInput = {
 
 export interface AiChatProvider {
   readonly name: string;
+  /**
+   * Whether this configured provider/model can receive AiChatImageInput values.
+   * This is deliberately a capability rather than a provider-name check: an
+   * OpenAI-compatible endpoint can expose both text-only and vision models.
+   */
+  readonly supportsImageInputs: boolean;
   classifyScope(
     input: AiChatClassifyScopeInput,
   ): Promise<AiChatProviderResult<AiScopeClassifierResult>>;

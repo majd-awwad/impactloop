@@ -205,6 +205,12 @@ const ALLOWED_LOG_KEYS = new Set([
   'requiredStepCount',
   'returnedStepCount',
   'qualityIssueCode',
+  'qualityIssueCodes',
+  'consistencyIssueCodes',
+  'failingStepIndexes',
+  'failingComponentRefs',
+  'canonicalComponentIds',
+  'componentMismatchSource',
   'repairedStepCount',
 ]);
 

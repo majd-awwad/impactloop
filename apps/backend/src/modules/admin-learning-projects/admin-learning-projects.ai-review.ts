@@ -786,9 +786,6 @@ export const loadAdminReviewImageInputs = async (
   };
 };
 
-const providerSupportsImageInputs = (providerName: string): boolean =>
-  providerName === 'gemini' || providerName === 'mock';
-
 export type AdminAiReviewFullContentCanonical = {
   projectId: string;
   title: string;
@@ -1394,11 +1391,12 @@ export const executeAdminLearningProjectAiProviderReview = async (
   );
 
   const provider = getAiChatProvider();
-  if (imageInputs.length > 0 && !providerSupportsImageInputs(provider.name)) {
+  if (imageInputs.length > 0 && !provider.supportsImageInputs) {
     throw new AppError(
       'AI image review is unavailable with the configured provider.',
       503,
       'AI_REVIEW_IMAGE_PROVIDER_UNSUPPORTED',
+      { provider: provider.name },
     );
   }
 
@@ -1408,6 +1406,10 @@ export const executeAdminLearningProjectAiProviderReview = async (
     history: [],
     scopeClassification: 'DOMAIN_KNOWLEDGE',
     ...(imageInputs.length > 0 ? { imageInputs } : {}),
+    structuredOutput: {
+      name: 'impactloop_admin_learning_project_ai_review',
+      schema: z.toJSONSchema(adminAiReviewContentSchema),
+    },
   });
 
   const rawText = extractAdminAiReviewAnswerText(providerResult.data.blocks);

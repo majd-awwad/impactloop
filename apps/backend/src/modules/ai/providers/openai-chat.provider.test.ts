@@ -5,6 +5,7 @@ import { AppError } from '../../../utils/app-error.js';
 import {
   OpenAiAiChatProvider,
   setOpenAiChatClientFactoryForTests,
+  supportsOpenAiCompatibleImageInputs,
 } from './openai-chat.provider.js';
 
 const snapshotEnv = () => ({ ...process.env });
@@ -253,6 +254,111 @@ describe('OpenAiAiChatProvider', () => {
       assert.equal(firstBlock.purpose, 'answer');
       assert.match(firstBlock.text ?? '', /Arduino Uno/i);
     }
+  });
+
+  test('OpenRouter GPT-4.1 Nano accepts image inputs and sends a multimodal review request', async () => {
+    let capturedRequest: Record<string, unknown> | null = null;
+    process.env.OPENAI_BASE_URL = 'https://openrouter.ai/api/v1';
+    process.env.AI_CHAT_MODEL = 'openai/gpt-4.1-nano';
+    delete process.env.OPENAI_JSON_MODE;
+
+    setOpenAiChatClientFactoryForTests(() => ({
+      chat: {
+        completions: {
+          create: async (request: Record<string, unknown>) => {
+            capturedRequest = request;
+            return {
+              model: 'openai/gpt-4.1-nano',
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify({
+                      blocks: [
+                        {
+                          type: 'text',
+                          purpose: 'answer',
+                          text: JSON.stringify({
+                            summary: 'Image was reviewed.',
+                            attentionLevel: 'LOW',
+                            strengths: [],
+                            importantConcerns: [],
+                            safetyNotes: [],
+                            improvementSuggestions: [],
+                            manualReviewNotes: [],
+                          }),
+                        },
+                      ],
+                    }),
+                  },
+                },
+              ],
+              usage: { prompt_tokens: 1, completion_tokens: 1 },
+            };
+          },
+        },
+      },
+    }));
+
+    const provider = new OpenAiAiChatProvider();
+    assert.equal(provider.supportsImageInputs, true);
+    const result = await provider.generateGeneralLearningAnswer({
+      locale: 'en',
+      userMessage: 'ADMIN_PROJECT_REVIEW_V1\nReview this project.',
+      scopeClassification: 'DOMAIN_KNOWLEDGE',
+      history: [],
+      imageInputs: [
+        {
+          mimeType: 'image/jpeg',
+          dataBase64: 'aW1hZ2UtYnl0ZXM=',
+          sourceLabel: 'Project image 1',
+        },
+      ],
+      structuredOutput: {
+        name: 'impactloop_admin_learning_project_ai_review',
+        schema: {
+          type: 'object',
+          properties: { summary: { type: 'string' } },
+          required: ['summary'],
+          additionalProperties: false,
+        },
+      },
+    });
+
+    assert.equal(result.model, 'openai/gpt-4.1-nano');
+    const responseFormat = capturedRequest?.response_format as {
+      type?: string;
+      json_schema?: { name?: string; strict?: boolean; schema?: unknown };
+    };
+    assert.equal(responseFormat.type, 'json_schema');
+    assert.equal(
+      responseFormat.json_schema?.name,
+      'impactloop_admin_learning_project_ai_review',
+    );
+    assert.equal(responseFormat.json_schema?.strict, true);
+    assert.deepEqual(responseFormat.json_schema?.schema, {
+      type: 'object',
+      properties: { summary: { type: 'string' } },
+      required: ['summary'],
+      additionalProperties: false,
+    });
+    const messages = capturedRequest?.messages as Array<{ content?: unknown }>;
+    assert.ok(Array.isArray(messages));
+    const content = messages[1]?.content as Array<Record<string, unknown>>;
+    assert.equal(content[0]?.type, 'text');
+    assert.equal(content[0]?.text, 'ADMIN_PROJECT_REVIEW_V1\nReview this project.');
+    assert.equal(content[1]?.type, 'image_url');
+    assert.deepEqual(content[1]?.image_url, {
+      url: 'data:image/jpeg;base64,aW1hZ2UtYnl0ZXM=',
+    });
+  });
+
+  test('OpenAI-compatible image capability remains disabled for unverified models', async () => {
+    const { getAiChatRuntimeConfig } = await import('../../../config/env.js');
+    process.env.OPENAI_BASE_URL = 'https://openrouter.ai/api/v1';
+    process.env.AI_CHAT_MODEL = 'openrouter/free';
+
+    assert.equal(supportsOpenAiCompatibleImageInputs(getAiChatRuntimeConfig()), false);
+    assert.equal(new OpenAiAiChatProvider().supportsImageInputs, false);
   });
 
   test('maps empty completion to AI_RESPONSE_INVALID', async () => {

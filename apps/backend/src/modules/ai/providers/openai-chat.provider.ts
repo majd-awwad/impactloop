@@ -31,6 +31,39 @@ import {
   shouldRejectAsNonSemanticPayload,
 } from './semantic-planner-response.js';
 
+const ADMIN_PROJECT_REVIEW_MARKER = 'ADMIN_PROJECT_REVIEW_V1';
+
+const isAdminProjectReviewInput = (input: AiChatGenerateAnswerInput): boolean =>
+  input.userMessage.includes(ADMIN_PROJECT_REVIEW_MARKER);
+
+const normalizeAdminProjectReviewProviderAnswer = (value: unknown): unknown => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return value;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if ('blocks' in candidate) {
+    return value;
+  }
+
+  if (
+    typeof candidate.summary === 'string' &&
+    typeof candidate.attentionLevel === 'string'
+  ) {
+    return {
+      blocks: [
+        {
+          type: 'text',
+          text: JSON.stringify(value),
+          purpose: 'answer',
+        },
+      ],
+    };
+  }
+
+  return value;
+};
+
 type OpenAiChatCompletion = {
   model?: string | null;
   choices: Array<{ message: { content: string | null } }>;
@@ -128,22 +161,130 @@ const buildChatCompletionRequest = (input: {
   maxTokens: number;
   content: string;
   systemInstruction?: string;
+  imageInputs?: AiChatGenerateAnswerInput['imageInputs'];
+  structuredOutput?: AiChatGenerateAnswerInput['structuredOutput'];
 }) => {
-  const messages: Array<{ role: 'system' | 'user'; content: string }> = [];
+  const messages: Array<Record<string, unknown>> = [];
   if (input.systemInstruction) {
     messages.push({ role: 'system', content: input.systemInstruction });
   }
-  messages.push({ role: 'user', content: input.content });
+  const imageInputs = input.imageInputs ?? [];
+  messages.push({
+    role: 'user',
+    content:
+      imageInputs.length > 0
+        ? [
+            { type: 'text', text: input.content },
+            ...imageInputs.map((image) => ({
+              type: 'image_url',
+              image_url: {
+                url: `data:${image.mimeType};base64,${image.dataBase64}`,
+              },
+            })),
+          ]
+        : input.content,
+  });
 
   return {
     model: input.runtime.model,
     temperature: input.temperature,
     max_tokens: input.maxTokens,
-    ...(input.runtime.openaiJsonMode
-      ? { response_format: { type: 'json_object' as const } }
-      : {}),
+    ...buildOpenAiResponseFormat(input.runtime, input.structuredOutput),
     messages,
+  } as Parameters<OpenAiChatClient['chat']['completions']['create']>[0];
+};
+
+/**
+ * The current OpenRouter deployment is deliberately allow-listed. A compatible
+ * endpoint alone is not evidence that every model on it accepts vision input.
+ */
+export const supportsOpenAiCompatibleImageInputs = (
+  runtime: AiChatRuntimeConfig,
+): boolean =>
+  (runtime.isOpenRouter && /^openai\/gpt-4\.1-nano(?:$|[-:])/i.test(runtime.model)) ||
+  (!runtime.openaiBaseUrl && /^gpt-4\.1-nano(?:$|[-:])/i.test(runtime.model));
+
+const supportsOpenAiCompatibleStrictStructuredOutput = (
+  runtime: AiChatRuntimeConfig,
+): boolean =>
+  runtime.isOpenRouter && /^openai\/gpt-4\.1-nano(?:$|[-:])/i.test(runtime.model);
+
+const toOpenAiCompatibleStructuredSchema = (
+  schema: unknown,
+  isRoot = true,
+): unknown => {
+  if (Array.isArray(schema)) {
+    return schema.map((item) => toOpenAiCompatibleStructuredSchema(item, false));
+  }
+  if (!schema || typeof schema !== 'object') {
+    return schema;
+  }
+
+  const record = schema as Record<string, unknown>;
+  const normalized = Object.fromEntries(
+    Object.entries(record).map(([key, value]) => [
+      // OpenAI-compatible structured outputs accept anyOf but not Zod's oneOf.
+      key === 'oneOf' ? 'anyOf' : key,
+      toOpenAiCompatibleStructuredSchema(value, false),
+    ]),
+  );
+  const properties = record.properties;
+  if (!properties || typeof properties !== 'object' || Array.isArray(properties)) {
+    if (isRoot && Array.isArray(normalized.anyOf)) {
+      return {
+        type: 'object',
+        properties: { result: { anyOf: normalized.anyOf } },
+        required: ['result'],
+        additionalProperties: false,
+      };
+    }
+    return normalized;
+  }
+
+  const propertyNames = Object.keys(properties);
+  const required = Array.isArray(record.required)
+    ? record.required.filter((name): name is string => typeof name === 'string')
+    : [];
+  const requiredSet = new Set(required);
+  const normalizedProperties = normalized.properties as Record<string, unknown>;
+
+  return {
+    ...normalized,
+    properties: Object.fromEntries(
+      propertyNames.map((name) => [
+        name,
+        requiredSet.has(name)
+          ? normalizedProperties[name]
+          : { anyOf: [normalizedProperties[name], { type: 'null' }] },
+      ]),
+    ),
+    // OpenAI-compatible strict mode requires all declared properties.
+    required: propertyNames,
   };
+};
+
+const buildOpenAiResponseFormat = (
+  runtime: AiChatRuntimeConfig,
+  structuredOutput?: AiChatGenerateAnswerInput['structuredOutput'],
+) => {
+  if (structuredOutput && supportsOpenAiCompatibleStrictStructuredOutput(runtime)) {
+    return {
+      response_format: {
+        type: 'json_schema' as const,
+        json_schema: {
+          name: structuredOutput.name,
+          strict: true,
+          schema: toOpenAiCompatibleStructuredSchema(
+            structuredOutput.schema,
+          ) as Record<string, unknown>,
+        },
+      },
+    };
+  }
+
+  return runtime.openaiJsonMode
+    ? { response_format: { type: 'json_object' as const } }
+    : {};
 };
 
 const mapOpenAiFailure = (
@@ -191,6 +332,24 @@ const mapOpenAiFailure = (
     );
   }
 
+  if (status === 400) {
+    return new AppError(
+      'The learning assistant request is not compatible with the configured model.',
+      502,
+      'AI_PROVIDER_REQUEST_INVALID',
+      { status, model: runtime.model },
+    );
+  }
+
+  if (status === 404) {
+    return new AppError(
+      'The configured learning assistant model is not available.',
+      503,
+      'AI_PROVIDER_MODEL_UNAVAILABLE',
+      { status, model: runtime.model },
+    );
+  }
+
   return new AppError(
     'The learning assistant is temporarily unavailable.',
     502,
@@ -201,6 +360,10 @@ const mapOpenAiFailure = (
 
 export class OpenAiAiChatProvider implements AiChatProvider {
   readonly name = 'openai';
+
+  get supportsImageInputs(): boolean {
+    return supportsOpenAiCompatibleImageInputs(getAiChatRuntimeConfig());
+  }
 
   private getClient(runtime: AiChatRuntimeConfig): OpenAiChatClient {
     return clientFactoryOverride?.() ?? createDefaultClient(runtime);
@@ -254,25 +417,66 @@ export class OpenAiAiChatProvider implements AiChatProvider {
     const startedAt = Date.now();
     const runtime = getAiChatRuntimeConfig();
     const client = this.getClient(runtime);
+    const isAdminReview = isAdminProjectReviewInput(input);
+    const imageInputs = input.imageInputs ?? [];
 
     try {
+      if (imageInputs.length > 0) {
+        logger.info(
+          {
+            requestId: getRequestId(),
+            provider: this.name,
+            operation: isAdminReview
+              ? 'admin_learning_project_ai_review'
+              : 'general_learning_answer',
+            model: runtime.model,
+            baseUrlHost: runtime.openaiBaseHost ?? 'api.openai.com',
+            imageInputCount: imageInputs.length,
+          },
+          'OpenAI-compatible multimodal request dispatched',
+        );
+      }
+
       const response = await withTimeout(
         client.chat.completions.create(
           buildChatCompletionRequest({
             runtime,
             temperature: 0.4,
             maxTokens: runtime.maxOutputTokens,
-            content: buildAnswerPrompt(input),
+            // Admin review already contains its complete trusted/untrusted prompt.
+            content: isAdminReview ? input.userMessage : buildAnswerPrompt(input),
             systemInstruction: composeGeneralLearningSystemInstruction(input),
+            imageInputs,
+            structuredOutput: input.structuredOutput,
           }),
         ),
         runtime.timeoutMs,
         'AI_PROVIDER_TIMEOUT',
       );
 
+      const parsedResponse = extractJsonObject(readCompletionText(response));
       const parsed = aiProviderAnswerSchema.parse(
-        extractJsonObject(readCompletionText(response)),
+        isAdminReview
+          ? normalizeAdminProjectReviewProviderAnswer(parsedResponse)
+          : parsedResponse,
       );
+
+      if (imageInputs.length > 0) {
+        logger.info(
+          {
+            requestId: getRequestId(),
+            provider: this.name,
+            operation: isAdminReview
+              ? 'admin_learning_project_ai_review'
+              : 'general_learning_answer',
+            status: 200,
+            configuredModel: runtime.model,
+            model: response.model ?? runtime.model,
+            imageInputCount: imageInputs.length,
+          },
+          'OpenAI-compatible multimodal request succeeded',
+        );
+      }
 
       return {
         provider: this.name,

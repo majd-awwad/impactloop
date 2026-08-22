@@ -718,6 +718,7 @@ export const buildGeminiAnswerContents = (
 
 export class GeminiAiChatProvider implements AiChatProvider {
   readonly name = 'gemini';
+  readonly supportsImageInputs = true;
 
   private getClient(): GeminiChatClient {
     const geminiApiKey = getConfiguredGeminiApiKey();
