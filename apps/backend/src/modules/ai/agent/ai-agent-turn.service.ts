@@ -28,7 +28,7 @@ import {
 } from './ai-agent-safety-guard.service.js';
 import { getAiChatProvider } from '../providers/ai-chat-provider.factory.js';
 import type { AiLocale } from '../ai.types.js';
-import { prepareAiPendingAction, buildMaterialSavePayload, buildProjectSavePayload, buildStartBuildPayload, buildLinkMaterialPayload, buildUnsaveMaterialPayload, buildUnsaveProjectPayload, buildUnlinkMaterialPayload, buildReservationPayload, buildUpdateBuildComponentStatusesPayload, saveReservationDraft, cancelReservationDraft, findActiveReservationDraft } from '../ai-action.service.js';
+import { prepareAiPendingAction, cancelAiPendingAction, buildMaterialSavePayload, buildProjectSavePayload, buildStartBuildPayload, buildLinkMaterialPayload, buildUnsaveMaterialPayload, buildUnsaveProjectPayload, buildUnlinkMaterialPayload, buildReservationPayload, buildUpdateBuildComponentStatusesPayload, saveReservationDraft, cancelReservationDraft, findActiveReservationDraft } from '../ai-action.service.js';
 import * as learningProjectsRepository from '../../learning-projects/learning-projects.repository.js';
 import {
   detectMaterialSearchIntent,
@@ -47,6 +47,7 @@ import type { AiPendingActionType } from '../../../generated/prisma/client.js';
 import { listActiveProjectBuildsForLearner, getOwnedProjectBuildByBuildId, getLearningProjectById } from '../../learning-projects/learning-projects.service.js';
 import { getMaterialById, getMaterials } from '../../materials/materials.service.js';
 import { getLearningProjects } from '../../learning-projects/learning-projects.service.js';
+import { listMySavedDropoffAddresses } from '../../saved-dropoff-addresses/saved-dropoff-addresses.service.js';
 
 import { buildToolInputForRoute, parseComparisonFromContext, parseFindMaterialsForProjectInput, parseProjectComponentsInput } from './ai-agent-input-parser.service.js';
 import { routeToToolName } from './ai-agent-route-mapping.js';
@@ -152,6 +153,11 @@ const resolveActionFromMessage = (
   }
   return null;
 };
+
+const isStandalonePendingActionCancellation = (userMessage: string): boolean =>
+  /^(?:لا\s*[,،]?\s*)?(?:إلغاء|الغ|ألغي|الغي|cancel)(?:\s+(?:العملية|الإجراء|الاجراء|الطلب|action|it))?[.!؟]?$/i.test(
+    userMessage.trim(),
+  );
 
 type BuildComponentOwnershipDirection = 'ALREADY_OWNED' | 'MISSING';
 
@@ -786,6 +792,19 @@ export const parseReservationParameters = (userMessage: string) => {
           })
         : null;
 
+  const deliveryAddressText =
+    trimmed.match(
+      /(?:العنوان|address)\s*[:：]\s*(.+?)(?=\s*[,،;؛]\s*(?:المدينة|city|المنطقة|area)\s*[:：]|$)/iu,
+    )?.[1]?.trim() ?? null;
+  const dropoffCity =
+    trimmed.match(
+      /(?:المدينة|city)\s*[:：]\s*(.+?)(?=\s*[,،;؛]\s*(?:العنوان|address|المنطقة|area)\s*[:：]|$)/iu,
+    )?.[1]?.trim() ?? null;
+  const dropoffArea =
+    trimmed.match(
+      /(?:المنطقة|area)\s*[:：]\s*(.+?)(?=\s*[,،;؛]\s*(?:العنوان|address|المدينة|city)\s*[:：]|$)/iu,
+    )?.[1]?.trim() ?? null;
+
   return {
     quantity,
     fulfillmentMethod,
@@ -796,10 +815,29 @@ export const parseReservationParameters = (userMessage: string) => {
       fulfillmentMethod !== 'DELIVERY' && window ? [window] : undefined,
     deliveryWindows:
       fulfillmentMethod === 'DELIVERY' && window ? [window] : undefined,
+    deliveryAddressText,
+    dropoffCity,
+    dropoffArea,
   };
 };
 
-const computeReservationMissing = (params: {
+const LEGACY_AI_DELIVERY_ADDRESS = 'Nablus test address';
+
+const preferredSavedDropoff = async (userId: string) => {
+  const { items } = await listMySavedDropoffAddresses(userId);
+  const saved = items.find((item) => item.isDefault) ??
+    (items.length === 1 ? items[0] : undefined);
+  if (!saved) {
+    return null;
+  }
+  return {
+    deliveryAddressText: saved.location.addressLine,
+    dropoffCity: saved.location.city,
+    dropoffArea: saved.location.area ?? undefined,
+  };
+};
+
+export const computeReservationMissing = (params: {
   quantity: number | null;
   fulfillmentMethod: 'PICKUP' | 'DELIVERY' | null;
   pickupDate?: string | null;
@@ -807,26 +845,25 @@ const computeReservationMissing = (params: {
   pickupEndTime?: string | null;
   pickupWindows?: Array<{ start: string; end: string }>;
   deliveryWindows?: Array<{ start: string; end: string }>;
+  deliveryAddressText?: string | null;
+  dropoffCity?: string | null;
 }) => {
   const missing: string[] = [];
-  if (!params.quantity) {
+  if (params.quantity != null && params.quantity <= 0) {
+    missing.push('invalidQuantity');
+  } else if (params.quantity == null) {
     missing.push('quantity');
   }
   if (!params.fulfillmentMethod) {
     missing.push('fulfillment');
   }
-  if (params.fulfillmentMethod === 'PICKUP') {
-    if (params.pickupWindows?.length) {
-      return missing;
+  if (params.fulfillmentMethod === 'DELIVERY') {
+    if (!params.deliveryAddressText?.trim()) {
+      missing.push('deliveryAddress');
     }
-    if (!params.pickupStartTime || !params.pickupEndTime) {
-      missing.push('pickupWindow');
-    } else if (!params.pickupDate) {
-      missing.push('pickupDate');
+    if (!params.dropoffCity?.trim()) {
+      missing.push('dropoffCity');
     }
-  }
-  if (params.fulfillmentMethod === 'DELIVERY' && !params.deliveryWindows?.length) {
-    missing.push('deliveryWindow');
   }
   return missing;
 };
@@ -863,6 +900,9 @@ export const isReservationContinuationMessage = (userMessage: string): boolean =
   if (/(كمية|quantity)\s*[:：]?\s*\d/i.test(userMessage)) {
     return true;
   }
+  if (/(العنوان|المدينة|المنطقة|address|city|area)\s*[:：]/i.test(userMessage)) {
+    return true;
+  }
   if (/(الغ|إلغاء|cancel)/i.test(userMessage) && trimmed.length < 48) {
     return true;
   }
@@ -885,28 +925,36 @@ const buildActionPayload = async (input: {
 
   if (input.actionType === 'PREPARE_MATERIAL_RESERVATION') {
     const params = parseReservationParameters(input.userMessage);
-    const missing: string[] = [];
-    if (!params.quantity) {
-      missing.push('quantity');
-    }
-    if (!params.fulfillmentMethod) {
-      missing.push('fulfillment');
-    }
-    if (
-      params.fulfillmentMethod === 'PICKUP' &&
-      !params.pickupWindows?.length
-    ) {
-      missing.push('pickupWindow');
-    }
-    if (
-      params.fulfillmentMethod === 'DELIVERY' &&
-      !params.deliveryWindows?.length
-    ) {
-      missing.push('deliveryWindow');
-    }
+    const validQuantity =
+      params.quantity != null && params.quantity > 0
+        ? params.quantity
+        : undefined;
+    const savedDropoff = params.fulfillmentMethod === 'DELIVERY'
+      ? await preferredSavedDropoff(input.authenticatedUserId)
+      : null;
+    const parameters = {
+      quantityRequested: validQuantity,
+      fulfillmentMethod: params.fulfillmentMethod ?? undefined,
+      learnerPreferredPickupWindows: params.pickupWindows,
+      learnerPreferredDeliveryWindows: params.deliveryWindows,
+      deliveryAddressText:
+        params.deliveryAddressText ?? savedDropoff?.deliveryAddressText,
+      dropoffCity: params.dropoffCity ?? savedDropoff?.dropoffCity,
+      dropoffArea: params.dropoffArea ?? savedDropoff?.dropoffArea,
+      safeDropoffAllowed:
+        params.fulfillmentMethod === 'DELIVERY' ? false : undefined,
+    };
+    const missing = computeReservationMissing({
+      quantity: params.quantity,
+      fulfillmentMethod: params.fulfillmentMethod,
+      pickupWindows: params.pickupWindows,
+      deliveryWindows: params.deliveryWindows,
+      deliveryAddressText: parameters.deliveryAddressText,
+      dropoffCity: parameters.dropoffCity,
+    });
 
     if (missing.length > 0) {
-      return { missing } as const;
+      return { missing, parameters } as const;
     }
 
     const material = await getMaterialById(input.targetId, viewer);
@@ -919,9 +967,10 @@ const buildActionPayload = async (input: {
           fulfillmentMethod: params.fulfillmentMethod!,
           learnerPreferredPickupWindows: params.pickupWindows,
           learnerPreferredDeliveryWindows: params.deliveryWindows,
-          deliveryAddressText:
-            params.fulfillmentMethod === 'DELIVERY' ? 'Nablus test address' : undefined,
-          dropoffCity: params.fulfillmentMethod === 'DELIVERY' ? 'Nablus' : undefined,
+          deliveryAddressText: parameters.deliveryAddressText,
+          dropoffCity: parameters.dropoffCity,
+          dropoffArea: parameters.dropoffArea,
+          safeDropoffAllowed: parameters.safeDropoffAllowed,
         },
         displaySnapshot: { title: material.title, summary: material.title },
       }),
@@ -1017,11 +1066,31 @@ const reservationClarification = (
   missing: string[],
   options?: { pickupStartTime?: string; pickupEndTime?: string },
 ): string => {
+  if (missing.includes('invalidQuantity')) {
+    return locale === 'ar'
+      ? 'الكمية يجب أن تكون أكبر من صفر. كم كمية بدك؟'
+      : 'Quantity must be greater than zero. What quantity do you need?';
+  }
   if (missing.includes('quantity')) {
     return locale === 'ar' ? 'كم كمية بدك؟' : 'What quantity do you need?';
   }
   if (missing.includes('fulfillment')) {
     return locale === 'ar' ? 'بدك استلام ولا توصيل؟' : 'Pickup or delivery?';
+  }
+  if (missing.includes('deliveryAddress') && missing.includes('dropoffCity')) {
+    return locale === 'ar'
+      ? 'أرسل عنوان التوصيل والمدينة، مثلاً: المدينة: نابلس، العنوان: رفيديا - شارع الجامعة.'
+      : 'Send the delivery city and address, for example: City: Nablus, Address: Rafidia - University Street.';
+  }
+  if (missing.includes('deliveryAddress')) {
+    return locale === 'ar'
+      ? 'ما عنوان التوصيل؟ اكتب: العنوان: ...'
+      : 'What is the delivery address? Write: Address: ...';
+  }
+  if (missing.includes('dropoffCity')) {
+    return locale === 'ar'
+      ? 'ما مدينة التوصيل؟ اكتب: المدينة: ...'
+      : 'What is the delivery city? Write: City: ...';
   }
   if (missing.includes('pickupDate') && options?.pickupStartTime && options?.pickupEndTime) {
     return locale === 'ar'
@@ -1031,7 +1100,7 @@ const reservationClarification = (
   if (missing.includes('pickupDate')) {
     return locale === 'ar' ? 'ما تاريخ الاستلام؟' : 'What is the pickup date?';
   }
-  if (missing.includes('pickupWindow') || missing.includes('deliveryWindow')) {
+  if (missing.includes('pickupWindow')) {
     return locale === 'ar'
       ? 'اختاري وقت بداية ونهاية للاستلام.'
       : 'Choose a pickup start and end time.';
@@ -1143,11 +1212,18 @@ const handleReservationDraftContinuation = async (input: {
     };
   }
 
+  const fulfillmentMethod =
+    parsed.fulfillmentMethod ?? existing.fulfillmentMethod ?? undefined;
+  const hasLegacyDeliveryPlaceholder =
+    existing.deliveryAddressText === LEGACY_AI_DELIVERY_ADDRESS;
+  const savedDropoff = fulfillmentMethod === 'DELIVERY'
+    ? await preferredSavedDropoff(input.authenticatedUserId)
+    : null;
   const merged = {
     quantityRequested:
       parsed.quantity ?? existing.quantityRequested ?? undefined,
     fulfillmentMethod:
-      parsed.fulfillmentMethod ?? existing.fulfillmentMethod ?? undefined,
+      fulfillmentMethod,
     pickupDate: parsed.pickupDate ?? existing.pickupDate ?? undefined,
     pickupStartTime: parsed.pickupStartTime ?? existing.pickupStartTime ?? undefined,
     pickupEndTime: parsed.pickupEndTime ?? existing.pickupEndTime ?? undefined,
@@ -1165,13 +1241,19 @@ const handleReservationDraftContinuation = async (input: {
     learnerPreferredDeliveryWindows:
       parsed.deliveryWindows ?? existing.learnerPreferredDeliveryWindows,
     deliveryAddressText:
-      parsed.fulfillmentMethod === 'DELIVERY'
-        ? existing.deliveryAddressText ?? 'Nablus test address'
-        : existing.deliveryAddressText,
+      parsed.deliveryAddressText ??
+      (hasLegacyDeliveryPlaceholder ? undefined : existing.deliveryAddressText) ??
+      savedDropoff?.deliveryAddressText,
     dropoffCity:
-      parsed.fulfillmentMethod === 'DELIVERY'
-        ? existing.dropoffCity ?? 'Nablus'
-        : existing.dropoffCity,
+      parsed.dropoffCity ??
+      (hasLegacyDeliveryPlaceholder ? undefined : existing.dropoffCity) ??
+      savedDropoff?.dropoffCity,
+    dropoffArea:
+      parsed.dropoffArea ??
+      (hasLegacyDeliveryPlaceholder ? undefined : existing.dropoffArea) ??
+      savedDropoff?.dropoffArea,
+    safeDropoffAllowed:
+      fulfillmentMethod === 'DELIVERY' ? false : existing.safeDropoffAllowed,
   };
 
   if (
@@ -1255,6 +1337,8 @@ const handleReservationDraftContinuation = async (input: {
     pickupEndTime: merged.pickupEndTime ?? null,
     pickupWindows: merged.learnerPreferredPickupWindows,
     deliveryWindows: merged.learnerPreferredDeliveryWindows,
+    deliveryAddressText: merged.deliveryAddressText,
+    dropoffCity: merged.dropoffCity,
   });
 
   if (missing.length > 0) {
@@ -1320,6 +1404,8 @@ const handleReservationDraftContinuation = async (input: {
         learnerPreferredDeliveryWindows: merged.learnerPreferredDeliveryWindows,
         deliveryAddressText: merged.deliveryAddressText,
         dropoffCity: merged.dropoffCity,
+        dropoffArea: merged.dropoffArea,
+        safeDropoffAllowed: merged.safeDropoffAllowed,
       },
       displaySnapshot: { title: material.title, summary: material.title },
     }),
@@ -1847,7 +1933,7 @@ const handleActionRequestTurn = async (input: {
         userId: input.authenticatedUserId,
         conversationId: input.conversationId,
         materialId: resolution.target.materialId,
-        parameters: {},
+        parameters: built.parameters,
         locale: input.locale,
       });
 
@@ -1972,7 +2058,7 @@ const handleActionRequestTurn = async (input: {
         userId: input.authenticatedUserId,
         conversationId: input.conversationId,
         materialId: targetId,
-        parameters: {},
+        parameters: built.parameters,
         locale: input.locale,
       });
     }
@@ -2994,6 +3080,44 @@ export const executeLearnerAgentPlatformTurn = async (input: {
   });
   if (reservationContinuation) {
     return reservationContinuation;
+  }
+
+  if (isStandalonePendingActionCancellation(input.userMessage)) {
+    const pendingAction = await prisma.aiPendingAction.findFirst({
+      where: {
+        conversationId: input.conversationId,
+        userId: input.authenticatedUserId,
+        status: 'PENDING',
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { updatedAt: 'desc' },
+      select: { id: true },
+    });
+    if (pendingAction) {
+      const cancelled = await cancelAiPendingAction({
+        userId: input.authenticatedUserId,
+        pendingActionId: pendingAction.id,
+      });
+      return {
+        blocks: cancelled.block
+          ? [cancelled.block]
+          : [
+              textBlock(
+                responseLocale === 'ar'
+                  ? 'تم إلغاء الإجراء المعلّق.'
+                  : 'The pending action was cancelled.',
+                'answer',
+              ),
+            ],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'ACTION_REQUEST',
+      };
+    }
   }
 
   if (conversation?.projectBuildId) {

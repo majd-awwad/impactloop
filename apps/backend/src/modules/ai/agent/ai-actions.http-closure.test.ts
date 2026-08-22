@@ -166,7 +166,7 @@ async function createMaterial(input: {
       status: input.status ?? 'AVAILABLE',
       isFree: input.isFree ?? true,
       pickupAllowed: input.pickupAllowed ?? true,
-      deliveryAllowed: input.deliveryAllowed ?? false,
+      deliveryAllowed: input.deliveryAllowed ?? true,
     },
   });
   ids.materials.push(material.id);
@@ -354,7 +354,7 @@ before(async () => {
   const location = await prisma.location.create({
     data: {
       country: 'PS',
-      city: `${TEST_MARKER}-Nablus`,
+      city: 'Nablus',
       area: 'Industrial',
       latitude: 32.2211,
       longitude: 35.2544,
@@ -571,6 +571,36 @@ describe('ai actions http closure', () => {
     assert.equal(confirm.json.error?.code, 'AI_ACTION_CANCELLED');
     const afterLikes = await prisma.materialLike.count({ where: { userId: ids.learnerBId } });
     assert.equal(afterLikes, beforeLikes);
+  });
+
+  test('typing standalone cancellation cancels the latest pending action', async () => {
+    const token = tokenFor(ids.learnerBId);
+    const { conversationId, pendingActionId } =
+      await seedMaterialResultsAndPrepareSave(token, ids.learnerBId);
+    const likesBeforeCancel = await prisma.materialLike.count({
+      where: { userId: ids.learnerBId },
+    });
+
+    const cancelled = await sendMessage(
+      token,
+      conversationId,
+      'إلغاء',
+      clientId('typed-cancel'),
+    );
+    assert.equal(cancelled.response.status, 201);
+    const result = parseBlocks(cancelled.json).find(
+      (block) => block.type === 'action_result',
+    );
+    assert.equal(result?.status, 'CANCELLED');
+
+    const action = await prisma.aiPendingAction.findUnique({
+      where: { id: pendingActionId },
+    });
+    assert.equal(action?.status, 'CANCELLED');
+    assert.equal(
+      await prisma.materialLike.count({ where: { userId: ids.learnerBId } }),
+      likesBeforeCancel,
+    );
   });
 
   test('cross-user confirm is blocked', async () => {
@@ -914,7 +944,7 @@ describe('ai actions http closure', () => {
     assert.equal(after, before);
   });
 
-  test('reservation multi-turn continuation accepts numeric quantity reply', async () => {
+  test('reservation multi-turn pickup reaches confirmation without a preferred window', async () => {
     const token = tokenFor(ids.learnerAId);
     const conversationId = await createConversation(token);
     await sendMessage(
@@ -953,11 +983,10 @@ describe('ai actions http closure', () => {
     const clarify2 = blocks2.find((block) => block.type === 'text');
     assert.match(String(clarify2?.text ?? ''), /استلام|توصيل|pickup|delivery/i);
 
-    const window = futurePickupWindow(72);
     const step3 = await sendMessage(
       token,
       conversationId,
-      `استلام من ${window.start} إلى ${window.end}`,
+      'استلام',
       clientId('reserve-mt-step3'),
     );
     assert.equal(step3.response.status, 201);
@@ -986,6 +1015,126 @@ describe('ai actions http closure', () => {
       where: { requesterId: ids.learnerAId },
     });
     assert.equal(reservationsFinal, reservationsAfter);
+  });
+
+  test('direct zero-quantity reservation is clarified without an invalid action', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    await sendMessage(
+      token,
+      conversationId,
+      `اعرضلي مواد ${SEED_TOKEN} متوفرة`,
+      clientId('reserve-zero-search'),
+    );
+
+    const response = await sendMessage(
+      token,
+      conversationId,
+      'احجزلي الأولى بكمية 0',
+      clientId('reserve-zero-prepare'),
+    );
+    assert.equal(response.response.status, 201);
+    const blocks = parseBlocks(response.json);
+    assert.equal(
+      blocks.some((block) => block.type === 'action_confirmation'),
+      false,
+    );
+    const clarification = blocks.find((block) => block.type === 'text');
+    assert.match(
+      String(clarification?.text ?? ''),
+      /أكبر من صفر|greater than zero/i,
+    );
+
+    const draft = await prisma.aiPendingAction.findFirst({
+      where: {
+        conversationId,
+        actionType: 'PREPARE_MATERIAL_RESERVATION',
+        status: 'PENDING',
+      },
+    });
+    assert.ok(draft);
+    const payload = draft.payload as {
+      parameters?: { quantityRequested?: number };
+    };
+    assert.equal(payload.parameters?.quantityRequested, undefined);
+  });
+
+  test('reservation multi-turn delivery asks for address instead of pickup time and confirms', async () => {
+    const token = tokenFor(ids.learnerBId);
+    const conversationId = await createConversation(token);
+    await sendMessage(
+      token,
+      conversationId,
+      `اعرضلي مواد ${SEED_TOKEN} متوفرة`,
+      clientId('reserve-delivery-search'),
+    );
+    await sendMessage(
+      token,
+      conversationId,
+      'احجزلي أول مادة',
+      clientId('reserve-delivery-step1'),
+    );
+    await sendMessage(
+      token,
+      conversationId,
+      '1',
+      clientId('reserve-delivery-step2'),
+    );
+
+    const delivery = await sendMessage(
+      token,
+      conversationId,
+      'توصيل',
+      clientId('reserve-delivery-step3'),
+    );
+    assert.equal(delivery.response.status, 201);
+    const clarification = parseBlocks(delivery.json).find(
+      (block) => block.type === 'text',
+    );
+    assert.match(String(clarification?.text ?? ''), /عنوان|مدينة|address|city/i);
+    assert.doesNotMatch(
+      String(clarification?.text ?? ''),
+      /وقت بداية|pickup start|pickup time/i,
+    );
+
+    const before = await prisma.reservation.count({
+      where: { requesterId: ids.learnerBId },
+    });
+    const addressed = await sendMessage(
+      token,
+      conversationId,
+      'المدينة: نابلس، العنوان: رفيديا - شارع الجامعة',
+      clientId('reserve-delivery-step4'),
+    );
+    assert.equal(addressed.response.status, 201);
+    const confirmation = confirmationBlock(parseBlocks(addressed.json));
+    assert.equal(
+      await prisma.reservation.count({ where: { requesterId: ids.learnerBId } }),
+      before,
+    );
+
+    const pending = await prisma.aiPendingAction.findUnique({
+      where: { id: confirmation.pendingActionId as string },
+    });
+    const parameters = (pending?.payload as {
+      parameters?: Record<string, unknown>;
+    } | null)?.parameters;
+    assert.equal(parameters?.fulfillmentMethod, 'DELIVERY');
+    assert.equal(parameters?.dropoffCity, 'نابلس');
+    assert.equal(parameters?.deliveryAddressText, 'رفيديا - شارع الجامعة');
+    assert.equal(parameters?.safeDropoffAllowed, false);
+    assert.equal(parameters?.learnerPreferredDeliveryWindows, undefined);
+
+    const confirmed = await confirmAction(
+      token,
+      confirmation.pendingActionId as string,
+      'confirm-reservation-delivery',
+    );
+    assert.equal(confirmed.response.status, 201);
+    assert.equal(
+      await prisma.reservation.count({ where: { requesterId: ids.learnerBId } }),
+      before + 1,
+    );
   });
 
   test('reservation draft persists selected material before quantity reply', async () => {
@@ -1133,18 +1282,23 @@ describe('ai actions http closure', () => {
 
   test('valid reservation confirmation creates one reservation', async () => {
     const token = tokenFor(ids.learnerBId);
+    const uniqueMaterialLabel = `valid reservation ${Date.now()}`;
+    await createMaterial({
+      locationId: ids.locations[0]!,
+      title: `${SEED_TOKEN} ${uniqueMaterialLabel}`,
+      quantity: 5,
+    });
     const conversationId = await createConversation(token);
     await sendMessage(
       token,
       conversationId,
-      `اعرضلي مواد ${SEED_TOKEN}`,
+      `اعرضلي مادة ${uniqueMaterialLabel}`,
       clientId('reserve2-search'),
     );
-    const window = futurePickupWindow();
     const prepared = await sendMessage(
       token,
       conversationId,
-      `احجزلي أول مادة كمية 1 استلام من ${window.start} إلى ${window.end}`,
+      'احجزلي أول مادة كمية 1 استلام',
       clientId('reserve2-prepare'),
     );
     assert.equal(prepared.response.status, 201);
@@ -1348,13 +1502,19 @@ describe('ai actions http closure', () => {
     );
   });
 
-  test('reservation multi-turn continuation accepts pickup time before date', async () => {
+  test('pickup reservation reaches confirmation without asking for time or date', async () => {
     const token = tokenFor(ids.learnerBId);
+    const uniqueMaterialLabel = `pickup time flow ${Date.now()}`;
+    await createMaterial({
+      locationId: ids.locations[0]!,
+      title: `${SEED_TOKEN} ${uniqueMaterialLabel}`,
+      quantity: 5,
+    });
     const conversationId = await createConversation(token);
     await sendMessage(
       token,
       conversationId,
-      `اعرضلي مواد ${SEED_TOKEN} متوفرة`,
+      `اعرضلي مادة ${uniqueMaterialLabel}`,
       clientId('reserve-time-search'),
     );
 
@@ -1381,33 +1541,7 @@ describe('ai actions http closure', () => {
       clientId('reserve-time-step3'),
     );
     assert.equal(step3.response.status, 201);
-
-    const step4 = await sendMessage(
-      token,
-      conversationId,
-      'من 4 إلى 5',
-      clientId('reserve-time-step4'),
-    );
-    assert.equal(step4.response.status, 201);
-    const blocks4 = parseBlocks(step4.json);
-    const clarify4 = String(blocks4.find((block) => block.type === 'text')?.text ?? '');
-    assert.doesNotMatch(
-      clarify4,
-      /Specify which material or project you want to act on|حدّد المادة أو المشروع/i,
-    );
-    assert.match(clarify4, /تاريخ الاستلام|4:00|04:00/i);
-
-    const pickupDate = new Date(Date.now() + 4 * 24 * 3_600_000)
-      .toISOString()
-      .slice(0, 10);
-    const step5 = await sendMessage(
-      token,
-      conversationId,
-      pickupDate,
-      clientId('reserve-time-step5'),
-    );
-    assert.equal(step5.response.status, 201);
-    const confirmation = confirmationBlock(parseBlocks(step5.json));
+    const confirmation = confirmationBlock(parseBlocks(step3.json));
     const reservationsBefore = await prisma.reservation.count({
       where: { requesterId: ids.learnerBId },
     });

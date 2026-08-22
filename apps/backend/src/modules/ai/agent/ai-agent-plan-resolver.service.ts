@@ -23,6 +23,7 @@ import {
   detectMaterialSearchIntent,
   detectOwnedMaterialsBuildFollowUp,
   detectOwnedMaterialsProjectIntent,
+  detectPersonalizedRecommendationIntent,
   detectOwnedMaterialsSemanticParaphrase,
   detectPlatformGuidanceIntent,
   detectProjectComponentsIntent,
@@ -2100,6 +2101,22 @@ const buildPhraseDetectorFallbackPlan = (
     );
   }
 
+  if (detectPersonalizedRecommendationIntent(input.userMessage)) {
+    return markFallback(
+      buildDeterministicFallbackPlan({
+        userMessage: input.userMessage,
+        routeDecision: {
+          route: "PERSONALIZED_RECOMMENDATION",
+          confidence: 0.94,
+          source: "deterministic",
+          suggestedTool: "get_personalized_recommendations",
+        },
+        locale: input.locale,
+        conversationContext: input.conversationContext,
+      }),
+    );
+  }
+
   const materialIntent = detectMaterialSearchIntent(input.userMessage);
 
   if (materialIntent.detected) {
@@ -2394,6 +2411,33 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
       ? await buildPlannerConversationContext(input.conversationId)
       : undefined);
 
+  const deterministicGuidanceTopic = detectPlatformGuidanceIntent(
+    input.userMessage,
+  );
+  if (
+    deterministicGuidanceTopic === "RESERVATION_CANCELLATION" ||
+    deterministicGuidanceTopic === "MATERIAL_DELIVERY"
+  ) {
+    return {
+      route: "PLATFORM_GUIDANCE",
+      toolName: null,
+      toolInput: {},
+      platformGuidanceTopic: deterministicGuidanceTopic,
+      semanticUnderstandingRoute: "PLATFORM_GUIDANCE",
+      diagnostics: {
+        deterministicRoute: "PLATFORM_GUIDANCE",
+        deterministicConfidence: 0.94,
+        semanticPlannerUsed: false,
+        semanticRoute: null,
+        validatedRoute: "PLATFORM_GUIDANCE",
+        normalizedFilters: null,
+        toolName: null,
+        plannerConfidence: null,
+        resolvedEntityTitle: null,
+      },
+    };
+  }
+
   const numericBudgetContinuation = conversationContext
     ? resolveProjectsWithinBudgetNumericContinuation(
         input.userMessage,
@@ -2617,6 +2661,20 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
         confidence: 0.93,
         source: "deterministic",
         suggestedTool: "get_learning_project_details",
+      },
+      locale: input.locale,
+      conversationContext,
+    });
+  }
+
+  if (detectPersonalizedRecommendationIntent(input.userMessage)) {
+    return buildDeterministicFallbackPlan({
+      userMessage: input.userMessage,
+      routeDecision: {
+        route: "PERSONALIZED_RECOMMENDATION",
+        confidence: 0.94,
+        source: "deterministic",
+        suggestedTool: "get_personalized_recommendations",
       },
       locale: input.locale,
       conversationContext,

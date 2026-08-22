@@ -9,6 +9,7 @@ import {
   detectMaterialDetailsIntent,
   detectMaterialSearchIntent,
   detectOwnedMaterialsProjectIntent,
+  detectPersonalizedRecommendationIntent,
   detectPlatformGuidanceIntent,
   detectProjectComponentsIntent,
   detectProjectBudgetEstimationIntent,
@@ -275,6 +276,15 @@ const matchSemanticPlatformRoute = (text: string): AiAgentRouteDecision | null =
     };
   }
 
+  if (detectPersonalizedRecommendationIntent(text)) {
+    return {
+      route: 'PERSONALIZED_RECOMMENDATION',
+      confidence: 0.94,
+      source: 'deterministic',
+      suggestedTool: 'get_personalized_recommendations',
+    };
+  }
+
   if (detectProjectSearchIntent(text)) {
     return {
       route: 'PROJECT_SEARCH',
@@ -376,6 +386,10 @@ const matchSemanticPlatformRoute = (text: string): AiAgentRouteDecision | null =
 };
 
 const matchPlatformRoute = (text: string): AiAgentRouteDecision | null => {
+  if (detectPlatformGuidanceIntent(text)) {
+    return null;
+  }
+
   if (detectProjectsWithinBudgetIntent(text)) {
     return {
       route: 'PROJECTS_WITHIN_BUDGET',
@@ -430,6 +444,15 @@ const matchPlatformRoute = (text: string): AiAgentRouteDecision | null => {
     };
   }
 
+  if (detectPersonalizedRecommendationIntent(text)) {
+    return {
+      route: 'PERSONALIZED_RECOMMENDATION',
+      confidence: 0.94,
+      source: 'deterministic',
+      suggestedTool: 'get_personalized_recommendations',
+    };
+  }
+
   if (detectProjectSearchIntent(text)) {
     return {
       route: 'PROJECT_SEARCH',
@@ -463,7 +486,8 @@ const matchPlatformRoute = (text: string): AiAgentRouteDecision | null => {
       }
       if (
         candidate.route === 'PERSONALIZED_RECOMMENDATION' &&
-        detectProjectSearchIntent(text)
+        detectProjectSearchIntent(text) &&
+        !detectPersonalizedRecommendationIntent(text)
       ) {
         continue;
       }

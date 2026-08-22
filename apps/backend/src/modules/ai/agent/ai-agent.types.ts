@@ -13,6 +13,7 @@ export type SemanticRoute = (typeof SEMANTIC_ROUTES)[number];
 
 export type PlatformGuidanceTopic =
   | 'MATERIAL_RESERVATION'
+  | 'RESERVATION_CANCELLATION'
   | 'SAVE_PROJECT'
   | 'MATERIAL_DELIVERY'
   | 'RESERVATION_AFTER_SUPPLIER'

@@ -723,7 +723,7 @@ describe('semantic v2 contract', () => {
     for (const topic of PLATFORM_GUIDANCE_TOPICS) {
       assert.ok(topic.length > 0);
     }
-    assert.equal(PLATFORM_GUIDANCE_TOPICS.length, 5);
+    assert.equal(PLATFORM_GUIDANCE_TOPICS.length, 6);
   });
 });
 
@@ -1338,6 +1338,27 @@ describe('AI-SR-01 semantic planner contract and reconciliation', () => {
     }
   });
 
+  test('generic semantic availability query does not filter out all materials', async () => {
+    setSemanticUnderstandingOverrideForTests(async () =>
+      buildSystemDataUnderstanding('MATERIAL_SEARCH', {
+        name: 'search_available_materials',
+        arguments: { query: 'متاحة', limit: 10 },
+      }),
+    );
+    try {
+      const plan = await resolveAgentExecutionPlan({
+        userMessage: 'ورجيني مواد متاحة',
+        locale: 'ar',
+      });
+      assert.equal(plan.route, 'MATERIAL_SEARCH');
+      assert.equal(plan.toolName, 'search_available_materials');
+      assert.equal(plan.toolInput.query, undefined);
+      assert.equal(plan.toolInput.limit, 10);
+    } finally {
+      setSemanticUnderstandingOverrideForTests(null);
+    }
+  });
+
   test('supplier publish guidance routes to PLATFORM_GUIDANCE without tools', async () => {
     setSemanticUnderstandingOverrideForTests(async () =>
       buildPlatformGuidanceUnderstanding('GENERAL_PLATFORM'),
@@ -1440,7 +1461,10 @@ describe('AI-SR-01 max-price material search regressions', () => {
 
   test('price fragment queries are treated as search noise', () => {
     assert.equal(isMaterialSearchNoiseQuery('ية وسعرها'), true);
+    assert.equal(isMaterialSearchNoiseQuery('متاحة'), true);
+    assert.equal(isMaterialSearchNoiseQuery('مواد متاحة حالياً'), true);
     assert.equal(isMaterialSearchNoiseQuery('arduino'), false);
+    assert.equal(isMaterialSearchNoiseQuery('مواتير متاحة'), false);
   });
 });
 

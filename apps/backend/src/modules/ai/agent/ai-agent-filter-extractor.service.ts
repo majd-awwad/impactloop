@@ -447,6 +447,39 @@ const PRICE_FILTER_TERMS = [
   "price",
 ];
 
+const GENERIC_MATERIAL_QUERY_TOKENS = new Set(
+  [
+    ...SEARCH_VERBS,
+    ...AVAILABILITY_TERMS,
+    "material",
+    "materials",
+    "item",
+    "items",
+    "مادة",
+    "ماده",
+    "مواد",
+    "قطعة",
+    "قطع",
+    "حاليا",
+    "حاليًا",
+    "currently",
+    "now",
+  ].flatMap((term) =>
+    normalizeArabicVariants(normalize(term)).toLowerCase().split(" "),
+  ),
+);
+
+const stripGenericMaterialQueryTokens = (query: string): string =>
+  normalizeArabicVariants(normalize(query))
+    .split(" ")
+    .filter(
+      (token) =>
+        token &&
+        !GENERIC_MATERIAL_QUERY_TOKENS.has(token),
+    )
+    .join(" ")
+    .trim();
+
 export const isMaterialSearchNoiseQuery = (
   query: string | undefined,
 ): boolean => {
@@ -464,6 +497,14 @@ export const isMaterialSearchNoiseQuery = (
     return true;
   }
 
+  const meaningfulQuery = stripGenericMaterialQueryTokens(normalized);
+  if (!meaningfulQuery) {
+    return true;
+  }
+  if (ITEM_QUERY_ALIASES[meaningfulQuery.toLowerCase()]) {
+    return false;
+  }
+
   if (/(وسعرها|سعرها|شيكل|اقل|أقل)/i.test(normalized)) {
     return true;
   }
@@ -472,7 +513,7 @@ export const isMaterialSearchNoiseQuery = (
     return true;
   }
 
-  return isLowQualityMaterialQuery(query);
+  return isLowQualityMaterialQuery(meaningfulQuery);
 };
 
 export const normalizeMaterialCategoryText = (
@@ -604,19 +645,24 @@ export const normalizeMaterialItemQuery = (
     return undefined;
   }
 
-  const alias = ITEM_QUERY_ALIASES[trimmed.toLowerCase()];
+  const meaningfulQuery = stripGenericMaterialQueryTokens(trimmed);
+  if (!meaningfulQuery) {
+    return undefined;
+  }
+
+  const alias = ITEM_QUERY_ALIASES[meaningfulQuery.toLowerCase()];
   if (alias) {
     return alias;
   }
 
-  return isMaterialSearchNoiseQuery(trimmed) ? undefined : trimmed;
+  return isMaterialSearchNoiseQuery(meaningfulQuery) ? undefined : trimmed;
 };
 
 export const detectSavedProjectsIntent = (userMessage: string): boolean => {
   const normalized = normalize(userMessage);
   return (
     /\b(saved|bookmarked)\b.*\b(project|projects)\b/i.test(userMessage) ||
-    /(المشاريع|مشروع).*(حفظت|محفوظ|حفظتها|حفظته)/i.test(normalized) ||
+    /(المشاريع|مشروع).*(حفظت|محفوظ|حفظتها|حفظته|حافظها|حافظه|حافظهم|حافظهن)/i.test(normalized) ||
     /(شو|ما).*(المشاريع|مشروع).*(حفظ)/i.test(normalized) ||
     /(اخر|آخر|last).*(مشروع|project).*(حفظت|محفوظ|saved)/i.test(normalized)
   );
@@ -640,7 +686,7 @@ export const detectRecentProjectDetailsIntent = (
 
   return /((?:اخر|آخر|last|recent|previous|السابق).*(?:مشروع|project))|((?:مشروع|project).*(?:اخر|آخر|last|recent|previous|السابق))|(?:اشرح|احكيلي|حكيلي|tell|explain).*(?:عن|about).*(?:اخر|آخر|last|recent|السابق).*(?:مشروع|project)/i.test(
     normalized,
-  );
+  ) || /(?:اشرح|احكيلي|حكيلي|خبرني|tell|explain).*(?:عن|about).*(?:المشروع|project)\s*(?:الاول|الأول|الثاني|الثالث|first|second|third|1|2|3)/i.test(normalized);
 };
 
 /** Current/in-progress project wording — may resolve via active builds. */
@@ -698,6 +744,7 @@ export const detectEducationalLearningIntent = (
 };
 export type PlatformGuidanceTopic =
   | "MATERIAL_RESERVATION"
+  | "RESERVATION_CANCELLATION"
   | "SAVE_PROJECT"
   | "MATERIAL_DELIVERY"
   | "RESERVATION_AFTER_SUPPLIER"
@@ -707,7 +754,7 @@ const hasPlatformGuidanceHowToCue = (
   text: string,
   normalized: string,
 ): boolean =>
-  /(كيف\s+(?:أ|ا)?(?:قدر|قدر|بقدر)|how\s+(?:can|do)\s+i|how\s+to|كيف\s+(?:أ|ا)?(?:حفظ|احفظ|احجز|اطلب|أطلب|أنشر|انشر)|what\s+(?:happens|is\s+the\s+process)|شو\s+بيصير|شو\s+بصير|ما\s+الخطوات|what\s+are\s+the\s+steps)/i.test(
+  /(كيف\s+(?:أ|ا)?(?:قدر|قدر|بقدر)|كيف\s+بعرف|how\s+(?:can|do)\s+i|how\s+to|كيف\s+(?:أ|ا)?(?:حفظ|احفظ|احجز|اطلب|أطلب|أنشر|انشر)|what\s+(?:happens|is\s+the\s+process)|شو\s+بيصير|شو\s+بصير|ما\s+الخطوات|what\s+are\s+the\s+steps)/i.test(
     normalized,
   ) ||
   /(كيف\s+(?:أ|ا)?(?:قدر|قدر)|how\s+(?:can|do)\s+i)/i.test(text) ||
@@ -729,7 +776,7 @@ export const detectLearnerReservationStatusQuery = (
   }
 
   const asksOwnData =
-    /(هل\s+عندي|do\s+i\s+have|show\s+my|list\s+my|my\s+reservations?)/i.test(
+    /(هل\s+عندي|شو\s+حجوزاتي|(?:اعرض|اعرضلي|وريني|ورجيني)\s+(?:كل\s+)?حجوزاتي|حجوزاتي\s+(?:المعلقة|الحالية|كلها)|do\s+i\s+have|show\s+my|list\s+my|my\s+reservations?)/i.test(
       normalized,
     );
   const mentionsReservations = /(حجوز|reservation)/i.test(normalized);
@@ -792,7 +839,7 @@ export const detectSupplierPublishGuidanceIntent = (
     normalized,
   );
   const publishCue =
-    /(أنشر|انشر|publish|listing|list\s+a\s+material|post\s+a\s+material)/i.test(
+    /(أنشر|انشر|ينشر|نشر|publish|listing|list\s+a\s+material|post\s+a\s+material)/i.test(
       normalized,
     );
   const howToCue = hasPlatformGuidanceHowToCue(userMessage, normalized);
@@ -945,11 +992,27 @@ const isImperativePlatformAction = (
 export const detectPlatformGuidanceIntent = (
   userMessage: string,
 ): PlatformGuidanceTopic | null => {
+  const normalized = normalizeArabicVariants(normalize(userMessage));
+
+  const asksCancellationHowTo =
+    /(حجز|حجوز|reservation|booking)/i.test(normalized) &&
+    /(الغاء|إلغاء|ألغي|الغي|cancel)/i.test(normalized) &&
+    hasPlatformGuidanceHowToCue(userMessage, normalized);
+  if (asksCancellationHowTo) {
+    return "RESERVATION_CANCELLATION";
+  }
+
+  const asksFulfillmentGuidance =
+    /(توصيل|استلام\s+من\s+المورد|delivery|pickup)/i.test(normalized) &&
+    (hasPlatformGuidanceHowToCue(userMessage, normalized) ||
+      /(شو|ما)\s+الفرق|الفرق\s+بين|هل\s+(?:المادة|ماده).*توصيل/i.test(normalized));
+  if (asksFulfillmentGuidance) {
+    return "MATERIAL_DELIVERY";
+  }
+
   if (detectEducationalLearningIntent(userMessage)) {
     return null;
   }
-
-  const normalized = normalizeArabicVariants(normalize(userMessage));
 
   if (isImperativePlatformAction(userMessage, normalized)) {
     return null;
@@ -1436,6 +1499,22 @@ export type RecommendationSubtype =
   | "NEXT_ACTIONS"
   | "MIXED";
 
+export const detectPersonalizedRecommendationIntent = (
+  userMessage: string,
+): boolean => {
+  const normalized = normalizeArabicVariants(normalize(userMessage));
+  const recommendationCue =
+    /(اقترحلي|اقترح\s+لي|اقترح|بتنصحني|انصحني|recommend|suggest|what\s+should\s+i)/i.test(
+      normalized,
+    );
+  const personalCue =
+    /(مناسب(?:ة|ه)?\s+(?:الي|إلي|لي)|اهتماماتي|ذوقي|بتنصحني|انصحني|for\s+me|my\s+interests|based\s+on\s+my|what\s+should\s+i)/i.test(
+      normalized,
+    );
+
+  return recommendationCue && personalCue;
+};
+
 export const classifyRecommendationSubtype = (
   userMessage: string,
 ): RecommendationSubtype => {
@@ -1710,14 +1789,27 @@ export const resolveProjectsWithinBudgetNumericContinuation = (
     recentMessages: Array<{ role: "USER" | "ASSISTANT"; text: string }>;
   },
 ): z.infer<typeof findProjectsWithinBudgetInputSchema> | null => {
-  if (!isProjectsWithinBudgetNumericFollowUp(userMessage)) {
-    return null;
-  }
-  if (!hasRecentProjectsWithinBudgetClarification(conversationContext)) {
+  const isNumericClarification =
+    isProjectsWithinBudgetNumericFollowUp(userMessage) &&
+    hasRecentProjectsWithinBudgetClarification(conversationContext);
+  const isRebudgetFollowUp =
+    /(?:ميزانيتي|ميزانيه|budget).{0,20}\d|\d.{0,20}(?:شيكل|nis|budget)/i.test(
+      userMessage,
+    ) &&
+    conversationContext.recentMessages.some(
+      (message) =>
+        message.role === "USER" &&
+        (extractBudgetBound(message.text) != null ||
+          /(?:مشاريع|projects|مشروع|project).{0,40}(?:بحد|بميزانية|under|within|budget|أقل|اقل)/i.test(
+            message.text,
+          )),
+    );
+
+  if (!isNumericClarification && !isRebudgetFollowUp) {
     return null;
   }
 
-  const amountMatch = userMessage.trim().match(/^(\d+(?:\.\d+)?)/);
+  const amountMatch = userMessage.match(/(\d+(?:\.\d+)?)/);
   const amount = amountMatch?.[1]
     ? sanitizeBudgetAmount(Number(amountMatch[1]))
     : undefined;
@@ -1730,6 +1822,7 @@ export const resolveProjectsWithinBudgetNumericContinuation = (
     .find(
       (message) =>
         message.role === "USER" &&
+        message.text !== userMessage &&
         !isProjectsWithinBudgetNumericFollowUp(message.text) &&
         (extractBudgetBound(message.text) != null ||
           /(?:مشاريع|projects|مشروع|project).{0,40}(?:بحد|بميزانية|under|within|budget|أقل|اقل)/i.test(
@@ -2369,6 +2462,7 @@ const extractOwnedMaterialsSegment = (userMessage: string): string | null => {
     /(?:عندي|معي|معاي)\s+(.+?)(?:،|,|\s+)(?:شو|ما|ايش|إيش)\s+(?:أقدر|اقدر|بقدر)/iu,
     /(?:عندي|معي|معاي)\s+(.+?)(?:\?|؟|$)/iu,
     /(?:شو|ما)\s+(?:بقدر|أقدر|اقدر)\s+(?:أبني|ابني)\s+باستخدام\s+(.+?)(?:\?|؟|$)/iu,
+    /(?:شو|ما|ايش|إيش)\s+(?:المشاريع|مشاريع)\s+(?:اللي\s+)?(?:بقدر|أقدر|اقدر)\s+(?:أعملها|اعملها|ابنيها|أبنيها)\s+باستخدام\s+(.+?)(?:\?|؟|$)/iu,
     /(?:مشاريع|مشروع)\s+باستخدام\s+(.+?)(?:\?|؟|$)/iu,
     /\bi\s+have\s+(.+?)(?:\.|,|\s+)(?:what\s+can\s+i\s+(?:build|make)|what\s+projects)/iu,
     /what\s+(?:projects\s+can\s+i\s+make|can\s+i\s+(?:make|build))\s+with\s+(.+?)(?:\?|$)/iu,
@@ -2400,6 +2494,10 @@ export const detectOwnedMaterialsProjectIntent = (
   const parsedMessage = stripBenignListPrefixForParsing(userMessage);
   const normalized = normalizeOwnedMaterialLabel(parsedMessage);
 
+  if (/(ميزاني|budget|شيكل|nis|₪)/i.test(normalized)) {
+    return false;
+  }
+
   if (
     OWNED_MATERIALS_NEGATIVE_OWNERSHIP_CUES.some((cue) =>
       normalized.includes(normalizeOwnedMaterialLabel(cue)),
@@ -2423,6 +2521,7 @@ export const detectOwnedMaterialsProjectIntent = (
     /(?:شو|ما)\s+(?:بقدر|أقدر|اقدر)\s+(?:أبني|ابني)\s+باستخدام/i.test(
       parsedMessage,
     ) ||
+    /(?:شو|ما|ايش|إيش)\s+(?:المشاريع|مشاريع)\s+(?:اللي\s+)?(?:بقدر|أقدر|اقدر)\s+(?:أعملها|اعملها|ابنيها|أبنيها)\s+باستخدام/i.test(parsedMessage) ||
     /(?:مشاريع|مشروع)\s+باستخدام/i.test(parsedMessage) ||
     /what\s+(?:projects\s+can\s+i\s+make|can\s+i\s+(?:make|build))\s+with/i.test(
       parsedMessage,
