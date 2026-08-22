@@ -341,7 +341,7 @@ describe('sequential steps provider', () => {
         }),
       (error: unknown) => error instanceof AppError,
     );
-    assert.equal(getAuthoringRealStepInvokerCallCountForTests(), 2);
+    assert.equal(getAuthoringRealStepInvokerCallCountForTests(), 1);
     setAuthoringRealStepInvokerForTests(null);
   });
 
@@ -1234,7 +1234,11 @@ ${JSON.stringify({
 
   test('initial prompt receives authoritative minimum before first provider call', async () => {
     process.env.AI_CHAT_PROVIDER = 'gemini';
-    const { setAuthoringRealStepInvokerForTests } = await import(
+    const {
+      buildStepPlanProviderJsonSchema,
+      computeStepPlanQualityRequirements,
+      setAuthoringRealStepInvokerForTests,
+    } = await import(
       './ai-project-authoring-real.provider.js'
     );
     const capturedPrompts: string[] = [];
@@ -1272,6 +1276,11 @@ ${JSON.stringify({
         preferredRange?: { min?: number; max?: number };
         semanticDepthTarget?: number;
         guidance?: { onePrimaryObjectivePerStep?: boolean };
+        hardCountContract?: {
+          minimumMeaningfulSteps?: number;
+          instruction?: string;
+          noPadding?: string;
+        };
       };
     };
     assert.equal(payload.stepPlanQualityRequirements?.minimumMeaningfulSteps, 8);
@@ -1281,11 +1290,40 @@ ${JSON.stringify({
       payload.stepPlanQualityRequirements?.guidance?.onePrimaryObjectivePerStep,
       true,
     );
+    assert.equal(
+      payload.stepPlanQualityRequirements?.hardCountContract?.minimumMeaningfulSteps,
+      8,
+    );
+    assert.match(
+      payload.stepPlanQualityRequirements?.hardCountContract?.instruction ?? '',
+      /do not return fewer than 8/i,
+    );
+    assert.match(
+      payload.stepPlanQualityRequirements?.hardCountContract?.noPadding ?? '',
+      /duplicating|rewording/i,
+    );
+    const requirements = computeStepPlanQualityRequirements({
+      locale: 'ar',
+      ideaText: 'بدي أعمل مصباح ليلي ذكي باستخدام Arduino Uno وLDR وLED',
+      projectTitle: 'مصباح ليلي',
+      projectShortDescription: 'مشروع مبتدئ',
+      projectDescription: 'مصباح ليلي بدون Relay',
+      difficulty: 'BEGINNER',
+      estimatedMinutes: 300,
+      components: ldrComponents,
+      recentAnswers: [],
+      requestedStepCount: null,
+    });
+    const transportSchema = buildStepPlanProviderJsonSchema(requirements) as {
+      properties?: { steps?: { minItems?: number; maxItems?: number } };
+    };
+    assert.equal(transportSchema.properties?.steps?.minItems, 8);
+    assert.equal(transportSchema.properties?.steps?.maxItems, requirements.safeMaximum);
     assert.doesNotMatch(capturedPrompts[0]!, /target exactly 8/i);
     setAuthoringRealStepInvokerForTests(null);
   });
 
-  test('four-step hardware response triggers repair requesting minimum eight', async () => {
+  test('seven-step hardware response triggers repair requesting minimum eight', async () => {
     process.env.AI_CHAT_PROVIDER = 'gemini';
     const { setAuthoringRealStepInvokerForTests } = await import(
       './ai-project-authoring-real.provider.js'
@@ -1298,7 +1336,7 @@ ${JSON.stringify({
         return {
           text: JSON.stringify({
             kind: 'STEP_PLAN',
-            steps: detailedProviderSteps('Four only').slice(0, 4),
+            steps: detailedProviderSteps('Seven only').slice(0, 7),
             explanation: 'Too few steps.',
           }),
           model: 'test-gemini',
@@ -1337,14 +1375,22 @@ ${JSON.stringify({
     assert.equal(repairPrompts.length, 1);
     const repairPayload = JSON.parse(repairPrompts[0]!) as {
       repairIssue?: string | null;
+      previousInvalidOutput?: string | null;
+      repairInstructions?: { preserveValidContent?: string } | null;
     };
     assert.match(repairPayload.repairIssue ?? '', /at least 8 meaningful steps/i);
     assert.doesNotMatch(repairPayload.repairIssue ?? '', /at least 6 meaningful steps/i);
-    assert.match(repairPayload.repairIssue ?? '', /contained 4 meaningful steps/i);
+    assert.match(repairPayload.repairIssue ?? '', /previous response contained 7/i);
+    assert.match(repairPayload.repairIssue ?? '', /preserve every valid/i);
+    assert.match(repairPayload.previousInvalidOutput ?? '', /Seven only step 1/i);
+    assert.match(
+      repairPayload.repairInstructions?.preserveValidContent ?? '',
+      /preserve valid, distinct steps/i,
+    );
     setAuthoringRealStepInvokerForTests(null);
   });
 
-  test('repaired six-step hardware plan fails with required eight and received six', async () => {
+  test('repair that still returns seven is bounded and preserves the exact count error', async () => {
     process.env.AI_CHAT_PROVIDER = 'gemini';
     const { setAuthoringRealStepInvokerForTests } = await import(
       './ai-project-authoring-real.provider.js'
@@ -1356,7 +1402,7 @@ ${JSON.stringify({
         return {
           text: JSON.stringify({
             kind: 'STEP_PLAN',
-            steps: detailedProviderSteps('Initial four').slice(0, 4),
+            steps: detailedProviderSteps('Initial seven').slice(0, 7),
             explanation: 'Too few.',
           }),
           model: 'test-gemini',
@@ -1367,7 +1413,7 @@ ${JSON.stringify({
       return {
         text: JSON.stringify({
           kind: 'STEP_PLAN',
-          steps: detailedProviderSteps('Still six').slice(0, 6),
+          steps: detailedProviderSteps('Still seven').slice(0, 7),
           explanation: 'Still too few.',
         }),
         model: 'test-gemini',
@@ -1398,7 +1444,7 @@ ${JSON.stringify({
           requiredMinimum?: number;
           receivedSteps?: number;
         };
-        return details.requiredMinimum === 8 && details.receivedSteps === 6;
+        return details.requiredMinimum === 8 && details.receivedSteps === 7;
       },
     );
     assert.equal(calls, 2);
@@ -1410,8 +1456,11 @@ ${JSON.stringify({
     const { setAuthoringRealStepInvokerForTests } = await import(
       './ai-project-authoring-real.provider.js'
     );
-    setAuthoringRealStepInvokerForTests(async () => ({
-      text: JSON.stringify({
+    let calls = 0;
+    setAuthoringRealStepInvokerForTests(async () => {
+      calls += 1;
+      return {
+        text: JSON.stringify({
         kind: 'STEP_PLAN',
         steps: Array.from({ length: 8 }, (_, index) => ({
           order: index + 1,
@@ -1422,11 +1471,12 @@ ${JSON.stringify({
           componentRefs: ['comp-arduino'],
         })),
         explanation: 'Duplicate plan.',
-      }),
-      model: 'test-gemini',
-      inputTokens: 1,
-      outputTokens: 1,
-    }));
+        }),
+        model: 'test-gemini',
+        inputTokens: 1,
+        outputTokens: 1,
+      };
+    });
 
     await assert.rejects(
       () =>
@@ -1445,6 +1495,7 @@ ${JSON.stringify({
       (error: unknown) =>
         error instanceof AppError && error.code === 'AI_AUTHORING_STEP_QUALITY_INVALID',
     );
+    assert.equal(calls, 2);
     setAuthoringRealStepInvokerForTests(null);
   });
 

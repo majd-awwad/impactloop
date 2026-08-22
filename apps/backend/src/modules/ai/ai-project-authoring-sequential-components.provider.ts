@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { resolveAiChatProvider } from '../../config/env.js';
+import { logger } from '../../observability/logger.js';
 import { AppError } from '../../utils/app-error.js';
 import { getAiChatProvider } from './providers/ai-chat-provider.factory.js';
 
@@ -86,21 +87,33 @@ const ARABIC_SCRIPT_PATTERN = /[\u0600-\u06FF]/;
 
 /**
  * Primary sensing devices that must never be injected into a project whose brief
- * does not mention them (e.g. an Ultrasonic or PIR sensor slipping into an LDR
- * night-light). Each is only rejected when the project corpus lacks the concept.
+ * does not support their purpose (e.g. an Ultrasonic or PIR sensor slipping into
+ * an LDR night-light). A project may support a sensor through its goal rather
+ * than its exact catalog name, so every group has both direct and semantic
+ * project-context signals.
  */
-const FOREIGN_SENSOR_GROUPS: Array<{ label: string; pattern: RegExp }> = [
+const FOREIGN_SENSOR_GROUPS: Array<{
+  label: string;
+  pattern: RegExp;
+  supportedByProject: RegExp;
+}> = [
   {
     label: 'ultrasonic sensor',
     pattern: /\b(ultrasonic|hc[-\s]?sr04)\b|بالموجات\s*فوق\s*الصوتية|الموجات\s*فوق\s*الصوتية|مستشعر\s*الموجات/i,
+    supportedByProject:
+      /\b(ultrasonic|hc[-\s]?sr04|distance|proximity|obstacle|parking|tank\s*level|range)\b|مساف[هة]|قرب|عوائق|موقف|مستوى\s*الخزان|خزان/i,
   },
   {
     label: 'PIR / motion sensor',
     pattern: /\b(pir|motion\s*sensor)\b|حسّ?اس\s*حركة|كشف\s*الحركة/i,
+    supportedByProject:
+      /\b(pir|motion\s*sensor|motion|presence|occupancy|security|intrusion|alarm)\b|حسّ?اس\s*حركة|كشف\s*الحركة|وجود|إشغال|اشغال|أمن|امن|تسلل|إنذار|انذار/i,
   },
   {
     label: 'soil-moisture sensor',
     pattern: /\bsoil\s*moisture\b|رطوبة\s*التربة/i,
+    supportedByProject:
+      /\b(soil\s*moisture|plant|garden|greenhouse|irrigation|agri(?:culture)?|watering|grow(?:ing)?|soil|humidity)\b|رطوبة\s*التربة|نبات(?:ات)?|حديقة|دفيئة|ري|سقي|زراع(?:ة|ي)|تربة|رطوبة/i,
   },
 ];
 const VAGUE_COMPONENT_NAME_PATTERNS = [
@@ -169,6 +182,8 @@ const constraintText = (input: ComponentListContext) =>
     input.projectTitle,
     input.projectShortDescription,
     input.projectDescription ?? '',
+    input.difficulty ?? '',
+    input.durationMinutes?.toString() ?? '',
     ...input.recentAnswers,
     JSON.stringify(input.clarification),
   ].join(' ');
@@ -461,8 +476,8 @@ export const assertComponentListQuality = (
   }
 
   for (const foreign of FOREIGN_SENSOR_GROUPS) {
-    const briefMentions = foreign.pattern.test(corpus);
-    if (briefMentions) {
+    const projectSupportsSensor = foreign.supportedByProject.test(corpus);
+    if (projectSupportsSensor) {
       continue;
     }
     const offending = components.find((component) =>
@@ -470,7 +485,7 @@ export const assertComponentListQuality = (
     );
     if (offending) {
       issues.push(
-        `Component "${offending.componentName}" introduces an unrelated ${foreign.label} not present in the project brief.`,
+        `Component "${offending.componentName}" is a ${foreign.label}, but the project context does not support that sensor's purpose.`,
       );
     }
   }
@@ -720,6 +735,60 @@ export const generateAlternativeSequentialComponentList = async (
   return generated;
 };
 
+const validationIssuesFromError = (error: unknown): string[] => {
+  if (!(error instanceof AppError) || !error.details || typeof error.details !== 'object') {
+    return [];
+  }
+  const issues = (error.details as { issues?: unknown }).issues;
+  return Array.isArray(issues)
+    ? issues.filter((issue): issue is string => typeof issue === 'string')
+    : [];
+};
+
+const validationTargetFromIssues = (issues: string[]) => {
+  const text = issues.join(' ').toLowerCase();
+  return FOREIGN_SENSOR_GROUPS.find((group) => text.includes(group.label))?.label ?? 'component-list';
+};
+
+const buildComponentRepairIssue = (error: unknown) => {
+  const issues = validationIssuesFromError(error);
+  const primaryIssue = issues.slice(0, 4).map((issue) => issue.slice(0, 360)).join(' ');
+  const reason = primaryIssue ||
+    (error instanceof AppError ? error.message : 'Component list was invalid.');
+
+  return [
+    'The previous component list failed validation.',
+    `Failed rule: ${reason}`,
+    'Return a complete replacement COMPONENT_LIST, not a partial patch.',
+    'Use the complete canonical project context to decide whether each sensor serves the project goal; remove or replace a sensor whose purpose is unsupported.',
+    'Keep explicit exclusions, required fields, and project-completeness constraints intact.',
+  ].join(' ');
+};
+
+const logComponentRepairAttempt = (
+  error: unknown,
+  repairAttempt: boolean,
+  repairSucceeded: boolean,
+) => {
+  if ((process.env.NODE_ENV ?? 'development') !== 'development') {
+    return;
+  }
+  const issues = validationIssuesFromError(error);
+  logger.warn(
+    {
+      operation: 'component_generation_repair',
+      stage: 'COMPONENTS',
+      errorCode: error instanceof AppError ? error.code : 'UNKNOWN',
+      field: 'components[].componentName',
+      reason: issues.length > 0 ? 'component_quality_validation' : 'provider_response_validation',
+      target: validationTargetFromIssues(issues),
+      repairAttempt,
+      repairSucceeded,
+    },
+    'AI authoring component generation repair attempt',
+  );
+};
+
 export const generateAlternativeSequentialComponentListWithRepair = async (
   input: ComponentListContext & { previousComponents: SequentialComponent[] },
 ): Promise<{ components: SequentialComponent[]; explanation: string }> => {
@@ -736,12 +805,20 @@ export const generateAlternativeSequentialComponentListWithRepair = async (
     if (input.repairAttempt || !repairable) {
       throw error;
     }
-    return generateAlternativeSequentialComponentList({
-      ...input,
-      repairAttempt: true,
-      repairIssue:
-        error instanceof AppError ? error.message : 'Component list was identical.',
-    });
+    const repairIssue = buildComponentRepairIssue(error);
+    logComponentRepairAttempt(error, true, false);
+    try {
+      const repaired = await generateAlternativeSequentialComponentList({
+        ...input,
+        repairAttempt: true,
+        repairIssue,
+      });
+      logComponentRepairAttempt(error, true, true);
+      return repaired;
+    } catch (repairError) {
+      logComponentRepairAttempt(repairError, true, false);
+      throw repairError;
+    }
   }
 };
 
@@ -760,12 +837,20 @@ export const generateSequentialComponentListWithRepair = async (
     if (input.repairAttempt || !repairable) {
       throw error;
     }
-    return generateSequentialComponentList({
-      ...input,
-      repairAttempt: true,
-      repairIssue:
-        error instanceof AppError ? error.message : 'Component list was invalid.',
-    });
+    const repairIssue = buildComponentRepairIssue(error);
+    logComponentRepairAttempt(error, true, false);
+    try {
+      const repaired = await generateSequentialComponentList({
+        ...input,
+        repairAttempt: true,
+        repairIssue,
+      });
+      logComponentRepairAttempt(error, true, true);
+      return repaired;
+    } catch (repairError) {
+      logComponentRepairAttempt(repairError, true, false);
+      throw repairError;
+    }
   }
 };
 
@@ -1144,7 +1229,7 @@ export const generateComponentStageReply = async (
     if (input.currentComponents.length > 0) {
       return buildListReply(input, input.currentComponents, 'COMPONENT_LIST');
     }
-    const generated = await generateSequentialComponentList(input);
+    const generated = await generateSequentialComponentListWithRepair(input);
     return buildListReply(input, generated.components, 'COMPONENT_LIST');
   }
 

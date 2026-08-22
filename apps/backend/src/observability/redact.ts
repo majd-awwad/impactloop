@@ -200,6 +200,12 @@ const ALLOWED_LOG_KEYS = new Set([
   'providerSchemaIssues',
   'expected',
   'received',
+  'repairAttempt',
+  'repairSucceeded',
+  'requiredStepCount',
+  'returnedStepCount',
+  'qualityIssueCode',
+  'repairedStepCount',
 ]);
 
 const isSensitiveKey = (key: string): boolean => SENSITIVE_KEY_PATTERN.test(key);

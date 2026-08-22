@@ -491,6 +491,10 @@ const receivedCategoryFromIssue = (
 
   let valueAtPath = response;
   for (const pathSegment of issue.path) {
+    if (typeof pathSegment !== 'string' && typeof pathSegment !== 'number') {
+      valueAtPath = undefined;
+      break;
+    }
     if (
       valueAtPath == null ||
       (typeof valueAtPath !== 'object' && !Array.isArray(valueAtPath))

@@ -28,6 +28,7 @@ import {
   getAuthoringProviderSchemaIssues,
   parseAuthoringProviderPayload,
   recordAuthoringValidationDiagnostic,
+  type AuthoringProviderSchemaIssue,
 } from './ai-project-authoring-clarification.shared.js';
 
 type OpenAiAuthoringClient = {
@@ -605,7 +606,9 @@ const buildAuthoringOpenAiResponseFormat = (
         json_schema: {
           name: structuredOutput.name,
           strict: true,
-          schema: toOpenAiCompatibleStructuredSchema(structuredOutput.schema),
+          schema: toOpenAiCompatibleStructuredSchema(
+            structuredOutput.schema,
+          ) as Record<string, unknown>,
         },
       },
     };
@@ -773,6 +776,7 @@ const invokeRealStepProvider = async (
   provider: RealProviderName,
   systemInstruction: string,
   userPrompt: string,
+  structuredSchema: unknown,
 ) => {
   if (stepInvokerOverride) {
     stepInvokerCallCountForTests += 1;
@@ -789,6 +793,11 @@ const invokeRealStepProvider = async (
 
   return invokeRealProvider(provider, systemInstruction, userPrompt, {
     maxOutputTokens: STEP_PLAN_MAX_OUTPUT_TOKENS,
+    structuredOutput: {
+      name: 'impactloop_authoring_step_plan',
+      schema: structuredSchema,
+    },
+    diagnosticStage: 'STEPS_OVERVIEW',
   });
 };
 
@@ -989,22 +998,39 @@ const componentListProviderJsonSchema = z.toJSONSchema(
   componentListProviderResponseSchema,
 );
 
-const stepPlanProviderResponseSchema = z.object({
+const providerStepSchema = z.object({
+  order: z.number().int().positive(),
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().min(32).max(2000),
+  safetyNote: z.string().trim().max(500).nullable().optional(),
+  componentRefs: z.array(z.string().trim().min(1).max(80)).max(20).optional(),
+});
+
+const buildStepPlanProviderResponseSchema = (
+  minimumSteps: number,
+  maximumSteps: number,
+) => z.object({
   kind: z.literal('STEP_PLAN'),
   steps: z
-    .array(
-      z.object({
-        order: z.number().int().positive(),
-        title: z.string().trim().min(1).max(200),
-        description: z.string().trim().min(32).max(2000),
-        safetyNote: z.string().trim().max(500).nullable().optional(),
-        componentRefs: z.array(z.string().trim().min(1).max(80)).max(20).optional(),
-      }),
-    )
-    .min(2)
-    .max(30),
+    .array(providerStepSchema)
+    .min(minimumSteps)
+    .max(maximumSteps),
   explanation: z.string().trim().min(8).max(4000),
 });
+
+// The base parser keeps semantic failures (including the exact received count)
+// available to the repair layer. The provider transport schema below is derived
+// from this same source with the project-specific minimum.
+const stepPlanProviderResponseSchema = buildStepPlanProviderResponseSchema(2, 30);
+
+export const buildStepPlanProviderJsonSchema = (
+  requirements: StepPlanQualityRequirements,
+) => z.toJSONSchema(
+  buildStepPlanProviderResponseSchema(
+    requirements.minimumMeaningfulSteps,
+    requirements.safeMaximum,
+  ),
+);
 
 const SHALLOW_STEP_DESCRIPTION_PATTERNS = [
   /^connect the (circuit|components)\.?$/i,
@@ -1632,8 +1658,8 @@ export const buildStepQualityRepairIssue = (input: {
     ...overloadedFromSteps,
   ].join(' ');
   return [
-    `Previous step plan contained ${input.receivedSteps} meaningful steps.`,
-    `This project requires at least ${input.requirements.minimumMeaningfulSteps} meaningful steps.`,
+    `Project requires at least ${input.requirements.minimumMeaningfulSteps} meaningful steps; previous response contained ${input.receivedSteps}.`,
+    'Preserve every valid, distinct, actionable step from the previous response where possible, and add or revise only the steps needed to satisfy validation.',
     `Expected meaningful grouped phase count is about ${input.requirements.expectedPhaseCount}; this is guidance only and not a hard minimum.`,
     `Preferred range is ${range}; it is guidance only and not a hard maximum.`,
     `Safe maximum is ${input.requirements.safeMaximum}.`,
@@ -1732,6 +1758,7 @@ export const PROJECT_AUTHORING_COMPONENT_LIST_SYSTEM_POLICY = [
   'Do not duplicate components under slightly different names.',
   'Respect explicit learner constraints and exclusions in the context.',
   'Do not include components the learner explicitly excluded.',
+  'When repairAttempt is true, repairIssue identifies the failed rule: return a full corrected list, preserve the canonical project intent, and remove or replace any component whose purpose the supplied project context does not support.',
   'Match content language to the learner idea and messages, not UI locale alone.',
   'For Arabic projects, write Arabic names/notes while keeping natural technical terms like Arduino, LDR, LED, Breadboard.',
   'Do not claim ImpactLoop inventory availability.',
@@ -2223,6 +2250,8 @@ export const buildAuthoringStepPlanPrompt = (input: RealAuthoringStepPlanInput) 
         previousInvalidOutput: input.previousInvalidOutput ?? null,
         doNotRepeat:
           'Do not repeat unknown componentRefs, invalid JSON structure, field names, language, shallow steps, or an insufficient step count. Return one complete schema-valid STEP_PLAN object using only saved catalog ids or exact catalog names/aliases.',
+        preserveValidContent:
+          'Preserve valid, distinct steps from the previous proposal where possible, then add or revise only what is needed to satisfy the reported quality rules. Do not alter accepted project fields.',
         language:
           input.locale === 'ar'
             ? 'Write Arabic titles and descriptions. Keep natural English technical terms where appropriate.'
@@ -2294,6 +2323,12 @@ export const buildAuthoringStepPlanPrompt = (input: RealAuthoringStepPlanInput) 
       },
       detailContract:
         'Each step must include concrete action, project-specific component/object, implementation guidance, purpose or expected result, and verification guidance.',
+      hardCountContract: {
+        minimumMeaningfulSteps: qualityRequirements.minimumMeaningfulSteps,
+        instruction: `Return at least ${qualityRequirements.minimumMeaningfulSteps} distinct, actionable, meaningful steps. Do not return fewer than ${qualityRequirements.minimumMeaningfulSteps}.`,
+        noPadding:
+          'Do not satisfy the count by duplicating, lightly rewording, or splitting meaningless actions.',
+      },
     },
     clarification: input.clarification,
     suggestAnother: input.suggestAnother ?? false,
@@ -2548,7 +2583,7 @@ const logComponentProviderValidationFailure = (input: {
   provider: RealProviderName;
   model: string | null;
   failure: 'JSON_PARSE' | 'SCHEMA_VALIDATION' | 'QUALITY_VALIDATION';
-  issues?: Array<Record<string, unknown>>;
+  issues?: AuthoringProviderSchemaIssue[];
 }) => {
   if ((process.env.NODE_ENV ?? 'development') !== 'development') {
     return;
@@ -2561,7 +2596,12 @@ const logComponentProviderValidationFailure = (input: {
       provider: input.provider,
       model: input.model,
       responseFailure: input.failure,
-      providerSchemaIssues: input.issues ?? [],
+      providerSchemaIssues: (input.issues ?? []).map((issue) => ({
+        field: issue.path,
+        expected: issue.expected,
+        received: issue.received,
+        code: issue.code,
+      })),
     },
     'AI authoring component response validation failed',
   );
@@ -2668,7 +2708,23 @@ export const generateRealAuthoringStepPlan = async (
   }>
 > => {
   const startedAt = Date.now();
-  const userPrompt = buildAuthoringStepPlanPrompt(input);
+  const qualityRequirements =
+    input.qualityRequirements ??
+    computeStepPlanQualityRequirements({
+      locale: input.locale,
+      ideaText: input.ideaText,
+      projectTitle: input.projectTitle,
+      projectShortDescription: input.projectShortDescription,
+      projectDescription: input.projectDescription,
+      difficulty: input.difficulty,
+      estimatedMinutes: input.durationMinutes,
+      components: input.components,
+      recentAnswers: input.recentMessages,
+      requestedStepCount: input.requestedStepCount ?? null,
+    });
+  const requestInput = { ...input, qualityRequirements };
+  const userPrompt = buildAuthoringStepPlanPrompt(requestInput);
+  const structuredSchema = buildStepPlanProviderJsonSchema(qualityRequirements);
   let rawText: string | null = null;
 
   try {
@@ -2676,6 +2732,7 @@ export const generateRealAuthoringStepPlan = async (
       provider,
       PROJECT_AUTHORING_STEP_PLAN_SYSTEM_POLICY,
       userPrompt,
+      structuredSchema,
     );
     rawText = response.text;
     let rawJson: unknown;
@@ -2730,7 +2787,7 @@ export const generateRealAuthoringStepPlan = async (
     }
 
     const steps = mapProviderSteps(parsed.steps, input.components);
-    assertParsedStepPlanQuality(input, steps);
+    assertParsedStepPlanQuality(requestInput, steps);
 
     return {
       provider,
@@ -3011,7 +3068,15 @@ export const generateRealAuthoringScalarProposal = async (
 ): Promise<RealAuthoringStructuredProviderResult<RealAuthoringScalarResult>> => {
   const startedAt = Date.now();
   const userPrompt = buildAuthoringScalarPrompt(input);
-  const providerContract = scalarProviderContractForStage(input.stage);
+  const scalarStage = scalarStageSchema.safeParse(input.stage);
+  if (!scalarStage.success) {
+    throw new AppError(
+      'Scalar proposal stage is not supported.',
+      400,
+      'AI_PROVIDER_REQUEST_INVALID',
+    );
+  }
+  const providerContract = scalarProviderContractForStage(scalarStage.data);
 
   try {
     const response = await invokeRealScalarProvider(
@@ -3023,7 +3088,7 @@ export const generateRealAuthoringScalarProposal = async (
           name: 'impactloop_authoring_scalar_proposal',
           schema: providerContract.jsonSchema,
         },
-        diagnosticStage: input.stage,
+        diagnosticStage: scalarStage.data,
       },
     );
     let parsed: z.infer<typeof scalarProviderResponseSchema>;
@@ -3038,7 +3103,7 @@ export const generateRealAuthoringScalarProposal = async (
         logScalarProviderSchemaValidationFailure(
           error,
           provider,
-          input.stage,
+          scalarStage.data,
           rawProviderResponse,
         );
         throw new AppError(
@@ -3068,7 +3133,7 @@ export const generateRealAuthoringScalarProposal = async (
       };
     }
 
-    if (parsed.stage !== input.stage) {
+    if (parsed.stage !== scalarStage.data) {
       throw new AppError(
         'Scalar provider returned the wrong stage.',
         502,

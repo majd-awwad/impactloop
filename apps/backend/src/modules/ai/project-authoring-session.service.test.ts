@@ -675,6 +675,184 @@ describe('project authoring persisted session', () => {
     }
   });
 
+  test('regenerate failed Steps repairs seven steps to eight and continues to final review', async () => {
+    const { randomUUID } = await import('node:crypto');
+    const { runPersistedAuthoringSessionAction } = await import(
+      './project-authoring-session.service.js'
+    );
+    const { setAuthoringRealStepInvokerForTests } = await import(
+      './ai-project-authoring-real.provider.js'
+    );
+    const { learner, conversation, project } = await createDraftPair('steps-regenerate-repair');
+    const componentIds = Array.from({ length: 6 }, () => randomUUID());
+    await prisma.learningProject.update({
+      where: { id: project.id },
+      data: {
+        title: 'Arduino LDR night light',
+        shortDescription: 'Beginner Arduino light-sensing project',
+        description:
+          'Build an Arduino night light that reads an LDR and turns on an LED in darkness.',
+      },
+    });
+    const componentNames = [
+      'Arduino Uno',
+      'LDR photoresistor',
+      '10k ohm resistor',
+      'White LED',
+      '220 ohm resistor',
+      'Breadboard',
+    ];
+    await prisma.projectRequiredComponent.createMany({
+      data: componentNames.map((componentName, index) => ({
+        id: componentIds[index]!,
+        projectId: project.id,
+        componentName,
+        materialType: 'Electronics',
+        quantity: 1,
+        unit: 'piece',
+        componentRole: index === 5 ? ('TOOL' as const) : ('REQUIRED_MATERIAL' as const),
+        isRequired: true,
+        canBeSubstituted: false,
+        searchKeywords: [],
+      })),
+    });
+    const refreshedProject = await prisma.learningProject.findUniqueOrThrow({
+      where: { id: project.id },
+      include: {
+        requiredComponents: true,
+        steps: true,
+        category: true,
+        tags: true,
+        images: true,
+        createdByUser: true,
+        links: true,
+      },
+    });
+    const sessionId = randomUUID();
+    await prisma.projectAuthoringSession.create({
+      data: {
+        id: sessionId,
+        conversationId: conversation.id,
+        learningProjectId: project.id,
+        ownerId: learner.id,
+        stage: 'STEPS_OVERVIEW',
+        status: 'GENERATION_FAILED',
+        generationErrorCode: 'AI_AUTHORING_STEP_QUALITY_INVALID',
+        version: 1,
+        baseProjectUpdatedAt: refreshedProject.updatedAt,
+        completedStages: [
+          'TITLE',
+          'SHORT_DESCRIPTION',
+          'FULL_DESCRIPTION',
+          'DIFFICULTY',
+          'ESTIMATED_DURATION',
+          'COMPONENTS',
+        ],
+      },
+    });
+
+    const providerSteps = [
+      {
+        title: 'Prepare and inspect components',
+        description:
+          'Prepare the Arduino, LDR, resistors, LED, and breadboard, inspect every pin, and verify that no part is damaged before wiring.',
+      },
+      {
+        title: 'Understand the voltage divider',
+        description:
+          'Review how the LDR and 10k resistor form a voltage divider, then verify why its changing voltage is safe for an Arduino analog input.',
+      },
+      {
+        title: 'Place parts on the breadboard',
+        description:
+          'Place the Arduino beside the breadboard and arrange each component with clear wire paths, then verify that no rows are accidentally shared.',
+      },
+      {
+        title: 'Wire the LDR to analog input',
+        description:
+          'Connect the LDR and 10k resistor on the breadboard, wire their junction to analog pin A0, and verify the 5V and GND paths.',
+      },
+      {
+        title: 'Wire the LED output',
+        description:
+          'Connect the LED and 220 ohm resistor to an Arduino digital pin with correct polarity, then verify the current-limiting path.',
+      },
+      {
+        title: 'Define pins in Arduino IDE',
+        description:
+          'Open Arduino IDE, define constants for A0 and the LED output pin, and verify that the code identifiers match the physical wiring.',
+      },
+      {
+        title: 'Read and control from the sensor',
+        description:
+          'Read analogRead values in Serial Monitor, choose a threshold, control the LED from that threshold, and verify bright and dark readings.',
+      },
+      {
+        title: 'Upload, test, and calibrate',
+        description:
+          'Upload the sketch over USB, test the night light in bright and dark conditions, adjust the threshold, and verify stable final behavior.',
+      },
+    ].map((step, index) => ({
+      order: index + 1,
+      ...step,
+      safetyNote: null,
+      componentRefs: [componentIds[0]],
+    }));
+
+    const previousProvider = process.env.AI_CHAT_PROVIDER;
+    process.env.AI_CHAT_PROVIDER = 'openai';
+    let calls = 0;
+    setAuthoringRealStepInvokerForTests(async () => {
+      calls += 1;
+      return {
+        text: JSON.stringify({
+          kind: 'STEP_PLAN',
+          steps: calls === 1 ? providerSteps.slice(0, 7) : providerSteps,
+          explanation: calls === 1 ? 'Seven-step draft.' : 'Repaired eight-step plan.',
+        }),
+        model: 'openai/gpt-4.1-nano',
+        inputTokens: 1,
+        outputTokens: 1,
+      };
+    });
+
+    try {
+      const regenerated = await runPersistedAuthoringSessionAction(learner.id, sessionId, {
+        action: 'REGENERATE_FAILED_STAGE',
+        expectedVersion: 1,
+      });
+      assert.equal(calls, 2);
+      assert.equal(regenerated.session.stage, 'STEPS_OVERVIEW');
+      assert.equal(regenerated.session.status, 'WAITING_FOR_USER');
+      assert.equal(regenerated.currentTurn?.kind, 'STEP_PLAN');
+      const repairedSteps = (
+        regenerated.currentTurn?.payload as { steps?: unknown[] } | undefined
+      )?.steps ?? [];
+      assert.equal(repairedSteps.length, 8);
+
+      const modeSelected = await runPersistedAuthoringSessionAction(learner.id, sessionId, {
+        action: 'CHOOSE_STEP_MODE',
+        mode: 'FULL_PLAN',
+        expectedVersion: regenerated.session.version,
+        turnId: regenerated.currentTurn?.id,
+      });
+      const accepted = await runPersistedAuthoringSessionAction(learner.id, sessionId, {
+        action: 'ACCEPT_CURRENT',
+        expectedVersion: modeSelected.session.version,
+        turnId: modeSelected.currentTurn?.id,
+      });
+      assert.equal(accepted.session.stage, 'FINAL_REVIEW');
+      assert.equal(accepted.canonicalProject.steps.length, 8);
+    } finally {
+      setAuthoringRealStepInvokerForTests(null);
+      if (previousProvider === undefined) {
+        delete process.env.AI_CHAT_PROVIDER;
+      } else {
+        process.env.AI_CHAT_PROVIDER = previousProvider;
+      }
+    }
+  });
+
   test('component finalize still succeeds when step generation fails afterward', async () => {
     const { randomUUID } = await import('node:crypto');
     const { runPersistedAuthoringSessionAction } = await import('./project-authoring-session.service.js');

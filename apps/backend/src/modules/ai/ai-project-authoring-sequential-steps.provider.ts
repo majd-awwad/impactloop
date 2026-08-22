@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { resolveAiChatProvider } from '../../config/env.js';
+import { logger } from '../../observability/logger.js';
 import { AppError } from '../../utils/app-error.js';
 
 import type { AiProjectAuthoringClarificationBlock } from './ai.content-blocks.js';
@@ -549,6 +550,51 @@ const readPreviousInvalidOutput = (error: unknown): string | null => {
     : null;
 };
 
+const REPAIRABLE_STEP_GENERATION_CODES = new Set([
+  'AI_RESPONSE_INVALID',
+  'AI_AUTHORING_STEP_JSON_INVALID',
+  'AI_AUTHORING_STEP_SCHEMA_INVALID',
+  'AI_AUTHORING_STEP_QUALITY_INVALID',
+  'AI_STEP_PROPOSAL_INVALID',
+  'AI_STEP_COMPONENT_INCONSISTENT',
+  'AI_STEP_PLAN_IRRELEVANT',
+  'AI_STEP_PLAN_LANGUAGE_MISMATCH',
+]);
+
+export const isRepairableStepGenerationError = (error: unknown) =>
+  error instanceof AppError && REPAIRABLE_STEP_GENERATION_CODES.has(error.code);
+
+const logStepRepairDiagnostic = (input: {
+  error: unknown;
+  requirements: StepPlanQualityRequirements;
+  repairAttempt: number;
+  repairSucceeded: boolean;
+  repairedStepCount?: number | null;
+}) => {
+  if ((process.env.NODE_ENV ?? 'development') !== 'development') {
+    return;
+  }
+  const details =
+    input.error instanceof AppError && input.error.details && typeof input.error.details === 'object'
+      ? (input.error.details as { issues?: string[]; receivedSteps?: number })
+      : {};
+  logger.info(
+    {
+      operation: 'ai_authoring_step_repair',
+      stage: 'STEPS_OVERVIEW',
+      qualityIssueCode:
+        details.issues?.[0]?.split(':', 1)[0] ??
+        (input.error instanceof AppError ? input.error.code : 'UNKNOWN'),
+      requiredStepCount: input.requirements.minimumMeaningfulSteps,
+      returnedStepCount: details.receivedSteps ?? null,
+      repairAttempt: input.repairAttempt,
+      repairedStepCount: input.repairedStepCount ?? null,
+      repairSucceeded: input.repairSucceeded,
+    },
+    'AI authoring step repair result',
+  );
+};
+
 const invokeConfiguredStepProvider = async (
   input: StepListContext & {
     suggestAnother?: boolean;
@@ -620,6 +666,9 @@ export const generateSequentialStepListWithRepair = async (
             'AI_AUTHORING_STEP_GENERATION_FAILED',
           );
     }
+    if (!isRepairableStepGenerationError(error)) {
+      throw error;
+    }
     const previousInvalidOutput = readPreviousInvalidOutput(error);
     const qualityDetails =
       error instanceof AppError && error.details && typeof error.details === 'object'
@@ -658,12 +707,36 @@ export const generateSequentialStepListWithRepair = async (
         ? `Issues: ${JSON.stringify((error.details as { issues: unknown }).issues).slice(0, 1500)}`
         : null,
     ].filter(Boolean);
-    return generateSequentialStepList({
-      ...input,
-      repairAttempt: true,
-      repairIssue: issueParts.join(' '),
-      previousInvalidOutput,
+    logStepRepairDiagnostic({
+      error,
+      requirements,
+      repairAttempt: 1,
+      repairSucceeded: false,
     });
+    try {
+      const repaired = await generateSequentialStepList({
+        ...input,
+        repairAttempt: true,
+        repairIssue: issueParts.join(' '),
+        previousInvalidOutput,
+      });
+      logStepRepairDiagnostic({
+        error,
+        requirements,
+        repairAttempt: 1,
+        repairedStepCount: repaired.steps.length,
+        repairSucceeded: true,
+      });
+      return repaired;
+    } catch (repairError) {
+      logStepRepairDiagnostic({
+        error: repairError,
+        requirements,
+        repairAttempt: 1,
+        repairSucceeded: false,
+      });
+      throw repairError;
+    }
   }
 };
 
@@ -810,7 +883,7 @@ export const generateStepStageReply = async (
     return buildPlanReply(input, input.currentSteps, 'STEP_PLAN');
   }
 
-  const generated = await generateSequentialStepList(input);
+  const generated = await generateSequentialStepListWithRepair(input);
   return buildPlanReply(input, generated.steps, 'STEP_PLAN', generated.explanation);
 };
 

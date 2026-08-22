@@ -5,6 +5,8 @@ import type {
   ProjectAuthoringSessionStage,
   ProjectAuthoringTurnKind,
 } from '../../generated/prisma/client.js';
+import { logger } from '../../observability/logger.js';
+import type { LogContext } from '../../observability/log-types.js';
 import { AppError } from '../../utils/app-error.js';
 
 import {
@@ -51,6 +53,7 @@ import { resolveAiChatProvider } from '../../config/env.js';
 import {
   generateSequentialStepList,
   generateSequentialStepListWithRepair,
+  isRepairableStepGenerationError,
   validateStepList,
 } from './ai-project-authoring-sequential-steps.provider.js';
 import type { StepListContext } from './ai-project-authoring-sequential-steps.provider.js';
@@ -1918,12 +1921,16 @@ export const processStepsStageComposerMessage = async (input: {
 };
 
 const logStepGenerationEvent = (event: string, details: Record<string, unknown>) => {
-  console.info(
-    JSON.stringify({
+  if ((process.env.NODE_ENV ?? 'development') !== 'development') {
+    return;
+  }
+  logger.info(
+    {
+      operation: 'ai_authoring_step_generation',
       event,
-      module: 'project-authoring-session.helpers',
       ...details,
-    }),
+    } as LogContext,
+    'AI authoring step generation event',
   );
 };
 
@@ -2330,6 +2337,7 @@ export const tryGenerateStepPlan = async (input: {
       contentLocale: context.locale,
       repairAttempt,
       requestedStepCount: context.requestedStepCount,
+      requiredStepCount: capturedStepQualityRequirements?.minimumMeaningfulSteps ?? null,
     });
     // One provider attempt per call. Bounded repair is handled by the outer
     // try/catch below so Retry = 1 request + at most 1 repair, with the exact
@@ -2371,12 +2379,15 @@ export const tryGenerateStepPlan = async (input: {
     };
   };
 
+  let repairAttempted = false;
   try {
-    let repairAttempted = false;
     let plan: Awaited<ReturnType<typeof generateValidatedPlan>>;
     try {
       plan = await generateValidatedPlan(false);
     } catch (firstError) {
+      if (!isRepairableStepGenerationError(firstError)) {
+        throw firstError;
+      }
       repairAttempted = true;
       const previousInvalidOutput =
         firstError instanceof AppError &&
@@ -2434,8 +2445,13 @@ export const tryGenerateStepPlan = async (input: {
         version: expectedVersion,
         provider: resolveAiChatProvider(),
         errorCode: firstError instanceof AppError ? firstError.code : 'UNKNOWN',
-        errorMessage: firstError instanceof Error ? firstError.message : String(firstError),
-        repairAttempted: true,
+        qualityIssueCode:
+          qualityDetails.issues?.[0]?.split(':', 1)[0] ??
+          (firstError instanceof AppError ? firstError.code : 'UNKNOWN'),
+        requiredStepCount: capturedStepQualityRequirements?.minimumMeaningfulSteps ?? null,
+        returnedStepCount: qualityDetails.receivedSteps ?? null,
+        repairAttempt: 1,
+        repairSucceeded: false,
         hasPreviousInvalidOutput: Boolean(previousInvalidOutput),
       });
       plan = await generateValidatedPlan(true, issueParts.join(' '), previousInvalidOutput);
@@ -2480,11 +2496,19 @@ export const tryGenerateStepPlan = async (input: {
       source: 'provider',
       repairAttempted,
       stepCount: payloadSteps.length,
+      requiredStepCount: capturedStepQualityRequirements?.minimumMeaningfulSteps ?? null,
+      repairAttempt: repairAttempted ? 1 : 0,
+      repairedStepCount: repairAttempted ? payloadSteps.length : null,
+      repairSucceeded: repairAttempted,
       currentTurnId: turnId,
     });
 
     return session;
   } catch (error) {
+    const finalQualityDetails =
+      error instanceof AppError && error.details && typeof error.details === 'object'
+        ? (error.details as { issues?: string[]; receivedSteps?: number })
+        : {};
     const preservedStepCodes = new Set([
       'AI_STEP_COMPONENT_INCONSISTENT',
       'AI_STEP_PLAN_IRRELEVANT',
@@ -2513,7 +2537,13 @@ export const tryGenerateStepPlan = async (input: {
       conversationId: sessionRecord.conversationId,
       version: expectedVersion,
       errorCode,
-      errorMessage: error instanceof Error ? error.message : String(error),
+      qualityIssueCode:
+        finalQualityDetails.issues?.[0]?.split(':', 1)[0] ?? errorCode,
+      requiredStepCount: capturedStepQualityRequirements?.minimumMeaningfulSteps ?? null,
+      returnedStepCount: finalQualityDetails.receivedSteps ?? null,
+      repairAttempt: repairAttempted ? 1 : 0,
+      repairedStepCount: repairAttempted ? finalQualityDetails.receivedSteps ?? null : null,
+      repairSucceeded: false,
     });
 
     await projectAuthoringSessionRepository.updateSession({

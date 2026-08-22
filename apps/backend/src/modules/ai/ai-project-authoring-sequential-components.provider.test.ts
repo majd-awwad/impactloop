@@ -11,8 +11,10 @@ import {
   generateAlternativeSequentialComponentList,
   generateComponentStageReply,
   generateSequentialComponentList,
+  generateSequentialComponentListWithRepair,
   processComponentStageComposerMessage,
   resolveComponentComposerIntent,
+  setSequentialComponentListGeneratorForTests,
 } from './ai-project-authoring-sequential-components.provider.js';
 
 const clarification = {
@@ -161,6 +163,101 @@ describe('sequential components provider', () => {
         (error as { code?: string }).code === 'AI_COMPONENT_PROPOSAL_INVALID' &&
         /ultrasonic/i.test((error as Error).message),
     );
+  });
+
+  test('plant-monitoring context semantically supports a soil-moisture sensor', () => {
+    const plantMonitoringContext = {
+      locale: 'en' as const,
+      ideaText: 'Build a beginner Arduino automation project.',
+      projectTitle: 'Smart automation project',
+      projectShortDescription: 'A beginner project using Arduino.',
+      projectDescription:
+        'The Arduino should observe the plant condition and help the learner decide when watering is needed.',
+      clarification: {
+        ...clarification,
+        summary: 'Beginner Arduino automation project',
+      },
+      recentAnswers: [],
+    };
+
+    assert.doesNotThrow(() =>
+      assertComponentListQuality(
+        plantMonitoringContext,
+        mockSoilMoistureComponentList('en'),
+      ),
+    );
+  });
+
+  test('repairs a semantically unrelated component list once using the failing rule', async () => {
+    const ldrContext = {
+      locale: 'en' as const,
+      ideaText: 'Beginner Arduino LDR night light on USB power.',
+      projectTitle: 'Smart night light',
+      projectShortDescription: 'Turn an LED on when the room is dark.',
+      projectDescription: 'Use light sensing only; do not add unrelated sensors.',
+      clarification: { ...clarification, summary: 'Arduino LDR night light' },
+      recentAnswers: [],
+    };
+    const invalid = mockSoilMoistureComponentList('en');
+    const valid = invalid.map((component) =>
+      component.componentName === 'Soil moisture sensor'
+        ? {
+            ...component,
+            componentName: 'LDR photoresistor',
+            searchKeywords: ['ldr', 'photoresistor'],
+            notes: 'Measures ambient light so the LED can switch at night.',
+          }
+        : component,
+    );
+    const attempts: Array<{ repairAttempt?: boolean; repairIssue?: string | null }> = [];
+    setSequentialComponentListGeneratorForTests((input) => {
+      attempts.push({
+        repairAttempt: input.repairAttempt,
+        repairIssue: input.repairIssue,
+      });
+      return input.repairAttempt ? valid : invalid;
+    });
+
+    try {
+      const result = await generateSequentialComponentListWithRepair(ldrContext);
+      assert.equal(attempts.length, 2);
+      assert.equal(attempts[1]?.repairAttempt, true);
+      assert.match(attempts[1]?.repairIssue ?? '', /soil-moisture sensor/i);
+      assert.match(attempts[1]?.repairIssue ?? '', /does not support/i);
+      assert.ok(result.components.some((component) => /ldr/i.test(component.componentName)));
+    } finally {
+      setSequentialComponentListGeneratorForTests(null);
+    }
+  });
+
+  test('stops after one failed component-list repair', async () => {
+    const ldrContext = {
+      locale: 'en' as const,
+      ideaText: 'Beginner Arduino LDR night light on USB power.',
+      projectTitle: 'Smart night light',
+      projectShortDescription: 'Turn an LED on when the room is dark.',
+      projectDescription: 'Use light sensing only; do not add unrelated sensors.',
+      clarification: { ...clarification, summary: 'Arduino LDR night light' },
+      recentAnswers: [],
+    };
+    let callCount = 0;
+    setSequentialComponentListGeneratorForTests(() => {
+      callCount += 1;
+      return mockSoilMoistureComponentList('en');
+    });
+
+    try {
+      await assert.rejects(
+        () => generateSequentialComponentListWithRepair(ldrContext),
+        (error: unknown) =>
+          error instanceof Error &&
+          'code' in error &&
+          (error as { code?: string }).code === 'AI_COMPONENT_PROPOSAL_INVALID',
+      );
+      assert.equal(callCount, 2);
+    } finally {
+      setSequentialComponentListGeneratorForTests(null);
+    }
   });
 
   test('valid LDR component list passes quality with no unrelated sensor', async () => {
