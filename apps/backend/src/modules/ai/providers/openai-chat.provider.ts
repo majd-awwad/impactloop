@@ -191,7 +191,9 @@ const buildChatCompletionRequest = (input: {
     max_tokens: input.maxTokens,
     ...buildOpenAiResponseFormat(input.runtime, input.structuredOutput),
     messages,
-  } as Parameters<OpenAiChatClient['chat']['completions']['create']>[0];
+  } as unknown as Parameters<
+    OpenAiChatClient['chat']['completions']['create']
+  >[0];
 };
 
 /**

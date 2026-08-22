@@ -328,6 +328,19 @@ const SEMANTIC_FILTER_KEYS = new Set([
 
 const SEMANTIC_FILTER_ALIASES: Record<string, string> = {
   freeOnly: 'isFree',
+  free_only: 'isFree',
+  category: 'categoryText',
+  category_text: 'categoryText',
+  materialType: 'query',
+  material_type: 'query',
+  min_price: 'minPrice',
+  max_price: 'maxPrice',
+  near_me: 'nearLearner',
+  near_learner: 'nearLearner',
+  pickup: 'pickupAllowed',
+  pickup_allowed: 'pickupAllowed',
+  delivery: 'deliveryAllowed',
+  delivery_allowed: 'deliveryAllowed',
 };
 
 const TOPIC_DEFAULT_TOOL_NAMES: Partial<Record<string, string>> = {
@@ -367,7 +380,11 @@ const normalizeSemanticFilters = (
 
     const targetKey = SEMANTIC_FILTER_ALIASES[key] ?? key;
     if ((SEMANTIC_FILTER_KEYS as Set<string>).has(targetKey)) {
-      if (targetKey === 'maxPrice' || targetKey === 'minPrice') {
+      if (
+        targetKey === 'maxPrice' ||
+        targetKey === 'minPrice' ||
+        targetKey === 'limit'
+      ) {
         const numeric =
           typeof entry === 'string' ? Number(entry.trim()) : entry;
         if (typeof numeric === 'number' && !Number.isNaN(numeric)) {
@@ -375,12 +392,23 @@ const normalizeSemanticFilters = (
         }
         continue;
       }
+      if (
+        targetKey === 'isFree' ||
+        targetKey === 'nearLearner' ||
+        targetKey === 'pickupAllowed' ||
+        targetKey === 'deliveryAllowed'
+      ) {
+        if (typeof entry === 'boolean') {
+          normalized[targetKey] = entry;
+        } else if (typeof entry === 'string') {
+          const booleanValue = entry.trim().toLowerCase();
+          if (booleanValue === 'true' || booleanValue === 'false') {
+            normalized[targetKey] = booleanValue === 'true';
+          }
+        }
+        continue;
+      }
       normalized[targetKey] = entry;
-      continue;
-    }
-
-    if (key === 'materialType' && typeof entry === 'string' && entry.trim()) {
-      normalized.query = entry.trim();
     }
   }
 
@@ -435,7 +463,7 @@ const normalizeSemanticToolCall = (
   }
 
   if (typeof value === 'string' && value.trim()) {
-    const name = value.trim();
+    const name = value.trim().toLowerCase();
     if (name === 'get_learner_reservations') {
       return null;
     }
@@ -449,24 +477,39 @@ const normalizeSemanticToolCall = (
   const source = value as Record<string, unknown>;
   const name =
     typeof source.name === 'string'
-      ? source.name.trim()
+      ? source.name.trim().toLowerCase()
       : typeof source.tool === 'string'
-        ? source.tool.trim()
-        : '';
+        ? source.tool.trim().toLowerCase()
+        : typeof source.toolName === 'string'
+          ? source.toolName.trim().toLowerCase()
+          : typeof source.tool_name === 'string'
+            ? source.tool_name.trim().toLowerCase()
+            : '';
 
   if (!name || name === 'get_learner_reservations') {
     return null;
   }
 
-  const argumentsValue =
-    source.arguments &&
-    typeof source.arguments === 'object' &&
-    !Array.isArray(source.arguments)
-      ? normalizePlannerToolArguments(
-          name,
-          source.arguments as Record<string, unknown>,
-        )
-      : {};
+  const rawArguments = source.arguments ?? source.args ?? source.parameters;
+  let argumentsRecord: Record<string, unknown> = {};
+  if (rawArguments && typeof rawArguments === 'object' && !Array.isArray(rawArguments)) {
+    argumentsRecord = rawArguments as Record<string, unknown>;
+  } else if (typeof rawArguments === 'string' && rawArguments.trim()) {
+    try {
+      const parsedArguments: unknown = JSON.parse(rawArguments);
+      if (
+        parsedArguments &&
+        typeof parsedArguments === 'object' &&
+        !Array.isArray(parsedArguments)
+      ) {
+        argumentsRecord = parsedArguments as Record<string, unknown>;
+      }
+    } catch {
+      argumentsRecord = {};
+    }
+  }
+
+  const argumentsValue = normalizePlannerToolArguments(name, argumentsRecord);
 
   return { name, arguments: argumentsValue };
 };
@@ -527,14 +570,28 @@ export const coerceSemanticUnderstandingFromGemini = (
   }
 
   const source = raw as Record<string, unknown>;
-  let route = source.route;
+  let route =
+    typeof source.route === 'string'
+      ? source.route.trim().toUpperCase()
+      : source.route;
 
   if (typeof route === 'string' && LEGACY_PLANNER_SYSTEM_DATA_ROUTES.has(route)) {
     const topic = route;
+    const rawConfidence =
+      typeof source.confidence === 'string'
+        ? Number(source.confidence.trim())
+        : source.confidence;
     const normalizedToolCall = inferToolCallForTopic(
       'SYSTEM_DATA_QUERY',
       topic,
-      normalizeSemanticToolCall(source.toolCall, topic),
+      normalizeSemanticToolCall(
+        source.toolCall ??
+          source.tool_call ??
+          source.tool ??
+          source.toolName ??
+          source.tool_name,
+        topic,
+      ),
     );
     return {
       schemaVersion: 1,
@@ -542,8 +599,11 @@ export const coerceSemanticUnderstandingFromGemini = (
       topic,
       action: null,
       entities: normalizeSemanticEntities(source.entities),
-      filters: normalizeSemanticFilters(source.filters),
-      confidence: typeof source.confidence === 'number' ? source.confidence : 0.85,
+      filters: normalizeSemanticFilters(source.filters ?? source.filter),
+      confidence:
+        typeof rawConfidence === 'number' && Number.isFinite(rawConfidence)
+          ? rawConfidence
+          : 0.85,
       needsClarification:
         source.needsClarification === true || source.clarificationNeeded === true,
       clarificationQuestion:
@@ -562,21 +622,44 @@ export const coerceSemanticUnderstandingFromGemini = (
 
   const needsClarification =
     source.needsClarification === true || source.clarificationNeeded === true;
-  const topic = normalizeSemanticTopic(route, source.topic ?? null);
+  const rawTopic =
+    typeof source.topic === 'string'
+      ? source.topic.trim().toUpperCase()
+      : source.topic ?? null;
+  const topic = normalizeSemanticTopic(route, rawTopic);
+  const action =
+    typeof source.action === 'string'
+      ? source.action.trim().toUpperCase()
+      : source.action ?? null;
   const normalizedToolCall = inferToolCallForTopic(
     route,
     topic,
-    normalizeSemanticToolCall(source.toolCall, topic),
+    normalizeSemanticToolCall(
+      source.toolCall ??
+        source.tool_call ??
+        source.tool ??
+        source.toolName ??
+        source.tool_name,
+      topic,
+    ),
   );
+  const rawConfidence =
+    typeof source.confidence === 'string'
+      ? Number(source.confidence.trim())
+      : source.confidence;
 
   return {
-    schemaVersion: source.schemaVersion ?? 1,
+    schemaVersion:
+      source.schemaVersion === '1' ? 1 : source.schemaVersion ?? 1,
     route,
     topic,
-    action: source.action ?? null,
+    action,
     entities: normalizeSemanticEntities(source.entities),
-    filters: normalizeSemanticFilters(source.filters),
-    confidence: typeof source.confidence === 'number' ? source.confidence : 0.85,
+    filters: normalizeSemanticFilters(source.filters ?? source.filter),
+    confidence:
+      typeof rawConfidence === 'number' && Number.isFinite(rawConfidence)
+        ? rawConfidence
+        : 0.85,
     needsClarification,
     clarificationQuestion:
       typeof source.clarificationQuestion === 'string'
@@ -588,12 +671,74 @@ export const coerceSemanticUnderstandingFromGemini = (
   };
 };
 
+type SafeSemanticValidationFailure = {
+  stage: 'schema' | 'tool_name' | 'forbidden_arguments' | 'tool_arguments';
+  schemaVersion: string | number | null;
+  route: string | null;
+  topic: string | null;
+  action: string | null;
+  toolName: string | null;
+  filterKeys: string[];
+  toolArgumentKeys: string[];
+  entityCount: number;
+  issues: Array<{ path: string; code: string }>;
+};
+
+const summarizeSemanticValidationFailure = (
+  coerced: unknown,
+  stage: SafeSemanticValidationFailure['stage'],
+  issues: Array<{ path: PropertyKey[]; code: string }> = [],
+): SafeSemanticValidationFailure => {
+  const source =
+    coerced && typeof coerced === 'object' && !Array.isArray(coerced)
+      ? (coerced as Record<string, unknown>)
+      : {};
+  const filters =
+    source.filters && typeof source.filters === 'object' && !Array.isArray(source.filters)
+      ? (source.filters as Record<string, unknown>)
+      : {};
+  const toolCall =
+    source.toolCall && typeof source.toolCall === 'object' && !Array.isArray(source.toolCall)
+      ? (source.toolCall as Record<string, unknown>)
+      : {};
+  const toolArguments =
+    toolCall.arguments &&
+    typeof toolCall.arguments === 'object' &&
+    !Array.isArray(toolCall.arguments)
+      ? (toolCall.arguments as Record<string, unknown>)
+      : {};
+
+  return {
+    stage,
+    schemaVersion:
+      typeof source.schemaVersion === 'string' ||
+      typeof source.schemaVersion === 'number'
+        ? source.schemaVersion
+        : null,
+    route: typeof source.route === 'string' ? source.route : null,
+    topic: typeof source.topic === 'string' ? source.topic : null,
+    action: typeof source.action === 'string' ? source.action : null,
+    toolName: typeof toolCall.name === 'string' ? toolCall.name : null,
+    filterKeys: Object.keys(filters).sort(),
+    toolArgumentKeys: Object.keys(toolArguments).sort(),
+    entityCount: Array.isArray(source.entities) ? source.entities.length : 0,
+    issues: issues.map((issue) => ({
+      path: issue.path.map(String).join('.'),
+      code: issue.code,
+    })),
+  };
+};
+
 export const validateSemanticUnderstanding = (
   raw: unknown,
+  onFailure?: (failure: SafeSemanticValidationFailure) => void,
 ): SemanticUnderstanding | null => {
   const coerced = coerceSemanticUnderstandingFromGemini(raw);
   const parsed = semanticUnderstandingSchema.safeParse(coerced);
   if (!parsed.success) {
+    onFailure?.(
+      summarizeSemanticValidationFailure(coerced, 'schema', parsed.error.issues),
+    );
     return null;
   }
 
@@ -604,6 +749,17 @@ export const validateSemanticUnderstanding = (
       if (data.topic === 'LEARNER_RESERVATION_STATUS') {
         return { ...data, toolCall: undefined };
       }
+      onFailure?.(summarizeSemanticValidationFailure(coerced, 'tool_name'));
+      return null;
+    }
+    if (
+      Object.keys(data.toolCall.arguments ?? {}).some((key) =>
+        isForbiddenPlannerArgumentKey(key),
+      )
+    ) {
+      onFailure?.(
+        summarizeSemanticValidationFailure(coerced, 'forbidden_arguments'),
+      );
       return null;
     }
     try {
@@ -619,6 +775,9 @@ export const validateSemanticUnderstanding = (
           toolCall: { name: data.toolCall.name, arguments: {} },
         };
       }
+      onFailure?.(
+        summarizeSemanticValidationFailure(coerced, 'tool_arguments'),
+      );
       return null;
     }
   }
@@ -1071,6 +1230,13 @@ const FORBIDDEN_ARGUMENT_KEYS = new Set([
   'conversationId',
 ]);
 
+const FORBIDDEN_ARGUMENT_KEYS_LOWER = new Set(
+  [...FORBIDDEN_ARGUMENT_KEYS].map((key) => key.toLowerCase()),
+);
+
+const isForbiddenPlannerArgumentKey = (key: string): boolean =>
+  FORBIDDEN_ARGUMENT_KEYS_LOWER.has(key.toLowerCase());
+
 const buildPlannerPrompt = (input: {
   userMessage: string;
   locale: AiLocale;
@@ -1507,10 +1673,20 @@ export const planSemanticUnderstanding = async (input: {
       prompt: buildSemanticPlannerPrompt(input),
       locale: input.locale,
     });
-    const understanding = validateSemanticUnderstanding(result.data);
+    let validationFailure: SafeSemanticValidationFailure | undefined;
+    const understanding = validateSemanticUnderstanding(
+      result.data,
+      (failure) => {
+        validationFailure = failure;
+      },
+    );
     if (!understanding) {
       logger.warn(
-        { userMessageLength: input.userMessage.length, provider: chatProvider },
+        {
+          provider: chatProvider,
+          userMessageLength: input.userMessage.length,
+          validationFailure,
+        },
         'AI semantic understanding planner returned invalid output',
       );
       return toSemanticPlannerFailure('semantic_invalid');

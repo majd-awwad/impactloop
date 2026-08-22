@@ -1,14 +1,14 @@
-import { logger } from '../../../observability/logger.js';
-import type { SafeLogValue } from '../../../observability/log-types.js';
-import { classifyScopeDeterministic } from '../ai-scope-guard.js';
-import type { AiLocale } from '../ai.types.js';
-import { AI_DISABLED_COPY } from '../ai.policy.js';
-import type { SemanticRoute } from './ai-agent.types.js';
+import { logger } from "../../../observability/logger.js";
+import type { SafeLogValue } from "../../../observability/log-types.js";
+import { classifyScopeDeterministic } from "../ai-scope-guard.js";
+import type { AiLocale } from "../ai.types.js";
+import { AI_DISABLED_COPY } from "../ai.policy.js";
+import type { SemanticRoute } from "./ai-agent.types.js";
 import {
   AI_AGENT_PLATFORM_ROUTES,
   type AiAgentRouteDecision,
   type AiAgentRouteType,
-} from './ai-agent.types.js';
+} from "./ai-agent.types.js";
 import {
   detectBuildGapIntent,
   detectComponentMaterialMatchingIntent,
@@ -50,15 +50,18 @@ import {
   shouldCorrectToMaterialSearch,
   shouldDeferMaterialSearchForOwnedMaterialsProjectUse,
   shouldDeferMaterialSearchForProjectMaterialAvailability,
-} from './ai-agent-filter-extractor.service.js';
-import { buildToolInputForRoute, parseRecommendationInput } from './ai-agent-input-parser.service.js';
+} from "./ai-agent-filter-extractor.service.js";
+import {
+  buildToolInputForRoute,
+  parseRecommendationInput,
+} from "./ai-agent-input-parser.service.js";
 import {
   buildPlannerConversationContext,
   detectMaterialResultSetFilterFollowUp,
   resolveMaterialResultSetFilterContinuation,
   TRUSTED_MATERIAL_RESULT_SET_FILTER_MARKER,
   type PlannerConversationContext,
-} from './ai-agent-planner-context.service.js';
+} from "./ai-agent-planner-context.service.js";
 import {
   AI_SEMANTIC_ROUTER_VERSION,
   mapSemanticToExecutionPlan,
@@ -70,20 +73,26 @@ import {
   planLearnerAgentTurn,
   type AgentPlannerOutput,
   type SemanticUnderstanding,
-} from './ai-agent-semantic-planner.service.js';
-import { applyLinkedBuildGuideLearningOverride, isExplicitMarketplaceCatalogRequest } from './ai-build-guide-routing.js';
-import { resolveAgentRoute, assessHardSafetyRoute } from './ai-agent-router.service.js';
-import { resolveProjectFromRecentEntities } from './ai-agent-reference-resolver.service.js';
-import { assessDangerousRequest } from './ai-agent-safety-guard.service.js';
-import { routeToToolName } from './ai-agent-route-mapping.js';
-import { resolveEntityFromContext } from './ai-agent-reference-resolver.service.js';
-import { findProjectsWithinBudgetInputSchema } from './ai-tool.types.js';
+} from "./ai-agent-semantic-planner.service.js";
+import {
+  applyLinkedBuildGuideLearningOverride,
+  isExplicitMarketplaceCatalogRequest,
+} from "./ai-build-guide-routing.js";
+import {
+  resolveAgentRoute,
+  assessHardSafetyRoute,
+} from "./ai-agent-router.service.js";
+import { resolveProjectFromRecentEntities } from "./ai-agent-reference-resolver.service.js";
+import { assessDangerousRequest } from "./ai-agent-safety-guard.service.js";
+import { routeToToolName } from "./ai-agent-route-mapping.js";
+import { resolveEntityFromContext } from "./ai-agent-reference-resolver.service.js";
+import { findProjectsWithinBudgetInputSchema } from "./ai-tool.types.js";
 
 export type AgentRoutingMode =
-  | 'semantic'
-  | 'semantic_invalid_fallback'
-  | 'provider_unavailable_fallback'
-  | 'structured_continuation';
+  | "semantic"
+  | "semantic_invalid_fallback"
+  | "provider_unavailable_fallback"
+  | "structured_continuation";
 
 export type AgentExecutionDiagnostics = {
   deterministicRoute: AiAgentRouteType;
@@ -119,7 +128,7 @@ const markSemanticRoutingDiagnostics = (
   ...plan,
   diagnostics: {
     ...plan.diagnostics,
-    routingMode: 'semantic',
+    routingMode: "semantic",
   },
 });
 
@@ -129,7 +138,7 @@ const markProviderUnavailableFallbackDiagnostics = (
   ...plan,
   diagnostics: {
     ...plan.diagnostics,
-    routingMode: 'provider_unavailable_fallback',
+    routingMode: "provider_unavailable_fallback",
   },
 });
 
@@ -139,7 +148,7 @@ const markSemanticInvalidFallbackDiagnostics = (
   ...plan,
   diagnostics: {
     ...plan.diagnostics,
-    routingMode: 'semantic_invalid_fallback',
+    routingMode: "semantic_invalid_fallback",
   },
 });
 
@@ -149,7 +158,7 @@ const markStructuredContinuationDiagnostics = (
   ...plan,
   diagnostics: {
     ...plan.diagnostics,
-    routingMode: 'structured_continuation',
+    routingMode: "structured_continuation",
   },
 });
 
@@ -158,19 +167,19 @@ const buildMaterialResultSetFilterExecutionPlan = (input: {
   semanticPlannerUsed: boolean;
   plannerConfidence: number | null;
 }): AgentExecutionPlan => ({
-  route: 'MATERIAL_SEARCH',
-  toolName: 'search_available_materials',
+  route: "MATERIAL_SEARCH",
+  toolName: "search_available_materials",
   toolInput: input.toolInput,
-  semanticUnderstandingRoute: 'SYSTEM_DATA_QUERY',
-  semanticDataTopic: 'MATERIAL_RESULT_SET_FILTER',
+  semanticUnderstandingRoute: "SYSTEM_DATA_QUERY",
+  semanticDataTopic: "MATERIAL_RESULT_SET_FILTER",
   diagnostics: {
-    deterministicRoute: 'MATERIAL_SEARCH',
+    deterministicRoute: "MATERIAL_SEARCH",
     deterministicConfidence: 0.96,
     semanticPlannerUsed: input.semanticPlannerUsed,
-    semanticRoute: 'MATERIAL_SEARCH',
-    validatedRoute: 'MATERIAL_SEARCH',
+    semanticRoute: "MATERIAL_SEARCH",
+    validatedRoute: "MATERIAL_SEARCH",
     normalizedFilters: input.toolInput,
-    toolName: 'search_available_materials',
+    toolName: "search_available_materials",
     plannerConfidence: input.plannerConfidence,
     resolvedEntityTitle: null,
   },
@@ -183,34 +192,33 @@ export const isProviderFailureFallbackPlan = (
 
 export const isProviderUnavailableFallbackPlan = (
   plan: AgentExecutionPlan,
-): boolean =>
-  plan.diagnostics.routingMode === 'provider_unavailable_fallback';
+): boolean => plan.diagnostics.routingMode === "provider_unavailable_fallback";
 
 export const isSemanticInvalidFallbackPlan = (
   plan: AgentExecutionPlan,
-): boolean => plan.diagnostics.routingMode === 'semantic_invalid_fallback';
+): boolean => plan.diagnostics.routingMode === "semantic_invalid_fallback";
 
 export const isStructuredContinuationPlan = (
   plan: AgentExecutionPlan,
-): boolean => plan.diagnostics.routingMode === 'structured_continuation';
+): boolean => plan.diagnostics.routingMode === "structured_continuation";
 
 const STATIC_ROUTES = new Set<AiAgentRouteType>([
-  'CONVERSATIONAL_STATIC',
-  'PLATFORM_GUIDANCE',
-  'OUT_OF_SCOPE',
-  'DANGEROUS_REQUEST',
+  "CONVERSATIONAL_STATIC",
+  "PLATFORM_GUIDANCE",
+  "OUT_OF_SCOPE",
+  "DANGEROUS_REQUEST",
 ]);
 
 const PLATFORM_ROUTES = new Set<AiAgentRouteType>(AI_AGENT_PLATFORM_ROUTES);
 
 const OWNED_MATERIALS_CLARIFICATION_COPY = {
-  ar: 'هل تريد أن أعرض مشاريع ImpactLoop التي يمكن تنفيذها باستخدام هذه المواد؟',
-  en: 'Would you like me to show ImpactLoop projects that use these materials?',
+  ar: "هل تريد أن أعرض مشاريع ImpactLoop التي يمكن تنفيذها باستخدام هذه المواد؟",
+  en: "Would you like me to show ImpactLoop projects that use these materials?",
 } as const;
 
 const OWNED_MATERIALS_EMPTY_CLARIFICATION_COPY = {
-  ar: 'ما أسماء المواد أو المكوّنات التي لديك؟ اذكرها بشكل أوضح (مثل Arduino، أسلاك، كرتون) وسأطابقها مع مشاريع ImpactLoop.',
-  en: 'What material or component names do you have? List them clearly (for example Arduino, wires, cardboard) and I will match them to ImpactLoop projects.',
+  ar: "ما أسماء المواد أو المكوّنات التي لديك؟ اذكرها بشكل أوضح (مثل Arduino، أسلاك، كرتون) وسأطابقها مع مشاريع ImpactLoop.",
+  en: "What material or component names do you have? List them clearly (for example Arduino, wires, cardboard) and I will match them to ImpactLoop projects.",
 } as const;
 
 const buildOwnedMaterialsExecutionPlan = (input: {
@@ -221,17 +229,17 @@ const buildOwnedMaterialsExecutionPlan = (input: {
   semanticRoute: AiAgentRouteType | null;
   plannerConfidence: number | null;
 }): AgentExecutionPlan => ({
-  route: 'OWNED_MATERIALS_PROJECT_MATCH',
-  toolName: 'match_projects_by_owned_materials',
+  route: "OWNED_MATERIALS_PROJECT_MATCH",
+  toolName: "match_projects_by_owned_materials",
   toolInput: input.toolInput,
   diagnostics: {
     deterministicRoute: input.routeDecision.route,
     deterministicConfidence: input.routeDecision.confidence,
     semanticPlannerUsed: input.semanticPlannerUsed,
     semanticRoute: input.semanticRoute,
-    validatedRoute: 'OWNED_MATERIALS_PROJECT_MATCH',
+    validatedRoute: "OWNED_MATERIALS_PROJECT_MATCH",
     normalizedFilters: null,
-    toolName: 'match_projects_by_owned_materials',
+    toolName: "match_projects_by_owned_materials",
     plannerConfidence: input.plannerConfidence,
     resolvedEntityTitle: null,
   },
@@ -246,18 +254,18 @@ const buildOwnedMaterialsClarificationPlan = (input: {
   plannerConfidence: number | null;
   reason?: string;
 }): AgentExecutionPlan => ({
-  route: 'CLARIFICATION',
+  route: "CLARIFICATION",
   toolName: null,
   toolInput: {},
   clarificationReason:
     input.reason ??
-    OWNED_MATERIALS_CLARIFICATION_COPY[input.locale === 'ar' ? 'ar' : 'en'],
+    OWNED_MATERIALS_CLARIFICATION_COPY[input.locale === "ar" ? "ar" : "en"],
   diagnostics: {
     deterministicRoute: input.routeDecision.route,
     deterministicConfidence: input.routeDecision.confidence,
     semanticPlannerUsed: input.semanticPlannerUsed,
     semanticRoute: input.semanticRoute,
-    validatedRoute: 'CLARIFICATION',
+    validatedRoute: "CLARIFICATION",
     normalizedFilters: null,
     toolName: null,
     plannerConfidence: input.plannerConfidence,
@@ -309,10 +317,16 @@ const buildOwnedMaterialsSemanticFallbackPlan = (input: {
     });
   }
 
-  const hasExplicitIntent = detectOwnedMaterialsProjectIntent(input.userMessage);
+  const hasExplicitIntent = detectOwnedMaterialsProjectIntent(
+    input.userMessage,
+  );
   const hasBuildFollowUp = detectOwnedMaterialsBuildFollowUp(input.userMessage);
-  const isBarePossession = detectBareOwnedMaterialsPossession(input.userMessage);
-  const isAffirmative = isAffirmativeOwnedMaterialsContinuation(input.userMessage);
+  const isBarePossession = detectBareOwnedMaterialsPossession(
+    input.userMessage,
+  );
+  const isAffirmative = isAffirmativeOwnedMaterialsContinuation(
+    input.userMessage,
+  );
   const hasProjectContext = hasRecentOwnedMaterialsProjectContext({
     recentMessages: input.conversationContext?.recentMessages,
   });
@@ -395,7 +409,7 @@ const isHighConfidenceDeterministicPlatformPlan = (input: {
     return false;
   }
 
-  if (input.routeDecision.route === 'MATERIAL_SEARCH') {
+  if (input.routeDecision.route === "MATERIAL_SEARCH") {
     const materialIntent = detectMaterialSearchIntent(input.userMessage);
     if (!materialIntent.detected) {
       return false;
@@ -408,13 +422,17 @@ const isHighConfidenceDeterministicPlatformPlan = (input: {
       return false;
     }
 
-    if (shouldDeferMaterialSearchForProjectMaterialAvailability(input.userMessage)) {
+    if (
+      shouldDeferMaterialSearchForProjectMaterialAvailability(input.userMessage)
+    ) {
       return false;
     }
 
     if (
-      typeof input.toolInput.query === 'string' &&
-      input.userMessage.toLowerCase().includes(String(input.toolInput.query).toLowerCase()) &&
+      typeof input.toolInput.query === "string" &&
+      input.userMessage
+        .toLowerCase()
+        .includes(String(input.toolInput.query).toLowerCase()) &&
       String(input.toolInput.query).split(/\s+/).length >= 3
     ) {
       return false;
@@ -422,7 +440,7 @@ const isHighConfidenceDeterministicPlatformPlan = (input: {
   }
 
   if (
-    input.routeDecision.route === 'PROJECT_COMPONENTS' &&
+    input.routeDecision.route === "PROJECT_COMPONENTS" &&
     shouldDeferMaterialSearchForOwnedMaterialsProjectUse(input.userMessage)
   ) {
     return false;
@@ -436,9 +454,9 @@ const isHighConfidenceDeterministicPlatformPlan = (input: {
   }
 
   if (
-    input.routeDecision.route === 'COMPONENT_MATERIAL_MATCHING' ||
-    input.routeDecision.route === 'PROJECT_MATERIAL_MATCHING' ||
-    input.routeDecision.route === 'OWNED_MATERIALS_PROJECT_MATCH'
+    input.routeDecision.route === "COMPONENT_MATERIAL_MATCHING" ||
+    input.routeDecision.route === "PROJECT_MATERIAL_MATCHING" ||
+    input.routeDecision.route === "OWNED_MATERIALS_PROJECT_MATCH"
   ) {
     return true;
   }
@@ -446,7 +464,9 @@ const isHighConfidenceDeterministicPlatformPlan = (input: {
   return true;
 };
 
-const shouldConsultSemanticPlannerForOwnedMaterials = (userMessage: string): boolean => {
+const shouldConsultSemanticPlannerForOwnedMaterials = (
+  userMessage: string,
+): boolean => {
   if (detectOwnedMaterialsProjectIntent(userMessage)) {
     return true;
   }
@@ -465,8 +485,9 @@ const shouldConsultSemanticPlannerForOwnedMaterials = (userMessage: string): boo
 
   const parsedMessage = userMessage.trim();
   return (
-    /(?:المواد|القطع|مكوّنات|مكونات).*(?:عندي|معي|معاي)/iu.test(parsedMessage) ||
-    /(?:عندي|معي|معاي).*(?:مواد|قطع|مكوّن|مكون)/iu.test(parsedMessage)
+    /(?:المواد|القطع|مكوّنات|مكونات).*(?:عندي|معي|معاي)/iu.test(
+      parsedMessage,
+    ) || /(?:عندي|معي|معاي).*(?:مواد|قطع|مكوّن|مكون)/iu.test(parsedMessage)
   );
 };
 
@@ -480,7 +501,7 @@ const buildDeterministicFallbackPlan = (input: {
   let toolInput = buildToolInputForRoute(route, input.userMessage);
 
   if (
-    route === 'MATERIAL_SEARCH' &&
+    route === "MATERIAL_SEARCH" &&
     shouldDeferMaterialSearchForOwnedMaterialsProjectUse(input.userMessage) &&
     !isExplicitMaterialSearchCommand(input.userMessage)
   ) {
@@ -496,7 +517,7 @@ const buildDeterministicFallbackPlan = (input: {
   }
 
   if (
-    route === 'PROJECT_COMPONENTS' &&
+    route === "PROJECT_COMPONENTS" &&
     shouldDeferMaterialSearchForOwnedMaterialsProjectUse(input.userMessage)
   ) {
     const ownedFallback = buildOwnedMaterialsSemanticFallbackPlan({
@@ -510,9 +531,9 @@ const buildDeterministicFallbackPlan = (input: {
     }
   }
 
-  if (route === 'CLARIFICATION' || route === 'GENERAL_LEARNING') {
+  if (route === "CLARIFICATION" || route === "GENERAL_LEARNING") {
     if (input.conversationContext?.activeBuildGuide) {
-      route = 'GENERAL_LEARNING';
+      route = "GENERAL_LEARNING";
       toolInput = {};
     } else {
       const ownedFallback = buildOwnedMaterialsSemanticFallbackPlan({
@@ -526,31 +547,32 @@ const buildDeterministicFallbackPlan = (input: {
       }
 
       if (detectEducationalLearningIntent(input.userMessage)) {
-        route = 'GENERAL_LEARNING';
+        route = "GENERAL_LEARNING";
         toolInput = {};
       } else if (detectMaterialSearchIntent(input.userMessage).detected) {
-        route = 'MATERIAL_SEARCH';
+        route = "MATERIAL_SEARCH";
         toolInput = mergeMaterialSearchPlan(input.userMessage);
       } else if (detectProjectComponentsIntent(input.userMessage)) {
-        route = 'PROJECT_COMPONENTS';
+        route = "PROJECT_COMPONENTS";
         toolInput = buildToolInputForRoute(route, input.userMessage);
       } else if (detectComponentMaterialMatchingIntent(input.userMessage)) {
-        route = 'COMPONENT_MATERIAL_MATCHING';
+        route = "COMPONENT_MATERIAL_MATCHING";
         toolInput = {};
       }
     }
   }
 
-  if (route === 'MATERIAL_SEARCH') {
+  if (route === "MATERIAL_SEARCH") {
     const deterministic = mergeMaterialSearchPlan(input.userMessage);
     toolInput = {
       ...deterministic,
       ...toolInput,
       ...(messageImpliesFreeFilter(input.userMessage) ? { isFree: true } : {}),
-      limit: (toolInput.limit as number | undefined) ?? deterministic.limit ?? 10,
+      limit:
+        (toolInput.limit as number | undefined) ?? deterministic.limit ?? 10,
     };
 
-    if (typeof toolInput.query === 'string') {
+    if (typeof toolInput.query === "string") {
       const normalizedQuery = toolInput.query.trim().toLowerCase();
       const normalizedMessage = input.userMessage.trim().toLowerCase();
       if (
@@ -562,7 +584,7 @@ const buildDeterministicFallbackPlan = (input: {
     }
   }
 
-  if (route === 'PROJECTS_WITHIN_BUDGET') {
+  if (route === "PROJECTS_WITHIN_BUDGET") {
     const parsed = parseProjectsWithinBudgetInput(input.userMessage);
     const budgetBound = extractBudgetBound(input.userMessage);
     if (!budgetBound?.maxBudgetNis) {
@@ -577,7 +599,7 @@ const buildDeterministicFallbackPlan = (input: {
     toolInput = parsed;
   }
 
-  if (route === 'PROJECT_BUDGET_ESTIMATION') {
+  if (route === "PROJECT_BUDGET_ESTIMATION") {
     const contextual = resolveContextualProjectBudgetToolInput({
       userMessage: input.userMessage,
       conversationContext: input.conversationContext,
@@ -608,7 +630,7 @@ const buildDeterministicFallbackPlan = (input: {
       semanticPlannerUsed: false,
       semanticRoute: null,
       validatedRoute: route,
-      normalizedFilters: route === 'MATERIAL_SEARCH' ? toolInput : null,
+      normalizedFilters: route === "MATERIAL_SEARCH" ? toolInput : null,
       toolName,
       plannerConfidence: null,
       resolvedEntityTitle: null,
@@ -619,7 +641,12 @@ const buildDeterministicFallbackPlan = (input: {
 const resolveEntityIdsFromPlanner = (
   planner: AgentPlannerOutput,
   context: PlannerConversationContext | undefined,
-): { projectId?: string; materialId?: string; componentId?: string; title?: string } => {
+): {
+  projectId?: string;
+  materialId?: string;
+  componentId?: string;
+  title?: string;
+} => {
   if (!context) {
     return {};
   }
@@ -637,13 +664,13 @@ const resolveEntityIdsFromPlanner = (
       continue;
     }
 
-    if (entity.type === 'PROJECT') {
+    if (entity.type === "PROJECT") {
       return { projectId: resolved.entity.id, title: resolved.entity.title };
     }
-    if (entity.type === 'MATERIAL') {
+    if (entity.type === "MATERIAL") {
       return { materialId: resolved.entity.id, title: resolved.entity.title };
     }
-    if (entity.type === 'COMPONENT') {
+    if (entity.type === "COMPONENT") {
       return { componentId: resolved.entity.id, title: resolved.entity.title };
     }
   }
@@ -663,8 +690,8 @@ const applyOwnedMaterialsPlannerDecision = (input: {
   }
 
   const isOwnedMaterialsDecision =
-    input.planner.route === 'OWNED_MATERIALS_PROJECT_MATCH' ||
-    input.planner.toolCall?.name === 'match_projects_by_owned_materials';
+    input.planner.route === "OWNED_MATERIALS_PROJECT_MATCH" ||
+    input.planner.toolCall?.name === "match_projects_by_owned_materials";
 
   if (!isOwnedMaterialsDecision) {
     return null;
@@ -693,7 +720,11 @@ const applyOwnedMaterialsPlannerDecision = (input: {
       input.conversationContext,
     ) ?? null;
 
-  if (!toolInput || !Array.isArray(toolInput.materials) || toolInput.materials.length === 0) {
+  if (
+    !toolInput ||
+    !Array.isArray(toolInput.materials) ||
+    toolInput.materials.length === 0
+  ) {
     return buildOwnedMaterialsClarificationPlan({
       userMessage: input.userMessage,
       routeDecision: input.routeDecision,
@@ -703,7 +734,7 @@ const applyOwnedMaterialsPlannerDecision = (input: {
       plannerConfidence: input.planner.confidence,
       reason:
         OWNED_MATERIALS_EMPTY_CLARIFICATION_COPY[
-          input.locale === 'ar' ? 'ar' : 'en'
+          input.locale === "ar" ? "ar" : "en"
         ],
     });
   }
@@ -725,19 +756,19 @@ const buildProjectBudgetClarificationPlan = (input: {
   semanticRoute: AiAgentRouteType | null;
   plannerConfidence: number | null;
 }): AgentExecutionPlan => ({
-  route: 'CLARIFICATION',
+  route: "CLARIFICATION",
   toolName: null,
   toolInput: {},
   clarificationReason:
-    input.locale === 'ar'
-      ? 'أي مشروع تريد أن أحسب تقدير موادّه؟'
-      : 'Which project should I estimate the available material cost for?',
+    input.locale === "ar"
+      ? "أي مشروع تريد أن أحسب تقدير موادّه؟"
+      : "Which project should I estimate the available material cost for?",
   diagnostics: {
     deterministicRoute: input.routeDecision.route,
     deterministicConfidence: input.routeDecision.confidence,
     semanticPlannerUsed: input.semanticPlannerUsed,
     semanticRoute: input.semanticRoute,
-    validatedRoute: 'CLARIFICATION',
+    validatedRoute: "CLARIFICATION",
     normalizedFilters: null,
     toolName: null,
     plannerConfidence: input.plannerConfidence,
@@ -752,19 +783,19 @@ const buildProjectsWithinBudgetClarificationPlan = (input: {
   semanticRoute: AiAgentRouteType | null;
   plannerConfidence: number | null;
 }): AgentExecutionPlan => ({
-  route: 'CLARIFICATION',
+  route: "CLARIFICATION",
   toolName: null,
   toolInput: {},
   clarificationReason:
-    input.locale === 'ar'
-      ? 'ما الحد الأقصى لميزانيتك بالشيكل؟'
-      : 'What is your maximum budget in NIS?',
+    input.locale === "ar"
+      ? "ما الحد الأقصى لميزانيتك بالشيكل؟"
+      : "What is your maximum budget in NIS?",
   diagnostics: {
     deterministicRoute: input.routeDecision.route,
     deterministicConfidence: input.routeDecision.confidence,
     semanticPlannerUsed: input.semanticPlannerUsed,
     semanticRoute: input.semanticRoute,
-    validatedRoute: 'CLARIFICATION',
+    validatedRoute: "CLARIFICATION",
     normalizedFilters: null,
     toolName: null,
     plannerConfidence: input.plannerConfidence,
@@ -776,41 +807,44 @@ const projectsWithinBudgetPlanFromPlanner = (
   userMessage: string,
   planner: AgentPlannerOutput,
 ): Record<string, unknown> | null => {
-  if (planner.toolCall?.name !== 'find_projects_within_budget') {
+  if (planner.toolCall?.name !== "find_projects_within_budget") {
     return null;
   }
 
   const toolArgs =
-    planner.toolCall?.name === 'find_projects_within_budget'
+    planner.toolCall?.name === "find_projects_within_budget"
       ? planner.toolCall.arguments
       : {};
   const deterministic = parseProjectsWithinBudgetInput(userMessage);
   const maxBudgetNis =
-    typeof toolArgs.maxBudgetNis === 'number'
+    typeof toolArgs.maxBudgetNis === "number"
       ? toolArgs.maxBudgetNis
       : deterministic.maxBudgetNis;
 
   const candidate = {
     maxBudgetNis,
     comparisonMode:
-      toolArgs.comparisonMode === 'LT' || toolArgs.comparisonMode === 'LTE'
+      toolArgs.comparisonMode === "LT" || toolArgs.comparisonMode === "LTE"
         ? toolArgs.comparisonMode
         : deterministic.comparisonMode,
     category:
-      typeof toolArgs.category === 'string' ? toolArgs.category : deterministic.category,
+      typeof toolArgs.category === "string"
+        ? toolArgs.category
+        : deterministic.category,
     difficulty:
-      toolArgs.difficulty === 'BEGINNER' ||
-      toolArgs.difficulty === 'INTERMEDIATE' ||
-      toolArgs.difficulty === 'ADVANCED'
+      toolArgs.difficulty === "BEGINNER" ||
+      toolArgs.difficulty === "INTERMEDIATE" ||
+      toolArgs.difficulty === "ADVANCED"
         ? toolArgs.difficulty
         : deterministic.difficulty,
-    query: typeof toolArgs.query === 'string' ? toolArgs.query : deterministic.query,
+    query:
+      typeof toolArgs.query === "string" ? toolArgs.query : deterministic.query,
     projectLimit:
-      typeof toolArgs.projectLimit === 'number'
+      typeof toolArgs.projectLimit === "number"
         ? toolArgs.projectLimit
         : deterministic.projectLimit,
     includePartial:
-      typeof toolArgs.includePartial === 'boolean'
+      typeof toolArgs.includePartial === "boolean"
         ? toolArgs.includePartial
         : deterministic.includePartial,
     candidateProjectIds: Array.isArray(toolArgs.candidateProjectIds)
@@ -833,33 +867,33 @@ const buildProjectsWithinBudgetExecutionPlan = (input: {
   semanticRoute: AiAgentRouteType | null;
   plannerConfidence: number | null;
 }): AgentExecutionPlan => ({
-  route: 'PROJECTS_WITHIN_BUDGET',
-  toolName: 'find_projects_within_budget',
+  route: "PROJECTS_WITHIN_BUDGET",
+  toolName: "find_projects_within_budget",
   toolInput: input.toolInput,
   diagnostics: {
     deterministicRoute: input.routeDecision.route,
     deterministicConfidence: input.routeDecision.confidence,
     semanticPlannerUsed: input.semanticPlannerUsed,
     semanticRoute: input.semanticRoute,
-    validatedRoute: 'PROJECTS_WITHIN_BUDGET',
+    validatedRoute: "PROJECTS_WITHIN_BUDGET",
     normalizedFilters: input.toolInput,
-    toolName: 'find_projects_within_budget',
+    toolName: "find_projects_within_budget",
     plannerConfidence: input.plannerConfidence,
     resolvedEntityTitle: null,
   },
 });
 
 const BUDGET_CONTEXT_PROJECT_BLOCK_TYPES = new Set([
-  'project_results',
-  'component_list',
-  'component_matches',
-  'project_details',
-  'project_budget_estimate',
+  "project_results",
+  "component_list",
+  "component_matches",
+  "project_details",
+  "project_budget_estimate",
 ]);
 
 const resolveSingleBudgetContextProject = (
   projectCandidates: Array<{
-    type: 'PROJECT';
+    type: "PROJECT";
     id: string;
     title: string;
     resultIndex: number;
@@ -877,7 +911,9 @@ const resolveSingleBudgetContextProject = (
     return null;
   }
 
-  const latestOrder = Math.max(...grounded.map((candidate) => candidate.recencyOrder));
+  const latestOrder = Math.max(
+    ...grounded.map((candidate) => candidate.recencyOrder),
+  );
   const latestGrounded = [
     ...new Map(
       grounded
@@ -903,17 +939,17 @@ const resolveContextualProjectBudgetToolInput = (input: {
   }
 
   const projectCandidates = (input.conversationContext?.entities ?? [])
-    .filter((entity) => entity.type === 'PROJECT')
+    .filter((entity) => entity.type === "PROJECT")
     .map((entity) => ({
-      type: 'PROJECT' as const,
+      type: "PROJECT" as const,
       id: entity.id,
       title: entity.title,
       normalizedTitle: entity.title.trim().toLowerCase(),
       resultIndex: entity.resultIndex,
       parentContext: entity.parentContext,
       status: entity.status,
-      blockType: entity.blockType ?? 'project_results',
-      messageId: entity.messageId ?? '',
+      blockType: entity.blockType ?? "project_results",
+      messageId: entity.messageId ?? "",
       recencyOrder: entity.recencyOrder ?? 0,
     }));
 
@@ -962,7 +998,8 @@ const buildProjectBudgetFallbackPlan = (input: {
     resolveContextualProjectBudgetToolInput({
       userMessage: input.userMessage,
       conversationContext: input.conversationContext,
-    }) ?? buildToolInputForRoute('PROJECT_BUDGET_ESTIMATION', input.userMessage);
+    }) ??
+    buildToolInputForRoute("PROJECT_BUDGET_ESTIMATION", input.userMessage);
 
   if (!toolInput.projectId && !toolInput.projectQuery) {
     return buildProjectBudgetClarificationPlan({
@@ -978,8 +1015,8 @@ const buildProjectBudgetFallbackPlan = (input: {
     userMessage: input.userMessage,
     routeDecision: {
       ...input.routeDecision,
-      route: 'PROJECT_BUDGET_ESTIMATION',
-      suggestedTool: 'estimate_project_material_budget',
+      route: "PROJECT_BUDGET_ESTIMATION",
+      suggestedTool: "estimate_project_material_budget",
       confidence: 0.94,
     },
     locale: input.locale,
@@ -989,10 +1026,10 @@ const buildProjectBudgetFallbackPlan = (input: {
     ...toolInput,
     limitPerComponent: toolInput.limitPerComponent ?? 5,
   };
-  fallback.toolName = 'estimate_project_material_budget';
-  fallback.route = 'PROJECT_BUDGET_ESTIMATION';
-  fallback.diagnostics.validatedRoute = 'PROJECT_BUDGET_ESTIMATION';
-  fallback.diagnostics.toolName = 'estimate_project_material_budget';
+  fallback.toolName = "estimate_project_material_budget";
+  fallback.route = "PROJECT_BUDGET_ESTIMATION";
+  fallback.diagnostics.validatedRoute = "PROJECT_BUDGET_ESTIMATION";
+  fallback.diagnostics.toolName = "estimate_project_material_budget";
   if (input.semanticPlannerUsed != null) {
     fallback.diagnostics.semanticPlannerUsed = input.semanticPlannerUsed;
   }
@@ -1011,61 +1048,61 @@ const buildLearnerReservationStatusPlan = (input: {
   routingMode?: AgentRoutingMode;
 }): AgentExecutionPlan => {
   const plan: AgentExecutionPlan = {
-    route: 'MATERIAL_DETAILS',
+    route: "MATERIAL_DETAILS",
     toolName: null,
     toolInput: {},
-    semanticDataTopic: 'LEARNER_RESERVATION_STATUS',
-    semanticUnderstandingRoute: 'SYSTEM_DATA_QUERY',
+    semanticDataTopic: "LEARNER_RESERVATION_STATUS",
+    semanticUnderstandingRoute: "SYSTEM_DATA_QUERY",
     diagnostics: {
-      deterministicRoute: 'MATERIAL_DETAILS',
+      deterministicRoute: "MATERIAL_DETAILS",
       deterministicConfidence: 0.94,
       semanticPlannerUsed: input.semanticPlannerUsed,
       semanticRoute: null,
-      validatedRoute: 'MATERIAL_DETAILS',
+      validatedRoute: "MATERIAL_DETAILS",
       normalizedFilters: null,
       toolName: null,
       plannerConfidence: input.plannerConfidence,
       resolvedEntityTitle: null,
-      routingMode: input.routingMode ?? 'semantic',
+      routingMode: input.routingMode ?? "semantic",
     },
   };
 
-  if (input.routingMode === 'provider_unavailable_fallback') {
+  if (input.routingMode === "provider_unavailable_fallback") {
     return markProviderUnavailableFallbackDiagnostics(plan);
   }
-  if (input.routingMode === 'semantic_invalid_fallback') {
+  if (input.routingMode === "semantic_invalid_fallback") {
     return markSemanticInvalidFallbackDiagnostics(plan);
   }
   return markSemanticRoutingDiagnostics(plan);
 };
 
 const MUTATION_TOOL_NAMES = new Set([
-  'prepare_action',
-  'update_learner_location',
-  'save_material',
-  'unsave_material',
-  'save_project',
-  'unsave_project',
+  "prepare_action",
+  "update_learner_location",
+  "save_material",
+  "unsave_material",
+  "save_project",
+  "unsave_project",
 ]);
 
 const READ_ONLY_DATA_ROUTES = new Set<AiAgentRouteType>([
-  'MATERIAL_SEARCH',
-  'MATERIAL_DETAILS',
-  'PROJECT_SEARCH',
-  'PROJECT_DETAILS',
-  'PROJECT_COMPONENTS',
-  'SAVED_PROJECTS',
-  'ACTIVE_PROJECT_BUILDS',
-  'BUILD_GAP_ANALYSIS',
-  'COMPONENT_MATERIAL_MATCHING',
-  'PROJECT_MATERIAL_MATCHING',
-  'PROJECT_MATERIAL_AVAILABILITY',
-  'PROJECT_BUDGET_ESTIMATION',
-  'PROJECTS_WITHIN_BUDGET',
-  'OWNED_MATERIALS_PROJECT_MATCH',
-  'MATERIAL_COMPARISON',
-  'PROJECT_COMPARISON',
-  'PERSONALIZED_RECOMMENDATION',
+  "MATERIAL_SEARCH",
+  "MATERIAL_DETAILS",
+  "PROJECT_SEARCH",
+  "PROJECT_DETAILS",
+  "PROJECT_COMPONENTS",
+  "SAVED_PROJECTS",
+  "ACTIVE_PROJECT_BUILDS",
+  "BUILD_GAP_ANALYSIS",
+  "COMPONENT_MATERIAL_MATCHING",
+  "PROJECT_MATERIAL_MATCHING",
+  "PROJECT_MATERIAL_AVAILABILITY",
+  "PROJECT_BUDGET_ESTIMATION",
+  "PROJECTS_WITHIN_BUDGET",
+  "OWNED_MATERIALS_PROJECT_MATCH",
+  "MATERIAL_COMPARISON",
+  "PROJECT_COMPARISON",
+  "PERSONALIZED_RECOMMENDATION",
 ]);
 
 const reconcileSemanticExecutionPlan = (input: {
@@ -1085,29 +1122,29 @@ const reconcileSemanticExecutionPlan = (input: {
   }
 
   if (
-    (plan.route === 'PROJECT_MATERIAL_AVAILABILITY' ||
-      plan.toolName === 'match_available_materials_for_project') &&
+    (plan.route === "PROJECT_MATERIAL_AVAILABILITY" ||
+      plan.toolName === "match_available_materials_for_project") &&
     !hasTrustedProjectMaterialContext(input.userMessage)
   ) {
     return { plan, rejected: true };
   }
 
   if (
-    plan.route === 'MATERIAL_SEARCH' &&
+    plan.route === "MATERIAL_SEARCH" &&
     plan.toolInput.nearLearner === true &&
-    plan.toolName === 'update_learner_location'
+    plan.toolName === "update_learner_location"
   ) {
     return { plan, rejected: true };
   }
 
-  if (input.understanding.topic === 'LEARNER_RESERVATION_STATUS') {
+  if (input.understanding.topic === "LEARNER_RESERVATION_STATUS") {
     plan = {
       ...plan,
-      route: 'MATERIAL_DETAILS',
+      route: "MATERIAL_DETAILS",
       toolName: null,
       toolInput: {},
-      semanticDataTopic: 'LEARNER_RESERVATION_STATUS',
-      semanticUnderstandingRoute: 'SYSTEM_DATA_QUERY',
+      semanticDataTopic: "LEARNER_RESERVATION_STATUS",
+      semanticUnderstandingRoute: "SYSTEM_DATA_QUERY",
     };
   }
 
@@ -1115,10 +1152,10 @@ const reconcileSemanticExecutionPlan = (input: {
   if (
     materialResultSet &&
     detectMaterialResultSetFilterFollowUp(input.userMessage) &&
-    (plan.route === 'GENERAL_LEARNING' ||
-      plan.route === 'CLARIFICATION' ||
-      input.understanding.route === 'GENERAL_LEARNING' ||
-      input.understanding.route === 'CLARIFICATION_REQUIRED')
+    (plan.route === "GENERAL_LEARNING" ||
+      plan.route === "CLARIFICATION" ||
+      input.understanding.route === "GENERAL_LEARNING" ||
+      input.understanding.route === "CLARIFICATION_REQUIRED")
   ) {
     const constraints: Record<string, unknown> = {
       [TRUSTED_MATERIAL_RESULT_SET_FILTER_MARKER]: true,
@@ -1130,17 +1167,17 @@ const reconcileSemanticExecutionPlan = (input: {
     }
 
     plan = {
-      route: 'MATERIAL_SEARCH',
-      toolName: 'search_available_materials',
+      route: "MATERIAL_SEARCH",
+      toolName: "search_available_materials",
       toolInput: constraints,
-      semanticDataTopic: 'MATERIAL_RESULT_SET_FILTER',
-      semanticUnderstandingRoute: 'SYSTEM_DATA_QUERY',
+      semanticDataTopic: "MATERIAL_RESULT_SET_FILTER",
+      semanticUnderstandingRoute: "SYSTEM_DATA_QUERY",
       diagnostics: {
         ...plan.diagnostics,
-        validatedRoute: 'MATERIAL_SEARCH',
+        validatedRoute: "MATERIAL_SEARCH",
         normalizedFilters: constraints,
-        toolName: 'search_available_materials',
-        semanticRoute: 'MATERIAL_SEARCH',
+        toolName: "search_available_materials",
+        semanticRoute: "MATERIAL_SEARCH",
       },
     };
   }
@@ -1162,7 +1199,7 @@ const applyPlannerPlan = (input: {
 
   if (input.planner.clarificationNeeded) {
     return {
-      route: 'CLARIFICATION',
+      route: "CLARIFICATION",
       toolName: null,
       toolInput: {},
       clarificationReason: input.planner.clarificationReason,
@@ -1171,7 +1208,7 @@ const applyPlannerPlan = (input: {
         deterministicConfidence: input.routeDecision.confidence,
         semanticPlannerUsed: true,
         semanticRoute: input.planner.route,
-        validatedRoute: 'CLARIFICATION',
+        validatedRoute: "CLARIFICATION",
         normalizedFilters: null,
         toolName: null,
         plannerConfidence: input.planner.confidence,
@@ -1180,9 +1217,9 @@ const applyPlannerPlan = (input: {
     };
   }
 
-  if (input.planner.route === 'OUT_OF_SCOPE') {
+  if (input.planner.route === "OUT_OF_SCOPE") {
     return {
-      route: 'OUT_OF_SCOPE',
+      route: "OUT_OF_SCOPE",
       toolName: null,
       toolInput: {},
       diagnostics: {
@@ -1190,7 +1227,7 @@ const applyPlannerPlan = (input: {
         deterministicConfidence: input.routeDecision.confidence,
         semanticPlannerUsed: true,
         semanticRoute: input.planner.route,
-        validatedRoute: 'OUT_OF_SCOPE',
+        validatedRoute: "OUT_OF_SCOPE",
         normalizedFilters: null,
         toolName: null,
         plannerConfidence: input.planner.confidence,
@@ -1210,12 +1247,13 @@ const applyPlannerPlan = (input: {
   );
 
   if (
-    input.planner.toolCall?.name === 'find_projects_within_budget' ||
+    input.planner.toolCall?.name === "find_projects_within_budget" ||
     projectsWithinBudgetToolInput ||
     detectProjectsWithinBudgetIntent(input.userMessage)
   ) {
     let toolInput =
-      projectsWithinBudgetToolInput ?? parseProjectsWithinBudgetInput(input.userMessage);
+      projectsWithinBudgetToolInput ??
+      parseProjectsWithinBudgetInput(input.userMessage);
     const budgetBound = extractBudgetBound(input.userMessage);
 
     if (!budgetBound?.maxBudgetNis || Number(toolInput.maxBudgetNis) <= 0) {
@@ -1245,13 +1283,13 @@ const applyPlannerPlan = (input: {
   );
 
   if (
-    input.planner.route === 'PROJECT_BUDGET_ESTIMATION' ||
-    input.planner.toolCall?.name === 'estimate_project_material_budget' ||
+    input.planner.route === "PROJECT_BUDGET_ESTIMATION" ||
+    input.planner.toolCall?.name === "estimate_project_material_budget" ||
     budgetToolInput
   ) {
     let toolInput =
       budgetToolInput ??
-      buildToolInputForRoute('PROJECT_BUDGET_ESTIMATION', input.userMessage);
+      buildToolInputForRoute("PROJECT_BUDGET_ESTIMATION", input.userMessage);
 
     if (resolvedEntities.projectId) {
       toolInput.projectId = resolvedEntities.projectId;
@@ -1284,17 +1322,17 @@ const applyPlannerPlan = (input: {
     }
 
     return {
-      route: 'PROJECT_BUDGET_ESTIMATION',
-      toolName: 'estimate_project_material_budget',
+      route: "PROJECT_BUDGET_ESTIMATION",
+      toolName: "estimate_project_material_budget",
       toolInput,
       diagnostics: {
         deterministicRoute: input.routeDecision.route,
         deterministicConfidence: input.routeDecision.confidence,
         semanticPlannerUsed: true,
         semanticRoute: input.planner.route,
-        validatedRoute: 'PROJECT_BUDGET_ESTIMATION',
+        validatedRoute: "PROJECT_BUDGET_ESTIMATION",
         normalizedFilters: null,
-        toolName: 'estimate_project_material_budget',
+        toolName: "estimate_project_material_budget",
         plannerConfidence: input.planner.confidence,
         resolvedEntityTitle: resolvedEntities.title ?? null,
       },
@@ -1302,7 +1340,7 @@ const applyPlannerPlan = (input: {
   }
 
   if (
-    input.planner.route === 'MATERIAL_SEARCH' &&
+    input.planner.route === "MATERIAL_SEARCH" &&
     shouldDeferMaterialSearchForOwnedMaterialsProjectUse(input.userMessage) &&
     !isExplicitMaterialSearchCommand(input.userMessage)
   ) {
@@ -1325,9 +1363,9 @@ const applyPlannerPlan = (input: {
     }
   }
 
-  if (input.planner.route === 'GENERAL_LEARNING') {
+  if (input.planner.route === "GENERAL_LEARNING") {
     return {
-      route: 'GENERAL_LEARNING',
+      route: "GENERAL_LEARNING",
       toolName: null,
       toolInput: {},
       diagnostics: {
@@ -1335,7 +1373,7 @@ const applyPlannerPlan = (input: {
         deterministicConfidence: input.routeDecision.confidence,
         semanticPlannerUsed: true,
         semanticRoute: input.planner.route,
-        validatedRoute: 'GENERAL_LEARNING',
+        validatedRoute: "GENERAL_LEARNING",
         normalizedFilters: null,
         toolName: null,
         plannerConfidence: input.planner.confidence,
@@ -1347,25 +1385,29 @@ const applyPlannerPlan = (input: {
   let route = input.planner.route as AiAgentRouteType;
   let toolInput: Record<string, unknown> = {};
 
-  if (route === 'MATERIAL_SEARCH') {
+  if (route === "MATERIAL_SEARCH") {
     toolInput =
       materialSearchPlanFromPlanner(input.userMessage, input.planner) ??
       mergeMaterialSearchPlan(input.userMessage);
-  } else if (route === 'OWNED_MATERIALS_PROJECT_MATCH') {
+  } else if (route === "OWNED_MATERIALS_PROJECT_MATCH") {
     toolInput =
       ownedMaterialsPlanFromPlanner(
         input.userMessage,
         input.planner,
         input.conversationContext,
       ) ?? buildToolInputForRoute(route, input.userMessage);
-  } else if (route === 'PROJECT_MATERIAL_AVAILABILITY') {
+  } else if (route === "PROJECT_MATERIAL_AVAILABILITY") {
     toolInput =
-      projectMaterialAvailabilityPlanFromPlanner(input.userMessage, input.planner) ??
-      buildToolInputForRoute(route, input.userMessage);
-  } else if (route === 'PROJECT_BUDGET_ESTIMATION') {
+      projectMaterialAvailabilityPlanFromPlanner(
+        input.userMessage,
+        input.planner,
+      ) ?? buildToolInputForRoute(route, input.userMessage);
+  } else if (route === "PROJECT_BUDGET_ESTIMATION") {
     toolInput =
-      projectBudgetEstimationPlanFromPlanner(input.userMessage, input.planner) ??
-      buildToolInputForRoute(route, input.userMessage);
+      projectBudgetEstimationPlanFromPlanner(
+        input.userMessage,
+        input.planner,
+      ) ?? buildToolInputForRoute(route, input.userMessage);
   } else if (input.planner.toolCall) {
     route = input.planner.route as AiAgentRouteType;
     toolInput = { ...input.planner.toolCall.arguments };
@@ -1384,7 +1426,8 @@ const applyPlannerPlan = (input: {
   }
 
   const toolName =
-    input.planner.toolCall?.name ?? routeToToolName(route, input.routeDecision.suggestedTool);
+    input.planner.toolCall?.name ??
+    routeToToolName(route, input.routeDecision.suggestedTool);
 
   return {
     route,
@@ -1396,7 +1439,7 @@ const applyPlannerPlan = (input: {
       semanticPlannerUsed: true,
       semanticRoute: input.planner.route,
       validatedRoute: route,
-      normalizedFilters: route === 'MATERIAL_SEARCH' ? toolInput : null,
+      normalizedFilters: route === "MATERIAL_SEARCH" ? toolInput : null,
       toolName,
       plannerConfidence: input.planner.confidence,
       resolvedEntityTitle: resolvedEntities.title ?? null,
@@ -1410,12 +1453,12 @@ export const preserveDeterministicDomainLearning = (input: {
 }): AgentExecutionPlan => {
   const deterministicScope = classifyScopeDeterministic(input.userMessage);
   if (
-    deterministicScope.classification === 'DOMAIN_KNOWLEDGE' &&
-    input.plan.route === 'OUT_OF_SCOPE'
+    deterministicScope.classification === "DOMAIN_KNOWLEDGE" &&
+    input.plan.route === "OUT_OF_SCOPE"
   ) {
     return {
       ...input.plan,
-      route: 'GENERAL_LEARNING',
+      route: "GENERAL_LEARNING",
       toolName: null,
       toolInput: {},
     };
@@ -1436,20 +1479,21 @@ const reconcilePlannerWithPlatformIntent = (input: {
     plan: input.plan,
   });
 
-  if (input.plan.route === 'OWNED_MATERIALS_PROJECT_MATCH') {
+  if (input.plan.route === "OWNED_MATERIALS_PROJECT_MATCH") {
     if (isExplicitMaterialSearchCommand(input.userMessage)) {
       const fallback = buildDeterministicFallbackPlan({
         userMessage: input.userMessage,
         routeDecision: {
           ...input.routeDecision,
-          route: 'MATERIAL_SEARCH',
-          suggestedTool: 'search_available_materials',
+          route: "MATERIAL_SEARCH",
+          suggestedTool: "search_available_materials",
           confidence: 0.96,
         },
         locale: input.locale,
         conversationContext: input.conversationContext,
       });
-      fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+      fallback.diagnostics.semanticPlannerUsed =
+        input.plan.diagnostics.semanticPlannerUsed;
       fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
       return fallback;
     }
@@ -1457,7 +1501,7 @@ const reconcilePlannerWithPlatformIntent = (input: {
     if (detectEducationalLearningIntent(input.userMessage)) {
       return {
         ...domainPreservedPlan,
-        route: 'GENERAL_LEARNING',
+        route: "GENERAL_LEARNING",
         toolName: null,
         toolInput: {},
       };
@@ -1466,9 +1510,9 @@ const reconcilePlannerWithPlatformIntent = (input: {
   }
 
   if (
-    input.plan.route === 'CLARIFICATION' &&
-    (input.plan.clarificationReason?.includes('ImpactLoop') ||
-      input.plan.clarificationReason?.includes('مشاريع ImpactLoop'))
+    input.plan.route === "CLARIFICATION" &&
+    (input.plan.clarificationReason?.includes("ImpactLoop") ||
+      input.plan.clarificationReason?.includes("مشاريع ImpactLoop"))
   ) {
     return domainPreservedPlan;
   }
@@ -1483,45 +1527,47 @@ const reconcilePlannerWithPlatformIntent = (input: {
 
   if (
     detectActiveProjectBuildsIntent(input.userMessage) &&
-    input.plan.route !== 'ACTIVE_PROJECT_BUILDS'
+    input.plan.route !== "ACTIVE_PROJECT_BUILDS"
   ) {
     const fallback = buildDeterministicFallbackPlan({
       userMessage: input.userMessage,
       routeDecision: {
         ...input.routeDecision,
-        route: 'ACTIVE_PROJECT_BUILDS',
-        suggestedTool: 'get_active_project_builds',
+        route: "ACTIVE_PROJECT_BUILDS",
+        suggestedTool: "get_active_project_builds",
         confidence: 0.94,
       },
       locale: input.locale,
       conversationContext: input.conversationContext,
     });
-    fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+    fallback.diagnostics.semanticPlannerUsed =
+      input.plan.diagnostics.semanticPlannerUsed;
     fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
     return fallback;
   }
 
   if (
     detectMaterialDetailsIntent(input.userMessage) &&
-    input.plan.route !== 'MATERIAL_DETAILS'
+    input.plan.route !== "MATERIAL_DETAILS"
   ) {
     const fallback = buildDeterministicFallbackPlan({
       userMessage: input.userMessage,
       routeDecision: {
         ...input.routeDecision,
-        route: 'MATERIAL_DETAILS',
-        suggestedTool: 'get_material_details',
+        route: "MATERIAL_DETAILS",
+        suggestedTool: "get_material_details",
         confidence: 0.92,
       },
       locale: input.locale,
       conversationContext: input.conversationContext,
     });
-    fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+    fallback.diagnostics.semanticPlannerUsed =
+      input.plan.diagnostics.semanticPlannerUsed;
     fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
     return fallback;
   }
 
-  if (input.plan.route === 'PERSONALIZED_RECOMMENDATION') {
+  if (input.plan.route === "PERSONALIZED_RECOMMENDATION") {
     const expected = parseRecommendationInput(input.userMessage);
     const currentType = input.plan.toolInput.type as string | undefined;
     if (currentType !== expected.type) {
@@ -1536,23 +1582,24 @@ const reconcilePlannerWithPlatformIntent = (input: {
     !input.conversationContext?.activeBuildGuide &&
     detectProjectComponentsIntent(input.userMessage) &&
     !detectBuildGapIntent(input.userMessage) &&
-    (input.plan.route === 'GENERAL_LEARNING' ||
-      input.plan.route === 'CLARIFICATION' ||
-      input.plan.route === 'BUILD_GAP_ANALYSIS' ||
-      input.plan.route === 'MATERIAL_SEARCH')
+    (input.plan.route === "GENERAL_LEARNING" ||
+      input.plan.route === "CLARIFICATION" ||
+      input.plan.route === "BUILD_GAP_ANALYSIS" ||
+      input.plan.route === "MATERIAL_SEARCH")
   ) {
     const fallback = buildDeterministicFallbackPlan({
       userMessage: input.userMessage,
       routeDecision: {
         ...input.routeDecision,
-        route: 'PROJECT_COMPONENTS',
-        suggestedTool: 'get_project_required_components',
+        route: "PROJECT_COMPONENTS",
+        suggestedTool: "get_project_required_components",
         confidence: 0.94,
       },
       locale: input.locale,
       conversationContext: input.conversationContext,
     });
-    fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+    fallback.diagnostics.semanticPlannerUsed =
+      input.plan.diagnostics.semanticPlannerUsed;
     fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
     return fallback;
   }
@@ -1566,25 +1613,26 @@ const reconcilePlannerWithPlatformIntent = (input: {
       userMessage: input.userMessage,
       routeDecision: {
         ...input.routeDecision,
-        route: 'MATERIAL_SEARCH',
-        suggestedTool: 'search_available_materials',
+        route: "MATERIAL_SEARCH",
+        suggestedTool: "search_available_materials",
         confidence: 0.94,
       },
       locale: input.locale,
       conversationContext: input.conversationContext,
     });
-    fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+    fallback.diagnostics.semanticPlannerUsed =
+      input.plan.diagnostics.semanticPlannerUsed;
     fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
     return fallback;
   }
 
   if (
     detectProjectsWithinBudgetIntent(input.userMessage) &&
-    (input.plan.route === 'GENERAL_LEARNING' ||
-      input.plan.route === 'CLARIFICATION' ||
-      input.plan.route === 'MATERIAL_SEARCH' ||
-      input.plan.route === 'PROJECT_SEARCH' ||
-      input.plan.route === 'PROJECT_BUDGET_ESTIMATION')
+    (input.plan.route === "GENERAL_LEARNING" ||
+      input.plan.route === "CLARIFICATION" ||
+      input.plan.route === "MATERIAL_SEARCH" ||
+      input.plan.route === "PROJECT_SEARCH" ||
+      input.plan.route === "PROJECT_BUDGET_ESTIMATION")
   ) {
     const budgetBound = extractBudgetBound(input.userMessage);
     if (!budgetBound?.maxBudgetNis) {
@@ -1608,11 +1656,11 @@ const reconcilePlannerWithPlatformIntent = (input: {
 
   if (
     detectProjectBudgetEstimationIntent(input.userMessage) &&
-    (input.plan.route === 'GENERAL_LEARNING' ||
-      input.plan.route === 'CLARIFICATION' ||
-      input.plan.route === 'MATERIAL_SEARCH' ||
-      input.plan.route === 'PROJECT_MATERIAL_AVAILABILITY' ||
-      input.plan.route === 'PROJECT_SEARCH')
+    (input.plan.route === "GENERAL_LEARNING" ||
+      input.plan.route === "CLARIFICATION" ||
+      input.plan.route === "MATERIAL_SEARCH" ||
+      input.plan.route === "PROJECT_MATERIAL_AVAILABILITY" ||
+      input.plan.route === "PROJECT_SEARCH")
   ) {
     return buildProjectBudgetFallbackPlan({
       userMessage: input.userMessage,
@@ -1627,32 +1675,33 @@ const reconcilePlannerWithPlatformIntent = (input: {
 
   if (
     detectProjectMaterialAvailabilityIntent(input.userMessage) &&
-    (input.plan.route === 'GENERAL_LEARNING' ||
-      input.plan.route === 'CLARIFICATION' ||
-      input.plan.route === 'MATERIAL_SEARCH')
+    (input.plan.route === "GENERAL_LEARNING" ||
+      input.plan.route === "CLARIFICATION" ||
+      input.plan.route === "MATERIAL_SEARCH")
   ) {
     const fallback = buildDeterministicFallbackPlan({
       userMessage: input.userMessage,
       routeDecision: {
         ...input.routeDecision,
-        route: 'PROJECT_MATERIAL_AVAILABILITY',
-        suggestedTool: 'match_available_materials_for_project',
+        route: "PROJECT_MATERIAL_AVAILABILITY",
+        suggestedTool: "match_available_materials_for_project",
         confidence: 0.94,
       },
       locale: input.locale,
       conversationContext: input.conversationContext,
     });
-    fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+    fallback.diagnostics.semanticPlannerUsed =
+      input.plan.diagnostics.semanticPlannerUsed;
     fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
     return fallback;
   }
 
   if (
-    input.plan.route !== 'GENERAL_LEARNING' &&
-    input.plan.route !== 'CLARIFICATION'
+    input.plan.route !== "GENERAL_LEARNING" &&
+    input.plan.route !== "CLARIFICATION"
   ) {
     if (
-      input.plan.route === 'MATERIAL_SEARCH' &&
+      input.plan.route === "MATERIAL_SEARCH" &&
       shouldDeferMaterialSearchForOwnedMaterialsProjectUse(input.userMessage) &&
       !isExplicitMaterialSearchCommand(input.userMessage)
     ) {
@@ -1666,17 +1715,20 @@ const reconcilePlannerWithPlatformIntent = (input: {
         ownedSemanticFallback.diagnostics.semanticPlannerUsed =
           input.plan.diagnostics.semanticPlannerUsed;
         ownedSemanticFallback.diagnostics.semanticRoute =
-          input.plan.diagnostics.semanticRoute ?? 'OWNED_MATERIALS_PROJECT_MATCH';
+          input.plan.diagnostics.semanticRoute ??
+          "OWNED_MATERIALS_PROJECT_MATCH";
         return ownedSemanticFallback;
       }
 
-      if (input.plan.diagnostics.semanticRoute === 'OWNED_MATERIALS_PROJECT_MATCH') {
+      if (
+        input.plan.diagnostics.semanticRoute === "OWNED_MATERIALS_PROJECT_MATCH"
+      ) {
         const ownedFallback = buildDeterministicFallbackPlan({
           userMessage: input.userMessage,
           routeDecision: {
             ...input.routeDecision,
-            route: 'OWNED_MATERIALS_PROJECT_MATCH',
-            suggestedTool: 'match_projects_by_owned_materials',
+            route: "OWNED_MATERIALS_PROJECT_MATCH",
+            suggestedTool: "match_projects_by_owned_materials",
             confidence: 0.95,
           },
           locale: input.locale,
@@ -1710,14 +1762,15 @@ const reconcilePlannerWithPlatformIntent = (input: {
       userMessage: input.userMessage,
       routeDecision: {
         ...input.routeDecision,
-        route: 'BUILD_GAP_ANALYSIS',
-        suggestedTool: 'analyze_build_gaps',
+        route: "BUILD_GAP_ANALYSIS",
+        suggestedTool: "analyze_build_gaps",
         confidence: 0.93,
       },
       locale: input.locale,
       conversationContext: input.conversationContext,
     });
-    fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+    fallback.diagnostics.semanticPlannerUsed =
+      input.plan.diagnostics.semanticPlannerUsed;
     fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
     return fallback;
   }
@@ -1730,14 +1783,15 @@ const reconcilePlannerWithPlatformIntent = (input: {
       userMessage: input.userMessage,
       routeDecision: {
         ...input.routeDecision,
-        route: 'MATERIAL_COMPARISON',
-        suggestedTool: 'compare_materials',
+        route: "MATERIAL_COMPARISON",
+        suggestedTool: "compare_materials",
         confidence: 0.94,
       },
       locale: input.locale,
       conversationContext: input.conversationContext,
     });
-    fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+    fallback.diagnostics.semanticPlannerUsed =
+      input.plan.diagnostics.semanticPlannerUsed;
     fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
     return fallback;
   }
@@ -1751,14 +1805,15 @@ const reconcilePlannerWithPlatformIntent = (input: {
       userMessage: input.userMessage,
       routeDecision: {
         ...input.routeDecision,
-        route: 'MATERIAL_SEARCH',
-        suggestedTool: 'search_available_materials',
+        route: "MATERIAL_SEARCH",
+        suggestedTool: "search_available_materials",
         confidence: 0.94,
       },
       locale: input.locale,
       conversationContext: input.conversationContext,
     });
-    fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+    fallback.diagnostics.semanticPlannerUsed =
+      input.plan.diagnostics.semanticPlannerUsed;
     fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
     return fallback;
   }
@@ -1771,14 +1826,15 @@ const reconcilePlannerWithPlatformIntent = (input: {
       userMessage: input.userMessage,
       routeDecision: {
         ...input.routeDecision,
-        route: 'PROJECT_COMPONENTS',
-        suggestedTool: 'get_project_required_components',
+        route: "PROJECT_COMPONENTS",
+        suggestedTool: "get_project_required_components",
         confidence: 0.94,
       },
       locale: input.locale,
       conversationContext: input.conversationContext,
     });
-    fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+    fallback.diagnostics.semanticPlannerUsed =
+      input.plan.diagnostics.semanticPlannerUsed;
     fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
     return fallback;
   }
@@ -1800,14 +1856,15 @@ const reconcilePlannerWithPlatformIntent = (input: {
       userMessage: input.userMessage,
       routeDecision: {
         ...input.routeDecision,
-        route: 'PROJECT_MATERIAL_AVAILABILITY',
-        suggestedTool: 'match_available_materials_for_project',
+        route: "PROJECT_MATERIAL_AVAILABILITY",
+        suggestedTool: "match_available_materials_for_project",
         confidence: 0.94,
       },
       locale: input.locale,
       conversationContext: input.conversationContext,
     });
-    fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+    fallback.diagnostics.semanticPlannerUsed =
+      input.plan.diagnostics.semanticPlannerUsed;
     fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
     return fallback;
   }
@@ -1817,14 +1874,15 @@ const reconcilePlannerWithPlatformIntent = (input: {
       userMessage: input.userMessage,
       routeDecision: {
         ...input.routeDecision,
-        route: 'OWNED_MATERIALS_PROJECT_MATCH',
-        suggestedTool: 'match_projects_by_owned_materials',
+        route: "OWNED_MATERIALS_PROJECT_MATCH",
+        suggestedTool: "match_projects_by_owned_materials",
         confidence: 0.95,
       },
       locale: input.locale,
       conversationContext: input.conversationContext,
     });
-    fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+    fallback.diagnostics.semanticPlannerUsed =
+      input.plan.diagnostics.semanticPlannerUsed;
     fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
     return fallback;
   }
@@ -1838,14 +1896,15 @@ const reconcilePlannerWithPlatformIntent = (input: {
       userMessage: input.userMessage,
       routeDecision: {
         ...input.routeDecision,
-        route: 'MATERIAL_SEARCH',
-        suggestedTool: 'search_available_materials',
+        route: "MATERIAL_SEARCH",
+        suggestedTool: "search_available_materials",
         confidence: 0.94,
       },
       locale: input.locale,
       conversationContext: input.conversationContext,
     });
-    fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+    fallback.diagnostics.semanticPlannerUsed =
+      input.plan.diagnostics.semanticPlannerUsed;
     fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
     return fallback;
   }
@@ -1868,15 +1927,15 @@ const reconcilePlannerWithPlatformIntent = (input: {
 };
 
 const buildDangerousExecutionPlan = (): AgentExecutionPlan => ({
-  route: 'DANGEROUS_REQUEST',
+  route: "DANGEROUS_REQUEST",
   toolName: null,
   toolInput: {},
   diagnostics: {
-    deterministicRoute: 'DANGEROUS_REQUEST',
+    deterministicRoute: "DANGEROUS_REQUEST",
     deterministicConfidence: 0.98,
     semanticPlannerUsed: false,
     semanticRoute: null,
-    validatedRoute: 'DANGEROUS_REQUEST',
+    validatedRoute: "DANGEROUS_REQUEST",
     normalizedFilters: null,
     toolName: null,
     plannerConfidence: null,
@@ -1888,27 +1947,27 @@ const understandingToPlannerOutput = (
   understanding: SemanticUnderstanding,
 ): AgentPlannerOutput => {
   const mapped = mapSemanticToExecutionPlan(understanding);
-  if (mapped.route === 'CLARIFICATION') {
+  if (mapped.route === "CLARIFICATION") {
     return {
-      route: 'CLARIFICATION',
+      route: "CLARIFICATION",
       confidence: understanding.confidence,
       entities: understanding.entities,
       clarificationNeeded: true,
       clarificationReason: mapped.clarificationReason,
     };
   }
-  if (mapped.route === 'PLATFORM_GUIDANCE') {
+  if (mapped.route === "PLATFORM_GUIDANCE") {
     return {
-      route: 'GENERAL_LEARNING',
+      route: "GENERAL_LEARNING",
       confidence: understanding.confidence,
       entities: understanding.entities,
       clarificationNeeded: false,
     };
   }
   if (
-    mapped.route === 'GENERAL_LEARNING' ||
-    mapped.route === 'OUT_OF_SCOPE' ||
-    mapped.route === 'ACTION_REQUEST'
+    mapped.route === "GENERAL_LEARNING" ||
+    mapped.route === "OUT_OF_SCOPE" ||
+    mapped.route === "ACTION_REQUEST"
   ) {
     return {
       route: mapped.route,
@@ -1918,7 +1977,7 @@ const understandingToPlannerOutput = (
     };
   }
   return {
-    route: mapped.route as AgentPlannerOutput['route'],
+    route: mapped.route as AgentPlannerOutput["route"],
     confidence: understanding.confidence,
     entities: understanding.entities,
     filters: understanding.filters,
@@ -1933,17 +1992,17 @@ export const buildSemanticProviderUnavailablePlan = (
   locale: AiLocale,
 ): AgentExecutionPlan =>
   markProviderUnavailableFallbackDiagnostics({
-    route: 'CLARIFICATION',
+    route: "CLARIFICATION",
     toolName: null,
     toolInput: {},
     assistantUnavailable: true,
     clarificationReason: AI_DISABLED_COPY[locale],
     diagnostics: {
-      deterministicRoute: 'CLARIFICATION',
+      deterministicRoute: "CLARIFICATION",
       deterministicConfidence: 0,
       semanticPlannerUsed: false,
       semanticRoute: null,
-      validatedRoute: 'CLARIFICATION',
+      validatedRoute: "CLARIFICATION",
       normalizedFilters: null,
       toolName: null,
       plannerConfidence: null,
@@ -1958,8 +2017,8 @@ export const isProviderUnavailableExecutionPlan = (
 export const isSemanticAmbiguityExecutionPlan = (
   plan: AgentExecutionPlan,
 ): boolean =>
-  plan.route === 'CLARIFICATION' &&
-  plan.semanticUnderstandingRoute === 'CLARIFICATION_REQUIRED' &&
+  plan.route === "CLARIFICATION" &&
+  plan.semanticUnderstandingRoute === "CLARIFICATION_REQUIRED" &&
   plan.assistantUnavailable !== true;
 
 const buildProviderFailureClarificationPlan = (input: {
@@ -1967,17 +2026,17 @@ const buildProviderFailureClarificationPlan = (input: {
   reason: string;
 }): AgentExecutionPlan =>
   markProviderUnavailableFallbackDiagnostics({
-    route: 'CLARIFICATION',
+    route: "CLARIFICATION",
     toolName: null,
     toolInput: {},
     clarificationReason: input.reason,
-    semanticUnderstandingRoute: 'CLARIFICATION_REQUIRED',
+    semanticUnderstandingRoute: "CLARIFICATION_REQUIRED",
     diagnostics: {
-      deterministicRoute: 'CLARIFICATION',
+      deterministicRoute: "CLARIFICATION",
       deterministicConfidence: 0.5,
       semanticPlannerUsed: false,
       semanticRoute: null,
-      validatedRoute: 'CLARIFICATION',
+      validatedRoute: "CLARIFICATION",
       normalizedFilters: null,
       toolName: null,
       plannerConfidence: null,
@@ -1990,14 +2049,20 @@ export const buildProviderFailureDeterministicFallbackPlan = (input: {
   locale: AiLocale;
   conversationContext?: PlannerConversationContext;
 }): AgentExecutionPlan =>
-  buildPhraseDetectorFallbackPlan(input, markProviderUnavailableFallbackDiagnostics);
+  buildPhraseDetectorFallbackPlan(
+    input,
+    markProviderUnavailableFallbackDiagnostics,
+  );
 
 export const buildSemanticInvalidFallbackPlan = (input: {
   userMessage: string;
   locale: AiLocale;
   conversationContext?: PlannerConversationContext;
 }): AgentExecutionPlan =>
-  buildPhraseDetectorFallbackPlan(input, markSemanticInvalidFallbackDiagnostics);
+  buildPhraseDetectorFallbackPlan(
+    input,
+    markSemanticInvalidFallbackDiagnostics,
+  );
 
 const buildPhraseDetectorFallbackPlan = (
   input: {
@@ -2009,17 +2074,17 @@ const buildPhraseDetectorFallbackPlan = (
 ): AgentExecutionPlan => {
   if (detectDeterministicPlatformActionIntent(input.userMessage)) {
     return markFallback({
-      route: 'ACTION_REQUEST',
-      toolName: 'prepare_action',
+      route: "ACTION_REQUEST",
+      toolName: "prepare_action",
       toolInput: {},
       diagnostics: {
-        deterministicRoute: 'ACTION_REQUEST',
+        deterministicRoute: "ACTION_REQUEST",
         deterministicConfidence: 0.95,
         semanticPlannerUsed: false,
         semanticRoute: null,
-        validatedRoute: 'ACTION_REQUEST',
+        validatedRoute: "ACTION_REQUEST",
         normalizedFilters: null,
-        toolName: 'prepare_action',
+        toolName: "prepare_action",
         plannerConfidence: null,
         resolvedEntityTitle: null,
       },
@@ -2035,15 +2100,33 @@ const buildPhraseDetectorFallbackPlan = (
     );
   }
 
+  const materialIntent = detectMaterialSearchIntent(input.userMessage);
+
+  if (materialIntent.detected) {
+    return markFallback(
+      buildDeterministicFallbackPlan({
+        userMessage: input.userMessage,
+        routeDecision: {
+          route: "MATERIAL_SEARCH",
+          confidence: materialIntent.confidence,
+          source: "deterministic",
+          suggestedTool: "search_available_materials",
+        },
+        locale: input.locale,
+        conversationContext: input.conversationContext,
+      }),
+    );
+  }
+
   if (detectProjectSearchIntent(input.userMessage)) {
     return markFallback(
       buildDeterministicFallbackPlan({
         userMessage: input.userMessage,
         routeDecision: {
-          route: 'PROJECT_SEARCH',
+          route: "PROJECT_SEARCH",
           confidence: 0.92,
-          source: 'deterministic',
-          suggestedTool: 'search_learning_projects',
+          source: "deterministic",
+          suggestedTool: "search_learning_projects",
         },
         locale: input.locale,
         conversationContext: input.conversationContext,
@@ -2056,10 +2139,10 @@ const buildPhraseDetectorFallbackPlan = (
       buildDeterministicFallbackPlan({
         userMessage: input.userMessage,
         routeDecision: {
-          route: 'SAVED_PROJECTS',
+          route: "SAVED_PROJECTS",
           confidence: 0.93,
-          source: 'deterministic',
-          suggestedTool: 'get_saved_projects',
+          source: "deterministic",
+          suggestedTool: "get_saved_projects",
         },
         locale: input.locale,
         conversationContext: input.conversationContext,
@@ -2072,10 +2155,10 @@ const buildPhraseDetectorFallbackPlan = (
       buildDeterministicFallbackPlan({
         userMessage: input.userMessage,
         routeDecision: {
-          route: 'PROJECT_DETAILS',
+          route: "PROJECT_DETAILS",
           confidence: 0.93,
-          source: 'deterministic',
-          suggestedTool: 'get_learning_project_details',
+          source: "deterministic",
+          suggestedTool: "get_learning_project_details",
         },
         locale: input.locale,
         conversationContext: input.conversationContext,
@@ -2090,8 +2173,8 @@ const buildPhraseDetectorFallbackPlan = (
 
   if (
     PROVIDER_FAILURE_SYSTEM_DATA_ROUTES.has(routeDecision.route) &&
-    routeDecision.route !== 'ACTION_REQUEST' &&
-    routeDecision.route !== 'EXTERNAL_DOMAIN_KNOWLEDGE'
+    routeDecision.route !== "ACTION_REQUEST" &&
+    routeDecision.route !== "EXTERNAL_DOMAIN_KNOWLEDGE"
   ) {
     return markFallback(
       buildDeterministicFallbackPlan({
@@ -2106,10 +2189,10 @@ const buildPhraseDetectorFallbackPlan = (
   const ownedFallback = buildOwnedMaterialsSemanticFallbackPlan({
     userMessage: input.userMessage,
     routeDecision: {
-      route: 'OWNED_MATERIALS_PROJECT_MATCH',
+      route: "OWNED_MATERIALS_PROJECT_MATCH",
       confidence: 0.95,
-      source: 'deterministic',
-      suggestedTool: 'match_projects_by_owned_materials',
+      source: "deterministic",
+      suggestedTool: "match_projects_by_owned_materials",
     },
     locale: input.locale,
     conversationContext: input.conversationContext,
@@ -2121,16 +2204,16 @@ const buildPhraseDetectorFallbackPlan = (
   const guidanceTopic = detectPlatformGuidanceIntent(input.userMessage);
   if (guidanceTopic) {
     return markFallback({
-      route: 'PLATFORM_GUIDANCE',
+      route: "PLATFORM_GUIDANCE",
       toolName: null,
       toolInput: {},
-      semanticUnderstandingRoute: 'PLATFORM_GUIDANCE',
+      semanticUnderstandingRoute: "PLATFORM_GUIDANCE",
       diagnostics: {
-        deterministicRoute: 'PLATFORM_GUIDANCE',
+        deterministicRoute: "PLATFORM_GUIDANCE",
         deterministicConfidence: 0.7,
         semanticPlannerUsed: false,
         semanticRoute: null,
-        validatedRoute: 'PLATFORM_GUIDANCE',
+        validatedRoute: "PLATFORM_GUIDANCE",
         normalizedFilters: null,
         toolName: null,
         plannerConfidence: null,
@@ -2139,18 +2222,18 @@ const buildPhraseDetectorFallbackPlan = (
     });
   }
 
-  if (routeDecision.route === 'OUT_OF_SCOPE') {
+  if (routeDecision.route === "OUT_OF_SCOPE") {
     return markFallback({
-      route: 'OUT_OF_SCOPE',
+      route: "OUT_OF_SCOPE",
       toolName: null,
       toolInput: {},
-      semanticUnderstandingRoute: 'OUT_OF_SCOPE',
+      semanticUnderstandingRoute: "OUT_OF_SCOPE",
       diagnostics: {
-        deterministicRoute: 'OUT_OF_SCOPE',
+        deterministicRoute: "OUT_OF_SCOPE",
         deterministicConfidence: routeDecision.confidence,
         semanticPlannerUsed: false,
         semanticRoute: null,
-        validatedRoute: 'OUT_OF_SCOPE',
+        validatedRoute: "OUT_OF_SCOPE",
         normalizedFilters: null,
         toolName: null,
         plannerConfidence: null,
@@ -2159,21 +2242,21 @@ const buildPhraseDetectorFallbackPlan = (
     });
   }
 
-  if (routeDecision.route === 'DANGEROUS_REQUEST') {
+  if (routeDecision.route === "DANGEROUS_REQUEST") {
     return buildDangerousExecutionPlan();
   }
 
-  if (routeDecision.route === 'CONVERSATIONAL_STATIC') {
+  if (routeDecision.route === "CONVERSATIONAL_STATIC") {
     return markFallback({
-      route: 'CONVERSATIONAL_STATIC',
+      route: "CONVERSATIONAL_STATIC",
       toolName: null,
       toolInput: {},
       diagnostics: {
-        deterministicRoute: 'CONVERSATIONAL_STATIC',
+        deterministicRoute: "CONVERSATIONAL_STATIC",
         deterministicConfidence: routeDecision.confidence,
         semanticPlannerUsed: false,
         semanticRoute: null,
-        validatedRoute: 'CONVERSATIONAL_STATIC',
+        validatedRoute: "CONVERSATIONAL_STATIC",
         normalizedFilters: null,
         toolName: null,
         plannerConfidence: null,
@@ -2184,7 +2267,7 @@ const buildPhraseDetectorFallbackPlan = (
 
   if (
     detectEducationalLearningIntent(input.userMessage) ||
-    routeDecision.route === 'GENERAL_LEARNING'
+    routeDecision.route === "GENERAL_LEARNING"
   ) {
     return buildSemanticProviderUnavailablePlan(input.locale);
   }
@@ -2194,9 +2277,9 @@ const buildPhraseDetectorFallbackPlan = (
       buildProviderFailureClarificationPlan({
         locale: input.locale,
         reason:
-          input.locale === 'ar'
-            ? 'ماذا تريد أن أفعل بالضبط في ImpactLoop؟'
-            : 'What exactly would you like me to do in ImpactLoop?',
+          input.locale === "ar"
+            ? "ماذا تريد أن أفعل بالضبط في ImpactLoop؟"
+            : "What exactly would you like me to do in ImpactLoop?",
       }),
     );
   }
@@ -2205,9 +2288,9 @@ const buildPhraseDetectorFallbackPlan = (
     buildProviderFailureClarificationPlan({
       locale: input.locale,
       reason:
-        input.locale === 'ar'
-          ? 'أخبرني أكثر عن ما تريد القيام به في ImpactLoop.'
-          : 'Tell me more about what you want to do in ImpactLoop.',
+        input.locale === "ar"
+          ? "أخبرني أكثر عن ما تريد القيام به في ImpactLoop."
+          : "Tell me more about what you want to do in ImpactLoop.",
     }),
   );
 };
@@ -2227,16 +2310,16 @@ export const buildSemanticFallbackPlan = (input: {
   const guidanceTopic = detectPlatformGuidanceIntent(input.userMessage);
   if (guidanceTopic) {
     return {
-      route: 'PLATFORM_GUIDANCE',
+      route: "PLATFORM_GUIDANCE",
       toolName: null,
       toolInput: {},
-      semanticUnderstandingRoute: 'PLATFORM_GUIDANCE',
+      semanticUnderstandingRoute: "PLATFORM_GUIDANCE",
       diagnostics: {
-        deterministicRoute: 'PLATFORM_GUIDANCE',
+        deterministicRoute: "PLATFORM_GUIDANCE",
         deterministicConfidence: 0.7,
         semanticPlannerUsed: false,
         semanticRoute: null,
-        validatedRoute: 'PLATFORM_GUIDANCE',
+        validatedRoute: "PLATFORM_GUIDANCE",
         normalizedFilters: null,
         toolName: null,
         plannerConfidence: null,
@@ -2246,18 +2329,18 @@ export const buildSemanticFallbackPlan = (input: {
   }
 
   const scope = classifyScopeDeterministic(input.userMessage);
-  if (scope.classification === 'OUT_OF_SCOPE') {
+  if (scope.classification === "OUT_OF_SCOPE") {
     return {
-      route: 'OUT_OF_SCOPE',
+      route: "OUT_OF_SCOPE",
       toolName: null,
       toolInput: {},
-      semanticUnderstandingRoute: 'OUT_OF_SCOPE',
+      semanticUnderstandingRoute: "OUT_OF_SCOPE",
       diagnostics: {
-        deterministicRoute: 'OUT_OF_SCOPE',
+        deterministicRoute: "OUT_OF_SCOPE",
         deterministicConfidence: scope.confidence,
         semanticPlannerUsed: false,
         semanticRoute: null,
-        validatedRoute: 'OUT_OF_SCOPE',
+        validatedRoute: "OUT_OF_SCOPE",
         normalizedFilters: null,
         toolName: null,
         plannerConfidence: null,
@@ -2267,20 +2350,20 @@ export const buildSemanticFallbackPlan = (input: {
   }
 
   return {
-    route: 'CLARIFICATION',
+    route: "CLARIFICATION",
     toolName: null,
     toolInput: {},
     clarificationReason:
-      input.locale === 'ar'
-        ? 'أخبرني أكثر عن ما تريد القيام به في ImpactLoop.'
-        : 'Tell me more about what you want to do in ImpactLoop.',
-    semanticUnderstandingRoute: 'CLARIFICATION_REQUIRED',
+      input.locale === "ar"
+        ? "أخبرني أكثر عن ما تريد القيام به في ImpactLoop."
+        : "Tell me more about what you want to do in ImpactLoop.",
+    semanticUnderstandingRoute: "CLARIFICATION_REQUIRED",
     diagnostics: {
-      deterministicRoute: 'CLARIFICATION',
+      deterministicRoute: "CLARIFICATION",
       deterministicConfidence: 0.5,
       semanticPlannerUsed: false,
       semanticRoute: null,
-      validatedRoute: 'CLARIFICATION',
+      validatedRoute: "CLARIFICATION",
       normalizedFilters: null,
       toolName: null,
       plannerConfidence: null,
@@ -2296,7 +2379,7 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
   conversationContext?: PlannerConversationContext;
 }): Promise<AgentExecutionPlan> => {
   const hardSafety = assessHardSafetyRoute(input.userMessage);
-  if (hardSafety?.route === 'DANGEROUS_REQUEST') {
+  if (hardSafety?.route === "DANGEROUS_REQUEST") {
     return buildDangerousExecutionPlan();
   }
 
@@ -2321,10 +2404,10 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     return markStructuredContinuationDiagnostics(
       buildProjectsWithinBudgetExecutionPlan({
         routeDecision: {
-          route: 'PROJECTS_WITHIN_BUDGET',
+          route: "PROJECTS_WITHIN_BUDGET",
           confidence: 0.95,
-          source: 'deterministic',
-          suggestedTool: 'find_projects_within_budget',
+          source: "deterministic",
+          suggestedTool: "find_projects_within_budget",
         },
         toolInput: numericBudgetContinuation,
         semanticPlannerUsed: false,
@@ -2335,13 +2418,14 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
   }
 
   if (input.conversationId) {
-    const materialFilterContinuation = await resolveMaterialResultSetFilterContinuation({
-      userMessage: input.userMessage,
-      locale: input.locale,
-      conversationId: input.conversationId,
-      conversationContext,
-    });
-    if (materialFilterContinuation?.kind === 'filter') {
+    const materialFilterContinuation =
+      await resolveMaterialResultSetFilterContinuation({
+        userMessage: input.userMessage,
+        locale: input.locale,
+        conversationId: input.conversationId,
+        conversationContext,
+      });
+    if (materialFilterContinuation?.kind === "filter") {
       return markStructuredContinuationDiagnostics(
         buildMaterialResultSetFilterExecutionPlan({
           toolInput: materialFilterContinuation.toolInput,
@@ -2350,19 +2434,19 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
         }),
       );
     }
-    if (materialFilterContinuation?.kind === 'clarification') {
+    if (materialFilterContinuation?.kind === "clarification") {
       return markStructuredContinuationDiagnostics({
-        route: 'CLARIFICATION',
+        route: "CLARIFICATION",
         toolName: null,
         toolInput: {},
         clarificationReason: materialFilterContinuation.reason,
-        semanticUnderstandingRoute: 'CLARIFICATION_REQUIRED',
+        semanticUnderstandingRoute: "CLARIFICATION_REQUIRED",
         diagnostics: {
-          deterministicRoute: 'CLARIFICATION',
+          deterministicRoute: "CLARIFICATION",
           deterministicConfidence: 0.9,
           semanticPlannerUsed: false,
           semanticRoute: null,
-          validatedRoute: 'CLARIFICATION',
+          validatedRoute: "CLARIFICATION",
           normalizedFilters: null,
           toolName: null,
           plannerConfidence: null,
@@ -2381,10 +2465,10 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     const confirmationPlan = buildProjectBudgetFallbackPlan({
       userMessage: input.userMessage,
       routeDecision: {
-        route: 'PROJECT_BUDGET_ESTIMATION',
+        route: "PROJECT_BUDGET_ESTIMATION",
         confidence: 0.96,
-        source: 'deterministic',
-        suggestedTool: 'estimate_project_material_budget',
+        source: "deterministic",
+        suggestedTool: "estimate_project_material_budget",
       },
       locale: input.locale,
       conversationContext,
@@ -2398,10 +2482,10 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     const ownedContinuation = buildOwnedMaterialsSemanticFallbackPlan({
       userMessage: input.userMessage,
       routeDecision: {
-        route: 'OWNED_MATERIALS_PROJECT_MATCH',
+        route: "OWNED_MATERIALS_PROJECT_MATCH",
         confidence: 0.95,
-        source: 'deterministic',
-        suggestedTool: 'match_projects_by_owned_materials',
+        source: "deterministic",
+        suggestedTool: "match_projects_by_owned_materials",
       },
       locale: input.locale,
       conversationContext,
@@ -2411,35 +2495,16 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     }
   }
 
-  if (detectDeterministicPlatformActionIntent(input.userMessage)) {
-    return markStructuredContinuationDiagnostics({
-      route: 'ACTION_REQUEST',
-      toolName: 'prepare_action',
-      toolInput: {},
-      diagnostics: {
-        deterministicRoute: 'ACTION_REQUEST',
-        deterministicConfidence: 0.95,
-        semanticPlannerUsed: false,
-        semanticRoute: null,
-        validatedRoute: 'ACTION_REQUEST',
-        normalizedFilters: null,
-        toolName: 'prepare_action',
-        plannerConfidence: null,
-        resolvedEntityTitle: null,
-      },
-    });
-  }
-
   if (detectProjectsWithinBudgetIntent(input.userMessage)) {
     const budgetBound = extractBudgetBound(input.userMessage);
     if (!budgetBound?.maxBudgetNis) {
       return markStructuredContinuationDiagnostics(
         buildProjectsWithinBudgetClarificationPlan({
           routeDecision: {
-            route: 'PROJECTS_WITHIN_BUDGET',
+            route: "PROJECTS_WITHIN_BUDGET",
             confidence: 0.92,
-            source: 'deterministic',
-            suggestedTool: 'find_projects_within_budget',
+            source: "deterministic",
+            suggestedTool: "find_projects_within_budget",
           },
           locale: input.locale,
           semanticPlannerUsed: false,
@@ -2452,10 +2517,10 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     return markStructuredContinuationDiagnostics(
       buildProjectsWithinBudgetExecutionPlan({
         routeDecision: {
-          route: 'PROJECTS_WITHIN_BUDGET',
+          route: "PROJECTS_WITHIN_BUDGET",
           confidence: 0.94,
-          source: 'deterministic',
-          suggestedTool: 'find_projects_within_budget',
+          source: "deterministic",
+          suggestedTool: "find_projects_within_budget",
         },
         toolInput: parseProjectsWithinBudgetInput(input.userMessage),
         semanticPlannerUsed: false,
@@ -2468,15 +2533,15 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
   if (
     conversationContext &&
     detectProjectBudgetEstimationFollowUp(input.userMessage) &&
-    conversationContext.entities.some((entity) => entity.type === 'PROJECT')
+    conversationContext.entities.some((entity) => entity.type === "PROJECT")
   ) {
     const budgetPlan = buildProjectBudgetFallbackPlan({
       userMessage: input.userMessage,
       routeDecision: {
-        route: 'PROJECT_BUDGET_ESTIMATION',
+        route: "PROJECT_BUDGET_ESTIMATION",
         confidence: 0.94,
-        source: 'deterministic',
-        suggestedTool: 'estimate_project_material_budget',
+        source: "deterministic",
+        suggestedTool: "estimate_project_material_budget",
       },
       locale: input.locale,
       conversationContext,
@@ -2485,7 +2550,7 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
       plannerConfidence: null,
     });
     if (
-      budgetPlan.route === 'PROJECT_BUDGET_ESTIMATION' &&
+      budgetPlan.route === "PROJECT_BUDGET_ESTIMATION" &&
       (budgetPlan.toolInput.projectId || budgetPlan.toolInput.projectQuery)
     ) {
       return markStructuredContinuationDiagnostics(budgetPlan);
@@ -2500,10 +2565,10 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     return buildDeterministicFallbackPlan({
       userMessage: input.userMessage,
       routeDecision: {
-        route: 'PROJECT_COMPONENTS',
+        route: "PROJECT_COMPONENTS",
         confidence: 0.94,
-        source: 'deterministic',
-        suggestedTool: 'get_project_required_components',
+        source: "deterministic",
+        suggestedTool: "get_project_required_components",
       },
       locale: input.locale,
       conversationContext,
@@ -2517,10 +2582,10 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     return buildDeterministicFallbackPlan({
       userMessage: input.userMessage,
       routeDecision: {
-        route: 'COMPONENT_MATERIAL_MATCHING',
+        route: "COMPONENT_MATERIAL_MATCHING",
         confidence: 0.94,
-        source: 'deterministic',
-        suggestedTool: 'find_materials_for_component',
+        source: "deterministic",
+        suggestedTool: "find_materials_for_component",
       },
       locale: input.locale,
       conversationContext,
@@ -2531,30 +2596,10 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     return buildDeterministicFallbackPlan({
       userMessage: input.userMessage,
       routeDecision: {
-        route: 'BUILD_GAP_ANALYSIS',
+        route: "BUILD_GAP_ANALYSIS",
         confidence: 0.93,
-        source: 'deterministic',
-        suggestedTool: 'analyze_build_gaps',
-      },
-      locale: input.locale,
-      conversationContext,
-    });
-  }
-
-  if (
-    detectMaterialSearchIntent(input.userMessage).detected &&
-    !(
-      conversationContext?.activeBuildGuide &&
-      !isExplicitMarketplaceCatalogRequest(input.userMessage)
-    )
-  ) {
-    return buildDeterministicFallbackPlan({
-      userMessage: input.userMessage,
-      routeDecision: {
-        route: 'MATERIAL_SEARCH',
-        confidence: 0.94,
-        source: 'deterministic',
-        suggestedTool: 'search_available_materials',
+        source: "deterministic",
+        suggestedTool: "analyze_build_gaps",
       },
       locale: input.locale,
       conversationContext,
@@ -2568,10 +2613,10 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     return buildDeterministicFallbackPlan({
       userMessage: input.userMessage,
       routeDecision: {
-        route: 'PROJECT_DETAILS',
+        route: "PROJECT_DETAILS",
         confidence: 0.93,
-        source: 'deterministic',
-        suggestedTool: 'get_learning_project_details',
+        source: "deterministic",
+        suggestedTool: "get_learning_project_details",
       },
       locale: input.locale,
       conversationContext,
@@ -2584,8 +2629,8 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     conversationContext,
   });
 
-  if (plannerResult.status === 'failure') {
-    if (plannerResult.reason === 'semantic_invalid') {
+  if (plannerResult.status === "failure") {
+    if (plannerResult.reason === "semantic_invalid") {
       return buildSemanticInvalidFallbackPlan({
         userMessage: input.userMessage,
         locale: input.locale,
@@ -2601,7 +2646,9 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
 
   const understanding = plannerResult.understanding;
 
-  const finalizeSemanticPlan = (plan: AgentExecutionPlan): AgentExecutionPlan => {
+  const finalizeSemanticPlan = (
+    plan: AgentExecutionPlan,
+  ): AgentExecutionPlan => {
     const reconciled = reconcileSemanticExecutionPlan({
       userMessage: input.userMessage,
       plan,
@@ -2625,18 +2672,18 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
 
   if (understanding) {
     const mapped = mapSemanticToExecutionPlan(understanding);
-    if (mapped.route === 'PLATFORM_GUIDANCE') {
+    if (mapped.route === "PLATFORM_GUIDANCE") {
       return finalizeSemanticPlan({
-        route: 'PLATFORM_GUIDANCE',
+        route: "PLATFORM_GUIDANCE",
         toolName: null,
         toolInput: {},
-        semanticUnderstandingRoute: 'PLATFORM_GUIDANCE',
+        semanticUnderstandingRoute: "PLATFORM_GUIDANCE",
         diagnostics: {
-          deterministicRoute: 'PLATFORM_GUIDANCE',
+          deterministicRoute: "PLATFORM_GUIDANCE",
           deterministicConfidence: understanding.confidence,
           semanticPlannerUsed: true,
           semanticRoute: null,
-          validatedRoute: 'PLATFORM_GUIDANCE',
+          validatedRoute: "PLATFORM_GUIDANCE",
           normalizedFilters: null,
           toolName: null,
           plannerConfidence: understanding.confidence,
@@ -2644,20 +2691,20 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
         },
       });
     }
-    if (mapped.route === 'GENERAL_LEARNING') {
+    if (mapped.route === "GENERAL_LEARNING") {
       return markSemanticRoutingDiagnostics(
         applyLinkedBuildGuideLearningOverride(
           {
-            route: 'GENERAL_LEARNING',
+            route: "GENERAL_LEARNING",
             toolName: null,
             toolInput: {},
-            semanticUnderstandingRoute: 'GENERAL_LEARNING',
+            semanticUnderstandingRoute: "GENERAL_LEARNING",
             diagnostics: {
-              deterministicRoute: 'GENERAL_LEARNING',
+              deterministicRoute: "GENERAL_LEARNING",
               deterministicConfidence: understanding.confidence,
               semanticPlannerUsed: true,
               semanticRoute: null,
-              validatedRoute: 'GENERAL_LEARNING',
+              validatedRoute: "GENERAL_LEARNING",
               normalizedFilters: null,
               toolName: null,
               plannerConfidence: understanding.confidence,
@@ -2671,18 +2718,18 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
         ),
       );
     }
-    if (mapped.route === 'OUT_OF_SCOPE') {
+    if (mapped.route === "OUT_OF_SCOPE") {
       return markSemanticRoutingDiagnostics({
-        route: 'OUT_OF_SCOPE',
+        route: "OUT_OF_SCOPE",
         toolName: null,
         toolInput: {},
-        semanticUnderstandingRoute: 'OUT_OF_SCOPE',
+        semanticUnderstandingRoute: "OUT_OF_SCOPE",
         diagnostics: {
-          deterministicRoute: 'OUT_OF_SCOPE',
+          deterministicRoute: "OUT_OF_SCOPE",
           deterministicConfidence: understanding.confidence,
           semanticPlannerUsed: true,
           semanticRoute: null,
-          validatedRoute: 'OUT_OF_SCOPE',
+          validatedRoute: "OUT_OF_SCOPE",
           normalizedFilters: null,
           toolName: null,
           plannerConfidence: understanding.confidence,
@@ -2690,38 +2737,38 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
         },
       });
     }
-    if (mapped.route === 'ACTION_REQUEST') {
+    if (mapped.route === "ACTION_REQUEST") {
       return markSemanticRoutingDiagnostics({
-        route: 'ACTION_REQUEST',
-        toolName: 'prepare_action',
+        route: "ACTION_REQUEST",
+        toolName: "prepare_action",
         toolInput: mapped.toolInput,
-        semanticUnderstandingRoute: 'ACTION_REQUEST',
+        semanticUnderstandingRoute: "ACTION_REQUEST",
         diagnostics: {
-          deterministicRoute: 'ACTION_REQUEST',
+          deterministicRoute: "ACTION_REQUEST",
           deterministicConfidence: understanding.confidence,
           semanticPlannerUsed: true,
           semanticRoute: null,
-          validatedRoute: 'ACTION_REQUEST',
+          validatedRoute: "ACTION_REQUEST",
           normalizedFilters: null,
-          toolName: 'prepare_action',
+          toolName: "prepare_action",
           plannerConfidence: understanding.confidence,
           resolvedEntityTitle: null,
         },
       });
     }
-    if (understanding.topic === 'LEARNER_RESERVATION_STATUS') {
+    if (understanding.topic === "LEARNER_RESERVATION_STATUS") {
       return finalizeSemanticPlan({
-        route: 'MATERIAL_DETAILS',
+        route: "MATERIAL_DETAILS",
         toolName: null,
         toolInput: {},
-        semanticDataTopic: 'LEARNER_RESERVATION_STATUS',
-        semanticUnderstandingRoute: 'SYSTEM_DATA_QUERY',
+        semanticDataTopic: "LEARNER_RESERVATION_STATUS",
+        semanticUnderstandingRoute: "SYSTEM_DATA_QUERY",
         diagnostics: {
-          deterministicRoute: 'MATERIAL_DETAILS',
+          deterministicRoute: "MATERIAL_DETAILS",
           deterministicConfidence: understanding.confidence,
           semanticPlannerUsed: true,
           semanticRoute: null,
-          validatedRoute: 'MATERIAL_DETAILS',
+          validatedRoute: "MATERIAL_DETAILS",
           normalizedFilters: null,
           toolName: null,
           plannerConfidence: understanding.confidence,
@@ -2729,19 +2776,19 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
         },
       });
     }
-    if (mapped.route === 'CLARIFICATION') {
+    if (mapped.route === "CLARIFICATION") {
       return finalizeSemanticPlan({
-        route: 'CLARIFICATION',
+        route: "CLARIFICATION",
         toolName: null,
         toolInput: {},
         clarificationReason: mapped.clarificationReason,
-        semanticUnderstandingRoute: 'CLARIFICATION_REQUIRED',
+        semanticUnderstandingRoute: "CLARIFICATION_REQUIRED",
         diagnostics: {
-          deterministicRoute: 'CLARIFICATION',
+          deterministicRoute: "CLARIFICATION",
           deterministicConfidence: understanding.confidence,
           semanticPlannerUsed: true,
           semanticRoute: null,
-          validatedRoute: 'CLARIFICATION',
+          validatedRoute: "CLARIFICATION",
           normalizedFilters: null,
           toolName: null,
           plannerConfidence: understanding.confidence,
@@ -2754,7 +2801,7 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     const routeDecision: AiAgentRouteDecision = {
       route: mapped.route,
       confidence: understanding.confidence,
-      source: 'planner',
+      source: "planner",
       suggestedTool: mapped.toolName ?? undefined,
     };
     const plan = applyPlannerPlan({
@@ -2766,7 +2813,7 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     });
     return finalizeSemanticPlan({
       ...plan,
-      semanticUnderstandingRoute: 'SYSTEM_DATA_QUERY',
+      semanticUnderstandingRoute: "SYSTEM_DATA_QUERY",
       diagnostics: {
         ...plan.diagnostics,
         semanticPlannerUsed: true,
@@ -2798,12 +2845,13 @@ export const resolveAgentExecutionPlan = async (input: {
           semanticRoute: plan.diagnostics.semanticRoute,
           semanticUnderstandingRoute: plan.semanticUnderstandingRoute ?? null,
           validatedRoute: plan.diagnostics.validatedRoute,
-          normalizedFilters: plan.diagnostics.normalizedFilters as SafeLogValue | null,
+          normalizedFilters: plan.diagnostics
+            .normalizedFilters as SafeLogValue | null,
           toolName: plan.diagnostics.toolName,
           plannerConfidence: plan.diagnostics.plannerConfidence,
           resolvedEntityTitle: plan.diagnostics.resolvedEntityTitle,
         },
-        'learner agent understanding diagnostics',
+        "learner agent understanding diagnostics",
       );
     }
     return plan;
@@ -2812,15 +2860,15 @@ export const resolveAgentExecutionPlan = async (input: {
   const dangerous = assessDangerousRequest(input.userMessage);
   if (dangerous.isDangerous) {
     return {
-      route: 'DANGEROUS_REQUEST',
+      route: "DANGEROUS_REQUEST",
       toolName: null,
       toolInput: {},
       diagnostics: {
-        deterministicRoute: 'DANGEROUS_REQUEST',
+        deterministicRoute: "DANGEROUS_REQUEST",
         deterministicConfidence: 0.98,
         semanticPlannerUsed: false,
         semanticRoute: null,
-        validatedRoute: 'DANGEROUS_REQUEST',
+        validatedRoute: "DANGEROUS_REQUEST",
         normalizedFilters: null,
         toolName: null,
         plannerConfidence: null,
@@ -2873,10 +2921,10 @@ export const resolveAgentExecutionPlan = async (input: {
   if (numericBudgetContinuation) {
     return buildProjectsWithinBudgetExecutionPlan({
       routeDecision: {
-        route: 'PROJECTS_WITHIN_BUDGET',
+        route: "PROJECTS_WITHIN_BUDGET",
         confidence: 0.95,
-        source: 'deterministic',
-        suggestedTool: 'find_projects_within_budget',
+        source: "deterministic",
+        suggestedTool: "find_projects_within_budget",
       },
       toolInput: numericBudgetContinuation,
       semanticPlannerUsed: false,
@@ -2894,10 +2942,10 @@ export const resolveAgentExecutionPlan = async (input: {
     const confirmationPlan = buildProjectBudgetFallbackPlan({
       userMessage: input.userMessage,
       routeDecision: {
-        route: 'PROJECT_BUDGET_ESTIMATION',
+        route: "PROJECT_BUDGET_ESTIMATION",
         confidence: 0.96,
-        source: 'deterministic',
-        suggestedTool: 'estimate_project_material_budget',
+        source: "deterministic",
+        suggestedTool: "estimate_project_material_budget",
       },
       locale: input.locale,
       conversationContext,
@@ -2913,7 +2961,7 @@ export const resolveAgentExecutionPlan = async (input: {
       toolInput: deterministicToolInput,
       userMessage: input.userMessage,
     }) &&
-    routeDecision.source === 'deterministic' &&
+    routeDecision.source === "deterministic" &&
     !shouldConsultSemanticPlannerForOwnedMaterials(input.userMessage);
 
   let plan: AgentExecutionPlan;
@@ -2972,16 +3020,17 @@ export const resolveAgentExecutionPlan = async (input: {
         semanticPlannerUsed: plan.diagnostics.semanticPlannerUsed,
         semanticRoute: plan.diagnostics.semanticRoute,
         validatedRoute: plan.diagnostics.validatedRoute,
-        normalizedFilters: plan.diagnostics.normalizedFilters as SafeLogValue | null,
+        normalizedFilters: plan.diagnostics
+          .normalizedFilters as SafeLogValue | null,
         toolName: plan.diagnostics.toolName,
         plannerConfidence: plan.diagnostics.plannerConfidence,
         resolvedEntityTitle: plan.diagnostics.resolvedEntityTitle,
       },
-      'learner agent understanding diagnostics',
+      "learner agent understanding diagnostics",
     );
   }
 
   return plan;
 };
 
-const envIsDevelopment = () => process.env.NODE_ENV !== 'production';
+const envIsDevelopment = () => process.env.NODE_ENV !== "production";

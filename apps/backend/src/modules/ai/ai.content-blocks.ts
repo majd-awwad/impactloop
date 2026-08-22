@@ -15,10 +15,46 @@ export const aiErrorBlockSchema = z.object({
   retryable: z.boolean(),
 });
 
+const isSafeAiMediaUrl = (value: string): boolean => {
+  try {
+    const absoluteUrl = new URL(value);
+    return absoluteUrl.protocol === 'http:' || absoluteUrl.protocol === 'https:';
+  } catch {
+    if (
+      !value.startsWith('/') ||
+      value.startsWith('//') ||
+      value === '/' ||
+      /[\\\s\u0000-\u001f\u007f]/u.test(value)
+    ) {
+      return false;
+    }
+
+    const rawPath = value.split(/[?#]/u, 1)[0];
+    try {
+      return rawPath
+        .slice(1)
+        .split('/')
+        .every((segment) => {
+          const decoded = decodeURIComponent(segment);
+          return decoded.length > 0 && decoded !== '.' && decoded !== '..';
+        });
+    } catch {
+      return false;
+    }
+  }
+};
+
+/** HTTP(S) or a safe, single-slash origin-relative backend media path. */
+export const aiMediaUrlSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .refine(isSafeAiMediaUrl, { message: 'Invalid URL' });
+
 const aiMaterialCardSchema = z.object({
   materialId: z.string().trim().min(1),
   title: z.string().trim().min(1),
-  thumbnailUrl: z.string().url().nullable().optional(),
+  thumbnailUrl: aiMediaUrlSchema.nullable().optional(),
   categoryLabel: z.string().trim().min(1).optional(),
   condition: z.string().trim().min(1).optional(),
   quantityLabel: z.string().trim().min(1).optional(),
@@ -42,7 +78,7 @@ export const aiMaterialDetailsBlockSchema = z.object({
 const aiProjectCardSchema = z.object({
   projectId: z.string().trim().min(1),
   title: z.string().trim().min(1),
-  thumbnailUrl: z.string().url().nullable().optional(),
+  thumbnailUrl: aiMediaUrlSchema.nullable().optional(),
   difficulty: z.string().trim().min(1).optional(),
   estimatedTimeLabel: z.string().trim().min(1).optional(),
   interestLabels: z.array(z.string().trim().min(1)).max(6).optional(),
@@ -74,7 +110,7 @@ export const aiComponentListBlockSchema = z.object({
   type: z.literal('component_list'),
   projectId: z.string().trim().min(1),
   projectTitle: z.string().trim().min(1).optional(),
-  projectImageUrl: z.string().url().nullable().optional(),
+  projectImageUrl: aiMediaUrlSchema.nullable().optional(),
   items: z
     .array(
       z.object({
@@ -157,7 +193,7 @@ export const aiProjectBudgetEstimateBlockSchema = z.object({
   type: z.literal('project_budget_estimate'),
   projectId: z.string().trim().min(1),
   projectTitle: z.string().trim().min(1),
-  projectImageUrl: z.string().url().nullable().optional(),
+  projectImageUrl: aiMediaUrlSchema.nullable().optional(),
   categoryLabel: z.string().trim().min(1).nullable().optional(),
   difficulty: z.string().trim().min(1).nullable().optional(),
   estimateStatus: z.enum(['COMPLETE', 'PARTIAL', 'ZERO_COST_AVAILABLE_MATERIALS']),
@@ -197,7 +233,7 @@ export const aiRecommendationsBlockSchema = z.object({
         itemId: z.string().trim().min(1),
         title: z.string().trim().min(1),
         reasons: z.array(z.string().trim().min(1)).min(1).max(6),
-        thumbnailUrl: z.string().url().nullable().optional(),
+        thumbnailUrl: aiMediaUrlSchema.nullable().optional(),
         priceLabel: z.string().trim().min(1).optional(),
         categoryLabel: z.string().trim().min(1).optional(),
         difficulty: z.string().trim().min(1).optional(),
@@ -221,7 +257,7 @@ export const aiBuildStepGuideBlockSchema = z.object({
   totalSteps: z.number().int().nonnegative(),
   title: z.string().trim().min(1),
   description: z.string().trim().min(1),
-  imageUrl: z.string().url().nullable().optional(),
+  imageUrl: aiMediaUrlSchema.nullable().optional(),
   progressPercent: z.number().int().min(0).max(100),
   completedSteps: z.number().int().nonnegative(),
   materialReadiness: z.object({

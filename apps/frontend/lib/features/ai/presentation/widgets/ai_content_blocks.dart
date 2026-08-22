@@ -17,6 +17,7 @@ import '../../application/ai_chat_controller.dart';
 import '../../domain/ai_helpers.dart';
 import '../../domain/ai_models.dart';
 import '../l10n/ai_l10n.dart';
+import '../../../../core/config/api_config.dart';
 
 class AiContentBlockView extends ConsumerWidget {
   const AiContentBlockView({
@@ -47,103 +48,108 @@ class AiContentBlockView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(aiAssistantControllerProvider.notifier);
-    final onQuickReply = block.type == 'text' && block.purpose == 'clarification'
+    final onQuickReply =
+        block.type == 'text' && block.purpose == 'clarification'
         ? (String reply) => controller.sendMessage(text: reply, locale: locale)
         : null;
 
     return Padding(
       padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.sm),
       child: switch (block.type) {
-        'text' => _AiTextBlock(
-            block: block,
-            onQuickReply: onQuickReply,
-          ),
+        'text' => _AiTextBlock(block: block, onQuickReply: onQuickReply),
         'error' => _AiErrorBlock(block: block),
-        'material_results' => _AiMaterialResultsBlock(items: block.materialItems),
-        'material_details' => block.materialItem == null
-            ? const SizedBox.shrink()
-            : _AiMaterialDetailsBlock(item: block.materialItem!),
+        'material_results' => _AiMaterialResultsBlock(
+          items: block.materialItems,
+        ),
+        'material_details' =>
+          block.materialItem == null
+              ? const SizedBox.shrink()
+              : _AiMaterialDetailsBlock(item: block.materialItem!),
         'project_results' => _AiProjectResultsBlock(items: block.projectItems),
-        'project_details' => block.projectItem == null
-            ? const SizedBox.shrink()
-            : _AiProjectDetailsBlock(item: block.projectItem!),
+        'project_details' =>
+          block.projectItem == null
+              ? const SizedBox.shrink()
+              : _AiProjectDetailsBlock(item: block.projectItem!),
         'component_list' => _AiComponentListBlock(
-            projectId: block.projectId,
-            items: block.componentItems,
-          ),
+          projectId: block.projectId,
+          items: block.componentItems,
+        ),
         'build_checklist' => _AiBuildChecklistBlock(
-            buildId: block.buildId,
-            projectId: block.projectId,
-            readyCount: block.readyCount,
-            totalRequired: block.totalRequired,
-            items: block.checklistItems,
-          ),
+          buildId: block.buildId,
+          projectId: block.projectId,
+          readyCount: block.readyCount,
+          totalRequired: block.totalRequired,
+          items: block.checklistItems,
+        ),
         'build_step_guide' => _AiBuildStepGuideBlock(block: block),
         'component_matches' => _AiComponentMatchesBlock(
-            buildId: block.buildId,
-            groups: block.matchGroups,
-          ),
-        'project_budget_estimate' => block.budgetEstimate == null
-            ? const SizedBox.shrink()
-            : _AiProjectBudgetEstimateBlock(estimate: block.budgetEstimate!),
+          buildId: block.buildId,
+          groups: block.matchGroups,
+        ),
+        'project_budget_estimate' =>
+          block.budgetEstimate == null
+              ? const SizedBox.shrink()
+              : _AiProjectBudgetEstimateBlock(estimate: block.budgetEstimate!),
         'comparison' => _AiComparisonBlock(
-            subject: block.comparisonSubject,
-            items: block.comparisonItems,
-          ),
+          subject: block.comparisonSubject,
+          items: block.comparisonItems,
+        ),
         'recommendations' => _AiRecommendationsBlock(
-            recommendationType: block.recommendationType,
-            items: block.recommendationItems,
-          ),
+          recommendationType: block.recommendationType,
+          items: block.recommendationItems,
+        ),
         'action_confirmation' => _AiActionConfirmationBlock(
+          block: block,
+          uiState: resolveActionConfirmationUiState(
             block: block,
-            uiState: resolveActionConfirmationUiState(
-              block: block,
-              messageBlocks: messageBlocks,
-              blockIndex: blockIndex,
-              pendingActionBusyId: pendingActionBusyId,
-              actionErrorMessage: actionErrorMessage,
-            ),
-            onConfirm: onConfirmAction,
-            onCancel: onCancelAction,
+            messageBlocks: messageBlocks,
+            blockIndex: blockIndex,
+            pendingActionBusyId: pendingActionBusyId,
+            actionErrorMessage: actionErrorMessage,
           ),
+          onConfirm: onConfirmAction,
+          onCancel: onCancelAction,
+        ),
         'action_result' => _AiActionResultBlock(block: block),
-        'external_sources' => _AiExternalSourcesBlock(items: block.externalSources),
-        'project_authoring_clarification' => _AiProjectAuthoringClarificationCard(
+        'external_sources' => _AiExternalSourcesBlock(
+          items: block.externalSources,
+        ),
+        'project_authoring_clarification' =>
+          _AiProjectAuthoringClarificationCard(
             block: block,
             locale: locale,
             projectUpdatedAt: authoringProjectUpdatedAt,
           ),
         'project_authoring_proposal' => Consumer(
-            builder: (context, ref, _) {
-              ref.watch(aiAssistantControllerProvider);
-              final controller =
-                  ref.read(aiAssistantControllerProvider.notifier);
-              final hasSequential = controller.hasActiveSequentialAuthoring;
-              if (hasSequential) {
-                return const SizedBox.shrink();
-              }
-              if (controller.hasLegacyAuthoringWithoutSession) {
-                return _AiSequentialAuthoringStageCard(
-                  block: block,
-                  draftSnapshot: authoringDraftSnapshot,
-                );
-              }
-              return _AiProjectAuthoringProposalCard(
-                block: block,
-                projectUpdatedAt: authoringProjectUpdatedAt,
-                draftSnapshot: authoringDraftSnapshot,
-              );
-            },
-          ),
-        'project_authoring_session' => Consumer(
-            builder: (context, ref, _) {
-              ref.watch(aiAssistantControllerProvider);
+          builder: (context, ref, _) {
+            ref.watch(aiAssistantControllerProvider);
+            final controller = ref.read(aiAssistantControllerProvider.notifier);
+            final hasSequential = controller.hasActiveSequentialAuthoring;
+            if (hasSequential) {
+              return const SizedBox.shrink();
+            }
+            if (controller.hasLegacyAuthoringWithoutSession) {
               return _AiSequentialAuthoringStageCard(
                 block: block,
                 draftSnapshot: authoringDraftSnapshot,
               );
-            },
-          ),
+            }
+            return _AiProjectAuthoringProposalCard(
+              block: block,
+              projectUpdatedAt: authoringProjectUpdatedAt,
+              draftSnapshot: authoringDraftSnapshot,
+            );
+          },
+        ),
+        'project_authoring_session' => Consumer(
+          builder: (context, ref, _) {
+            ref.watch(aiAssistantControllerProvider);
+            return _AiSequentialAuthoringStageCard(
+              block: block,
+              draftSnapshot: authoringDraftSnapshot,
+            );
+          },
+        ),
         'project_authoring_turn' =>
           messageBlocks.any((item) => item.type == 'project_authoring_session')
               ? const SizedBox.shrink()
@@ -152,9 +158,8 @@ class AiContentBlockView extends ConsumerWidget {
                   draftSnapshot: authoringDraftSnapshot,
                 ),
         'project_authoring_review_state' => const SizedBox.shrink(),
-        'project_authoring_proposal_diff' => _AiProjectAuthoringProposalDiffCard(
-            block: block,
-          ),
+        'project_authoring_proposal_diff' =>
+          _AiProjectAuthoringProposalDiffCard(block: block),
         _ => const SizedBox.shrink(),
       },
     );
@@ -162,10 +167,7 @@ class AiContentBlockView extends ConsumerWidget {
 }
 
 class _AiTextBlock extends StatelessWidget {
-  const _AiTextBlock({
-    required this.block,
-    this.onQuickReply,
-  });
+  const _AiTextBlock({required this.block, this.onQuickReply});
 
   final AiContentBlock block;
   final ValueChanged<String>? onQuickReply;
@@ -184,18 +186,16 @@ class _AiTextBlock extends StatelessWidget {
             padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
             child: Text(
               AiL10n.purposeLabel(context, purpose),
-              style: AppTextStyles.label(context).copyWith(
-                color: palette.mint,
-                fontWeight: FontWeight.w600,
-              ),
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.mint, fontWeight: FontWeight.w600),
             ),
           ),
         Text(
           text,
-          style: AppTextStyles.body(context).copyWith(
-            color: palette.textPrimary,
-            height: 1.45,
-          ),
+          style: AppTextStyles.body(
+            context,
+          ).copyWith(color: palette.textPrimary, height: 1.45),
           textAlign: TextAlign.start,
         ),
         if (purpose == 'clarification' && onQuickReply != null)
@@ -230,7 +230,8 @@ class _AiReservationClarificationControlsState
   TimeOfDay? _endTime;
 
   bool get _isQuantityStep =>
-      widget.prompt.contains('كمية') || widget.prompt.toLowerCase().contains('quantity');
+      widget.prompt.contains('كمية') ||
+      widget.prompt.toLowerCase().contains('quantity');
 
   bool get _isFulfillmentStep =>
       widget.prompt.contains('استلام ولا توصيل') ||
@@ -263,7 +264,9 @@ class _AiReservationClarificationControlsState
   Future<void> _pickTime({required bool isStart}) async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: (isStart ? _startTime : _endTime) ?? const TimeOfDay(hour: 16, minute: 0),
+      initialTime:
+          (isStart ? _startTime : _endTime) ??
+          const TimeOfDay(hour: 16, minute: 0),
     );
     if (picked == null) {
       return;
@@ -292,12 +295,16 @@ class _AiReservationClarificationControlsState
         child: Row(
           children: [
             IconButton(
-              onPressed: _quantity > 1 ? () => setState(() => _quantity -= 1) : null,
+              onPressed: _quantity > 1
+                  ? () => setState(() => _quantity -= 1)
+                  : null,
               icon: const Icon(Icons.remove_circle_outline),
             ),
             Text('$_quantity', style: AppTextStyles.label(context)),
             IconButton(
-              onPressed: _quantity < 10 ? () => setState(() => _quantity += 1) : null,
+              onPressed: _quantity < 10
+                  ? () => setState(() => _quantity += 1)
+                  : null,
               icon: const Icon(Icons.add_circle_outline),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -346,8 +353,10 @@ class _AiReservationClarificationControlsState
           onPressed: _pickDate,
           icon: const Icon(Icons.calendar_today_outlined),
           label: Text(
-            LocalizedText(en: 'Choose pickup date', ar: 'اختيار تاريخ الاستلام')
-                .resolve(context),
+            LocalizedText(
+              en: 'Choose pickup date',
+              ar: 'اختيار تاريخ الاستلام',
+            ).resolve(context),
           ),
         ),
       );
@@ -363,13 +372,19 @@ class _AiReservationClarificationControlsState
             OutlinedButton(
               onPressed: () => _pickTime(isStart: true),
               child: Text(
-                LocalizedText(en: 'Start time', ar: 'وقت البداية').resolve(context),
+                LocalizedText(
+                  en: 'Start time',
+                  ar: 'وقت البداية',
+                ).resolve(context),
               ),
             ),
             OutlinedButton(
               onPressed: () => _pickTime(isStart: false),
               child: Text(
-                LocalizedText(en: 'End time', ar: 'وقت النهاية').resolve(context),
+                LocalizedText(
+                  en: 'End time',
+                  ar: 'وقت النهاية',
+                ).resolve(context),
               ),
             ),
           ],
@@ -399,10 +414,9 @@ class _AiErrorBlock extends StatelessWidget {
 
     return Text(
       message,
-      style: AppTextStyles.body(context).copyWith(
-        color: materialWarning,
-        height: 1.45,
-      ),
+      style: AppTextStyles.body(
+        context,
+      ).copyWith(color: materialWarning, height: 1.45),
       textAlign: TextAlign.start,
     );
   }
@@ -456,6 +470,9 @@ class _AiMaterialCompactCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final isFree = _isFreePrice(item.priceLabel);
+    final resolvedThumbnailUrl = ApiConfig.resolveApiAssetUrl(
+      item.thumbnailUrl ?? '',
+    );
     final card = ImpactMaterialCompactCard(
       title: item.title,
       description: item.categoryLabel ?? '',
@@ -470,11 +487,8 @@ class _AiMaterialCompactCard extends StatelessWidget {
       availabilityLabel: _availabilityLabel(context, item),
       deliveryAvailable: item.deliveryAllowed == true,
       isFree: isFree,
-      gradientColors: [
-        palette.fallbackStart,
-        palette.fallbackEnd,
-      ],
-      imageUrl: item.thumbnailUrl,
+      gradientColors: [palette.fallbackStart, palette.fallbackEnd],
+      imageUrl: resolvedThumbnailUrl,
       onTap: item.materialId.isEmpty
           ? null
           : () => context.push('/materials/${item.materialId}'),
@@ -488,10 +502,7 @@ class _AiMaterialCompactCard extends StatelessWidget {
 
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            width: 280,
-            child: card,
-          ),
+          child: SizedBox(width: 280, child: card),
         );
       },
     );
@@ -538,10 +549,7 @@ class _AiProjectDetailsBlock extends StatelessWidget {
 }
 
 class _AiProjectCompactCard extends StatelessWidget {
-  const _AiProjectCompactCard({
-    required this.item,
-    this.showSummary = false,
-  });
+  const _AiProjectCompactCard({required this.item, this.showSummary = false});
 
   final AiProjectCardItem item;
   final bool showSummary;
@@ -609,9 +617,9 @@ class _AiProjectCompactCard extends StatelessWidget {
                   children: [
                     Text(
                       item.title,
-                      style: AppTextStyles.label(context).copyWith(
-                        color: palette.textPrimary,
-                      ),
+                      style: AppTextStyles.label(
+                        context,
+                      ).copyWith(color: palette.textPrimary),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -619,10 +627,9 @@ class _AiProjectCompactCard extends StatelessWidget {
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         item.summary!,
-                        style: AppTextStyles.body(context).copyWith(
-                          color: palette.textSecondary,
-                          height: 1.4,
-                        ),
+                        style: AppTextStyles.body(
+                          context,
+                        ).copyWith(color: palette.textSecondary, height: 1.4),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -644,10 +651,9 @@ class _AiProjectCompactCard extends StatelessWidget {
                         item.matchExplanation?.trim().isNotEmpty == true
                             ? item.matchExplanation!.trim()
                             : '${item.title} — ${item.readinessPercent}%',
-                        style: AppTextStyles.body(context).copyWith(
-                          color: palette.textSecondary,
-                          height: 1.4,
-                        ),
+                        style: AppTextStyles.body(
+                          context,
+                        ).copyWith(color: palette.textSecondary, height: 1.4),
                       ),
                       if (item.matchedComponents.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.sm),
@@ -692,9 +698,9 @@ class _AiProjectCompactCard extends StatelessWidget {
                         alignment: AlignmentDirectional.centerStart,
                         child: Text(
                           AiL10n.viewProject.resolve(context),
-                          style: AppTextStyles.label(context).copyWith(
-                            color: colors.primary,
-                          ),
+                          style: AppTextStyles.label(
+                            context,
+                          ).copyWith(color: colors.primary),
                         ),
                       ),
                     ],
@@ -710,10 +716,7 @@ class _AiProjectCompactCard extends StatelessWidget {
 }
 
 class _AiComponentListBlock extends StatelessWidget {
-  const _AiComponentListBlock({
-    required this.projectId,
-    required this.items,
-  });
+  const _AiComponentListBlock({required this.projectId, required this.items});
 
   final String? projectId;
   final List<AiComponentListItem> items;
@@ -818,7 +821,8 @@ class _AiBuildStepGuideBlock extends StatelessWidget {
             total: totalSteps,
           )
         : null;
-    final progressLabel = block.progressPercent != null &&
+    final progressLabel =
+        block.progressPercent != null &&
             block.completedSteps != null &&
             totalSteps != null
         ? AiL10n.completedStepsProgress(
@@ -838,19 +842,18 @@ class _AiBuildStepGuideBlock extends StatelessWidget {
           if (progressLabel != null) ...[
             Text(
               progressLabel,
-              style: AppTextStyles.label(context).copyWith(
-                color: palette.textMuted,
-              ),
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textMuted),
             ),
             const SizedBox(height: AppSpacing.sm),
           ],
           if (description != null && description.isNotEmpty)
             Text(
               description,
-              style: AppTextStyles.body(context).copyWith(
-                color: palette.textPrimary,
-                height: 1.45,
-              ),
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textPrimary, height: 1.45),
             ),
         ],
       ),
@@ -881,11 +884,7 @@ class _AiBuildChecklistBlock extends StatelessWidget {
 
     final palette = MaterialsUiPalette.of(context);
     final progressLabel = readyCount != null && totalRequired != null
-        ? AiL10n.checklistProgress(
-            context,
-            readyCount!,
-            totalRequired!,
-          )
+        ? AiL10n.checklistProgress(context, readyCount!, totalRequired!)
         : null;
 
     return _AiBlockSection(
@@ -920,10 +919,9 @@ class _AiBuildChecklistBlock extends StatelessWidget {
                         ),
                         Text(
                           items[i].readinessLabel,
-                          style: AppTextStyles.body(context).copyWith(
-                            color: palette.textMuted,
-                            fontSize: 12,
-                          ),
+                          style: AppTextStyles.body(
+                            context,
+                          ).copyWith(color: palette.textMuted, fontSize: 12),
                         ),
                       ],
                     ),
@@ -938,8 +936,7 @@ class _AiBuildChecklistBlock extends StatelessWidget {
             Align(
               alignment: AlignmentDirectional.centerEnd,
               child: TextButton(
-                onPressed: () =>
-                    context.push('/learning/$projectId/build'),
+                onPressed: () => context.push('/learning/$projectId/build'),
                 child: Text(AiL10n.viewBuild.resolve(context)),
               ),
             ),
@@ -965,10 +962,16 @@ class _AiProjectBudgetEstimateBlock extends StatelessWidget {
     return switch (status) {
       'SELECTED' => AiL10n.budgetStatusSelected.resolve(context),
       'NO_AVAILABLE_MATCH' => AiL10n.budgetStatusNoMatch.resolve(context),
-      'INSUFFICIENT_QUANTITY' => AiL10n.budgetStatusInsufficient.resolve(context),
+      'INSUFFICIENT_QUANTITY' => AiL10n.budgetStatusInsufficient.resolve(
+        context,
+      ),
       'PRICE_UNAVAILABLE' => AiL10n.budgetStatusUnpriced.resolve(context),
-      'UNSUPPORTED_CURRENCY' => AiL10n.budgetStatusUnsupportedCurrency.resolve(context),
-      'UNIT_ASSUMPTION_REQUIRED' => AiL10n.budgetStatusUnitAssumption.resolve(context),
+      'UNSUPPORTED_CURRENCY' => AiL10n.budgetStatusUnsupportedCurrency.resolve(
+        context,
+      ),
+      'UNIT_ASSUMPTION_REQUIRED' => AiL10n.budgetStatusUnitAssumption.resolve(
+        context,
+      ),
       _ => status,
     };
   }
@@ -979,8 +982,9 @@ class _AiProjectBudgetEstimateBlock extends StatelessWidget {
     final isRtl = Directionality.of(context) == TextDirection.rtl;
     final statusLabel = switch (estimate.estimateStatus) {
       'COMPLETE' => AiL10n.budgetEstimateComplete.resolve(context),
-      'ZERO_COST_AVAILABLE_MATERIALS' =>
-        AiL10n.budgetEstimateZeroCost.resolve(context),
+      'ZERO_COST_AVAILABLE_MATERIALS' => AiL10n.budgetEstimateZeroCost.resolve(
+        context,
+      ),
       _ => AiL10n.budgetEstimatePartial.resolve(context),
     };
 
@@ -1022,8 +1026,14 @@ class _AiProjectBudgetEstimateBlock extends StatelessWidget {
                 Text(
                   AiL10n.budgetCoverageSummary
                       .resolve(context)
-                      .replaceAll('{priced}', '${estimate.pricedComponentCount}')
-                      .replaceAll('{total}', '${estimate.requiredComponentCount}'),
+                      .replaceAll(
+                        '{priced}',
+                        '${estimate.pricedComponentCount}',
+                      )
+                      .replaceAll(
+                        '{total}',
+                        '${estimate.requiredComponentCount}',
+                      ),
                   style: AppTextStyles.body(context).copyWith(fontSize: 12),
                 ),
               ],
@@ -1062,11 +1072,16 @@ class _AiProjectBudgetEstimateBlock extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (estimate.components[i].selectedMaterialTitle?.isNotEmpty ==
+                      if (estimate
+                              .components[i]
+                              .selectedMaterialTitle
+                              ?.isNotEmpty ==
                           true)
                         Text(
                           estimate.components[i].selectedMaterialTitle!,
-                          style: AppTextStyles.body(context).copyWith(fontSize: 13),
+                          style: AppTextStyles.body(
+                            context,
+                          ).copyWith(fontSize: 13),
                         )
                       else
                         Text(
@@ -1076,14 +1091,17 @@ class _AiProjectBudgetEstimateBlock extends StatelessWidget {
                             color: Theme.of(context).colorScheme.error,
                           ),
                         ),
-                      if (estimate.components[i].assumptionNote?.isNotEmpty == true)
+                      if (estimate.components[i].assumptionNote?.isNotEmpty ==
+                          true)
                         Padding(
                           padding: const EdgeInsets.only(top: AppSpacing.xs),
                           child: Text(
                             estimate.components[i].assumptionNote!,
                             style: AppTextStyles.body(context).copyWith(
                               fontSize: 11,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -1099,7 +1117,9 @@ class _AiProjectBudgetEstimateBlock extends StatelessWidget {
                                 ),
                             style: AppTextStyles.body(context).copyWith(
                               fontSize: 11,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -1108,8 +1128,9 @@ class _AiProjectBudgetEstimateBlock extends StatelessWidget {
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Column(
-                  crossAxisAlignment:
-                      isRtl ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+                  crossAxisAlignment: isRtl
+                      ? CrossAxisAlignment.start
+                      : CrossAxisAlignment.end,
                   children: [
                     Text(
                       estimate.components[i].effectiveComponentCost == null
@@ -1118,7 +1139,9 @@ class _AiProjectBudgetEstimateBlock extends StatelessWidget {
                               context,
                               estimate.components[i].effectiveComponentCost!,
                             ),
-                      style: AppTextStyles.label(context).copyWith(fontSize: 13),
+                      style: AppTextStyles.label(
+                        context,
+                      ).copyWith(fontSize: 13),
                     ),
                     if (estimate.components[i].selectedMaterialId?.isNotEmpty ==
                         true)
@@ -1139,7 +1162,9 @@ class _AiProjectBudgetEstimateBlock extends StatelessWidget {
             child: TextButton(
               onPressed: estimate.projectId.isEmpty
                   ? null
-                  : () => context.push('/learning/projects/${estimate.projectId}'),
+                  : () => context.push(
+                      '/learning/projects/${estimate.projectId}',
+                    ),
               child: Text(AiL10n.viewProject.resolve(context)),
             ),
           ),
@@ -1150,10 +1175,7 @@ class _AiProjectBudgetEstimateBlock extends StatelessWidget {
 }
 
 class _AiComponentMatchesBlock extends StatelessWidget {
-  const _AiComponentMatchesBlock({
-    required this.buildId,
-    required this.groups,
-  });
+  const _AiComponentMatchesBlock({required this.buildId, required this.groups});
 
   final String? buildId;
   final List<AiComponentMatchGroup> groups;
@@ -1197,10 +1219,7 @@ class _AiComponentMatchesBlock extends StatelessWidget {
 }
 
 class _AiComparisonBlock extends StatelessWidget {
-  const _AiComparisonBlock({
-    required this.subject,
-    required this.items,
-  });
+  const _AiComparisonBlock({required this.subject, required this.items});
 
   final String? subject;
   final List<AiComparisonItem> items;
@@ -1276,9 +1295,9 @@ class _AiComparisonBlock extends StatelessWidget {
                 children: [
                   Text(
                     '• ',
-                    style: AppTextStyles.body(context).copyWith(
-                      color: palette.textSecondary,
-                    ),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textSecondary),
                   ),
                   Expanded(
                     child: Text(
@@ -1465,7 +1484,9 @@ class _AiActionConfirmationBlock extends StatelessWidget {
     final isBusy = uiState.isBusy;
 
     return _AiBlockSection(
-      title: block.actionTitle ?? AiL10n.actionConfirmationSection.resolve(context),
+      title:
+          block.actionTitle ??
+          AiL10n.actionConfirmationSection.resolve(context),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsetsDirectional.all(AppSpacing.md),
@@ -1480,10 +1501,9 @@ class _AiActionConfirmationBlock extends StatelessWidget {
             if (block.actionSummary?.isNotEmpty ?? false)
               Text(
                 block.actionSummary!,
-                style: AppTextStyles.body(context).copyWith(
-                  color: palette.textPrimary,
-                  height: 1.4,
-                ),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textPrimary, height: 1.4),
                 textAlign: TextAlign.start,
               ),
             if (block.actionTarget != null &&
@@ -1499,9 +1519,9 @@ class _AiActionConfirmationBlock extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               Text(
                 AiL10n.actionExpired.resolve(context),
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textMuted,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textMuted),
                 textAlign: TextAlign.start,
               ),
             ],
@@ -1509,10 +1529,9 @@ class _AiActionConfirmationBlock extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               Text(
                 uiState.errorMessage!,
-                style: AppTextStyles.body(context).copyWith(
-                  color: materialWarning,
-                  height: 1.35,
-                ),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: materialWarning, height: 1.35),
                 textAlign: TextAlign.start,
               ),
             ],
@@ -1523,8 +1542,7 @@ class _AiActionConfirmationBlock extends StatelessWidget {
                 final cancelButton = OutlinedButton(
                   onPressed: isDisabled ? null : onCancel,
                   child: Text(
-                    block.cancelLabel ??
-                        AiL10n.cancelAction.resolve(context),
+                    block.cancelLabel ?? AiL10n.cancelAction.resolve(context),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
@@ -1609,10 +1627,9 @@ class _AiActionResultBlock extends StatelessWidget {
                 if (block.actionSummary?.isNotEmpty ?? false)
                   Text(
                     block.actionSummary!,
-                    style: AppTextStyles.body(context).copyWith(
-                      color: palette.textPrimary,
-                      height: 1.4,
-                    ),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textPrimary, height: 1.4),
                   ),
                 if (block.actionTarget != null)
                   Padding(
@@ -1621,10 +1638,9 @@ class _AiActionResultBlock extends StatelessWidget {
                     ),
                     child: Text(
                       block.actionTarget!.title,
-                      style: AppTextStyles.body(context).copyWith(
-                        color: palette.textMuted,
-                        fontSize: 12,
-                      ),
+                      style: AppTextStyles.body(
+                        context,
+                      ).copyWith(color: palette.textMuted, fontSize: 12),
                     ),
                   ),
               ],
@@ -1673,9 +1689,9 @@ class _AiExternalSourcesBlock extends StatelessWidget {
                       children: [
                         Text(
                           items[i].title,
-                          style: AppTextStyles.link(context).copyWith(
-                            fontSize: 13,
-                          ),
+                          style: AppTextStyles.link(
+                            context,
+                          ).copyWith(fontSize: 13),
                         ),
                         if (items[i].snippet?.isNotEmpty ?? false)
                           Text(
@@ -1720,19 +1736,17 @@ class _AiBlockSection extends StatelessWidget {
       children: [
         Text(
           title,
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textPrimary,
-            fontSize: 13,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textPrimary, fontSize: 13),
         ),
         if (subtitle != null) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(
             subtitle!,
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textMuted,
-              fontSize: 12,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textMuted, fontSize: 12),
           ),
         ],
         const SizedBox(height: AppSpacing.sm),
@@ -1900,7 +1914,8 @@ class _AiProjectAuthoringClarificationCardState
             projectUpdatedAt: widget.projectUpdatedAt!,
           );
     final hasSequential = controller.hasActiveSequentialAuthoring;
-    final canGenerate = isReady &&
+    final canGenerate =
+        isReady &&
         !hasCurrentProposal &&
         chatState.canGenerateProposal &&
         !hasSequential;
@@ -1937,10 +1952,9 @@ class _AiProjectAuthoringClarificationCardState
               const SizedBox(height: AppSpacing.xs),
               Text(
                 widget.block.authoringSummary!,
-                style: AppTextStyles.body(context).copyWith(
-                  color: palette.textPrimary,
-                  height: 1.45,
-                ),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textPrimary, height: 1.45),
                 textDirection: resolveContentTextDirection(
                   widget.block.authoringSummary!,
                 ),
@@ -1950,7 +1964,9 @@ class _AiProjectAuthoringClarificationCardState
             if (widget.block.authoringKnownFacts.isNotEmpty) ...[
               for (final fact in widget.block.authoringKnownFacts)
                 Padding(
-                  padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
+                  padding: const EdgeInsetsDirectional.only(
+                    bottom: AppSpacing.xs,
+                  ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1958,9 +1974,9 @@ class _AiProjectAuthoringClarificationCardState
                         flex: 2,
                         child: Text(
                           fact.label,
-                          style: AppTextStyles.label(context).copyWith(
-                            color: palette.textSecondary,
-                          ),
+                          style: AppTextStyles.label(
+                            context,
+                          ).copyWith(color: palette.textSecondary),
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
@@ -1968,10 +1984,12 @@ class _AiProjectAuthoringClarificationCardState
                         flex: 3,
                         child: Text(
                           fact.value,
-                          style: AppTextStyles.body(context).copyWith(
-                            color: palette.textPrimary,
+                          style: AppTextStyles.body(
+                            context,
+                          ).copyWith(color: palette.textPrimary),
+                          textDirection: resolveContentTextDirection(
+                            fact.value,
                           ),
-                          textDirection: resolveContentTextDirection(fact.value),
                         ),
                       ),
                     ],
@@ -1982,9 +2000,9 @@ class _AiProjectAuthoringClarificationCardState
             if (isReady) ...[
               Text(
                 AiL10n.authoringReadyForProposal.resolve(context),
-                style: AppTextStyles.subtitle(context).copyWith(
-                  color: palette.heroMid,
-                ),
+                style: AppTextStyles.subtitle(
+                  context,
+                ).copyWith(color: palette.heroMid),
                 textDirection: resolveContentTextDirection(
                   AiL10n.authoringReadyForProposal.resolve(context),
                 ),
@@ -2009,13 +2027,13 @@ class _AiProjectAuthoringClarificationCardState
                             ),
                             const SizedBox(width: AppSpacing.sm),
                             Text(
-                              AiL10n.authoringGeneratingProposal.resolve(context),
+                              AiL10n.authoringGeneratingProposal.resolve(
+                                context,
+                              ),
                             ),
                           ],
                         )
-                      : Text(
-                          AiL10n.authoringGenerateProposal.resolve(context),
-                        ),
+                      : Text(AiL10n.authoringGenerateProposal.resolve(context)),
                 ),
               ],
             ] else if (question != null && question.prompt.isNotEmpty) ...[
@@ -2029,10 +2047,9 @@ class _AiProjectAuthoringClarificationCardState
               const SizedBox(height: AppSpacing.xs),
               Text(
                 question.prompt,
-                style: AppTextStyles.body(context).copyWith(
-                  color: palette.textPrimary,
-                  height: 1.45,
-                ),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textPrimary, height: 1.45),
                 textDirection: resolveContentTextDirection(question.prompt),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -2044,7 +2061,9 @@ class _AiProjectAuthoringClarificationCardState
                     for (final option in question.options)
                       ActionChip(
                         label: Text(option),
-                        onPressed: canAnswer ? () => submitAnswer(option) : null,
+                        onPressed: canAnswer
+                            ? () => submitAnswer(option)
+                            : null,
                       ),
                   ],
                 )
@@ -2076,7 +2095,9 @@ class _AiProjectAuthoringClarificationCardState
                   onPressed: canAnswer && _selectedOptions.isNotEmpty
                       ? () => submitAnswer(_selectedOptions.join(', '))
                       : null,
-                  child: Text(AiL10n.authoringConfirmSelection.resolve(context)),
+                  child: Text(
+                    AiL10n.authoringConfirmSelection.resolve(context),
+                  ),
                 ),
               ],
             ],
@@ -2092,12 +2113,14 @@ class _AiProjectAuthoringClarificationCardState
               const SizedBox(height: AppSpacing.xs),
               for (final assumption in widget.block.authoringAssumptions)
                 Padding(
-                  padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
+                  padding: const EdgeInsetsDirectional.only(
+                    bottom: AppSpacing.xs,
+                  ),
                   child: Text(
                     assumption,
-                    style: AppTextStyles.body(context).copyWith(
-                      color: palette.textPrimary,
-                    ),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textPrimary),
                     textDirection: resolveContentTextDirection(assumption),
                   ),
                 ),
@@ -2114,12 +2137,14 @@ class _AiProjectAuthoringClarificationCardState
               const SizedBox(height: AppSpacing.xs),
               for (final warning in widget.block.authoringWarnings)
                 Padding(
-                  padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
+                  padding: const EdgeInsetsDirectional.only(
+                    bottom: AppSpacing.xs,
+                  ),
                   child: Text(
                     warning,
-                    style: AppTextStyles.body(context).copyWith(
-                      color: palette.textPrimary,
-                    ),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textPrimary),
                     textDirection: resolveContentTextDirection(warning),
                   ),
                 ),
@@ -2162,12 +2187,15 @@ class _AiProjectAuthoringProposalCardState
     }
 
     final proposalId = widget.block.authoringProposalId;
-    final latestProposal =
-        controller.findLatestAuthoringProposalState()?.proposal;
-    final isLatestProposal = latestProposal != null &&
+    final latestProposal = controller
+        .findLatestAuthoringProposalState()
+        ?.proposal;
+    final isLatestProposal =
+        latestProposal != null &&
         latestProposal.authoringProposalId == proposalId;
 
-    final isStale = widget.projectUpdatedAt != null &&
+    final isStale =
+        widget.projectUpdatedAt != null &&
         widget.block.authoringProposalBaseUpdatedAt != null &&
         widget.block.authoringProposalBaseUpdatedAt !=
             widget.projectUpdatedAt!.toUtc().toIso8601String();
@@ -2175,11 +2203,15 @@ class _AiProjectAuthoringProposalCardState
     final review = proposalId == null
         ? null
         : controller.findLatestReviewStateForProposal(proposalId);
-    final reviewBusy = chatState.isSubmittingReview ||
+    final reviewBusy =
+        chatState.isSubmittingReview ||
         chatState.isRevisingProposal ||
         chatState.isPreparingApply;
     final controlsEnabled =
-        isLatestProposal && !isStale && !(review?.isApplied ?? false) && !reviewBusy;
+        isLatestProposal &&
+        !isStale &&
+        !(review?.isApplied ?? false) &&
+        !reviewBusy;
 
     String formatDuration(int? minutes) {
       if (minutes == null || minutes <= 0) {
@@ -2199,10 +2231,9 @@ class _AiProjectAuthoringProposalCardState
     Widget sectionTitle(String label) {
       return Text(
         label,
-        style: AppTextStyles.label(context).copyWith(
-          color: palette.textSecondary,
-          fontWeight: FontWeight.w600,
-        ),
+        style: AppTextStyles.label(
+          context,
+        ).copyWith(color: palette.textSecondary, fontWeight: FontWeight.w600),
       );
     }
 
@@ -2267,10 +2298,9 @@ class _AiProjectAuthoringProposalCardState
         ),
         child: Text(
           label.resolve(context),
-          style: AppTextStyles.label(context).copyWith(
-            color: color,
-            fontWeight: FontWeight.w600,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: color, fontWeight: FontWeight.w600),
         ),
       );
     }
@@ -2303,8 +2333,7 @@ class _AiProjectAuthoringProposalCardState
       required String decision,
       required bool locked,
     }) {
-      final showControls =
-          !locked || _expandedChangeTargets.contains(target);
+      final showControls = !locked || _expandedChangeTargets.contains(target);
       if (!controlsEnabled || !showControls) {
         return const SizedBox.shrink();
       }
@@ -2327,9 +2356,7 @@ class _AiProjectAuthoringProposalCardState
               onPressed: reviewBusy
                   ? null
                   : () => submitDecision(target, 'KEEP_CURRENT'),
-              child: Text(
-                AiL10n.authoringReviewKeepCurrent.resolve(context),
-              ),
+              child: Text(AiL10n.authoringReviewKeepCurrent.resolve(context)),
             ),
             TextButton(
               onPressed: reviewBusy ? null : () => startDiscussion(target),
@@ -2437,10 +2464,9 @@ class _AiProjectAuthoringProposalCardState
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     '${AiL10n.authoringReviewYourRequest.resolve(context)}: $comment',
-                    style: AppTextStyles.body(context).copyWith(
-                      color: palette.textPrimary,
-                      height: 1.4,
-                    ),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textPrimary, height: 1.4),
                     textDirection: resolveContentTextDirection(comment!),
                   ),
                 ],
@@ -2454,11 +2480,13 @@ class _AiProjectAuthoringProposalCardState
                     Align(
                       alignment: AlignmentDirectional.centerStart,
                       child: TextButton(
-                        onPressed:
-                            reviewBusy ? null : () => startDiscussion(target),
+                        onPressed: reviewBusy
+                            ? null
+                            : () => startDiscussion(target),
                         child: Text(
-                          AiL10n.authoringReviewContinueDiscussion
-                              .resolve(context),
+                          AiL10n.authoringReviewContinueDiscussion.resolve(
+                            context,
+                          ),
                         ),
                       ),
                     ),
@@ -2490,16 +2518,18 @@ class _AiProjectAuthoringProposalCardState
                 Expanded(
                   child: Text(
                     project.title,
-                    style: AppTextStyles.subtitle(context).copyWith(
-                      color: palette.textPrimary,
-                    ),
+                    style: AppTextStyles.subtitle(
+                      context,
+                    ).copyWith(color: palette.textPrimary),
                     textDirection: resolveContentTextDirection(project.title),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 if (version > 1)
                   Container(
-                    margin: const EdgeInsetsDirectional.only(end: AppSpacing.xs),
+                    margin: const EdgeInsetsDirectional.only(
+                      end: AppSpacing.xs,
+                    ),
                     padding: const EdgeInsetsDirectional.symmetric(
                       horizontal: AppSpacing.sm,
                       vertical: AppSpacing.xs,
@@ -2544,23 +2574,23 @@ class _AiProjectAuthoringProposalCardState
               children: [
                 Text(
                   '${AiL10n.authoringProposalDifficulty.resolve(context)}: ${project.difficulty}',
-                  style: AppTextStyles.body(context).copyWith(
-                    color: palette.textSecondary,
-                  ),
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textSecondary),
                 ),
                 Text(
                   '${AiL10n.authoringProposalEstimatedDuration.resolve(context)}: ${formatDuration(project.estimatedMinutes)}',
-                  style: AppTextStyles.body(context).copyWith(
-                    color: palette.textSecondary,
-                  ),
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textSecondary),
                 ),
                 if ((widget.block.authoringProposalCategoryDisplayName ?? '')
                     .isNotEmpty)
                   Text(
                     widget.block.authoringProposalCategoryDisplayName!,
-                    style: AppTextStyles.body(context).copyWith(
-                      color: palette.textSecondary,
-                    ),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textSecondary),
                     textDirection: resolveContentTextDirection(
                       widget.block.authoringProposalCategoryDisplayName!,
                     ),
@@ -2570,10 +2600,9 @@ class _AiProjectAuthoringProposalCardState
             const SizedBox(height: AppSpacing.sm),
             Text(
               AiL10n.authoringProposalPreviewNotice.resolve(context),
-              style: AppTextStyles.body(context).copyWith(
-                color: palette.heroMid,
-                height: 1.4,
-              ),
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.heroMid, height: 1.4),
               textDirection: resolveContentTextDirection(
                 AiL10n.authoringProposalPreviewNotice.resolve(context),
               ),
@@ -2582,9 +2611,9 @@ class _AiProjectAuthoringProposalCardState
               const SizedBox(height: AppSpacing.xs),
               Text(
                 AiL10n.authoringProposalStaleNotice.resolve(context),
-                style: AppTextStyles.label(context).copyWith(
-                  color: materialWarning,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: materialWarning),
                 textDirection: resolveContentTextDirection(
                   AiL10n.authoringProposalStaleNotice.resolve(context),
                 ),
@@ -2594,8 +2623,9 @@ class _AiProjectAuthoringProposalCardState
               const SizedBox(height: AppSpacing.md),
               Builder(
                 builder: (context) {
-                  final progress =
-                      controller.computeAuthoringReviewProgress(review);
+                  final progress = controller.computeAuthoringReviewProgress(
+                    review,
+                  );
                   final statusLabel = AiL10n.authoringReviewStatusLabel(
                     progress.status,
                   ).resolve(context);
@@ -2628,8 +2658,9 @@ class _AiProjectAuthoringProposalCardState
                               color: palette.heroMid,
                               fontWeight: FontWeight.w700,
                             ),
-                            textDirection:
-                                resolveContentTextDirection(statusLabel),
+                            textDirection: resolveContentTextDirection(
+                              statusLabel,
+                            ),
                           ),
                         ],
                       ),
@@ -2655,17 +2686,19 @@ class _AiProjectAuthoringProposalCardState
                 ),
               ),
               reviewSection(
-                label: AiL10n.authoringProposalShortDescription.resolve(context),
+                label: AiL10n.authoringProposalShortDescription.resolve(
+                  context,
+                ),
                 target: 'shortDescription',
                 currentValue: draft?.shortDescription,
                 content: Text(
                   project.shortDescription,
-                  style: AppTextStyles.body(context).copyWith(
-                    color: palette.textPrimary,
-                    height: 1.45,
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textPrimary, height: 1.45),
+                  textDirection: resolveContentTextDirection(
+                    project.shortDescription,
                   ),
-                  textDirection:
-                      resolveContentTextDirection(project.shortDescription),
                 ),
               ),
               reviewSection(
@@ -2674,11 +2707,12 @@ class _AiProjectAuthoringProposalCardState
                 currentValue: draft?.description,
                 content: Text(
                   project.description,
-                  style: AppTextStyles.body(context).copyWith(
-                    color: palette.textPrimary,
-                    height: 1.45,
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textPrimary, height: 1.45),
+                  textDirection: resolveContentTextDirection(
+                    project.description,
                   ),
-                  textDirection: resolveContentTextDirection(project.description),
                 ),
               ),
               reviewSection(
@@ -2687,22 +2721,22 @@ class _AiProjectAuthoringProposalCardState
                 currentValue: draft?.difficulty,
                 content: Text(
                   project.difficulty,
-                  style: AppTextStyles.body(context).copyWith(
-                    color: palette.textPrimary,
-                    height: 1.45,
-                  ),
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textPrimary, height: 1.45),
                 ),
               ),
               reviewSection(
-                label: AiL10n.authoringProposalEstimatedDuration.resolve(context),
+                label: AiL10n.authoringProposalEstimatedDuration.resolve(
+                  context,
+                ),
                 target: 'estimatedMinutes',
                 currentValue: formatDuration(draft?.estimatedMinutes),
                 content: Text(
                   formatDuration(project.estimatedMinutes),
-                  style: AppTextStyles.body(context).copyWith(
-                    color: palette.textPrimary,
-                    height: 1.45,
-                  ),
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textPrimary, height: 1.45),
                 ),
               ),
             ] else ...[
@@ -2713,30 +2747,32 @@ class _AiProjectAuthoringProposalCardState
               const SizedBox(height: AppSpacing.xs),
               Text(
                 project.shortDescription,
-                style: AppTextStyles.body(context).copyWith(
-                  color: palette.textPrimary,
-                  height: 1.45,
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textPrimary, height: 1.45),
+                textDirection: resolveContentTextDirection(
+                  project.shortDescription,
                 ),
-                textDirection:
-                    resolveContentTextDirection(project.shortDescription),
               ),
               const SizedBox(height: AppSpacing.md),
-              sectionTitle(AiL10n.authoringProposalDescription.resolve(context)),
+              sectionTitle(
+                AiL10n.authoringProposalDescription.resolve(context),
+              ),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 project.description,
-                style: AppTextStyles.body(context).copyWith(
-                  color: palette.textPrimary,
-                  height: 1.45,
-                ),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textPrimary, height: 1.45),
                 textDirection: resolveContentTextDirection(project.description),
               ),
             ],
             if (widget.block.authoringProposalComponents.isNotEmpty) ...[
               if (isLatestProposal && !(review?.isApplied ?? false))
                 reviewSection(
-                  label: AiL10n.authoringProposalRequiredComponents
-                      .resolve(context),
+                  label: AiL10n.authoringProposalRequiredComponents.resolve(
+                    context,
+                  ),
                   target: 'components',
                   content: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2762,16 +2798,16 @@ class _AiProjectAuthoringProposalCardState
                               ),
                               Text(
                                 '${component.quantity.toString().replaceAll(RegExp(r'\.0$'), '')} ${component.unit} · ${component.isRequired ? AiL10n.authoringProposalRequired.resolve(context) : AiL10n.authoringProposalOptional.resolve(context)}${component.canBeSubstituted ? ' · ${AiL10n.authoringProposalSubstitutable.resolve(context)}' : ''}',
-                                style: AppTextStyles.label(context).copyWith(
-                                  color: palette.textSecondary,
-                                ),
+                                style: AppTextStyles.label(
+                                  context,
+                                ).copyWith(color: palette.textSecondary),
                               ),
                               if ((component.notes ?? '').isNotEmpty)
                                 Text(
                                   component.notes!,
-                                  style: AppTextStyles.body(context).copyWith(
-                                    color: palette.textPrimary,
-                                  ),
+                                  style: AppTextStyles.body(
+                                    context,
+                                  ).copyWith(color: palette.textPrimary),
                                   textDirection: resolveContentTextDirection(
                                     component.notes!,
                                   ),
@@ -2788,7 +2824,8 @@ class _AiProjectAuthoringProposalCardState
                   AiL10n.authoringProposalRequiredComponents.resolve(context),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                for (final component in widget.block.authoringProposalComponents)
+                for (final component
+                    in widget.block.authoringProposalComponents)
                   Padding(
                     padding: const EdgeInsetsDirectional.only(
                       bottom: AppSpacing.sm,
@@ -2808,16 +2845,16 @@ class _AiProjectAuthoringProposalCardState
                         ),
                         Text(
                           '${component.quantity.toString().replaceAll(RegExp(r'\.0$'), '')} ${component.unit} · ${component.isRequired ? AiL10n.authoringProposalRequired.resolve(context) : AiL10n.authoringProposalOptional.resolve(context)}${component.canBeSubstituted ? ' · ${AiL10n.authoringProposalSubstitutable.resolve(context)}' : ''}',
-                          style: AppTextStyles.label(context).copyWith(
-                            color: palette.textSecondary,
-                          ),
+                          style: AppTextStyles.label(
+                            context,
+                          ).copyWith(color: palette.textSecondary),
                         ),
                         if ((component.notes ?? '').isNotEmpty)
                           Text(
                             component.notes!,
-                            style: AppTextStyles.body(context).copyWith(
-                              color: palette.textPrimary,
-                            ),
+                            style: AppTextStyles.body(
+                              context,
+                            ).copyWith(color: palette.textPrimary),
                             textDirection: resolveContentTextDirection(
                               component.notes!,
                             ),
@@ -2835,9 +2872,11 @@ class _AiProjectAuthoringProposalCardState
                   content: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      for (var index = 0;
-                          index < widget.block.authoringProposalSteps.length;
-                          index += 1)
+                      for (
+                        var index = 0;
+                        index < widget.block.authoringProposalSteps.length;
+                        index += 1
+                      )
                         Padding(
                           padding: const EdgeInsetsDirectional.only(
                             bottom: AppSpacing.sm,
@@ -2852,18 +2891,25 @@ class _AiProjectAuthoringProposalCardState
                                   fontWeight: FontWeight.w600,
                                 ),
                                 textDirection: resolveContentTextDirection(
-                                  widget.block.authoringProposalSteps[index].title,
+                                  widget
+                                      .block
+                                      .authoringProposalSteps[index]
+                                      .title,
                                 ),
                               ),
                               Text(
-                                widget.block.authoringProposalSteps[index]
+                                widget
+                                    .block
+                                    .authoringProposalSteps[index]
                                     .description,
                                 style: AppTextStyles.body(context).copyWith(
                                   color: palette.textPrimary,
                                   height: 1.45,
                                 ),
                                 textDirection: resolveContentTextDirection(
-                                  widget.block.authoringProposalSteps[index]
+                                  widget
+                                      .block
+                                      .authoringProposalSteps[index]
                                       .description,
                                 ),
                               ),
@@ -2877,9 +2923,11 @@ class _AiProjectAuthoringProposalCardState
                 const SizedBox(height: AppSpacing.md),
                 sectionTitle(AiL10n.authoringProposalSteps.resolve(context)),
                 const SizedBox(height: AppSpacing.xs),
-                for (var index = 0;
-                    index < widget.block.authoringProposalSteps.length;
-                    index += 1)
+                for (
+                  var index = 0;
+                  index < widget.block.authoringProposalSteps.length;
+                  index += 1
+                )
                   Padding(
                     padding: const EdgeInsetsDirectional.only(
                       bottom: AppSpacing.sm,
@@ -2898,13 +2946,17 @@ class _AiProjectAuthoringProposalCardState
                           ),
                         ),
                         Text(
-                          widget.block.authoringProposalSteps[index].description,
-                          style: AppTextStyles.body(context).copyWith(
-                            color: palette.textPrimary,
-                            height: 1.45,
-                          ),
+                          widget
+                              .block
+                              .authoringProposalSteps[index]
+                              .description,
+                          style: AppTextStyles.body(
+                            context,
+                          ).copyWith(color: palette.textPrimary, height: 1.45),
                           textDirection: resolveContentTextDirection(
-                            widget.block.authoringProposalSteps[index]
+                            widget
+                                .block
+                                .authoringProposalSteps[index]
                                 .description,
                           ),
                         ),
@@ -2917,14 +2969,17 @@ class _AiProjectAuthoringProposalCardState
               const SizedBox(height: AppSpacing.md),
               sectionTitle(AiL10n.authoringAssumptions.resolve(context)),
               const SizedBox(height: AppSpacing.xs),
-              for (final assumption in widget.block.authoringProposalAssumptions)
+              for (final assumption
+                  in widget.block.authoringProposalAssumptions)
                 Padding(
-                  padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
+                  padding: const EdgeInsetsDirectional.only(
+                    bottom: AppSpacing.xs,
+                  ),
                   child: Text(
                     assumption,
-                    style: AppTextStyles.body(context).copyWith(
-                      color: palette.textPrimary,
-                    ),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textPrimary),
                     textDirection: resolveContentTextDirection(assumption),
                   ),
                 ),
@@ -2935,28 +2990,36 @@ class _AiProjectAuthoringProposalCardState
               const SizedBox(height: AppSpacing.xs),
               for (final warning in widget.block.authoringProposalWarnings)
                 Padding(
-                  padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
+                  padding: const EdgeInsetsDirectional.only(
+                    bottom: AppSpacing.xs,
+                  ),
                   child: Text(
                     warning,
-                    style: AppTextStyles.body(context).copyWith(
-                      color: palette.textPrimary,
-                    ),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textPrimary),
                     textDirection: resolveContentTextDirection(warning),
                   ),
                 ),
             ],
-            if (widget.block.authoringProposalSafetyConsiderations.isNotEmpty) ...[
+            if (widget
+                .block
+                .authoringProposalSafetyConsiderations
+                .isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
               sectionTitle(AiL10n.authoringProposalSafety.resolve(context)),
               const SizedBox(height: AppSpacing.xs),
-              for (final note in widget.block.authoringProposalSafetyConsiderations)
+              for (final note
+                  in widget.block.authoringProposalSafetyConsiderations)
                 Padding(
-                  padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
+                  padding: const EdgeInsetsDirectional.only(
+                    bottom: AppSpacing.xs,
+                  ),
                   child: Text(
                     note,
-                    style: AppTextStyles.body(context).copyWith(
-                      color: palette.textPrimary,
-                    ),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textPrimary),
                     textDirection: resolveContentTextDirection(note),
                   ),
                 ),
@@ -2972,13 +3035,15 @@ class _AiProjectAuthoringProposalCardState
                   onPressed: reviewBusy
                       ? null
                       : () => controller.reviseAuthoringProposal(
-                            proposalId: proposalId,
-                            reviewStateId: review!.reviewStateId,
-                          ),
+                          proposalId: proposalId,
+                          reviewStateId: review!.reviewStateId,
+                        ),
                   child: Text(
                     chatState.isRevisingProposal
                         ? AiL10n.authoringGeneratingProposal.resolve(context)
-                        : AiL10n.authoringReviewGenerateRevised.resolve(context),
+                        : AiL10n.authoringReviewGenerateRevised.resolve(
+                            context,
+                          ),
                   ),
                 ),
               ),
@@ -2990,14 +3055,16 @@ class _AiProjectAuthoringProposalCardState
               const SizedBox(height: AppSpacing.md),
               Builder(
                 builder: (context) {
-                  final progress =
-                      controller.computeAuthoringReviewProgress(review);
+                  final progress = controller.computeAuthoringReviewProgress(
+                    review,
+                  );
                   return DecoratedBox(
                     decoration: BoxDecoration(
                       color: palette.mint.withValues(alpha: 0.08),
                       borderRadius: AppRadius.mdAll,
-                      border:
-                          Border.all(color: palette.mint.withValues(alpha: 0.35)),
+                      border: Border.all(
+                        color: palette.mint.withValues(alpha: 0.35),
+                      ),
                     ),
                     child: Padding(
                       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
@@ -3025,14 +3092,15 @@ class _AiProjectAuthoringProposalCardState
                             onPressed: reviewBusy
                                 ? null
                                 : () => controller
-                                    .prepareApplyReviewedAuthoringProposal(
-                                      reviewStateId: review.reviewStateId,
-                                    ),
+                                      .prepareApplyReviewedAuthoringProposal(
+                                        reviewStateId: review.reviewStateId,
+                                      ),
                             child: Text(
                               chatState.isPreparingApply
                                   ? AiL10n.loading.resolve(context)
-                                  : AiL10n.authoringReviewApplyReviewed
-                                      .resolve(context),
+                                  : AiL10n.authoringReviewApplyReviewed.resolve(
+                                      context,
+                                    ),
                             ),
                           ),
                         ],
@@ -3081,9 +3149,9 @@ class _AiProjectAuthoringProposalDiffCard extends StatelessWidget {
             for (final item in items)
               Text(
                 '• $item',
-                style: AppTextStyles.body(context).copyWith(
-                  color: palette.textPrimary,
-                ),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textPrimary),
                 textDirection: resolveContentTextDirection(item),
               ),
           ],
@@ -3104,17 +3172,17 @@ class _AiProjectAuthoringProposalDiffCard extends StatelessWidget {
           children: [
             Text(
               AiL10n.authoringProposalUpdated.resolve(context),
-              style: AppTextStyles.subtitle(context).copyWith(
-                color: palette.textPrimary,
-              ),
+              style: AppTextStyles.subtitle(
+                context,
+              ).copyWith(color: palette.textPrimary),
             ),
             if (diff.changedTargets.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(
                 '${AiL10n.authoringDiffChangedTargets.resolve(context)}: ${diff.changedTargets.join(', ')}',
-                style: AppTextStyles.body(context).copyWith(
-                  color: palette.textSecondary,
-                ),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textSecondary),
               ),
             ],
             const SizedBox(height: AppSpacing.sm),
@@ -3243,18 +3311,17 @@ class _AiSequentialAuthoringStageCardState
           children: [
             Text(
               AiL10n.authoringSequentialLegacyTransitionBanner.resolve(context),
-              style: AppTextStyles.body(context).copyWith(
-                color: palette.textPrimary,
-                height: 1.45,
-              ),
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textPrimary, height: 1.45),
             ),
             const SizedBox(height: AppSpacing.md),
             FilledButton(
               onPressed: busy
                   ? null
                   : () => controller.runSequentialAuthoringAction(
-                        action: 'CONTINUE_GUIDED',
-                      ),
+                      action: 'CONTINUE_GUIDED',
+                    ),
               child: Text(
                 AiL10n.authoringSequentialContinueGuided.resolve(context),
               ),
@@ -3292,9 +3359,9 @@ class _AiSequentialAuthoringStageCardState
           onPressed: busy
               ? null
               : () => controller.runSequentialAuthoringAction(
-                    action: 'REMOVE_ITEM',
-                    turnId: turn.turnId,
-                  ),
+                  action: 'REMOVE_ITEM',
+                  turnId: turn.turnId,
+                ),
           child: Text(AiL10n.authoringSequentialRemoveItem.resolve(context)),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -3302,10 +3369,10 @@ class _AiSequentialAuthoringStageCardState
           onPressed: busy || addManualValue == null
               ? null
               : () => controller.runSequentialAuthoringAction(
-                    action: 'ADD_ITEM',
-                    turnId: turn.turnId,
-                    manualValue: addManualValue,
-                  ),
+                  action: 'ADD_ITEM',
+                  turnId: turn.turnId,
+                  manualValue: addManualValue,
+                ),
           child: Text(AiL10n.authoringSequentialAddItem.resolve(context)),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -3313,9 +3380,9 @@ class _AiSequentialAuthoringStageCardState
           onPressed: !canGoBack || busy
               ? null
               : () => controller.runSequentialAuthoringAction(
-                    action: 'BACK_ITEM',
-                    turnId: turn.turnId,
-                  ),
+                  action: 'BACK_ITEM',
+                  turnId: turn.turnId,
+                ),
           child: Text(AiL10n.authoringSequentialBackItem.resolve(context)),
         ),
         if (isStepReview) ...[
@@ -3324,9 +3391,9 @@ class _AiSequentialAuthoringStageCardState
             onPressed: busy
                 ? null
                 : () => controller.runSequentialAuthoringAction(
-                      action: 'EXPLAIN_STEP',
-                      turnId: turn.turnId,
-                    ),
+                    action: 'EXPLAIN_STEP',
+                    turnId: turn.turnId,
+                  ),
             child: Text(AiL10n.authoringSequentialExplainStep.resolve(context)),
           ),
         ],
@@ -3351,7 +3418,8 @@ class _AiSequentialAuthoringStageCardState
     }
 
     final session = controller.findLatestAuthoringSession();
-    final turn = widget.block.authoringTurn ?? controller.findCurrentAuthoringTurn();
+    final turn =
+        widget.block.authoringTurn ?? controller.findCurrentAuthoringTurn();
     if (session == null) {
       return const SizedBox.shrink();
     }
@@ -3420,9 +3488,9 @@ class _AiSequentialAuthoringStageCardState
           children: [
             Text(
               AiL10n.authoringSequentialProgressTitle.resolve(context),
-              style: AppTextStyles.subtitle(context).copyWith(
-                color: palette.textPrimary,
-              ),
+              style: AppTextStyles.subtitle(
+                context,
+              ).copyWith(color: palette.textPrimary),
             ),
             const SizedBox(height: AppSpacing.sm),
             progressRow('Title', accepted.contains('TITLE'), stage == 'TITLE'),
@@ -3453,16 +3521,20 @@ class _AiSequentialAuthoringStageCardState
               const SizedBox(height: AppSpacing.sm),
               Text(
                 AiL10n.authoringProposalStaleNotice.resolve(context),
-                style: AppTextStyles.label(context).copyWith(color: materialWarning),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: materialWarning),
               ),
               const SizedBox(height: AppSpacing.xs),
               OutlinedButton(
                 onPressed: busy
                     ? null
                     : () => controller.runSequentialAuthoringAction(
-                          action: 'REGENERATE_STALE',
-                        ),
-                child: Text(AiL10n.authoringSequentialRegenerateStale.resolve(context)),
+                        action: 'REGENERATE_STALE',
+                      ),
+                child: Text(
+                  AiL10n.authoringSequentialRegenerateStale.resolve(context),
+                ),
               ),
             ],
             if (session.stage == 'OVERVIEW') ...[
@@ -3470,7 +3542,9 @@ class _AiSequentialAuthoringStageCardState
               FilledButton(
                 onPressed: busy
                     ? null
-                    : () => controller.runSequentialAuthoringAction(action: 'START'),
+                    : () => controller.runSequentialAuthoringAction(
+                        action: 'START',
+                      ),
                 child: busy
                     ? Row(
                         mainAxisSize: MainAxisSize.min,
@@ -3484,7 +3558,9 @@ class _AiSequentialAuthoringStageCardState
                             ),
                           ),
                           const SizedBox(width: AppSpacing.sm),
-                          Text(AiL10n.authoringSequentialStart.resolve(context)),
+                          Text(
+                            AiL10n.authoringSequentialStart.resolve(context),
+                          ),
                         ],
                       )
                     : Text(AiL10n.authoringSequentialStart.resolve(context)),
@@ -3493,10 +3569,9 @@ class _AiSequentialAuthoringStageCardState
               const SizedBox(height: AppSpacing.md),
               Text(
                 AiL10n.authoringSequentialStageLabel(stage).resolve(context),
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.heroMid,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.heroMid, fontWeight: FontWeight.w700),
               ),
               if (session.isComponentOneByOne &&
                   stage == 'COMPONENTS' &&
@@ -3543,24 +3618,26 @@ class _AiSequentialAuthoringStageCardState
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   turn.explanation,
-                  style: AppTextStyles.body(context).copyWith(
-                    color: palette.textSecondary,
-                    height: 1.45,
-                  ),
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textSecondary, height: 1.45),
                   textDirection: resolveContentTextDirection(turn.explanation),
                 ),
               ],
               const SizedBox(height: AppSpacing.md),
-              if (session.awaitingComponentsFinalSave && stage == 'COMPONENTS') ...[
+              if (session.awaitingComponentsFinalSave &&
+                  stage == 'COMPONENTS') ...[
                 FilledButton(
                   onPressed: busy
                       ? null
                       : () => controller.runSequentialAuthoringAction(
-                            action: 'FINALIZE_SECTION',
-                            turnId: turn.turnId,
-                          ),
+                          action: 'FINALIZE_SECTION',
+                          turnId: turn.turnId,
+                        ),
                   child: Text(
-                    AiL10n.authoringSequentialAcceptListAndSave.resolve(context),
+                    AiL10n.authoringSequentialAcceptListAndSave.resolve(
+                      context,
+                    ),
                   ),
                 ),
               ] else if (session.awaitingStepsFinalSave &&
@@ -3569,11 +3646,13 @@ class _AiSequentialAuthoringStageCardState
                   onPressed: busy
                       ? null
                       : () => controller.runSequentialAuthoringAction(
-                            action: 'FINALIZE_SECTION',
-                            turnId: turn.turnId,
-                          ),
+                          action: 'FINALIZE_SECTION',
+                          turnId: turn.turnId,
+                        ),
                   child: Text(
-                    AiL10n.authoringSequentialAcceptPlanAndSave.resolve(context),
+                    AiL10n.authoringSequentialAcceptPlanAndSave.resolve(
+                      context,
+                    ),
                   ),
                 ),
               ] else if (session.isComponentOneByOne &&
@@ -3613,24 +3692,30 @@ class _AiSequentialAuthoringStageCardState
                   onPressed: busy
                       ? null
                       : () => controller.runSequentialAuthoringAction(
-                            action: 'ACCEPT_TURN',
-                            turnId: turn.turnId,
-                          ),
-                  child: Text(AiL10n.authoringSequentialAcceptAndSave.resolve(context)),
+                          action: 'ACCEPT_TURN',
+                          turnId: turn.turnId,
+                        ),
+                  child: Text(
+                    AiL10n.authoringSequentialAcceptAndSave.resolve(context),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 OutlinedButton(
                   onPressed: busy
                       ? null
                       : () => controller.runSequentialAuthoringAction(
-                            action: 'SUGGEST_ANOTHER',
-                            turnId: turn.turnId,
-                          ),
-                  child: Text(AiL10n.authoringSequentialSuggestAnother.resolve(context)),
+                          action: 'SUGGEST_ANOTHER',
+                          turnId: turn.turnId,
+                        ),
+                  child: Text(
+                    AiL10n.authoringSequentialSuggestAnother.resolve(context),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 OutlinedButton(
-                  onPressed: busy ? null : controller.selectSequentialDiscussionTarget,
+                  onPressed: busy
+                      ? null
+                      : controller.selectSequentialDiscussionTarget,
                   child: Text(AiL10n.authoringReviewDiscuss.resolve(context)),
                 ),
               ],
@@ -3650,20 +3735,28 @@ class _AiSequentialAuthoringStageCardState
                     DropdownButtonFormField<String>(
                       initialValue: _manualDifficulty,
                       decoration: InputDecoration(
-                        labelText: AiL10n.authoringSequentialManualHint(stage)
-                            .resolve(context),
+                        labelText: AiL10n.authoringSequentialManualHint(
+                          stage,
+                        ).resolve(context),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'BEGINNER', child: Text('Beginner')),
+                        DropdownMenuItem(
+                          value: 'BEGINNER',
+                          child: Text('Beginner'),
+                        ),
                         DropdownMenuItem(
                           value: 'INTERMEDIATE',
                           child: Text('Intermediate'),
                         ),
-                        DropdownMenuItem(value: 'ADVANCED', child: Text('Advanced')),
+                        DropdownMenuItem(
+                          value: 'ADVANCED',
+                          child: Text('Advanced'),
+                        ),
                       ],
                       onChanged: busy
                           ? null
-                          : (value) => setState(() => _manualDifficulty = value),
+                          : (value) =>
+                                setState(() => _manualDifficulty = value),
                     ),
                   ] else
                     TextField(
@@ -3671,8 +3764,9 @@ class _AiSequentialAuthoringStageCardState
                       enabled: !busy,
                       maxLines: _manualLinesForStage(stage),
                       decoration: InputDecoration(
-                        labelText: AiL10n.authoringSequentialManualHint(stage)
-                            .resolve(context),
+                        labelText: AiL10n.authoringSequentialManualHint(
+                          stage,
+                        ).resolve(context),
                       ),
                       textDirection: resolveContentTextDirection(
                         _manualController.text,
@@ -3693,20 +3787,22 @@ class _AiSequentialAuthoringStageCardState
                         : _manualController.text.trim().isEmpty
                         ? '—'
                         : _manualController.text.trim(),
-                    style: AppTextStyles.body(context).copyWith(
-                      color: palette.textPrimary,
-                    ),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textPrimary),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   FilledButton(
                     onPressed: busy || _manualValueForStage(stage) == null
                         ? null
                         : () => controller.runSequentialAuthoringAction(
-                              action: 'SAVE_MANUAL',
-                              manualValue: _manualValueForStage(stage),
-                            ),
+                            action: 'SAVE_MANUAL',
+                            manualValue: _manualValueForStage(stage),
+                          ),
                     child: Text(
-                      AiL10n.authoringSequentialSaveManualValue.resolve(context),
+                      AiL10n.authoringSequentialSaveManualValue.resolve(
+                        context,
+                      ),
                     ),
                   ),
                 ],
@@ -3719,40 +3815,51 @@ class _AiSequentialAuthoringStageCardState
                   onPressed: busy
                       ? null
                       : () => controller.runSequentialAuthoringAction(
-                            action: 'CHOOSE_MODE',
-                            mode: 'COMPONENTS_FULL_LIST',
-                          ),
-                  child: Text(AiL10n.authoringSequentialReviewFullList.resolve(context)),
+                          action: 'CHOOSE_MODE',
+                          mode: 'COMPONENTS_FULL_LIST',
+                        ),
+                  child: Text(
+                    AiL10n.authoringSequentialReviewFullList.resolve(context),
+                  ),
                 ),
                 OutlinedButton(
                   onPressed: busy
                       ? null
                       : () => controller.runSequentialAuthoringAction(
-                            action: 'CHOOSE_MODE',
-                            mode: 'COMPONENTS_ONE_BY_ONE',
-                          ),
-                  child: Text(AiL10n.authoringSequentialReviewOneByOne.resolve(context)),
+                          action: 'CHOOSE_MODE',
+                          mode: 'COMPONENTS_ONE_BY_ONE',
+                        ),
+                  child: Text(
+                    AiL10n.authoringSequentialReviewOneByOne.resolve(context),
+                  ),
                 ),
               ],
-              if (stage == 'STEPS_OVERVIEW' && !session.awaitingStepsFinalSave) ...[
+              if (stage == 'STEPS_OVERVIEW' &&
+                  !session.awaitingStepsFinalSave) ...[
                 const SizedBox(height: AppSpacing.xs),
                 OutlinedButton(
                   onPressed: busy
                       ? null
                       : () => controller.runSequentialAuthoringAction(
-                            action: 'CHOOSE_MODE',
-                            mode: 'STEPS_FULL_PLAN',
-                          ),
-                  child: Text(AiL10n.authoringSequentialReviewCompletePlan.resolve(context)),
+                          action: 'CHOOSE_MODE',
+                          mode: 'STEPS_FULL_PLAN',
+                        ),
+                  child: Text(
+                    AiL10n.authoringSequentialReviewCompletePlan.resolve(
+                      context,
+                    ),
+                  ),
                 ),
                 OutlinedButton(
                   onPressed: busy
                       ? null
                       : () => controller.runSequentialAuthoringAction(
-                            action: 'CHOOSE_MODE',
-                            mode: 'STEP_BY_STEP',
-                          ),
-                  child: Text(AiL10n.authoringSequentialReviewStepByStep.resolve(context)),
+                          action: 'CHOOSE_MODE',
+                          mode: 'STEP_BY_STEP',
+                        ),
+                  child: Text(
+                    AiL10n.authoringSequentialReviewStepByStep.resolve(context),
+                  ),
                 ),
               ],
             ] else if (session.stage == 'FINAL_REVIEW') ...[
@@ -3768,7 +3875,9 @@ class _AiSequentialAuthoringStageCardState
               FilledButton(
                 onPressed: busy
                     ? null
-                    : () => controller.runSequentialAuthoringAction(action: 'FINISH'),
+                    : () => controller.runSequentialAuthoringAction(
+                        action: 'FINISH',
+                      ),
                 child: Text(AiL10n.authoringSequentialFinish.resolve(context)),
               ),
             ],

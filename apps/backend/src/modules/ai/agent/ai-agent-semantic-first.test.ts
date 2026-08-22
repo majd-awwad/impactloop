@@ -641,10 +641,7 @@ describe('semantic v2 contract', () => {
       },
     };
     const parsed = validateSemanticUnderstanding(raw);
-    assert.ok(parsed);
-    const plan = mapSemanticToExecutionPlan(parsed!);
-    assert.equal(plan.toolInput.userId, undefined);
-    assert.equal(plan.toolInput.query, 'arduino');
+    assert.equal(parsed, null);
   });
 
   test('rejects invalid schema with unknown route', () => {
@@ -800,6 +797,32 @@ describe('semantic-first material platform intent', () => {
         assert.equal(plan.query, 'sensor');
       },
     },
+    {
+      message: 'ورجيني مواد متاحة',
+      assertPlan: (plan: Record<string, unknown>) => {
+        assert.equal(plan.city, undefined);
+      },
+    },
+    {
+      message: 'شو في مواد متاحة حالياً؟',
+      assertPlan: (plan: Record<string, unknown>) => {
+        assert.equal(plan.city, undefined);
+      },
+    },
+    {
+      message: 'شو في مواتير حالياً؟',
+      assertPlan: (plan: Record<string, unknown>) => {
+        assert.equal(plan.query, 'motor');
+        assert.equal(plan.city, undefined);
+      },
+    },
+    {
+      message: 'بدي ماتور لمشروعي، شو في مواتير معروضة؟',
+      assertPlan: (plan: Record<string, unknown>) => {
+        assert.equal(plan.query, 'motor');
+        assert.equal(plan.city, undefined);
+      },
+    },
   ];
 
   for (const sample of cases) {
@@ -832,6 +855,29 @@ describe('semantic-first material platform intent', () => {
       sample.assertPlan(plan.toolInput);
     });
   }
+
+  test('explicit motor marketplace intent wins over incidental project wording', () => {
+    const message = 'بدي ماتور لمشروعي، شو في مواتير معروضة؟';
+
+    assert.equal(detectMaterialSearchIntent(message).detected, true);
+    assert.equal(detectProjectSearchIntent(message), false);
+    assert.deepEqual(extractMaterialSearchFilters(message), {
+      limit: 10,
+      query: 'motor',
+    });
+  });
+
+  test('normalizes every supported Arabic motor alias to motor', () => {
+    for (const alias of ['ماتور', 'ماتورات', 'مواتير', 'محرك', 'محركات']) {
+      const message = `شو في ${alias} حالياً؟`;
+      assert.equal(detectMaterialSearchIntent(message).detected, true, alias);
+      assert.deepEqual(
+        extractMaterialSearchFilters(message),
+        { limit: 10, query: 'motor' },
+        alias,
+      );
+    }
+  });
 });
 
 describe('semantic-first general learning distinction', () => {
@@ -1021,6 +1067,63 @@ describe('AI-SR-01 semantic planner contract and reconciliation', () => {
     assert.equal(validated?.filters?.maxPrice, 20);
   });
 
+  test('reasonable lowercase and snake-case model variations are coerced', () => {
+    const validated = validateSemanticUnderstanding({
+      schemaVersion: '1',
+      route: 'system_data_query',
+      topic: 'material_search',
+      action: null,
+      entities: [],
+      filter: {
+        material_type: 'motor',
+        max_price: '20',
+        near_me: 'true',
+      },
+      confidence: '0.94',
+      needsClarification: false,
+      clarificationQuestion: null,
+      tool_call: {
+        tool_name: 'SEARCH_AVAILABLE_MATERIALS',
+        args: JSON.stringify({ query: 'motor', limit: '10' }),
+      },
+    });
+
+    assert.ok(validated);
+    assert.equal(validated?.route, 'SYSTEM_DATA_QUERY');
+    assert.equal(validated?.topic, 'MATERIAL_SEARCH');
+    assert.equal(validated?.filters?.query, 'motor');
+    assert.equal(validated?.filters?.maxPrice, 20);
+    assert.equal(validated?.filters?.nearLearner, true);
+    assert.equal(validated?.toolCall?.name, 'search_available_materials');
+    assert.equal(validated?.toolCall?.arguments.limit, 10);
+  });
+
+  test('semantic tool calls with forbidden identity arguments are rejected', () => {
+    let safeFailure = '';
+    const validated = validateSemanticUnderstanding({
+      schemaVersion: 1,
+      route: 'SYSTEM_DATA_QUERY',
+      topic: 'MATERIAL_SEARCH',
+      action: null,
+      entities: [],
+      filters: { query: 'motor' },
+      confidence: 0.95,
+      needsClarification: false,
+      clarificationQuestion: null,
+      toolCall: {
+        name: 'search_available_materials',
+        arguments: { query: 'motor', userId: 'do-not-trust' },
+      },
+    }, (failure) => {
+      safeFailure = JSON.stringify(failure);
+    });
+
+    assert.equal(validated, null);
+    assert.match(safeFailure, /forbidden_arguments/);
+    assert.match(safeFailure, /userId/);
+    assert.doesNotMatch(safeFailure, /do-not-trust/);
+  });
+
   test('arduino intended-use search maps directly to search_available_materials', async () => {
     setSemanticUnderstandingOverrideForTests(async () =>
       buildSystemDataUnderstanding('MATERIAL_SEARCH', {
@@ -1180,6 +1283,8 @@ describe('AI-SR-01 semantic planner contract and reconciliation', () => {
       });
       assert.equal(isSemanticInvalidFallbackPlan(plan), true);
       assert.equal(plan.diagnostics.routingMode, 'semantic_invalid_fallback');
+      assert.equal(plan.route, 'MATERIAL_SEARCH');
+      assert.equal(plan.toolName, 'search_available_materials');
     } finally {
       setSemanticUnderstandingOverrideForTests(null);
     }
@@ -1217,23 +1322,37 @@ describe('AI-SR-01 semantic planner contract and reconciliation', () => {
   });
 
   test('reservation navigation guidance routes to PLATFORM_GUIDANCE', async () => {
-    const plan = await resolveAgentExecutionPlan({
-      userMessage: 'وين بروح بالتطبيق إذا لقيت مادة وعجبتني؟',
-      locale: 'ar',
-    });
-    assert.equal(plan.route, 'PLATFORM_GUIDANCE');
-    assert.equal(plan.toolName, null);
-    assert.equal(plan.diagnostics.routingMode, 'semantic');
+    setSemanticUnderstandingOverrideForTests(async () =>
+      buildPlatformGuidanceUnderstanding('MATERIAL_RESERVATION'),
+    );
+    try {
+      const plan = await resolveAgentExecutionPlan({
+        userMessage: 'وين بروح بالتطبيق إذا لقيت مادة وعجبتني؟',
+        locale: 'ar',
+      });
+      assert.equal(plan.route, 'PLATFORM_GUIDANCE');
+      assert.equal(plan.toolName, null);
+      assert.equal(plan.diagnostics.routingMode, 'semantic');
+    } finally {
+      setSemanticUnderstandingOverrideForTests(null);
+    }
   });
 
   test('supplier publish guidance routes to PLATFORM_GUIDANCE without tools', async () => {
-    const plan = await resolveAgentExecutionPlan({
-      userMessage: 'كيف بقدر أنشر مادة عندي؟',
-      locale: 'ar',
-    });
-    assert.equal(plan.route, 'PLATFORM_GUIDANCE');
-    assert.equal(plan.toolName, null);
-    assert.equal(plan.diagnostics.routingMode, 'semantic');
+    setSemanticUnderstandingOverrideForTests(async () =>
+      buildPlatformGuidanceUnderstanding('GENERAL_PLATFORM'),
+    );
+    try {
+      const plan = await resolveAgentExecutionPlan({
+        userMessage: 'كيف بقدر أنشر مادة عندي؟',
+        locale: 'ar',
+      });
+      assert.equal(plan.route, 'PLATFORM_GUIDANCE');
+      assert.equal(plan.toolName, null);
+      assert.equal(plan.diagnostics.routingMode, 'semantic');
+    } finally {
+      setSemanticUnderstandingOverrideForTests(null);
+    }
   });
 });
 

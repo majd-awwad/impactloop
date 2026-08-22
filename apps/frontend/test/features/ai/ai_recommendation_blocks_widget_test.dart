@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:frontend/core/config/api_config.dart';
 import 'package:frontend/features/ai/domain/ai_models.dart';
 import 'package:frontend/features/ai/presentation/widgets/ai_content_blocks.dart';
+import 'package:frontend/shared/widgets/app_network_image.dart';
+import 'package:frontend/shared/widgets/materials/app_material_card.dart';
 
 void main() {
   Widget buildHarness(Widget child, {Locale locale = const Locale('ar')}) {
@@ -17,15 +20,13 @@ void main() {
         ),
         GoRoute(
           path: '/learning/:id',
-          builder: (context, state) => Scaffold(
-            body: Text('project-${state.pathParameters['id']}'),
-          ),
+          builder: (context, state) =>
+              Scaffold(body: Text('project-${state.pathParameters['id']}')),
         ),
         GoRoute(
           path: '/materials/:id',
-          builder: (context, state) => Scaffold(
-            body: Text('material-${state.pathParameters['id']}'),
-          ),
+          builder: (context, state) =>
+              Scaffold(body: Text('material-${state.pathParameters['id']}')),
         ),
       ],
     );
@@ -87,6 +88,98 @@ void main() {
       ],
     });
   }
+
+  AiContentBlock materialResultsBlock({String? thumbnailUrl}) {
+    return AiContentBlock.fromJson({
+      'type': 'material_results',
+      'items': [
+        {
+          'materialId': 'mat-motor',
+          'title': 'DC motor',
+          'thumbnailUrl': thumbnailUrl,
+          'priceLabel': 'Free',
+          'categoryLabel': 'Electronics',
+        },
+      ],
+    });
+  }
+
+  group('AI material result images', () {
+    testWidgets(
+      'resolves an origin-relative thumbnail against the API origin',
+      (tester) async {
+        const relativeUrl =
+            '/demo-assets/community-materials/materials/MAT-036_01.jpg';
+        await tester.pumpWidget(
+          buildHarness(
+            SizedBox(
+              width: 320,
+              child: AiContentBlockView(
+                block: materialResultsBlock(thumbnailUrl: relativeUrl),
+                messageBlocks: const [],
+                blockIndex: 0,
+              ),
+            ),
+          ),
+        );
+
+        final card = tester.widget<ImpactMaterialCompactCard>(
+          find.byType(ImpactMaterialCompactCard),
+        );
+        expect(
+          card.imageUrl,
+          ApiConfig.backendOrigin.resolve(relativeUrl).toString(),
+        );
+        expect(find.byType(AppNetworkImage), findsOneWidget);
+      },
+    );
+
+    testWidgets('preserves a full HTTP thumbnail URL', (tester) async {
+      const absoluteUrl = 'https://cdn.example.com/material.jpg';
+      await tester.pumpWidget(
+        buildHarness(
+          SizedBox(
+            width: 320,
+            child: AiContentBlockView(
+              block: materialResultsBlock(thumbnailUrl: absoluteUrl),
+              messageBlocks: const [],
+              blockIndex: 0,
+            ),
+          ),
+        ),
+      );
+
+      final card = tester.widget<ImpactMaterialCompactCard>(
+        find.byType(ImpactMaterialCompactCard),
+      );
+      expect(card.imageUrl, absoluteUrl);
+      expect(find.byType(AppNetworkImage), findsOneWidget);
+    });
+
+    testWidgets('uses the placeholder only when the thumbnail is absent', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildHarness(
+          SizedBox(
+            width: 320,
+            child: AiContentBlockView(
+              block: materialResultsBlock(),
+              messageBlocks: const [],
+              blockIndex: 0,
+            ),
+          ),
+        ),
+      );
+
+      final card = tester.widget<ImpactMaterialCompactCard>(
+        find.byType(ImpactMaterialCompactCard),
+      );
+      expect(card.imageUrl, isNull);
+      expect(find.byType(AppNetworkImage), findsNothing);
+      expect(find.byIcon(Icons.inventory_2_outlined), findsOneWidget);
+    });
+  });
 
   group('AI recommendation cards', () {
     testWidgets('renders project recommendation with image and Arabic reason', (
@@ -197,7 +290,9 @@ void main() {
       expect(find.byType(Image), findsNothing);
     });
 
-    testWidgets('uses fallback reason label when reasons missing', (tester) async {
+    testWidgets('uses fallback reason label when reasons missing', (
+      tester,
+    ) async {
       final block = AiContentBlock.fromJson({
         'type': 'recommendations',
         'recommendationType': 'PROJECTS',

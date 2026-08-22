@@ -1,15 +1,15 @@
-import type { z } from 'zod';
+import type { z } from "zod";
 
 import type {
   findProjectsWithinBudgetInputSchema,
   matchProjectsByOwnedMaterialsInputSchema,
   searchAvailableMaterialsInputSchema,
-} from './ai-tool.types.js';
+} from "./ai-tool.types.js";
 import {
   extractBoundedMaxPrice,
   extractRequestedResultCount,
   stripBenignListPrefixForParsing,
-} from './ai-agent-number-parser.service.js';
+} from "./ai-agent-number-parser.service.js";
 
 export type MaterialSearchFilters = Partial<
   z.infer<typeof searchAvailableMaterialsInputSchema>
@@ -19,162 +19,173 @@ const normalize = (text: string): string =>
   text
     .trim()
     .toLowerCase()
-    .normalize('NFKC')
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-    .replace(/\s+/g, ' ');
+    .normalize("NFKC")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ");
 
 export const normalizeArabicVariants = (text: string): string =>
   text
-    .replace(/[أإآ]/g, 'ا')
-    .replace(/ة/g, 'ه')
-    .replace(/ى/g, 'ي')
-    .replace(/ؤ/g, 'و')
-    .replace(/ئ/g, 'ي');
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي");
 
 const includesAny = (text: string, terms: string[]): boolean =>
   terms.some((term) => text.includes(term.toLowerCase()));
 
 const FREE_SYNONYMS = [
-  'مجاني',
-  'مجانية',
-  'مجانًا',
-  'مجانا',
-  'مجانيه',
-  'ببلاش',
-  'فري',
-  'فريي',
-  'free',
-  'no cost',
-  'بدون سعر',
-  'بدون تكلفة',
-  'ما عليها سعر',
-  'ما بدها مصاري',
-  'ما بدهاش مصاري',
-  'without cost',
-  'zero price',
+  "مجاني",
+  "مجانية",
+  "مجانًا",
+  "مجانا",
+  "مجانيه",
+  "ببلاش",
+  "فري",
+  "فريي",
+  "free",
+  "no cost",
+  "بدون سعر",
+  "بدون تكلفة",
+  "ما عليها سعر",
+  "ما بدها مصاري",
+  "ما بدهاش مصاري",
+  "without cost",
+  "zero price",
 ];
 
-const PAID_SYNONYMS = ['مدفوع', 'بسعر', 'paid', 'with price'];
+const PAID_SYNONYMS = ["مدفوع", "بسعر", "paid", "with price"];
 
 const MATERIAL_NOUNS = [
-  'مواد',
-  'مادة',
-  'أشياء',
-  'اشياء',
-  'شغلات',
-  'شغله',
-  'قطع',
-  'قِطع',
-  'إشي',
-  'اشي',
-  'materials',
-  'material',
-  'supplies',
-  'supply',
-  'stuff',
-  'parts',
-  'pieces',
+  "مواد",
+  "مادة",
+  "أشياء",
+  "اشياء",
+  "شغلات",
+  "شغله",
+  "قطع",
+  "قِطع",
+  "إشي",
+  "اشي",
+  "materials",
+  "material",
+  "supplies",
+  "supply",
+  "stuff",
+  "parts",
+  "pieces",
+  "ماتور",
+  "ماتورات",
+  "مواتير",
+  "محرك",
+  "محركات",
+  "حساس",
+  "حساسات",
+  "sensor",
+  "sensors",
+  "motor",
+  "motors",
 ];
 
 const SEARCH_VERBS = [
-  'اعرض',
-  'اعرضلي',
-  'ورّيني',
-  'وريني',
-  'ورجيني',
-  'هاتلي',
-  'هات',
-  'طلعلي',
-  'طلع',
-  'بدي',
-  'بدّي',
-  'شو في',
-  'ايش في',
-  'عندكم',
-  'عندك',
-  'في عندكم',
-  'show',
-  'find',
-  'search',
-  'list',
-  'browse',
-  'look for',
-  'give me',
-  'show me',
-  'available',
-  'متاح',
-  'متاحة',
-  'متوفر',
-  'متوفره',
-  'متوفرة',
+  "اعرض",
+  "اعرضلي",
+  "ورّيني",
+  "وريني",
+  "ورجيني",
+  "هاتلي",
+  "هات",
+  "طلعلي",
+  "طلع",
+  "بدي",
+  "بدّي",
+  "شو في",
+  "ايش في",
+  "عندكم",
+  "عندك",
+  "في عندكم",
+  "show",
+  "find",
+  "search",
+  "list",
+  "browse",
+  "look for",
+  "give me",
+  "show me",
+  "available",
+  "متاح",
+  "متاحة",
+  "متوفر",
+  "متوفره",
+  "متوفرة",
 ];
 
 const AVAILABILITY_TERMS = [
-  'متوفر',
-  'متوفره',
-  'متوفرة',
-  'متاح',
-  'متاحة',
-  'متوفرة',
-  'موجود',
-  'موجودة',
-  'available',
-  'in stock',
-  'هالفترة',
-  'هالفتره',
-  'حاليا',
-  'حاليًا',
-  'الان',
-  'الآن',
+  "متوفر",
+  "متوفره",
+  "متوفرة",
+  "متاح",
+  "متاحة",
+  "متوفرة",
+  "موجود",
+  "موجودة",
+  "available",
+  "in stock",
+  "هالفترة",
+  "هالفتره",
+  "حاليا",
+  "حاليًا",
+  "الان",
+  "الآن",
 ];
 
 const NEAR_TERMS = [
-  'near me',
-  'nearby',
-  'close to me',
-  'around me',
-  'قريب مني',
-  'قريبة مني',
-  'قريب علي',
-  'قريب عليّ',
-  'جنبي',
-  'بالقرب',
-  'حوالي',
-  'حواليّ',
-  'حواليني',
-  'حولي',
+  "near me",
+  "nearby",
+  "close to me",
+  "around me",
+  "قريب مني",
+  "قريبة مني",
+  "قريب علي",
+  "قريب عليّ",
+  "جنبي",
+  "بالقرب",
+  "حوالي",
+  "حواليّ",
+  "حواليني",
+  "حولي",
 ];
 
-const DELIVERY_TERMS = ['delivery', 'توصيل', 'بيوصل', 'deliver'];
-const PICKUP_TERMS = ['pickup', 'استلام', 'self pickup', 'self-pickup'];
+const DELIVERY_TERMS = ["delivery", "توصيل", "بيوصل", "deliver"];
+const PICKUP_TERMS = ["pickup", "استلام", "self pickup", "self-pickup"];
 
 const CATEGORY_SYNONYMS: Array<{ terms: string[]; categoryText: string }> = [
   {
     terms: [
-      'electronics',
-      'electronic',
-      'إلكترون',
-      'الكترون',
-      'إلكترونيات',
-      'الكترونيات',
-      'الالكترونيات',
-      'الكترونيه',
-      'إلكترونية',
-      'الكترونية',
-      'إلكترونيه',
-      'الكترونيه',
-      'دوائر كهربائية',
-      'دوائر كهربائيه',
-      'دوائر',
-      'كهربائية',
-      'كهربائيه',
+      "electronics",
+      "electronic",
+      "إلكترون",
+      "الكترون",
+      "إلكترونيات",
+      "الكترونيات",
+      "الالكترونيات",
+      "الكترونيه",
+      "إلكترونية",
+      "الكترونية",
+      "إلكترونيه",
+      "الكترونيه",
+      "دوائر كهربائية",
+      "دوائر كهربائيه",
+      "دوائر",
+      "كهربائية",
+      "كهربائيه",
     ],
-    categoryText: 'electronics',
+    categoryText: "electronics",
   },
-  { terms: ['wood', 'خشب', 'نجارة', 'plywood'], categoryText: 'wood' },
-  { terms: ['fabric', 'textile', 'قماش', 'خياطة'], categoryText: 'fabric' },
-  { terms: ['plastic', 'بلاستيك'], categoryText: 'plastic' },
-  { terms: ['metal', 'معدن', 'معادن'], categoryText: 'metal' },
+  { terms: ["wood", "خشب", "نجارة", "plywood"], categoryText: "wood" },
+  { terms: ["fabric", "textile", "قماش", "خياطة"], categoryText: "fabric" },
+  { terms: ["plastic", "بلاستيك"], categoryText: "plastic" },
+  { terms: ["metal", "معدن", "معادن"], categoryText: "metal" },
 ];
 
 const ITEM_QUERY_STOPWORDS = new Set(
@@ -187,87 +198,87 @@ const ITEM_QUERY_STOPWORDS = new Set(
     ...NEAR_TERMS,
     ...DELIVERY_TERMS,
     ...PICKUP_TERMS,
-    'available',
-    'materials',
-    'material',
-    'مواد',
-    'مادة',
-    'أشياء',
-    'اشياء',
-    'متوفرة',
-    'متاحة',
-    'موجودة',
-    'موجود',
-    'تكون',
-    'وتكون',
-    'ورجيني',
-    'وريني',
-    'لي',
-    'و',
-    'في',
-    'من',
-    'على',
-    'the',
-    'for',
-    'me',
-    'under',
-    'below',
-    'شيكل',
-    'nis',
-    'تحت',
-    'أقل',
-    'اقل',
-    'بحدود',
-    'شو',
-    'في',
-    '؟',
-    'electronics',
-    'إلكترون',
-    'الكترون',
-    'إلكترونيات',
-    'الكترونيات',
-    'خشب',
-    'wood',
-    'delivery',
-    'توصيل',
-    'pickup',
-    'استلام',
-    'near',
-    'قريب',
-    'قريبة',
-    'مني',
-    'حوالي',
-    'نابلس',
-    'nablus',
-    'رام الله',
-    'ramallah',
-    'رفيديا',
-    'rafidia',
-    'علاقة',
-    'علاقه',
-    'الها',
-    'لها',
-    'بتحتوي',
-    'تحتوي',
-    'بال',
-    'بالا',
-    'طيب',
-    'related',
-    'about',
-    'هالفترة',
-    'هالفتره',
-    'حاليا',
-    'حاليًا',
-    'لل',
-    'ال',
-    'الالكترونية',
-    'الإلكترونية',
-    'الكترونية',
-    'إلكترونية',
-    'الدوائر',
-    'دوائر',
-    'عندكم',
-    'عندك',
+    "available",
+    "materials",
+    "material",
+    "مواد",
+    "مادة",
+    "أشياء",
+    "اشياء",
+    "متوفرة",
+    "متاحة",
+    "موجودة",
+    "موجود",
+    "تكون",
+    "وتكون",
+    "ورجيني",
+    "وريني",
+    "لي",
+    "و",
+    "في",
+    "من",
+    "على",
+    "the",
+    "for",
+    "me",
+    "under",
+    "below",
+    "شيكل",
+    "nis",
+    "تحت",
+    "أقل",
+    "اقل",
+    "بحدود",
+    "شو",
+    "في",
+    "؟",
+    "electronics",
+    "إلكترون",
+    "الكترون",
+    "إلكترونيات",
+    "الكترونيات",
+    "خشب",
+    "wood",
+    "delivery",
+    "توصيل",
+    "pickup",
+    "استلام",
+    "near",
+    "قريب",
+    "قريبة",
+    "مني",
+    "حوالي",
+    "نابلس",
+    "nablus",
+    "رام الله",
+    "ramallah",
+    "رفيديا",
+    "rafidia",
+    "علاقة",
+    "علاقه",
+    "الها",
+    "لها",
+    "بتحتوي",
+    "تحتوي",
+    "بال",
+    "بالا",
+    "طيب",
+    "related",
+    "about",
+    "هالفترة",
+    "هالفتره",
+    "حاليا",
+    "حاليًا",
+    "لل",
+    "ال",
+    "الالكترونية",
+    "الإلكترونية",
+    "الكترونية",
+    "إلكترونية",
+    "الدوائر",
+    "دوائر",
+    "عندكم",
+    "عندك",
   ].map((term) => term.toLowerCase()),
 );
 
@@ -288,13 +299,13 @@ const extractMaxPrice = (text: string): number | undefined =>
 
 const extractCityArea = (text: string): { city?: string; area?: string } => {
   if (/nablus|نابلس/i.test(text)) {
-    return { city: 'Nablus' };
+    return { city: "Nablus" };
   }
   if (/ramallah|رام الله|ال بireh|البيرة/i.test(text)) {
-    return { city: 'Ramallah' };
+    return { city: "Ramallah" };
   }
   if (/rafidia|رفيديا/i.test(text)) {
-    return { area: 'Rafidia', city: 'Nablus' };
+    return { area: "Rafidia", city: "Nablus" };
   }
 
   const cityMatch = text.match(
@@ -303,21 +314,16 @@ const extractCityArea = (text: string): { city?: string; area?: string } => {
   if (
     cityMatch?.[1] &&
     !includesAny(cityMatch[1], [
-      'me',
-      'مني',
-      'مواد',
-      'مادة',
-      'اشياء',
-      'أشياء',
-      'عندكم',
-      'عندك',
-      'شغلات',
-      'قطع',
-      'الدوائر',
-      'دوائر',
-      'متاح',
-      'متوفر',
-      'هالفترة',
+      "me",
+      "مني",
+      ...MATERIAL_NOUNS,
+      "عندكم",
+      "عندك",
+      "الدوائر",
+      "دوائر",
+      "متاح",
+      "متوفر",
+      "هالفترة",
     ])
   ) {
     return { city: cityMatch[1].trim() };
@@ -349,7 +355,7 @@ export const extractMaterialSearchFilters = (
 
   if (includesAny(normalized, NEAR_TERMS)) {
     filters.nearLearner = true;
-    filters.sort = 'nearest';
+    filters.sort = "nearest";
   }
 
   if (includesAny(normalized, DELIVERY_TERMS)) {
@@ -364,7 +370,10 @@ export const extractMaterialSearchFilters = (
     const normalizedArabic = normalizeArabicVariants(normalized);
     if (
       includesAny(normalized, category.terms) ||
-      includesAny(normalizedArabic, category.terms.map((t) => normalizeArabicVariants(t)))
+      includesAny(
+        normalizedArabic,
+        category.terms.map((t) => normalizeArabicVariants(t)),
+      )
     ) {
       filters.categoryText = category.categoryText;
       break;
@@ -379,30 +388,43 @@ export const extractMaterialSearchFilters = (
     filters.area = location.area;
   }
 
-  if (includesAny(normalized, ['arduino', 'اردوينو', 'أردوينو'])) {
-    filters.categoryText = filters.categoryText ?? 'electronics';
-    filters.query = filters.query ?? 'Arduino';
+  if (includesAny(normalized, ["arduino", "اردوينو", "أردوينو"])) {
+    filters.categoryText = filters.categoryText ?? "electronics";
+    filters.query = filters.query ?? "Arduino";
   }
 
   if (
     /(مع|لل|ل|with|for|بتنفع\s+ل|تنفع\s+ل).*(arduino|اردوينو|أردوينو)/i.test(
       userMessage,
     ) ||
-    /(arduino|اردوينو|أردوينو).*(قطع|شغلات|مواد|parts|materials)/i.test(userMessage)
+    /(arduino|اردوينو|أردوينو).*(قطع|شغلات|مواد|parts|materials)/i.test(
+      userMessage,
+    )
   ) {
-    filters.categoryText = filters.categoryText ?? 'electronics';
-    filters.query = filters.query ?? 'Arduino';
+    filters.categoryText = filters.categoryText ?? "electronics";
+    filters.query = filters.query ?? "Arduino";
   }
-  if (includesAny(normalized, ['sensor', 'sensors', 'حساس', 'حساسات'])) {
-    filters.query = filters.query ?? 'sensor';
+  if (includesAny(normalized, ["sensor", "sensors", "حساس", "حساسات"])) {
+    filters.query = filters.query ?? "sensor";
   }
-  if (includesAny(normalized, ['motor', 'motors', 'محرك', 'محركات', 'dc motor'])) {
-    filters.query = filters.query ?? 'motor';
+  if (
+    includesAny(normalized, [
+      "motor",
+      "motors",
+      "محرك",
+      "محركات",
+      "ماتور",
+      "ماتورات",
+      "مواتير",
+      "dc motor",
+    ])
+  ) {
+    filters.query = filters.query ?? "motor";
   }
-  if (includesAny(normalized, ['breadboard', 'بريدبورد'])) {
-    filters.query = filters.query ?? 'breadboard';
+  if (includesAny(normalized, ["breadboard", "بريدبورد"])) {
+    filters.query = filters.query ?? "breadboard";
   }
-  if (includesAny(normalized, ['plywood', 'acrylic'])) {
+  if (includesAny(normalized, ["plywood", "acrylic"])) {
     filters.query = filters.query ?? normalized.match(/plywood|acrylic/i)?.[0];
   }
 
@@ -410,24 +432,31 @@ export const extractMaterialSearchFilters = (
 };
 
 const PRICE_FILTER_TERMS = [
-  'وسعرها',
-  'سعرها',
-  'سعر',
-  'أقل',
-  'اقل',
-  'شيكل',
-  'شيكلات',
-  'nis',
-  'under',
-  'below',
-  'max',
-  'maximum',
-  'price',
+  "وسعرها",
+  "سعرها",
+  "سعر",
+  "أقل",
+  "اقل",
+  "شيكل",
+  "شيكلات",
+  "nis",
+  "under",
+  "below",
+  "max",
+  "maximum",
+  "price",
 ];
 
-export const isMaterialSearchNoiseQuery = (query: string | undefined): boolean => {
+export const isMaterialSearchNoiseQuery = (
+  query: string | undefined,
+): boolean => {
   if (!query?.trim()) {
     return true;
+  }
+
+  const aliasKey = normalize(query).toLowerCase();
+  if (ITEM_QUERY_ALIASES[aliasKey]) {
+    return false;
   }
 
   const normalized = normalizeArabicVariants(normalize(query));
@@ -475,7 +504,7 @@ const isLowQualityMaterialQuery = (query: string): boolean => {
     return true;
   }
 
-  const tokens = normalized.split(' ').filter(Boolean);
+  const tokens = normalized.split(" ").filter(Boolean);
   if (tokens.length === 0) {
     return true;
   }
@@ -509,17 +538,20 @@ export const extractMaterialItemQuery = (
     ...PRICE_FILTER_TERMS,
     ...CATEGORY_SYNONYMS.flatMap((entry) => entry.terms),
   ]) {
-    working = working.replace(new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), ' ');
+    working = working.replace(
+      new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"),
+      " ",
+    );
   }
 
   working = working
-    .replace(/\b\d+\b/g, ' ')
-    .replace(/(?:under|below|max|تحت|أقل|اقل|شيكل|nis)/gi, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/\b\d+\b/g, " ")
+    .replace(/(?:under|below|max|تحت|أقل|اقل|شيكل|nis)/gi, " ")
+    .replace(/\s+/g, " ")
     .trim();
 
   const tokens = working
-    .split(' ')
+    .split(" ")
     .map((token) => token.trim())
     .filter((token) => token.length >= 2 && !ITEM_QUERY_STOPWORDS.has(token));
 
@@ -530,13 +562,14 @@ export const extractMaterialItemQuery = (
   if (
     filters.categoryText &&
     tokens.every(
-      (token) => token.length <= 4 || ITEM_QUERY_STOPWORDS.has(token.toLowerCase()),
+      (token) =>
+        token.length <= 4 || ITEM_QUERY_STOPWORDS.has(token.toLowerCase()),
     )
   ) {
     return undefined;
   }
 
-  const candidate = tokens.join(' ').slice(0, 120);
+  const candidate = tokens.join(" ").slice(0, 120);
   if (isMaterialSearchNoiseQuery(candidate)) {
     return undefined;
   }
@@ -545,15 +578,24 @@ export const extractMaterialItemQuery = (
 };
 
 const ITEM_QUERY_ALIASES: Record<string, string> = {
-  حساسات: 'sensor',
-  حساس: 'sensor',
-  حساسه: 'sensor',
+  حساسات: "sensor",
+  حساس: "sensor",
+  حساسه: "sensor",
+  sensor: "sensor",
+  sensors: "sensor",
+  ماتور: "motor",
+  ماتورات: "motor",
+  مواتير: "motor",
+  محرك: "motor",
+  محركات: "motor",
+  motor: "motor",
+  motors: "motor",
 };
 
 export const normalizeMaterialItemQuery = (
   query: string | undefined,
 ): string | undefined => {
-  if (!query || isMaterialSearchNoiseQuery(query)) {
+  if (!query) {
     return undefined;
   }
 
@@ -563,7 +605,11 @@ export const normalizeMaterialItemQuery = (
   }
 
   const alias = ITEM_QUERY_ALIASES[trimmed.toLowerCase()];
-  return alias ?? trimmed;
+  if (alias) {
+    return alias;
+  }
+
+  return isMaterialSearchNoiseQuery(trimmed) ? undefined : trimmed;
 };
 
 export const detectSavedProjectsIntent = (userMessage: string): boolean => {
@@ -576,7 +622,9 @@ export const detectSavedProjectsIntent = (userMessage: string): boolean => {
   );
 };
 
-export const detectRecentProjectDetailsIntent = (userMessage: string): boolean => {
+export const detectRecentProjectDetailsIntent = (
+  userMessage: string,
+): boolean => {
   // Saved-project lookups are owned by detectSavedProjectsIntent.
   if (detectSavedProjectsIntent(userMessage)) {
     return false;
@@ -615,7 +663,9 @@ export const detectCurrentInProgressProjectWording = (
  * `buildSemanticFallbackPlan` and deterministic routing helpers.
  * GENERAL_LEARNING excludes only intents positively owned elsewhere.
  */
-export const detectEducationalLearningIntent = (userMessage: string): boolean => {
+export const detectEducationalLearningIntent = (
+  userMessage: string,
+): boolean => {
   const normalized = normalize(userMessage);
   const educationalCue =
     /(كيف\s+(?:ب|أ)?ستخدم|how\s+(?:do\s+i|to)\s+use|اشرحلي|اشرح|explain|شو\s+هي|what\s+is|what\s+are|الفرق\s+بين|difference\s+between|احكيلي\s+كيف|teach\s+me)/i.test(
@@ -647,13 +697,16 @@ export const detectEducationalLearningIntent = (userMessage: string): boolean =>
   return true;
 };
 export type PlatformGuidanceTopic =
-  | 'MATERIAL_RESERVATION'
-  | 'SAVE_PROJECT'
-  | 'MATERIAL_DELIVERY'
-  | 'RESERVATION_AFTER_SUPPLIER'
-  | 'GENERAL_PLATFORM';
+  | "MATERIAL_RESERVATION"
+  | "SAVE_PROJECT"
+  | "MATERIAL_DELIVERY"
+  | "RESERVATION_AFTER_SUPPLIER"
+  | "GENERAL_PLATFORM";
 
-const hasPlatformGuidanceHowToCue = (text: string, normalized: string): boolean =>
+const hasPlatformGuidanceHowToCue = (
+  text: string,
+  normalized: string,
+): boolean =>
   /(كيف\s+(?:أ|ا)?(?:قدر|قدر|بقدر)|how\s+(?:can|do)\s+i|how\s+to|كيف\s+(?:أ|ا)?(?:حفظ|احفظ|احجز|اطلب|أطلب|أنشر|انشر)|what\s+(?:happens|is\s+the\s+process)|شو\s+بيصير|شو\s+بصير|ما\s+الخطوات|what\s+are\s+the\s+steps)/i.test(
     normalized,
   ) ||
@@ -661,7 +714,7 @@ const hasPlatformGuidanceHowToCue = (text: string, normalized: string): boolean 
   /(شو\s+أعمل|شو\s+اعمل|what\s+(?:should|do)\s+i\s+do)/i.test(normalized);
 
 export const LEARNER_RESERVATION_STATUS_QUERY_MARKER =
-  'learnerReservationStatusQuery' as const;
+  "learnerReservationStatusQuery" as const;
 
 export const isLearnerReservationStatusQueryPlan = (
   toolInput: Record<string, unknown> | undefined,
@@ -685,13 +738,15 @@ export const detectLearnerReservationStatusQuery = (
 };
 
 export const LEARNER_RESERVATION_TERMINAL_STATUSES = new Set([
-  'EXPIRED',
-  'COMPLETED',
-  'CANCELLED',
-  'REJECTED',
+  "EXPIRED",
+  "COMPLETED",
+  "CANCELLED",
+  "REJECTED",
 ]);
 
-export const isLearnerPendingReservationQuery = (userMessage: string): boolean => {
+export const isLearnerPendingReservationQuery = (
+  userMessage: string,
+): boolean => {
   const normalized = normalizeArabicVariants(normalize(userMessage));
   return (
     /(معلقه|pending)/i.test(normalized) &&
@@ -710,10 +765,12 @@ export const filterLearnerReservationsForStatusQuery = <
   T extends { status: string },
 >(
   reservations: T[],
-  scope: 'pending' | 'all',
+  scope: "pending" | "all",
 ): T[] => {
-  if (scope === 'pending') {
-    return reservations.filter((reservation) => reservation.status === 'PENDING');
+  if (scope === "pending") {
+    return reservations.filter(
+      (reservation) => reservation.status === "PENDING",
+    );
   }
 
   return reservations;
@@ -731,7 +788,9 @@ export const detectSupplierPublishGuidanceIntent = (
     return false;
   }
 
-  const mentionsMaterial = /(مواد|مادة|ماده|materials?|listing)/i.test(normalized);
+  const mentionsMaterial = /(مواد|مادة|ماده|materials?|listing)/i.test(
+    normalized,
+  );
   const publishCue =
     /(أنشر|انشر|publish|listing|list\s+a\s+material|post\s+a\s+material)/i.test(
       normalized,
@@ -739,7 +798,11 @@ export const detectSupplierPublishGuidanceIntent = (
   const howToCue = hasPlatformGuidanceHowToCue(userMessage, normalized);
   const supplierCue = /(supplier|مورد|بائع|vendor)/i.test(normalized);
 
-  return mentionsMaterial && publishCue && (howToCue || supplierCue || /عندي/i.test(normalized));
+  return (
+    mentionsMaterial &&
+    publishCue &&
+    (howToCue || supplierCue || /عندي/i.test(normalized))
+  );
 };
 
 export const detectAppMaterialNavigationGuidanceIntent = (
@@ -769,9 +832,15 @@ export const isMaterialUseContextQuery = (userMessage: string): boolean =>
   /(?:مع|لل|لـ|ل\s|with|for|usable\s+with|use\s+with|أستخدمها\s+مع|للاردو|لأردو|للاردنو)\s*(?:arduino|اردو|أردو|اردنو|esp32|robot|روبوت)/i.test(
     userMessage,
   ) ||
-  /(?:arduino|اردو|أردو|اردنو).*(?:مواد|materials|قطع|parts)/i.test(userMessage);
+  /(?:arduino|اردو|أردو|اردنو).*(?:مواد|materials|قطع|parts)/i.test(
+    userMessage,
+  );
 
 export const detectProjectSearchIntent = (userMessage: string): boolean => {
+  if (isExplicitMaterialSearchCommand(userMessage)) {
+    return false;
+  }
+
   // Avoid recursion with detectEducationalLearningIntent (which may call us).
   const normalizedForEducation = normalize(userMessage);
   const looksEducational =
@@ -800,13 +869,14 @@ export const detectProjectSearchIntent = (userMessage: string): boolean => {
   const suggestProjectCue =
     /(اقترح|انصحني|بتنصحني|recommend|suggest).*(مشروع|project)/i.test(
       normalized,
-    ) ||
-    /(مشروع|project).*(اقترح|انصحني|recommend|suggest)/i.test(normalized);
+    ) || /(مشروع|project).*(اقترح|انصحني|recommend|suggest)/i.test(normalized);
 
   return (asksProjects && searchCue) || suggestProjectCue;
 };
 
-export const hasTrustedProjectMaterialContext = (userMessage: string): boolean => {
+export const hasTrustedProjectMaterialContext = (
+  userMessage: string,
+): boolean => {
   if (hasContextualProjectMaterialReference(userMessage)) {
     return true;
   }
@@ -825,7 +895,11 @@ export const hasTrustedProjectMaterialContext = (userMessage: string): boolean =
 
   const normalized = normalize(stripBenignListPrefixForParsing(userMessage));
   if (/(مشروع|project)/i.test(normalized)) {
-    if (/(?:بدي|بدك|want to|i want to)\s+(?:أعمل|اعمل|build|make)/i.test(userMessage)) {
+    if (
+      /(?:بدي|بدك|want to|i want to)\s+(?:أعمل|اعمل|build|make)/i.test(
+        userMessage,
+      )
+    ) {
       return true;
     }
     if (extractProjectTitleQuery(userMessage) != null) {
@@ -882,7 +956,7 @@ export const detectPlatformGuidanceIntent = (
   }
 
   if (isReservationWorkflowGuidanceQuestion(userMessage, normalized)) {
-    return 'MATERIAL_RESERVATION';
+    return "MATERIAL_RESERVATION";
   }
 
   if (detectLearnerReservationStatusQuery(userMessage)) {
@@ -890,11 +964,11 @@ export const detectPlatformGuidanceIntent = (
   }
 
   if (detectAppMaterialNavigationGuidanceIntent(userMessage)) {
-    return 'MATERIAL_RESERVATION';
+    return "MATERIAL_RESERVATION";
   }
 
   if (detectSupplierPublishGuidanceIntent(userMessage)) {
-    return 'GENERAL_PLATFORM';
+    return "GENERAL_PLATFORM";
   }
 
   const hasAppContext =
@@ -913,14 +987,14 @@ export const detectPlatformGuidanceIntent = (
       normalized,
     )
   ) {
-    return 'RESERVATION_AFTER_SUPPLIER';
+    return "RESERVATION_AFTER_SUPPLIER";
   }
 
   if (
     /(احجز|حجز|reserve|reservation|booking|حجوز)/i.test(normalized) &&
     (isHowTo || hasAppContext)
   ) {
-    return 'MATERIAL_RESERVATION';
+    return "MATERIAL_RESERVATION";
   }
 
   if (
@@ -928,14 +1002,14 @@ export const detectPlatformGuidanceIntent = (
     /(مشروع|project)/i.test(normalized) &&
     (isHowTo || hasAppContext)
   ) {
-    return 'SAVE_PROJECT';
+    return "SAVE_PROJECT";
   }
 
   if (
     /(توصيل|delivery|deliver)/i.test(normalized) &&
     (isHowTo || hasAppContext)
   ) {
-    return 'MATERIAL_DELIVERY';
+    return "MATERIAL_DELIVERY";
   }
 
   if (detectMaterialSearchIntent(userMessage).detected) {
@@ -956,7 +1030,7 @@ export const detectPlatformGuidanceIntent = (
       normalized,
     )
   ) {
-    return 'GENERAL_PLATFORM';
+    return "GENERAL_PLATFORM";
   }
 
   return null;
@@ -997,7 +1071,9 @@ export const detectAmbiguousLearnerRequest = (userMessage: string): boolean => {
   );
 };
 
-export const detectComparisonFollowUpIntent = (userMessage: string): boolean => {
+export const detectComparisonFollowUpIntent = (
+  userMessage: string,
+): boolean => {
   const normalized = normalize(userMessage);
   const asksWhich =
     /(أي\s+واحدة|اي\s+واحدة|أي\s+واحد|اي\s+واحد|أي\s+مشروع|اي\s+مشروع|which\s+one|which\s+is)/i.test(
@@ -1030,7 +1106,9 @@ export const detectMaterialDetailsIntent = (userMessage: string): boolean => {
   );
 };
 
-export const detectActiveProjectBuildsIntent = (userMessage: string): boolean => {
+export const detectActiveProjectBuildsIntent = (
+  userMessage: string,
+): boolean => {
   const normalized = normalize(userMessage);
   return (
     /\b(active|current|in progress|started)\b.*\b(build|builds|project|projects)\b/i.test(
@@ -1045,7 +1123,9 @@ export const detectActiveProjectBuildsIntent = (userMessage: string): boolean =>
   );
 };
 
-export const detectMaterialSearchIntent = (userMessage: string): {
+export const detectMaterialSearchIntent = (
+  userMessage: string,
+): {
   detected: boolean;
   confidence: number;
 } => {
@@ -1074,7 +1154,9 @@ export const detectMaterialSearchIntent = (userMessage: string): {
       normalizedComponentMatch,
     ) ||
     /(مواد).*(مكون|ناقص|missing)/i.test(normalizedComponentMatch) ||
-    /(materials?).*(missing component|for the missing)/i.test(normalizedComponentMatch) ||
+    /(materials?).*(missing component|for the missing)/i.test(
+      normalizedComponentMatch,
+    ) ||
     /^(.+?)\s*:\s*(?:لاقي|لاقيلي|find|match)/i.test(parsedComponentMessage)
   ) {
     return { detected: false, confidence: 0.12 };
@@ -1083,7 +1165,9 @@ export const detectMaterialSearchIntent = (userMessage: string): {
   if (
     /(مواد|materials?).*(متوفرة|متاحة|available|موجود)/i.test(userMessage) &&
     (/(مشروع|project)/i.test(userMessage) ||
-      /(?:بدي|want to|i want to)\s+(?:أعمل|اعمل|build|make)/i.test(userMessage) ||
+      /(?:بدي|want to|i want to)\s+(?:أعمل|اعمل|build|make)/i.test(
+        userMessage,
+      ) ||
       /\b(build|make)\s+(?:the\s+)?[A-Za-z]/i.test(userMessage) ||
       /(هاد المشروع|هذا المشروع|this project|إله|له)/i.test(userMessage))
   ) {
@@ -1116,7 +1200,10 @@ export const detectMaterialSearchIntent = (userMessage: string): {
     return { detected: false, confidence: 0.18 };
   }
 
-  if (hasMaterialNoun && (hasSearchVerb || hasStructuredFilter || hasRelationPhrase)) {
+  if (
+    hasMaterialNoun &&
+    (hasSearchVerb || hasStructuredFilter || hasRelationPhrase)
+  ) {
     return { detected: true, confidence: hasStructuredFilter ? 0.96 : 0.9 };
   }
 
@@ -1151,14 +1238,23 @@ export const detectMaterialSearchIntent = (userMessage: string): {
     return { detected: true, confidence: 0.86 };
   }
 
-  if (filters.categoryText && includesAny(normalized, [...SEARCH_VERBS, ...AVAILABILITY_TERMS, ...FREE_SYNONYMS])) {
+  if (
+    filters.categoryText &&
+    includesAny(normalized, [
+      ...SEARCH_VERBS,
+      ...AVAILABILITY_TERMS,
+      ...FREE_SYNONYMS,
+    ])
+  ) {
     return { detected: true, confidence: 0.85 };
   }
 
   return { detected: false, confidence: 0.2 };
 };
 
-export const isExplicitMaterialSearchCommand = (userMessage: string): boolean => {
+export const isExplicitMaterialSearchCommand = (
+  userMessage: string,
+): boolean => {
   const parsedMessage = stripBenignListPrefixForParsing(userMessage);
   const normalized = normalize(parsedMessage);
 
@@ -1167,7 +1263,9 @@ export const isExplicitMaterialSearchCommand = (userMessage: string): boolean =>
       (/\b(available|currently available)\b/i.test(normalized) &&
         /\b(materials?|listings?)\b/i.test(normalized))) &&
     (/(مشروع|project)/i.test(normalized) ||
-      /(?:بدي|want to|i want to)\s+(?:أعمل|اعمل|build|make)/i.test(parsedMessage) ||
+      /(?:بدي|want to|i want to)\s+(?:أعمل|اعمل|build|make)/i.test(
+        parsedMessage,
+      ) ||
       /\b(build|make)\s+(?:the\s+)?[A-Za-z]/i.test(parsedMessage) ||
       /(إله|له|this project|the project)/i.test(parsedMessage) ||
       /\bhelp\s+me\s+(?:build|make)\b/i.test(parsedMessage))
@@ -1208,7 +1306,11 @@ export const isExplicitMaterialSearchCommand = (userMessage: string): boolean =>
 
   if (
     includesAny(normalized, MATERIAL_NOUNS) &&
-    includesAny(normalized, [...SEARCH_VERBS, ...AVAILABILITY_TERMS, ...NEAR_TERMS])
+    includesAny(normalized, [
+      ...SEARCH_VERBS,
+      ...AVAILABILITY_TERMS,
+      ...NEAR_TERMS,
+    ])
   ) {
     return true;
   }
@@ -1303,7 +1405,9 @@ export const detectProjectComponentsIntent = (userMessage: string): boolean => {
     /(required components|components needed|components for|project components|what components|which parts)/i.test(
       userMessage,
     ) ||
-    /(what|which).*(components|parts).*(need|required|for)/i.test(userMessage) ||
+    /(what|which).*(components|parts).*(need|required|for)/i.test(
+      userMessage,
+    ) ||
     /(مكونات|components).*(مطلوب|required|للمشروع|لمشروع|for project)/i.test(
       normalized,
     ) ||
@@ -1315,18 +1419,22 @@ export const detectProjectComponentsIntent = (userMessage: string): boolean => {
     ) ||
     /(أي|اي).*(قطع|مكونات).*(مطلوب|لازم|للمشروع|لمشروع)/i.test(normalized) ||
     /(شو|ما).*(بده|بتحتاج|محتاج).*(مشروع|project)/i.test(normalized) ||
-    /(شو|ما)\s*(?:بده|بتحتاج|محتاج|مكوناته|القطع|لازم)(?:\s|$)/i.test(normalized) ||
+    /(شو|ما)\s*(?:بده|بتحتاج|محتاج|مكوناته|القطع|لازم)(?:\s|$)/i.test(
+      normalized,
+    ) ||
     /(محتاج|لازم).*(عشان|ل).*(أعمل|انفذ|تنفيذ|بناء)/i.test(normalized) ||
-    (/(عرضته|السابق|اللي\s+عرضته|فوق|obstacle|robot|روبوت|بوت)/i.test(userMessage) &&
+    (/(عرضته|السابق|اللي\s+عرضته|فوق|obstacle|robot|روبوت|بوت)/i.test(
+      userMessage,
+    ) &&
       /(شو|ما)\s*(بده|محتاج|مكونات|لازم)/i.test(normalized))
   );
 };
 
 export type RecommendationSubtype =
-  | 'MATERIALS'
-  | 'PROJECTS'
-  | 'NEXT_ACTIONS'
-  | 'MIXED';
+  | "MATERIALS"
+  | "PROJECTS"
+  | "NEXT_ACTIONS"
+  | "MIXED";
 
 export const classifyRecommendationSubtype = (
   userMessage: string,
@@ -1339,7 +1447,7 @@ export const classifyRecommendationSubtype = (
     /(اقترح|انصحني).*(مواد|materials)/i.test(userMessage);
 
   if (explicitMaterials) {
-    return 'MATERIALS';
+    return "MATERIALS";
   }
 
   const nextActionCue =
@@ -1348,7 +1456,7 @@ export const classifyRecommendationSubtype = (
     );
 
   if (nextActionCue) {
-    return 'NEXT_ACTIONS';
+    return "NEXT_ACTIONS";
   }
 
   const mixedCue =
@@ -1357,7 +1465,7 @@ export const classifyRecommendationSubtype = (
     ) && !explicitMaterials;
 
   if (mixedCue) {
-    return 'MIXED';
+    return "MIXED";
   }
 
   const projectOrActionCue =
@@ -1368,14 +1476,14 @@ export const classifyRecommendationSubtype = (
     /(حسب|بناءً على|based on).*(اهتمامات|interests)/i.test(userMessage);
 
   if (projectOrActionCue) {
-    return 'PROJECTS';
+    return "PROJECTS";
   }
 
   if (/(recommend|suggest|انصحني|بتنصحني|اقترح)/i.test(userMessage)) {
-    return 'PROJECTS';
+    return "PROJECTS";
   }
 
-  return 'MATERIALS';
+  return "MATERIALS";
 };
 
 export const detectComponentMaterialMatchingIntent = (
@@ -1393,12 +1501,16 @@ export const detectComponentMaterialMatchingIntent = (
   );
 };
 
-export const hasContextualProjectMaterialReference = (userMessage: string): boolean =>
+export const hasContextualProjectMaterialReference = (
+  userMessage: string,
+): boolean =>
   /(هاد المشروع|هذا المشروع|هالمشروع|the project|this project|إله|له|لها|له؟)/i.test(
     userMessage,
   );
 
-export const detectProjectBudgetEstimationFollowUp = (userMessage: string): boolean =>
+export const detectProjectBudgetEstimationFollowUp = (
+  userMessage: string,
+): boolean =>
   /(كم\s+بكلف|تكلفة|تكلفه|how\s+much|what.*cost|estimate|مجموع|مجموعهم|subtotal|السعر|احسب|احسبلي|قديش|أدفع|ادفع|pay|total)/i.test(
     userMessage,
   ) &&
@@ -1449,7 +1561,9 @@ export const detectProjectBudgetEstimationIntent = (
     extractProjectTitleQuery(userMessage) != null ||
     hasContextualProjectMaterialReference(userMessage) ||
     detectProjectBudgetEstimationFollowUp(userMessage) ||
-    /(?:بدي|بدك|want to|i want to)\s+(?:أعمل|اعمل|build|make)/i.test(parsedMessage) ||
+    /(?:بدي|بدك|want to|i want to)\s+(?:أعمل|اعمل|build|make)/i.test(
+      parsedMessage,
+    ) ||
     /\b(build|make)\s+(?:the\s+)?[A-Za-z]/i.test(parsedMessage) ||
     /\bhelp\s+me\s+(?:build|make)\b/i.test(parsedMessage) ||
     /\bfor\s+(?:the\s+)?[A-Za-z][\w\s-]{2,}/i.test(parsedMessage);
@@ -1469,7 +1583,7 @@ export const detectProjectBudgetEstimationIntent = (
   return true;
 };
 
-export type BudgetComparisonMode = 'LT' | 'LTE';
+export type BudgetComparisonMode = "LT" | "LTE";
 
 export type ParsedBudgetBound = {
   maxBudgetNis: number;
@@ -1485,7 +1599,9 @@ const sanitizeBudgetAmount = (value: number): number | undefined => {
   return Math.round(value * 100) / 100;
 };
 
-export const extractBudgetBound = (text: string): ParsedBudgetBound | undefined => {
+export const extractBudgetBound = (
+  text: string,
+): ParsedBudgetBound | undefined => {
   const parsedMessage = stripBenignListPrefixForParsing(text);
   const normalized = normalize(parsedMessage);
 
@@ -1522,7 +1638,7 @@ export const extractBudgetBound = (text: string): ParsedBudgetBound | undefined 
   }
 
   const comparisonMode: BudgetComparisonMode =
-    strictCue.test(parsedMessage) || strictCue.test(normalized) ? 'LT' : 'LTE';
+    strictCue.test(parsedMessage) || strictCue.test(normalized) ? "LT" : "LTE";
 
   if (
     !strictCue.test(parsedMessage) &&
@@ -1537,8 +1653,12 @@ export const extractBudgetBound = (text: string): ParsedBudgetBound | undefined 
   return { maxBudgetNis: amount, comparisonMode };
 };
 
-export const isProjectsWithinBudgetNumericFollowUp = (userMessage: string): boolean =>
-  /^\s*\d+(?:\.\d+)?\s*(?:nis|شيكل|₪|shekels?)?\s*[.!?؟]*\s*$/iu.test(userMessage.trim());
+export const isProjectsWithinBudgetNumericFollowUp = (
+  userMessage: string,
+): boolean =>
+  /^\s*\d+(?:\.\d+)?\s*(?:nis|شيكل|₪|shekels?)?\s*[.!?؟]*\s*$/iu.test(
+    userMessage.trim(),
+  );
 
 const PROJECTS_WITHIN_BUDGET_CLARIFICATION_PATTERNS = [
   /what is your maximum budget in nis/i,
@@ -1547,15 +1667,19 @@ const PROJECTS_WITHIN_BUDGET_CLARIFICATION_PATTERNS = [
   /الحد الأقصى لميزانيتك/i,
 ];
 
-export const isProjectsWithinBudgetClarificationPrompt = (text: string): boolean =>
-  PROJECTS_WITHIN_BUDGET_CLARIFICATION_PATTERNS.some((pattern) => pattern.test(text));
+export const isProjectsWithinBudgetClarificationPrompt = (
+  text: string,
+): boolean =>
+  PROJECTS_WITHIN_BUDGET_CLARIFICATION_PATTERNS.some((pattern) =>
+    pattern.test(text),
+  );
 
 export const hasRecentProjectsWithinBudgetClarification = (input: {
-  recentMessages: Array<{ role: 'USER' | 'ASSISTANT'; text: string }>;
+  recentMessages: Array<{ role: "USER" | "ASSISTANT"; text: string }>;
 }): boolean => {
   const lastAssistant = [...input.recentMessages]
     .reverse()
-    .find((message) => message.role === 'ASSISTANT');
+    .find((message) => message.role === "ASSISTANT");
   return lastAssistant
     ? isProjectsWithinBudgetClarificationPrompt(lastAssistant.text)
     : false;
@@ -1570,11 +1694,11 @@ export const isProjectBudgetConfirmationPrompt = (text: string): boolean =>
   PROJECT_BUDGET_CONFIRMATION_PATTERNS.some((pattern) => pattern.test(text));
 
 export const hasRecentProjectBudgetConfirmation = (input: {
-  recentMessages: Array<{ role: 'USER' | 'ASSISTANT'; text: string }>;
+  recentMessages: Array<{ role: "USER" | "ASSISTANT"; text: string }>;
 }): boolean => {
   const lastAssistant = [...input.recentMessages]
     .reverse()
-    .find((message) => message.role === 'ASSISTANT');
+    .find((message) => message.role === "ASSISTANT");
   return lastAssistant
     ? isProjectBudgetConfirmationPrompt(lastAssistant.text)
     : false;
@@ -1583,7 +1707,7 @@ export const hasRecentProjectBudgetConfirmation = (input: {
 export const resolveProjectsWithinBudgetNumericContinuation = (
   userMessage: string,
   conversationContext: {
-    recentMessages: Array<{ role: 'USER' | 'ASSISTANT'; text: string }>;
+    recentMessages: Array<{ role: "USER" | "ASSISTANT"; text: string }>;
   },
 ): z.infer<typeof findProjectsWithinBudgetInputSchema> | null => {
   if (!isProjectsWithinBudgetNumericFollowUp(userMessage)) {
@@ -1594,7 +1718,9 @@ export const resolveProjectsWithinBudgetNumericContinuation = (
   }
 
   const amountMatch = userMessage.trim().match(/^(\d+(?:\.\d+)?)/);
-  const amount = amountMatch?.[1] ? sanitizeBudgetAmount(Number(amountMatch[1])) : undefined;
+  const amount = amountMatch?.[1]
+    ? sanitizeBudgetAmount(Number(amountMatch[1]))
+    : undefined;
   if (amount == null) {
     return null;
   }
@@ -1603,7 +1729,7 @@ export const resolveProjectsWithinBudgetNumericContinuation = (
     .reverse()
     .find(
       (message) =>
-        message.role === 'USER' &&
+        message.role === "USER" &&
         !isProjectsWithinBudgetNumericFollowUp(message.text) &&
         (extractBudgetBound(message.text) != null ||
           /(?:مشاريع|projects|مشروع|project).{0,40}(?:بحد|بميزانية|under|within|budget|أقل|اقل)/i.test(
@@ -1619,11 +1745,13 @@ export const resolveProjectsWithinBudgetNumericContinuation = (
   return {
     ...base,
     maxBudgetNis: amount,
-    comparisonMode: base.comparisonMode ?? 'LTE',
+    comparisonMode: base.comparisonMode ?? "LTE",
   };
 };
 
-export const detectProjectsWithinBudgetIntent = (userMessage: string): boolean => {
+export const detectProjectsWithinBudgetIntent = (
+  userMessage: string,
+): boolean => {
   if (detectEducationalLearningIntent(userMessage)) {
     return false;
   }
@@ -1655,8 +1783,9 @@ export const detectProjectsWithinBudgetIntent = (userMessage: string): boolean =
     /(ضمن\s+ميزانيتي|within\s+(?:my\s+)?budget)/i.test(parsedMessage);
 
   if (!budgetBound) {
-    return asksProjects && /(ضمن\s+ميزانيتي|within\s+(?:my\s+)?budget|بميزانية)/i.test(
-      parsedMessage,
+    return (
+      asksProjects &&
+      /(ضمن\s+ميزانيتي|within\s+(?:my\s+)?budget|بميزانية)/i.test(parsedMessage)
     );
   }
 
@@ -1674,23 +1803,23 @@ export const parseProjectsWithinBudgetInput = (
     maxBudgetNis: number;
     comparisonMode: BudgetComparisonMode;
     category?: string;
-    difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+    difficulty?: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
     query?: string;
     projectLimit?: number;
     includePartial?: boolean;
   } = {
     maxBudgetNis: budgetBound?.maxBudgetNis ?? 0,
-    comparisonMode: budgetBound?.comparisonMode ?? 'LTE',
+    comparisonMode: budgetBound?.comparisonMode ?? "LTE",
     includePartial: true,
     projectLimit: extractRequestedResultCount(parsedMessage) ?? 8,
   };
 
-  if (includesAny(normalized, ['beginner', 'مبتدئ', 'مبتدئين'])) {
-    input.difficulty = 'BEGINNER';
-  } else if (includesAny(normalized, ['intermediate', 'متوسط'])) {
-    input.difficulty = 'INTERMEDIATE';
-  } else if (includesAny(normalized, ['advanced', 'متقدم'])) {
-    input.difficulty = 'ADVANCED';
+  if (includesAny(normalized, ["beginner", "مبتدئ", "مبتدئين"])) {
+    input.difficulty = "BEGINNER";
+  } else if (includesAny(normalized, ["intermediate", "متوسط"])) {
+    input.difficulty = "INTERMEDIATE";
+  } else if (includesAny(normalized, ["advanced", "متقدم"])) {
+    input.difficulty = "ADVANCED";
   }
 
   for (const entry of CATEGORY_SYNONYMS) {
@@ -1711,12 +1840,18 @@ export const parseProjectsWithinBudgetInput = (
     }
   } else if (
     !input.category &&
-    includesAny(normalized, ['robot', 'robotics', 'روبوت', 'arduino', 'اردوينو'])
+    includesAny(normalized, [
+      "robot",
+      "robotics",
+      "روبوت",
+      "arduino",
+      "اردوينو",
+    ])
   ) {
-    if (includesAny(normalized, ['arduino', 'اردوينو', 'أردوينو'])) {
-      input.query = 'Arduino';
-    } else if (includesAny(normalized, ['robot', 'robotics', 'روبوت'])) {
-      input.query = 'robot';
+    if (includesAny(normalized, ["arduino", "اردوينو", "أردوينو"])) {
+      input.query = "Arduino";
+    } else if (includesAny(normalized, ["robot", "robotics", "روبوت"])) {
+      input.query = "robot";
     }
   }
 
@@ -1724,30 +1859,30 @@ export const parseProjectsWithinBudgetInput = (
 };
 
 const PROJECTS_WITHIN_BUDGET_QUERY_NOISE = [
-  'within my budget',
-  'within budget',
-  'my budget',
-  'budget',
-  'ضمن ميزانيتي',
-  'بميزانية',
-  'ميزانيتي',
-  'ميزانية',
-  'بحد أقصى',
-  'بحد اقصى',
-  'maximum',
-  'max',
-  'under',
-  'up to',
-  'أقل من',
-  'اقل من',
-  'شيكل',
-  'nis',
-  'shekel',
-  'shekels',
-  'project',
-  'projects',
-  'مشروع',
-  'مشاريع',
+  "within my budget",
+  "within budget",
+  "my budget",
+  "budget",
+  "ضمن ميزانيتي",
+  "بميزانية",
+  "ميزانيتي",
+  "ميزانية",
+  "بحد أقصى",
+  "بحد اقصى",
+  "maximum",
+  "max",
+  "under",
+  "up to",
+  "أقل من",
+  "اقل من",
+  "شيكل",
+  "nis",
+  "shekel",
+  "shekels",
+  "project",
+  "projects",
+  "مشروع",
+  "مشاريع",
 ];
 
 export const sanitizeProjectsWithinBudgetQuery = (
@@ -1760,10 +1895,13 @@ export const sanitizeProjectsWithinBudgetQuery = (
   }
 
   cleaned = cleaned
-    .replace(/(?:ضمن\s+ميزانيتي|within\s+(?:my\s+)?budget|بميزانية)/giu, ' ')
-    .replace(/(?:بحد\s+أقصى|بحد\s+اقصى|up\s+to|under|maximum|max\b|أقل\s+من|اقل\s+من)/giu, ' ')
-    .replace(/\d+(?:\.\d+)?\s*(?:nis|shekels?|شيكل|₪)?/giu, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/(?:ضمن\s+ميزانيتي|within\s+(?:my\s+)?budget|بميزانية)/giu, " ")
+    .replace(
+      /(?:بحد\s+أقصى|بحد\s+اقصى|up\s+to|under|maximum|max\b|أقل\s+من|اقل\s+من)/giu,
+      " ",
+    )
+    .replace(/\d+(?:\.\d+)?\s*(?:nis|shekels?|شيكل|₪)?/giu, " ")
+    .replace(/\s+/g, " ")
     .trim();
 
   const categoryTerms = new Set(
@@ -1791,7 +1929,7 @@ export const sanitizeProjectsWithinBudgetQuery = (
       return true;
     });
 
-  const sanitized = tokens.join(' ').trim();
+  const sanitized = tokens.join(" ").trim();
   return sanitized.length >= 2 ? sanitized : undefined;
 };
 
@@ -1853,7 +1991,9 @@ export const detectProjectMaterialAvailabilityIntent = (
     /(مشروع|project)/i.test(normalized) ||
     extractProjectTitleQuery(userMessage) != null ||
     hasContextualProjectMaterialReference(userMessage) ||
-    /(?:بدي|بدك|want to|i want to)\s+(?:أعمل|اعمل|build|make)/i.test(parsedMessage) ||
+    /(?:بدي|بدك|want to|i want to)\s+(?:أعمل|اعمل|build|make)/i.test(
+      parsedMessage,
+    ) ||
     /\b(build|make)\s+(?:the\s+)?[A-Za-z]/i.test(parsedMessage) ||
     /\bhelp\s+me\s+(?:build|make)\b/i.test(parsedMessage) ||
     isSelectionFollowUp;
@@ -1866,67 +2006,67 @@ export const shouldDeferMaterialSearchForProjectMaterialAvailability = (
 ): boolean => detectProjectMaterialAvailabilityIntent(userMessage);
 
 const GENERIC_COMPONENT_DESCRIPTOR_TITLES = new Set([
-  'الناقصة',
-  'الناقص',
-  'missing',
-  'missing components',
-  'required',
-  'المطلوبة',
-  'المطلوب',
-  'the missing',
-  'the required',
+  "الناقصة",
+  "الناقص",
+  "missing",
+  "missing components",
+  "required",
+  "المطلوبة",
+  "المطلوب",
+  "the missing",
+  "the required",
 ]);
 
 const PROJECT_QUERY_STOPWORDS = new Set(
   [
-    'project',
-    'projects',
-    'build',
-    'make',
-    'available',
-    'materials',
-    'material',
-    'the',
-    'a',
-    'an',
-    'for',
-    'مشروع',
-    'مشاريع',
-    'أعمل',
-    'اعمل',
-    'المواد',
-    'المتوفرة',
-    'متوفرة',
-    'متاحة',
-    'بدي',
-    'شو',
-    'ما',
-    'لمشروع',
-    'something',
-    'anything',
-    'available',
-    'nice',
-    'حلو',
-    'حلوة',
-    'beautiful',
-    'cool',
-    'كم',
-    'بكلفني',
-    'بكلف',
-    'تكلفة',
-    'تكلفه',
-    'سعر',
-    'السعر',
-    'cost',
-    'price',
-    'much',
-    'how',
-    'estimate',
-    'احسب',
-    'احسبلي',
-    'قديش',
-    'pay',
-    'budget',
+    "project",
+    "projects",
+    "build",
+    "make",
+    "available",
+    "materials",
+    "material",
+    "the",
+    "a",
+    "an",
+    "for",
+    "مشروع",
+    "مشاريع",
+    "أعمل",
+    "اعمل",
+    "المواد",
+    "المتوفرة",
+    "متوفرة",
+    "متاحة",
+    "بدي",
+    "شو",
+    "ما",
+    "لمشروع",
+    "something",
+    "anything",
+    "available",
+    "nice",
+    "حلو",
+    "حلوة",
+    "beautiful",
+    "cool",
+    "كم",
+    "بكلفني",
+    "بكلف",
+    "تكلفة",
+    "تكلفه",
+    "سعر",
+    "السعر",
+    "cost",
+    "price",
+    "much",
+    "how",
+    "estimate",
+    "احسب",
+    "احسبلي",
+    "قديش",
+    "pay",
+    "budget",
   ].map((term) => term.toLowerCase()),
 );
 
@@ -1934,7 +2074,7 @@ export const stripProjectBudgetCostSuffix = (text: string): string =>
   text
     .replace(
       /\s+(?:كم\s+)?(?:بكلف(?:ني)?|بكلف|تكلفة|تكلفه|سعر|السعر|how\s+much(?:\s+does)?|what.*cost|would\s+cost|price|estimate|احسب(?:لي)?|قديش|pay|budget).*$/iu,
-      '',
+      "",
     )
     .trim();
 
@@ -1942,16 +2082,16 @@ export const stripProjectBudgetCostPrefix = (text: string): string =>
   text
     .replace(
       /^(?:كم\s+)?(?:بكلف(?:ني)?|بكلف|تكلفة|تكلفه|سعر|السعر|how\s+much(?:\s+does)?|what.*cost|would\s+cost|price|estimate|احسب(?:لي)?|قديش|pay|budget)\s+(?:مشروع|project)?\s*/iu,
-      '',
+      "",
     )
     .trim();
 
 const normalizeExtractedProjectTitle = (candidate: string): string =>
   stripProjectBudgetCostSuffix(stripProjectBudgetCostPrefix(candidate))
-    .replace(/^(المطلوبة|المطلوب|required|the)\s+/i, '')
-    .replace(/\s+من\s+المنصة$/i, '')
-    .replace(/[؟?.!]+$/g, '')
-    .replace(/\s+/g, ' ')
+    .replace(/^(المطلوبة|المطلوب|required|the)\s+/i, "")
+    .replace(/\s+من\s+المنصة$/i, "")
+    .replace(/[؟?.!]+$/g, "")
+    .replace(/\s+/g, " ")
     .slice(0, 120)
     .trim();
 
@@ -1959,9 +2099,9 @@ export const normalizeProjectQueryText = (value: string): string =>
   value
     .trim()
     .toLowerCase()
-    .normalize('NFKC')
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-    .replace(/\s+/g, ' ')
+    .normalize("NFKC")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
     .trim();
 
 export const tokenizeProjectQuery = (query: string): string[] => {
@@ -1973,9 +2113,11 @@ export const tokenizeProjectQuery = (query: string): string[] => {
   return [
     ...new Set(
       normalized
-        .split(' ')
+        .split(" ")
         .map((token) => token.trim())
-        .filter((token) => token.length >= 2 && !PROJECT_QUERY_STOPWORDS.has(token)),
+        .filter(
+          (token) => token.length >= 2 && !PROJECT_QUERY_STOPWORDS.has(token),
+        ),
     ),
   ];
 };
@@ -1997,16 +2139,20 @@ export const detectProjectMaterialAvailabilitySelectionFollowUp = (
 const isGenericComponentDescriptorTitle = (candidate: string): boolean => {
   const normalized = candidate
     .trim()
-    .replace(/[؟?.!]+$/g, '')
-    .replace(/\s+/g, ' ')
+    .replace(/[؟?.!]+$/g, "")
+    .replace(/\s+/g, " ")
     .toLowerCase();
   if (GENERIC_COMPONENT_DESCRIPTOR_TITLES.has(normalized)) {
     return true;
   }
-  return /^(ال)?ناقص(ة|ين|ات)?$/i.test(normalized) || /^missing$/i.test(normalized);
+  return (
+    /^(ال)?ناقص(ة|ين|ات)?$/i.test(normalized) || /^missing$/i.test(normalized)
+  );
 };
 
-export const extractProjectTitleQuery = (userMessage: string): string | undefined => {
+export const extractProjectTitleQuery = (
+  userMessage: string,
+): string | undefined => {
   const parsedMessage = stripBenignListPrefixForParsing(userMessage);
   const actionFirstColon = parsedMessage.match(
     /(?:لاقي|لاقيلي|find|match|مواد).+?:\s*(.+)$/i,
@@ -2018,7 +2164,10 @@ export const extractProjectTitleQuery = (userMessage: string): string | undefine
     !isGenericComponentDescriptorTitle(actionFirstTitle)
   ) {
     const normalized = normalizeExtractedProjectTitle(actionFirstTitle);
-    if (normalized.length >= 3 && !isGenericComponentDescriptorTitle(normalized)) {
+    if (
+      normalized.length >= 3 &&
+      !isGenericComponentDescriptorTitle(normalized)
+    ) {
       return normalized;
     }
   }
@@ -2043,7 +2192,10 @@ export const extractProjectTitleQuery = (userMessage: string): string | undefine
     const candidate = match?.[1]?.trim();
     if (candidate && candidate.length >= 3) {
       const normalized = normalizeExtractedProjectTitle(candidate);
-      if (normalized.length < 3 || isGenericComponentDescriptorTitle(normalized)) {
+      if (
+        normalized.length < 3 ||
+        isGenericComponentDescriptorTitle(normalized)
+      ) {
         continue;
       }
       return normalized;
@@ -2107,91 +2259,91 @@ export const messageImpliesFreeFilter = (userMessage: string): boolean =>
   includesAny(normalize(userMessage), FREE_SYNONYMS);
 
 const OWNED_MATERIALS_OWNERSHIP_CUES = [
-  'عندي',
-  'معي',
-  'معاي',
-  'لقيت',
-  'وجدت',
-  'i have',
+  "عندي",
+  "معي",
+  "معاي",
+  "لقيت",
+  "وجدت",
+  "i have",
   "i've got",
-  'i got',
-  'i found',
-  'with my',
-  'leftover',
+  "i got",
+  "i found",
+  "with my",
+  "leftover",
 ];
 
 const OWNED_MATERIALS_BUILD_CUES = [
-  'شو أقدر أعمل',
-  'شو اقدر اعمل',
-  'بقدر أعمل',
-  'بقدر اعمل',
-  'في إشي بالمشاريع',
-  'في اشي بالمشاريع',
-  'بالمشاريع الموجودة',
-  'شو مشروع مناسب',
-  'شو بقدر أبني',
-  'شو بقدر ابني',
-  'شو مشاريع',
-  'مشاريع باستخدام',
-  'شو مشروع',
-  'بناسبوا مشروع',
-  'بناسب مشروع',
-  'ايش أقدر أعمل',
-  'إيش أقدر أعمل',
-  'what can i build',
-  'what can i make',
-  'what projects',
-  'projects using',
-  'what can i do with',
-  'what can we build',
-  'build using',
-  'make with',
-  'what can you build',
+  "شو أقدر أعمل",
+  "شو اقدر اعمل",
+  "بقدر أعمل",
+  "بقدر اعمل",
+  "في إشي بالمشاريع",
+  "في اشي بالمشاريع",
+  "بالمشاريع الموجودة",
+  "شو مشروع مناسب",
+  "شو بقدر أبني",
+  "شو بقدر ابني",
+  "شو مشاريع",
+  "مشاريع باستخدام",
+  "شو مشروع",
+  "بناسبوا مشروع",
+  "بناسب مشروع",
+  "ايش أقدر أعمل",
+  "إيش أقدر أعمل",
+  "what can i build",
+  "what can i make",
+  "what projects",
+  "projects using",
+  "what can i do with",
+  "what can we build",
+  "build using",
+  "make with",
+  "what can you build",
 ];
 
 const OWNED_MATERIALS_NEGATIVE_OWNERSHIP_CUES = [
-  'ما عندي',
-  'مش عندي',
+  "ما عندي",
+  "مش عندي",
   "don't have",
-  'do not have',
+  "do not have",
 ];
 
 const OWNED_MATERIAL_GENERIC_BLOCKLIST = new Set(
   [
-    'material',
-    'materials',
-    'component',
-    'components',
-    'board',
-    'item',
-    'items',
-    'part',
-    'parts',
-    'piece',
-    'pieces',
-    'stuff',
-    'مادة',
-    'مواد',
-    'قطعة',
-    'قطع',
-    'مكوّن',
-    'مكون',
-    'مكونات',
-    'لوح',
-    'شيء',
-    'اشي',
-    'إشي',
+    "material",
+    "materials",
+    "component",
+    "components",
+    "board",
+    "item",
+    "items",
+    "part",
+    "parts",
+    "piece",
+    "pieces",
+    "stuff",
+    "مادة",
+    "مواد",
+    "قطعة",
+    "قطع",
+    "مكوّن",
+    "مكون",
+    "مكونات",
+    "لوح",
+    "شيء",
+    "اشي",
+    "إشي",
   ].map((term) => normalizeArabicVariants(normalize(term))),
 );
 
 const OWNED_MATERIAL_ALIAS_GROUPS: string[][] = [
-  ['arduino', 'arduino uno', 'arduino nano', 'اردوينو', 'أردوينو'],
-  ['jumper wires', 'jumper wire', 'wires', 'wire', 'أسلاك', 'اسلاك', 'سلك'],
-  ['cardboard', 'carton', 'كرتون', 'ورق مقوى'],
-  ['led', 'leds', 'ليد'],
-  ['resistor', 'resistors', 'مقاومة', 'مقاومات'],
-  ['motor', 'dc motor', 'محرك', 'موتور'],
-  ['breadboard', 'لوحة تجارب', 'بريدبورد'],
+  ["arduino", "arduino uno", "arduino nano", "اردوينو", "أردوينو"],
+  ["jumper wires", "jumper wire", "wires", "wire", "أسلاك", "اسلاك", "سلك"],
+  ["cardboard", "carton", "كرتون", "ورق مقوى"],
+  ["led", "leds", "ليد"],
+  ["resistor", "resistors", "مقاومة", "مقاومات"],
+  ["motor", "dc motor", "محرك", "موتور"],
+  ["breadboard", "لوحة تجارب", "بريدبورد"],
 ];
 
 const normalizeOwnedMaterialLabel = (value: string): string =>
@@ -2205,8 +2357,8 @@ const splitOwnedMaterialSegments = (segment: string): string[] =>
     .map((part) =>
       part
         .trim()
-        .replace(/^[وف]\s+/i, '')
-        .replace(/[؟?.!]+$/g, '')
+        .replace(/^[وف]\s+/i, "")
+        .replace(/[؟?.!]+$/g, "")
         .trim(),
     )
     .filter((part) => part.length > 0);
@@ -2233,8 +2385,8 @@ const extractOwnedMaterialsSegment = (userMessage: string): string | null => {
     const segment = match?.[1]?.trim();
     if (segment && segment.length >= 2) {
       return segment
-        .replace(/(?:فيها?|فيه)\s*$/iu, '')
-        .replace(/[؟?.!]+$/g, '')
+        .replace(/(?:فيها?|فيه)\s*$/iu, "")
+        .replace(/[؟?.!]+$/g, "")
         .trim();
     }
   }
@@ -2242,7 +2394,9 @@ const extractOwnedMaterialsSegment = (userMessage: string): string | null => {
   return null;
 };
 
-export const detectOwnedMaterialsProjectIntent = (userMessage: string): boolean => {
+export const detectOwnedMaterialsProjectIntent = (
+  userMessage: string,
+): boolean => {
   const parsedMessage = stripBenignListPrefixForParsing(userMessage);
   const normalized = normalizeOwnedMaterialLabel(parsedMessage);
 
@@ -2266,7 +2420,9 @@ export const detectOwnedMaterialsProjectIntent = (userMessage: string): boolean 
   }
 
   if (
-    /(?:شو|ما)\s+(?:بقدر|أقدر|اقدر)\s+(?:أبني|ابني)\s+باستخدام/i.test(parsedMessage) ||
+    /(?:شو|ما)\s+(?:بقدر|أقدر|اقدر)\s+(?:أبني|ابني)\s+باستخدام/i.test(
+      parsedMessage,
+    ) ||
     /(?:مشاريع|مشروع)\s+باستخدام/i.test(parsedMessage) ||
     /what\s+(?:projects\s+can\s+i\s+make|can\s+i\s+(?:make|build))\s+with/i.test(
       parsedMessage,
@@ -2298,7 +2454,9 @@ const isGenericOwnedMaterialLabel = (value: string): boolean => {
   return tokens.every((token) => OWNED_MATERIAL_GENERIC_BLOCKLIST.has(token));
 };
 
-export const parseOwnedMaterialsFromMessage = (userMessage: string): string[] => {
+export const parseOwnedMaterialsFromMessage = (
+  userMessage: string,
+): string[] => {
   const segment = extractOwnedMaterialsSegment(userMessage);
   if (!segment) {
     return [];
@@ -2339,12 +2497,12 @@ export const parseOwnedMaterialsProjectInput = (
     limit: extractRequestedResultCount(parsedMessage) ?? 10,
   };
 
-  if (includesAny(normalized, ['beginner', 'مبتدئ', 'مبتدئين'])) {
-    input.difficulty = 'BEGINNER';
-  } else if (includesAny(normalized, ['intermediate', 'متوسط'])) {
-    input.difficulty = 'INTERMEDIATE';
-  } else if (includesAny(normalized, ['advanced', 'متقدم'])) {
-    input.difficulty = 'ADVANCED';
+  if (includesAny(normalized, ["beginner", "مبتدئ", "مبتدئين"])) {
+    input.difficulty = "BEGINNER";
+  } else if (includesAny(normalized, ["intermediate", "متوسط"])) {
+    input.difficulty = "INTERMEDIATE";
+  } else if (includesAny(normalized, ["advanced", "متقدم"])) {
+    input.difficulty = "ADVANCED";
   }
 
   for (const entry of CATEGORY_SYNONYMS) {
@@ -2386,7 +2544,9 @@ const dedupeOwnedMaterialLabels = (values: string[]): string[] => {
   return materials;
 };
 
-export const extractBareOwnedMaterialsFromMessage = (userMessage: string): string[] => {
+export const extractBareOwnedMaterialsFromMessage = (
+  userMessage: string,
+): string[] => {
   const parsedMessage = stripBenignListPrefixForParsing(userMessage);
   const patterns = [
     /(?:عندي|معي|معاي|لقيت|وجدت)\s+(.+?)(?:،|,|\s+ب(?:نفع|قدر|أقدر|استفيد)|\?|؟|$)/iu,
@@ -2402,7 +2562,10 @@ export const extractBareOwnedMaterialsFromMessage = (userMessage: string): strin
 
     return dedupeOwnedMaterialLabels(
       splitOwnedMaterialSegments(
-        segment.replace(/(?:فيها?|فيه)\s*$/iu, '').replace(/[؟?.!]+$/g, '').trim(),
+        segment
+          .replace(/(?:فيها?|فيه)\s*$/iu, "")
+          .replace(/[؟?.!]+$/g, "")
+          .trim(),
       ),
     );
   }
@@ -2410,7 +2573,9 @@ export const extractBareOwnedMaterialsFromMessage = (userMessage: string): strin
   return [];
 };
 
-export const detectOwnedMaterialsBuildFollowUp = (userMessage: string): boolean => {
+export const detectOwnedMaterialsBuildFollowUp = (
+  userMessage: string,
+): boolean => {
   if (detectEducationalLearningIntent(userMessage)) {
     return false;
   }
@@ -2427,7 +2592,9 @@ export const detectOwnedMaterialsBuildFollowUp = (userMessage: string): boolean 
   );
 };
 
-export const detectOwnedMaterialsSemanticParaphrase = (userMessage: string): boolean => {
+export const detectOwnedMaterialsSemanticParaphrase = (
+  userMessage: string,
+): boolean => {
   if (detectEducationalLearningIntent(userMessage)) {
     return false;
   }
@@ -2448,7 +2615,9 @@ export const detectOwnedMaterialsSemanticParaphrase = (userMessage: string): boo
   );
 };
 
-export const detectBareOwnedMaterialsPossession = (userMessage: string): boolean => {
+export const detectBareOwnedMaterialsPossession = (
+  userMessage: string,
+): boolean => {
   const parsedMessage = stripBenignListPrefixForParsing(userMessage);
   const normalized = normalizeOwnedMaterialLabel(parsedMessage);
 
@@ -2474,7 +2643,9 @@ export const detectBareOwnedMaterialsPossession = (userMessage: string): boolean
   return extractBareOwnedMaterialsFromMessage(userMessage).length > 0;
 };
 
-export const isAffirmativeOwnedMaterialsContinuation = (userMessage: string): boolean => {
+export const isAffirmativeOwnedMaterialsContinuation = (
+  userMessage: string,
+): boolean => {
   const trimmed = userMessage.trim();
   const normalized = normalize(trimmed);
 
@@ -2500,14 +2671,14 @@ export const isAffirmativeOwnedMaterialsContinuation = (userMessage: string): bo
 };
 
 const OWNED_MATERIALS_PROJECT_CONTEXT_MARKERS = [
-  'مشاريع impactloop التي يمكن تنفيذها',
-  'impactloop projects that use these materials',
-  'ما المواد أو القطع المتوفرة لديك',
-  'what materials or components do you have',
+  "مشاريع impactloop التي يمكن تنفيذها",
+  "impactloop projects that use these materials",
+  "ما المواد أو القطع المتوفرة لديك",
+  "what materials or components do you have",
 ];
 
 export const hasRecentOwnedMaterialsProjectContext = (input: {
-  recentMessages?: Array<{ role: 'USER' | 'ASSISTANT'; text: string }>;
+  recentMessages?: Array<{ role: "USER" | "ASSISTANT"; text: string }>;
 }): boolean => {
   if (!input.recentMessages?.length) {
     return false;
@@ -2515,7 +2686,7 @@ export const hasRecentOwnedMaterialsProjectContext = (input: {
 
   return input.recentMessages.slice(-6).some((message) => {
     const normalized = normalizeOwnedMaterialLabel(message.text);
-    if (message.role === 'ASSISTANT') {
+    if (message.role === "ASSISTANT") {
       return (
         OWNED_MATERIALS_PROJECT_CONTEXT_MARKERS.some((marker) =>
           normalized.includes(normalizeOwnedMaterialLabel(marker)),
@@ -2525,14 +2696,16 @@ export const hasRecentOwnedMaterialsProjectContext = (input: {
       );
     }
 
-    return /(?:بدي|أريد|want).*(?:مشروع|project)/i.test(message.text) &&
-      /(?:محتار|مش عارف|not sure|confused)/i.test(message.text);
+    return (
+      /(?:بدي|أريد|want).*(?:مشروع|project)/i.test(message.text) &&
+      /(?:محتار|مش عارف|not sure|confused)/i.test(message.text)
+    );
   });
 };
 
 export const resolveOwnedMaterialsFromConversation = (
   userMessage: string,
-  recentMessages?: Array<{ role: 'USER' | 'ASSISTANT'; text: string }>,
+  recentMessages?: Array<{ role: "USER" | "ASSISTANT"; text: string }>,
 ): string[] => {
   const fromMessage = dedupeOwnedMaterialLabels([
     ...parseOwnedMaterialsFromMessage(userMessage),
@@ -2547,7 +2720,7 @@ export const resolveOwnedMaterialsFromConversation = (
   }
 
   for (const message of [...recentMessages].reverse()) {
-    if (message.role !== 'USER') {
+    if (message.role !== "USER") {
       continue;
     }
 

@@ -4,6 +4,7 @@ import type {
 } from '../../../generated/prisma/client.js';
 
 import type { AiContentBlock } from '../ai.content-blocks.js';
+import { aiMediaUrlSchema } from '../ai.content-blocks.js';
 import type { AiLocale } from '../ai.types.js';
 import type { ProjectMaterialBudgetEstimate } from '../../learning-projects/learning-projects.build-material-linking.js';
 import { resolveBuildItemStepUnlockReadiness } from '../../learning-projects/learning-projects.build-material-linking.js';
@@ -11,20 +12,11 @@ import { resolveBuildItemStepUnlockReadiness } from '../../learning-projects/lea
 const DEFAULT_CURRENCY_SYMBOL = '₪';
 
 const toNullableHttpUrl = (value?: string | null): string | null => {
-  if (!value?.trim()) {
-    return null;
-  }
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
 
-  try {
-    const parsed = new URL(value.trim());
-    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-      return parsed.toString();
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
+  const parsed = aiMediaUrlSchema.safeParse(trimmed);
+  return parsed.success ? parsed.data : null;
 };
 
 const formatPriceLabel = (input: {

@@ -704,7 +704,7 @@ const normalizeReservationDigits = (text: string) =>
     .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
     .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)));
 
-const parseReservationParameters = (userMessage: string) => {
+export const parseReservationParameters = (userMessage: string) => {
   const trimmed = normalizeReservationDigits(userMessage.trim());
   const quantityMatch =
     trimmed.match(/(?:كمية|quantity)\s*[:：]?\s*(\d+(?:\.\d+)?)/i) ??
@@ -755,12 +755,29 @@ const parseReservationParameters = (userMessage: string) => {
     );
   }
 
-  const isoMatches = [...userMessage.matchAll(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/gi)].map(
-    (match) => match[0],
-  );
+  const isoMatches = [
+    ...userMessage.matchAll(
+      /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})/gi,
+    ),
+  ].map((match) => match[0]);
+  const parsedIsoWindow = (() => {
+    if (isoMatches.length < 2) {
+      return null;
+    }
+    const start = new Date(isoMatches[0]!);
+    const end = new Date(isoMatches[1]!);
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime()) ||
+      end <= start
+    ) {
+      return null;
+    }
+    return { start: start.toISOString(), end: end.toISOString() };
+  })();
   const window =
-    isoMatches.length >= 2
-      ? { start: isoMatches[0]!, end: isoMatches[1]! }
+    parsedIsoWindow
+      ? parsedIsoWindow
       : pickupDate && pickupStartTime && pickupEndTime
         ? buildPickupWindowFromParts({
             pickupDate,
