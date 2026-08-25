@@ -8,7 +8,7 @@ process.env.GEMINI_API_KEY ??= TEST_GEMINI_KEY;
 process.env.AI_CHAT_PROVIDER ??= 'gemini';
 process.env.AI_CHAT_MODEL ??= 'gemini-2.5-flash-lite';
 
-const { resolveAiChatProvider } = await import('../../config/env.js');
+const { resolveAiChatProvider, resolveAiProvider } = await import('../../config/env.js');
 const { GeminiAiChatProvider, setGeminiChatClientFactoryForTests } =
   await import('./providers/gemini-chat.provider.js');
 
@@ -48,6 +48,15 @@ describe('AI chat provider resolution', () => {
     process.env.OPENAI_API_KEY = TEST_OPENAI_KEY;
 
     assert.equal(resolveAiChatProvider(), 'gemini');
+  });
+
+  test('price suggestions accept an explicit OpenAI-compatible provider', () => {
+    withoutTestContext();
+    process.env.AI_PROVIDER = 'openai';
+    process.env.OPENAI_API_KEY = TEST_OPENAI_KEY;
+    delete process.env.GEMINI_API_KEY;
+
+    assert.equal(resolveAiProvider(), 'openai');
   });
 
   test('prefers gemini over openai when both keys are configured', () => {

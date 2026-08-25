@@ -16,6 +16,7 @@ import {
 } from './ai-price-lookup.repository.js';
 import { callGeminiForPriceSuggestion } from './gemini-price-suggestion.provider.js';
 import { generateMockPriceSuggestion } from './mock-price-suggestion.provider.js';
+import { callOpenAiForPriceSuggestion } from './openai-price-suggestion.provider.js';
 import type {
   AiPriceSuggestionInput,
   AiPriceSuggestionPayload,
@@ -91,7 +92,7 @@ const mapPayloadToResult = (
   payload: AiPriceSuggestionPayload,
   resultJson: Record<string, unknown>,
   logId: string,
-  aiProvider: 'gemini' | 'mock',
+  aiProvider: 'openai' | 'gemini' | 'mock',
 ): AiPriceSuggestionResult => ({
   status: 'SUCCESS',
   aiProvider,
@@ -114,8 +115,10 @@ const mapStoredLogToResult = (
       : null;
 
   const provider =
-    resultJson?.provider === 'gemini' || resultJson?.provider === 'mock'
-      ? (resultJson.provider as 'gemini' | 'mock')
+    resultJson?.provider === 'openai' ||
+    resultJson?.provider === 'gemini' ||
+    resultJson?.provider === 'mock'
+      ? (resultJson.provider as 'openai' | 'gemini' | 'mock')
       : null;
 
   if (log.status === 'SUCCESS' && resultJson?.suggestion) {
@@ -168,6 +171,8 @@ const getSkipReason = (provider: AiProviderName): string => {
       return 'AI disabled';
     case 'gemini':
       return 'Gemini provider not configured';
+    case 'openai':
+      return 'OpenAI-compatible provider not configured';
     default:
       return 'AI provider not configured';
   }
@@ -220,6 +225,21 @@ const runGeminiProvider = async (input: AiPriceSuggestionInput) => {
   };
 };
 
+const runOpenAiProvider = async (input: AiPriceSuggestionInput) => {
+  const openai = await callOpenAiForPriceSuggestion(input);
+  const validated = aiResponseSchema.parse(openai.parsed);
+  const payload = parseValidatedPayload(validated);
+  return {
+    payload,
+    resultJson: {
+      ...openai.resultJson,
+      suggestion: payload,
+      safetyNote: payload.safetyNote,
+    },
+    model: openai.model,
+  };
+};
+
 export const suggestPriceReferenceForReview = async (
   input: AiPriceSuggestionInput,
 ): Promise<AiPriceSuggestionResult> => {
@@ -269,6 +289,23 @@ export const suggestPriceReferenceForReview = async (
       );
     }
 
+    if (provider === 'openai') {
+      const openaiResult = await runOpenAiProvider(input);
+      const log = await createAiPriceLookupLog({
+        query: input.lookupKey,
+        normalizedQuery,
+        status: 'SUCCESS',
+        resultJson: openaiResult.resultJson,
+      });
+
+      return mapPayloadToResult(
+        openaiResult.payload,
+        openaiResult.resultJson,
+        log.id,
+        'openai',
+      );
+    }
+
     const geminiResult = await runGeminiProvider(input);
     const log = await createAiPriceLookupLog({
       query: input.lookupKey,
@@ -288,7 +325,12 @@ export const suggestPriceReferenceForReview = async (
       error instanceof Error ? error.message : 'Unknown AI suggestion error';
     const resultJson = {
       provider,
-      model: provider === 'gemini' ? env.geminiModel : 'mock-local',
+      model:
+        provider === 'gemini'
+          ? env.geminiModel
+          : provider === 'openai'
+            ? getAiPriceSuggestionDebugInfo().model
+            : 'mock-local',
       error: message,
     };
     const log = await createAiPriceLookupLog({
@@ -300,7 +342,14 @@ export const suggestPriceReferenceForReview = async (
 
     return {
       status: 'FAILED',
-      aiProvider: provider === 'mock' ? 'mock' : provider === 'gemini' ? 'gemini' : null,
+      aiProvider:
+        provider === 'mock'
+          ? 'mock'
+          : provider === 'gemini'
+            ? 'gemini'
+            : provider === 'openai'
+              ? 'openai'
+              : null,
       unit: null,
       maxUnitPriceNis: null,
       maxTotalPriceNis: null,
@@ -365,6 +414,10 @@ export const buildReviewAiMessage = (
       return 'Review request submitted. A Gemini-assisted price suggestion was generated for admin review.';
     }
 
+    if (aiProvider === 'openai') {
+      return 'Review request submitted. An OpenRouter-assisted price suggestion was generated for admin review.';
+    }
+
     if (aiProvider === 'mock') {
       return 'Review request submitted. A demo AI-assisted suggestion was generated for admin review.';
     }
@@ -386,6 +439,10 @@ export const buildPriceRuleReviewSuccessMessage = (
   if (aiStatus === 'SUCCESS' || aiStatus === 'REUSED') {
     if (aiProvider === 'gemini') {
       return 'Price review submitted. A Gemini-assisted price suggestion was generated for admin review.';
+    }
+
+    if (aiProvider === 'openai') {
+      return 'Price review submitted. An OpenRouter-assisted price suggestion was generated for admin review.';
     }
 
     if (aiProvider === 'mock') {

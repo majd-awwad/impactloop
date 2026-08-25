@@ -15,7 +15,7 @@ export type AiPriceSuggestionPayload = {
 
 export type AiPriceSuggestionResult = {
   status: 'SUCCESS' | 'FAILED' | 'SKIPPED' | 'REUSED';
-  aiProvider: 'gemini' | 'mock' | 'disabled' | null;
+  aiProvider: 'openai' | 'gemini' | 'mock' | 'disabled' | null;
   unit: string | null;
   maxUnitPriceNis: number | null;
   maxTotalPriceNis: number | null;

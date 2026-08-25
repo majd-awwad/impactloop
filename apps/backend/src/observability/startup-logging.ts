@@ -42,7 +42,7 @@ export const buildAiPriceSuggestionReadyContext = (
 ) => ({
   operation: 'ai.price_suggestion.ready' as const,
   provider: debug.aiProvider,
-  model: debug.geminiModel,
+  model: debug.model,
   operational: debug.operational,
 });
 
@@ -125,9 +125,12 @@ export const logAiStartupConfig = (): void => {
     {
       operation: 'ai.price_suggestion.diagnostics',
       provider: priceDebug.aiProvider,
-      model: priceDebug.geminiModel,
+      model: priceDebug.model,
       operational: priceDebug.operational,
       geminiKeyConfigured: priceDebug.geminiApiKeyConfigured,
+      openaiKeyConfigured: priceDebug.openaiApiKeyConfigured,
+      openaiBaseHost: priceDebug.openaiBaseHost,
+      isOpenRouter: priceDebug.isOpenRouter,
       explicitProvider: priceDebug.explicitProvider,
     },
     'AI pricing startup diagnostics',

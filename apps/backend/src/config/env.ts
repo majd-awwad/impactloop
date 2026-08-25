@@ -171,7 +171,7 @@ const afterInvitationsEnvSnapshot = snapshotTrackedAiEnv();
 export const backendEnvFilePath = envFilePath;
 export const invitationsEnvFilePathExported = invitationsEnvFilePath;
 
-export type AiProviderName = 'gemini' | 'mock' | 'disabled';
+export type AiProviderName = 'openai' | 'gemini' | 'mock' | 'disabled';
 export type AiChatProviderName = 'openai' | 'gemini' | 'mock' | 'disabled';
 
 export type EmailProviderName = 'mock' | 'smtp';
@@ -484,7 +484,12 @@ export const getGeminiChatModelCandidates = (): string[] => {
 
 const readExplicitAiProvider = (): AiProviderName | null => {
   const raw = process.env.AI_PROVIDER?.trim().toLowerCase();
-  if (raw === 'gemini' || raw === 'mock' || raw === 'disabled') {
+  if (
+    raw === 'openai' ||
+    raw === 'gemini' ||
+    raw === 'mock' ||
+    raw === 'disabled'
+  ) {
     return raw;
   }
 
@@ -499,6 +504,10 @@ export const resolveAiProvider = (): AiProviderName => {
 
   if (readGeminiApiKey()) {
     return 'gemini';
+  }
+
+  if (readOpenAiApiKey()) {
+    return 'openai';
   }
 
   if ((process.env.NODE_ENV ?? 'development') !== 'production') {
@@ -971,6 +980,10 @@ export const isAiProviderOperational = (): boolean => {
     return true;
   }
 
+  if (env.aiProvider === 'openai') {
+    return Boolean(getConfiguredOpenAiApiKey());
+  }
+
   return Boolean(getConfiguredGeminiApiKey());
 };
 
@@ -1131,6 +1144,9 @@ const collectAiConfigurationWarnings = (): string[] => {
 export const getAiPriceSuggestionDebugInfo = () => {
   const rawKeyPresent = Boolean(process.env.GEMINI_API_KEY?.trim());
   const explicitProvider = process.env.AI_PROVIDER?.trim() ?? null;
+  const chatRuntime = getAiChatRuntimeConfig();
+  const model =
+    env.aiProvider === 'openai' ? chatRuntime.model : env.geminiModel;
 
   return {
     envFilePath: backendEnvFilePath,
@@ -1141,6 +1157,10 @@ export const getAiPriceSuggestionDebugInfo = () => {
     geminiApiKeyRejectedAsPlaceholder:
       rawKeyPresent && !Boolean(env.geminiApiKey),
     geminiModel: env.geminiModel,
+    openaiApiKeyConfigured: Boolean(chatRuntime.openaiApiKey),
+    openaiBaseHost: chatRuntime.openaiBaseHost,
+    isOpenRouter: chatRuntime.isOpenRouter,
+    model,
     operational: isAiProviderOperational(),
   };
 };
@@ -1175,7 +1195,7 @@ export const getAiPlatformDiagnostics = () => {
     webSearchProvider: env.aiWebSearchProvider,
     webSearchModel: env.aiWebSearchModel,
     priceSuggestionProvider: env.aiProvider,
-    priceSuggestionModel: env.geminiModel,
+    priceSuggestionModel: getAiPriceSuggestionDebugInfo().model,
   };
 };
 
