@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { ZodError } from 'zod';
 
 import {
   env,
@@ -32,6 +33,33 @@ import {
 } from './semantic-planner-response.js';
 
 const ADMIN_PROJECT_REVIEW_MARKER = 'ADMIN_PROJECT_REVIEW_V1';
+
+const GENERAL_LEARNING_ANSWER_STRUCTURED_OUTPUT = {
+  name: 'impactloop_general_learning_answer',
+  schema: {
+    type: 'object',
+    properties: {
+      blocks: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            type: { type: 'string', enum: ['text'] },
+            text: { type: 'string' },
+            purpose: {
+              type: 'string',
+              enum: ['answer', 'refusal', 'clarification', 'safety'],
+            },
+          },
+          required: ['type', 'text', 'purpose'],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ['blocks'],
+    additionalProperties: false,
+  },
+} as const;
 
 const isAdminProjectReviewInput = (input: AiChatGenerateAnswerInput): boolean =>
   input.userMessage.includes(ADMIN_PROJECT_REVIEW_MARKER);
@@ -297,6 +325,18 @@ const mapOpenAiFailure = (
     return error;
   }
 
+  if (error instanceof ZodError || error instanceof SyntaxError) {
+    return new AppError(
+      'The learning assistant returned an invalid response.',
+      502,
+      'AI_RESPONSE_INVALID',
+      {
+        stage: error instanceof ZodError ? 'schema_validation' : 'json_extraction',
+        model: runtime.model,
+      },
+    );
+  }
+
   const status =
     typeof (error as { status?: number }).status === 'number'
       ? (error as { status: number }).status
@@ -328,6 +368,15 @@ const mapOpenAiFailure = (
   if (status === 429) {
     return new AppError(
       'The learning assistant is temporarily busy. Please try again shortly.',
+      503,
+      'AI_PROVIDER_QUOTA_EXCEEDED',
+      { status, model: runtime.model },
+    );
+  }
+
+  if (status === 402) {
+    return new AppError(
+      'The learning assistant account does not have enough credits.',
       503,
       'AI_PROVIDER_QUOTA_EXCEEDED',
       { status, model: runtime.model },
@@ -421,6 +470,9 @@ export class OpenAiAiChatProvider implements AiChatProvider {
     const client = this.getClient(runtime);
     const isAdminReview = isAdminProjectReviewInput(input);
     const imageInputs = input.imageInputs ?? [];
+    const structuredOutput =
+      input.structuredOutput ??
+      (isAdminReview ? undefined : GENERAL_LEARNING_ANSWER_STRUCTURED_OUTPUT);
 
     try {
       if (imageInputs.length > 0) {
@@ -449,19 +501,71 @@ export class OpenAiAiChatProvider implements AiChatProvider {
             content: isAdminReview ? input.userMessage : buildAnswerPrompt(input),
             systemInstruction: composeGeneralLearningSystemInstruction(input),
             imageInputs,
-            structuredOutput: input.structuredOutput,
+            structuredOutput,
           }),
         ),
         runtime.timeoutMs,
         'AI_PROVIDER_TIMEOUT',
       );
 
-      const parsedResponse = extractJsonObject(readCompletionText(response));
-      const parsed = aiProviderAnswerSchema.parse(
-        isAdminReview
-          ? normalizeAdminProjectReviewProviderAnswer(parsedResponse)
-          : parsedResponse,
-      );
+      const parseAnswer = (candidate: OpenAiChatCompletion) => {
+        const parsedResponse = extractJsonObject(readCompletionText(candidate));
+        return aiProviderAnswerSchema.parse(
+          isAdminReview
+            ? normalizeAdminProjectReviewProviderAnswer(parsedResponse)
+            : parsedResponse,
+        );
+      };
+
+      let finalResponse = response;
+      let parsed: ReturnType<typeof aiProviderAnswerSchema.parse>;
+
+      try {
+        parsed = parseAnswer(response);
+      } catch (error) {
+        if (
+          isAdminReview ||
+          !(error instanceof ZodError || error instanceof SyntaxError)
+        ) {
+          throw error;
+        }
+
+        logger.warn(
+          {
+            requestId: getRequestId(),
+            provider: this.name,
+            operation: 'general_learning_answer_repair',
+            stage:
+              error instanceof ZodError
+                ? 'schema_validation'
+                : 'json_extraction',
+            model: runtime.model,
+          },
+          'OpenAI-compatible answer validation failed; retrying with strict schema',
+        );
+
+        finalResponse = await withTimeout(
+          client.chat.completions.create(
+            buildChatCompletionRequest({
+              runtime,
+              temperature: 0,
+              maxTokens: runtime.maxOutputTokens,
+              content: [
+                buildAnswerPrompt(input),
+                '',
+                'Your previous response could not be parsed by the application.',
+                'Return the answer again as strict JSON matching the required schema. Do not add markdown fences or commentary outside the JSON object.',
+              ].join('\n'),
+              systemInstruction: composeGeneralLearningSystemInstruction(input),
+              imageInputs,
+              structuredOutput: GENERAL_LEARNING_ANSWER_STRUCTURED_OUTPUT,
+            }),
+          ),
+          runtime.timeoutMs,
+          'AI_PROVIDER_TIMEOUT',
+        );
+        parsed = parseAnswer(finalResponse);
+      }
 
       if (imageInputs.length > 0) {
         logger.info(
@@ -482,11 +586,21 @@ export class OpenAiAiChatProvider implements AiChatProvider {
 
       return {
         provider: this.name,
-        model: response.model ?? runtime.model,
+        model: finalResponse.model ?? runtime.model,
         data: parsed,
         usage: {
-          inputTokens: response.usage?.prompt_tokens ?? null,
-          outputTokens: response.usage?.completion_tokens ?? null,
+          inputTokens:
+            (response.usage?.prompt_tokens ?? 0) +
+              (finalResponse === response
+                ? 0
+                : (finalResponse.usage?.prompt_tokens ?? 0)) ||
+            null,
+          outputTokens:
+            (response.usage?.completion_tokens ?? 0) +
+              (finalResponse === response
+                ? 0
+                : (finalResponse.usage?.completion_tokens ?? 0)) ||
+            null,
         },
         latencyMs: Date.now() - startedAt,
       };

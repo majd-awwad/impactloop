@@ -327,6 +327,12 @@ void main() {
 
       expect(find.text('Retry'), findsOneWidget);
       expect(find.text('What is ESP32?'), findsOneWidget);
+      expect(
+        find.text(
+          'The assistant service is temporarily unavailable. Please try again.',
+        ),
+        findsOneWidget,
+      );
       expect(repository.sendCalls, 1);
 
       await tester.tap(find.text('Retry'));

@@ -1934,20 +1934,52 @@ bool _shouldRefreshBuildGuideAfterAction(AiContentBlock resultBlock) {
   }
 }
 
+Future<List<AiConversationSummary>> _loadAllConversations(
+  AiRepository repository,
+  AiConversationStatus status,
+) async {
+  const pageSize = 50;
+  final conversations = <AiConversationSummary>[];
+  final seenIds = <String>{};
+  var pageNumber = 1;
+
+  while (true) {
+    final page = await repository.listConversations(
+      limit: pageSize,
+      page: pageNumber,
+      status: status,
+    );
+    final added = page.items.where((item) => seenIds.add(item.id)).toList();
+    conversations.addAll(added);
+
+    final reachedKnownTotal =
+        page.total > 0 && conversations.length >= page.total;
+    if (!page.hasMore ||
+        page.items.isEmpty ||
+        added.isEmpty ||
+        reachedKnownTotal) {
+      break;
+    }
+    pageNumber += 1;
+  }
+
+  return List.unmodifiable(conversations);
+}
+
 final aiActiveConversationsProvider =
-    FutureProvider<List<AiConversationSummary>>((ref) async {
-  final page = await ref.watch(aiRepositoryProvider).listConversations(
-        status: AiConversationStatus.active,
-      );
-  return page.items;
+    FutureProvider<List<AiConversationSummary>>((ref) {
+  return _loadAllConversations(
+    ref.watch(aiRepositoryProvider),
+    AiConversationStatus.active,
+  );
 });
 
 final aiArchivedConversationsProvider =
-    FutureProvider<List<AiConversationSummary>>((ref) async {
-  final page = await ref.watch(aiRepositoryProvider).listConversations(
-        status: AiConversationStatus.archived,
-      );
-  return page.items;
+    FutureProvider<List<AiConversationSummary>>((ref) {
+  return _loadAllConversations(
+    ref.watch(aiRepositoryProvider),
+    AiConversationStatus.archived,
+  );
 });
 
 @Deprecated('Use aiActiveConversationsProvider')

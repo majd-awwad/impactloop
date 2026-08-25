@@ -263,6 +263,16 @@ class AiL10n {
     ar: 'تعذر على المساعد إنشاء اقتراح صالح. يرجى المحاولة مرة أخرى.',
   );
 
+  static const assistantResponseInvalid = LocalizedText(
+    en: 'The assistant returned an invalid response. Please try again.',
+    ar: 'أعاد المساعد استجابة غير صالحة. يرجى المحاولة مرة أخرى.',
+  );
+
+  static const assistantProviderUnavailable = LocalizedText(
+    en: 'The assistant service is temporarily unavailable. Please try again.',
+    ar: 'خدمة المساعد غير متاحة مؤقتًا. يرجى المحاولة مرة أخرى.',
+  );
+
   static const proposalGenerationRateLimited = LocalizedText(
     en: 'The AI service is temporarily busy. Please try again shortly.',
     ar: 'خدمة الذكاء الاصطناعي مشغولة مؤقتًا. يرجى المحاولة بعد قليل.',
@@ -1165,8 +1175,9 @@ class AiL10n {
           ar: 'نموذج المساعد غير متاح حاليًا.',
         ).resolve(context);
       case 'AI_PROVIDER_ERROR':
+        return assistantProviderUnavailable.resolve(context);
       case 'AI_RESPONSE_INVALID':
-        return proposalGenerationInvalid.resolve(context);
+        return assistantResponseInvalid.resolve(context);
       case 'AI_CONVERSATION_NOT_FOUND':
         return LocalizedText(
           en: 'This conversation is no longer available.',

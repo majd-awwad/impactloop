@@ -117,14 +117,17 @@ export const listConversationsForUser = async (input: {
   status?: 'ACTIVE' | 'ARCHIVED';
 }) => {
   const status = input.status ?? 'ACTIVE';
+  const where = {
+    userId: input.userId,
+    status,
+    // LEARNER_AGENT is the legacy persisted mode for assistant chats. Build
+    // guide conversations also use GENERAL_LEARNING with a projectBuildId and
+    // belong in the same user-visible history/archive surface.
+    mode: { in: ['GENERAL_LEARNING', 'LEARNER_AGENT'] },
+  } satisfies Prisma.AiConversationWhereInput;
   const [items, total] = await Promise.all([
     prisma.aiConversation.findMany({
-      where: {
-        userId: input.userId,
-        status,
-        mode: 'GENERAL_LEARNING',
-        projectBuildId: null,
-      },
+      where,
       orderBy: [{ lastMessageAt: 'desc' }, { updatedAt: 'desc' }],
       skip: input.offset,
       take: input.limit,
@@ -136,11 +139,7 @@ export const listConversationsForUser = async (input: {
       },
     }),
     prisma.aiConversation.count({
-      where: {
-        userId: input.userId,
-        status,
-        mode: 'GENERAL_LEARNING',
-      },
+      where,
     }),
   ]);
 

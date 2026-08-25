@@ -362,6 +362,36 @@ describe('ai general learning conversations', () => {
     assert.equal(listed.items.length, 1);
   });
 
+  test('conversation listing includes legacy learner-agent chats', async () => {
+    const user = await createLearnerUser();
+    const legacy = await prisma.aiConversation.create({
+      data: {
+        userId: user.id,
+        mode: 'LEARNER_AGENT',
+        locale: 'en',
+        title: 'Legacy assistant chat',
+        lastMessageAt: new Date(),
+      },
+    });
+
+    const active = await listGeneralLearningConversationsForUser(user.id, {
+      limit: 20,
+      offset: 0,
+      status: 'ACTIVE',
+    });
+    const activeLegacy = active.items.find((item) => item.id === legacy.id);
+    assert.ok(activeLegacy);
+    assert.equal(activeLegacy.mode, 'LEARNER_ASSISTANT');
+
+    await archiveGeneralLearningConversationForUser(user.id, legacy.id);
+    const archived = await listGeneralLearningConversationsForUser(user.id, {
+      limit: 20,
+      offset: 0,
+      status: 'ARCHIVED',
+    });
+    assert.ok(archived.items.some((item) => item.id === legacy.id));
+  });
+
   test('mock provider round trip persists structured assistant blocks', async () => {
     const user = await createLearnerUser();
     const conversation = await createGeneralLearningConversationForUser(

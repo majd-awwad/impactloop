@@ -256,6 +256,152 @@ describe('OpenAiAiChatProvider', () => {
     }
   });
 
+  test('OpenRouter GPT-4.1 Nano uses a strict schema for general learning answers', async () => {
+    let capturedRequest: Record<string, unknown> | null = null;
+    process.env.OPENAI_BASE_URL = 'https://openrouter.ai/api/v1';
+    process.env.AI_CHAT_MODEL = 'openai/gpt-4.1-nano';
+    delete process.env.OPENAI_JSON_MODE;
+
+    setOpenAiChatClientFactoryForTests(() => ({
+      chat: {
+        completions: {
+          create: async (request: Record<string, unknown>) => {
+            capturedRequest = request;
+            return {
+              model: 'openai/gpt-4.1-nano',
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify({
+                      blocks: [
+                        {
+                          type: 'text',
+                          text: 'شرح عربي واضح للخطوة.',
+                          purpose: 'answer',
+                        },
+                      ],
+                    }),
+                  },
+                },
+              ],
+              usage: { prompt_tokens: 10, completion_tokens: 8 },
+            };
+          },
+        },
+      },
+    }));
+
+    const provider = new OpenAiAiChatProvider();
+    await provider.generateGeneralLearningAnswer({
+      locale: 'ar',
+      userMessage: 'اشرح الخطوة بالعربي',
+      scopeClassification: 'DOMAIN_KNOWLEDGE',
+      history: [],
+    });
+
+    const responseFormat = capturedRequest?.response_format as {
+      type?: string;
+      json_schema?: { name?: string; strict?: boolean; schema?: unknown };
+    };
+    assert.equal(responseFormat.type, 'json_schema');
+    assert.equal(
+      responseFormat.json_schema?.name,
+      'impactloop_general_learning_answer',
+    );
+    assert.equal(responseFormat.json_schema?.strict, true);
+  });
+
+  test('repairs one malformed general learning answer and aggregates usage', async () => {
+    let calls = 0;
+    process.env.OPENAI_BASE_URL = 'https://openrouter.ai/api/v1';
+    process.env.AI_CHAT_MODEL = 'openai/gpt-4.1-nano';
+
+    setOpenAiChatClientFactoryForTests(() => ({
+      chat: {
+        completions: {
+          create: async () => {
+            calls += 1;
+            return {
+              model: 'openai/gpt-4.1-nano',
+              choices: [
+                {
+                  message: {
+                    content:
+                      calls === 1
+                        ? JSON.stringify({ blocks: [{ type: 'text' }] })
+                        : JSON.stringify({
+                            blocks: [
+                              {
+                                type: 'text',
+                                text: 'الشرح المصحح.',
+                                purpose: 'answer',
+                              },
+                            ],
+                          }),
+                  },
+                },
+              ],
+              usage:
+                calls === 1
+                  ? { prompt_tokens: 10, completion_tokens: 4 }
+                  : { prompt_tokens: 14, completion_tokens: 6 },
+            };
+          },
+        },
+      },
+    }));
+
+    const provider = new OpenAiAiChatProvider();
+    const result = await provider.generateGeneralLearningAnswer({
+      locale: 'ar',
+      userMessage: 'اشرح الخطوة بالعربي',
+      scopeClassification: 'DOMAIN_KNOWLEDGE',
+      history: [],
+    });
+
+    assert.equal(calls, 2);
+    assert.equal(result.usage.inputTokens, 24);
+    assert.equal(result.usage.outputTokens, 10);
+    assert.equal(result.data.blocks[0]?.type, 'text');
+  });
+
+  test('maps an unrepaired malformed answer to AI_RESPONSE_INVALID', async () => {
+    let calls = 0;
+    process.env.OPENAI_BASE_URL = 'https://openrouter.ai/api/v1';
+    process.env.AI_CHAT_MODEL = 'openai/gpt-4.1-nano';
+
+    setOpenAiChatClientFactoryForTests(() => ({
+      chat: {
+        completions: {
+          create: async () => {
+            calls += 1;
+            return {
+              model: 'openai/gpt-4.1-nano',
+              choices: [{ message: { content: 'not-json' } }],
+            };
+          },
+        },
+      },
+    }));
+
+    const provider = new OpenAiAiChatProvider();
+    await assert.rejects(
+      () =>
+        provider.generateGeneralLearningAnswer({
+          locale: 'en',
+          userMessage: 'Explain the step',
+          scopeClassification: 'DOMAIN_KNOWLEDGE',
+          history: [],
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, 'AI_RESPONSE_INVALID');
+        return true;
+      },
+    );
+    assert.equal(calls, 2);
+  });
+
   test('OpenRouter GPT-4.1 Nano accepts image inputs and sends a multimodal review request', async () => {
     let capturedRequest: Record<string, unknown> | null = null;
     process.env.OPENAI_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -466,6 +612,36 @@ describe('OpenAiAiChatProvider', () => {
           create: async () => {
             const error = new Error('Rate limited') as Error & { status: number };
             error.status = 429;
+            throw error;
+          },
+        },
+      },
+    }));
+
+    const provider = new OpenAiAiChatProvider();
+    await assert.rejects(
+      () =>
+        provider.classifyScope({
+          locale: 'en',
+          userMessage: 'hi',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, 'AI_PROVIDER_QUOTA_EXCEEDED');
+        return true;
+      },
+    );
+  });
+
+  test('maps 402 to AI_PROVIDER_QUOTA_EXCEEDED', async () => {
+    setOpenAiChatClientFactoryForTests(() => ({
+      chat: {
+        completions: {
+          create: async () => {
+            const error = new Error('Insufficient credits') as Error & {
+              status: number;
+            };
+            error.status = 402;
             throw error;
           },
         },

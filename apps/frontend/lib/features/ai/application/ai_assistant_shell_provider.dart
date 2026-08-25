@@ -76,6 +76,11 @@ class AiAssistantShellNotifier extends Notifier<AiAssistantShellState> {
       composerPrefill: composerPrefill ?? state.composerPrefill,
     );
 
+    // Build-guide surfaces can create conversations outside this shell, so
+    // refresh both cached lists whenever the assistant is reopened.
+    ref.invalidate(aiActiveConversationsProvider);
+    ref.invalidate(aiArchivedConversationsProvider);
+
     if (conversationId != null && conversationId.isNotEmpty) {
       ref
           .read(aiAssistantControllerProvider.notifier)
@@ -92,14 +97,28 @@ class AiAssistantShellNotifier extends Notifier<AiAssistantShellState> {
   }
 
   void toggleHistory({AiHistoryTab? tab}) {
+    final nextTab = tab ?? state.historyTab;
+    final willShowHistory = !state.showHistory;
     state = state.copyWith(
-      showHistory: !state.showHistory,
-      historyTab: tab ?? state.historyTab,
+      showHistory: willShowHistory,
+      historyTab: nextTab,
     );
+    if (willShowHistory) {
+      ref.invalidate(
+        nextTab == AiHistoryTab.active
+            ? aiActiveConversationsProvider
+            : aiArchivedConversationsProvider,
+      );
+    }
   }
 
   void setHistoryTab(AiHistoryTab tab) {
     state = state.copyWith(historyTab: tab, showHistory: true);
+    ref.invalidate(
+      tab == AiHistoryTab.active
+          ? aiActiveConversationsProvider
+          : aiArchivedConversationsProvider,
+    );
   }
 
   void toggleExpanded() {

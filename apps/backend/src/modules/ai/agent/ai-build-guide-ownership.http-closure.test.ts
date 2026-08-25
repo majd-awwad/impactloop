@@ -410,6 +410,38 @@ async function readPendingPayload(pendingActionId: string) {
 }
 
 describe('build-guide component ownership actions', () => {
+  test('build-guide conversations appear in active and archived chat history', async () => {
+    const fixture = await createOwnershipFixture();
+
+    const active = await apiFetch(
+      '/api/ai/v1/conversations?status=ACTIVE&limit=50',
+      { token: fixture.token },
+    );
+    assert.equal(active.response.status, 200);
+    const activeItems = active.json.data?.items as
+      | Array<Record<string, unknown>>
+      | undefined;
+    assert.ok(activeItems?.some((item) => item.id === fixture.conversationId));
+
+    const archived = await apiFetch(
+      `/api/ai/v1/conversations/${fixture.conversationId}/archive`,
+      { method: 'POST', token: fixture.token },
+    );
+    assert.equal(archived.response.status, 200);
+
+    const archivedList = await apiFetch(
+      '/api/ai/v1/conversations?status=ARCHIVED&limit=50',
+      { token: fixture.token },
+    );
+    assert.equal(archivedList.response.status, 200);
+    const archivedItems = archivedList.json.data?.items as
+      | Array<Record<string, unknown>>
+      | undefined;
+    assert.ok(
+      archivedItems?.some((item) => item.id === fixture.conversationId),
+    );
+  });
+
   test('single component Arabic creates pending action and updates after confirm', async () => {
     const fixture = await createOwnershipFixture();
     const ledItem = fixture.itemsByName.get('LED')!;

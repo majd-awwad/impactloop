@@ -115,9 +115,19 @@ class _AiAssistantShellOverlayState
       return;
     }
 
-    await ref
-        .read(aiAssistantControllerProvider.notifier)
-        .archiveCurrentConversation();
+    try {
+      await ref
+          .read(aiAssistantControllerProvider.notifier)
+          .archiveCurrentConversation();
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AiL10n.genericFailure.resolve(context))),
+      );
+      return;
+    }
 
     if (!mounted) {
       return;
@@ -201,6 +211,13 @@ class _AiAssistantShellOverlayState
             .restoreConversation(conversationId);
         if (!context.mounted) {
           return;
+        }
+        ref.read(aiAssistantShellProvider.notifier).clearBuildGuideContext();
+        ref
+            .read(aiAssistantShellProvider.notifier)
+            .setHistoryTab(AiHistoryTab.active);
+        if (!useTwoColumn) {
+          ref.read(aiAssistantShellProvider.notifier).toggleHistory();
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AiL10n.restoredNotice.resolve(context))),
