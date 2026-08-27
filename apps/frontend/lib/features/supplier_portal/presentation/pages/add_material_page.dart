@@ -629,7 +629,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _MaterialTypeAutocompleteField(
+                  MaterialTypeAutocompleteField(
                     controller: _materialNameController,
                     label: l.materialTypeSlashName,
                     hint: l.searchOrTypeMaterialName,
@@ -880,8 +880,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               isUploading: _isUploadingImages || _isSubmitting,
               onPickImages: _pickImages,
               onRemoveImage: (index) {
-                if (!_isSubmitting && !_submittedSuccessfully)
+                if (!_isSubmitting && !_submittedSuccessfully) {
                   setState(() => _images.removeAt(index));
+                }
               },
             ),
           ),
@@ -2417,8 +2418,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   }
 }
 
-class _MaterialTypeAutocompleteField extends ConsumerStatefulWidget {
-  const _MaterialTypeAutocompleteField({
+@visibleForTesting
+class MaterialTypeAutocompleteField extends ConsumerStatefulWidget {
+  const MaterialTypeAutocompleteField({
+    super.key,
     required this.controller,
     required this.label,
     required this.hint,
@@ -2439,12 +2442,12 @@ class _MaterialTypeAutocompleteField extends ConsumerStatefulWidget {
   final String? Function(String?)? validator;
 
   @override
-  ConsumerState<_MaterialTypeAutocompleteField> createState() =>
+  ConsumerState<MaterialTypeAutocompleteField> createState() =>
       _MaterialTypeAutocompleteFieldState();
 }
 
 class _MaterialTypeAutocompleteFieldState
-    extends ConsumerState<_MaterialTypeAutocompleteField> {
+    extends ConsumerState<MaterialTypeAutocompleteField> {
   static const _debounceDuration = Duration(milliseconds: 300);
 
   final _focusNode = FocusNode();
@@ -2459,7 +2462,7 @@ class _MaterialTypeAutocompleteFieldState
   }
 
   @override
-  void didUpdateWidget(covariant _MaterialTypeAutocompleteField oldWidget) {
+  void didUpdateWidget(covariant MaterialTypeAutocompleteField oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.categoryId != widget.categoryId) {
       _debounce?.cancel();
@@ -2556,60 +2559,67 @@ class _MaterialTypeAutocompleteFieldState
             width: double.infinity,
             constraints: const BoxConstraints(maxHeight: 280),
             decoration: decorations.profileSectionPanel,
-            child: searchResult!.when(
-              data: (result) {
-                if (result.items.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    child: Text(
-                      l.noMaterialTypeResults,
-                      style: context.supplierBody().copyWith(
-                        color: colors.textMuted,
+            // Keep suggestion taps in the text field's tap region. Without
+            // this, TextField unfocuses on pointer-down and removes the panel
+            // before its option can receive the subsequent tap on web/desktop.
+            child: TextFieldTapRegion(
+              child: searchResult!.when(
+                data: (result) {
+                  if (result.items.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Text(
+                        l.noMaterialTypeResults,
+                        style: context.supplierBody().copyWith(
+                          color: colors.textMuted,
+                        ),
                       ),
-                    ),
-                  );
-                }
-
-                return ListView.separated(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                  itemCount: result.items.length,
-                  separatorBuilder: (_, _) => Divider(
-                    height: 1,
-                    color: colors.border.withValues(alpha: 0.25),
-                  ),
-                  itemBuilder: (context, index) {
-                    final item = result.items[index];
-                    return _MaterialTypeOptionRow(
-                      materialType: item,
-                      onSelect: () => _select(item),
                     );
-                  },
-                );
-              },
-              loading: () => Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: colors.accent,
-                      ),
+                  }
+
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.xs,
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(l.loading, style: context.supplierBody()),
-                  ],
+                    itemCount: result.items.length,
+                    separatorBuilder: (_, _) => Divider(
+                      height: 1,
+                      color: colors.border.withValues(alpha: 0.25),
+                    ),
+                    itemBuilder: (context, index) {
+                      final item = result.items[index];
+                      return _MaterialTypeOptionRow(
+                        materialType: item,
+                        onSelect: () => _select(item),
+                      );
+                    },
+                  );
+                },
+                loading: () => Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: colors.accent,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(l.loading, style: context.supplierBody()),
+                    ],
+                  ),
                 ),
-              ),
-              error: (_, _) => Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Text(
-                  l.noMaterialTypeResults,
-                  style: context.supplierBody().copyWith(
-                    color: colors.textMuted,
+                error: (_, _) => Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Text(
+                    l.noMaterialTypeResults,
+                    style: context.supplierBody().copyWith(
+                      color: colors.textMuted,
+                    ),
                   ),
                 ),
               ),
@@ -2651,9 +2661,8 @@ class _MaterialTypeOptionRow extends StatelessWidget {
       if (aliasText.isNotEmpty) l.materialTypeAliases(aliasText),
     ];
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => onSelect(),
+    return InkWell(
+      onTap: onSelect,
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
