@@ -9,6 +9,7 @@ import 'package:frontend/app/app.dart';
 import 'package:frontend/app/application/app_settings_notifier.dart';
 import 'package:frontend/app/router/app_router.dart';
 import 'package:frontend/app/theme/app_theme.dart';
+import 'package:frontend/app/widgets/hero_workshop_visual.dart';
 import 'package:frontend/features/comments/application/comments_providers.dart';
 import 'package:frontend/features/comments/domain/comment_models.dart';
 import 'package:frontend/features/landing/application/landing_public_providers.dart';
@@ -24,12 +25,9 @@ import 'package:frontend/features/material_discovery/application/material_discov
 import 'package:frontend/features/material_discovery/application/material_related_projects_providers.dart';
 import 'package:frontend/features/material_discovery/data/mock_material_discovery_repository.dart';
 import 'package:frontend/features/material_discovery/data/mock_materials.dart';
-import 'package:frontend/features/material_discovery/data/models/material_related_projects.dart';
 import 'package:frontend/features/materials/application/material_listing_providers.dart';
 import 'package:frontend/l10n/app_localizations.dart';
-import 'package:frontend/shared/models/localized_text.dart';
 import 'package:frontend/shared/widgets/user_avatar.dart';
-import 'package:go_router/go_router.dart';
 
 import 'support/learning_hub_test_support.dart';
 
@@ -200,14 +198,15 @@ void main() {
     expect(find.text('Build a better future'), findsOneWidget);
     expect(find.text('Create account'), findsWidgets);
     expect(find.text('Reclaimed Birch Plywood Panels'), findsNothing);
-    expect(find.text('Mini Wooden Phone Stand'), findsOneWidget);
+    expect(find.text('Mini Wooden Phone Stand'), findsNothing);
+    expect(find.text('Published learning projects'), findsNothing);
     expect(find.byType(UserAvatar), findsWidgets);
     expect(find.text('12'), findsWidgets);
     expect(find.text('12.5k+'), findsNothing);
     expect(find.text('420+'), findsNothing);
   });
 
-  testWidgets('empty and error landing sections do not crash the page', (
+  testWidgets('landing remains usable when public content is unavailable', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(1200, 1600));
@@ -226,7 +225,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Build a better future'), findsOneWidget);
-    expect(find.text('This section could not be loaded.'), findsWidgets);
+    expect(find.text('This section could not be loaded.'), findsNothing);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(
@@ -243,7 +242,7 @@ void main() {
     );
     expect(
       find.text('No published learning projects are available right now.'),
-      findsOneWidget,
+      findsNothing,
     );
     expect(tester.takeException(), isNull);
   });
@@ -264,56 +263,66 @@ void main() {
     await tester.pump();
 
     expect(find.text('Build a better future'), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsWidgets);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.text('Mini Wooden Phone Stand'), findsNothing);
     expect(find.byType(UserAvatar), findsNothing);
 
     completer.complete(_populatedContent());
     await tester.pumpAndSettle();
 
-    expect(find.text('Mini Wooden Phone Stand'), findsOneWidget);
+    expect(find.text('Mini Wooden Phone Stand'), findsNothing);
     expect(find.byType(UserAvatar), findsWidgets);
   });
 
-  testWidgets(
-    'guest can open materials browse and project details from landing',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(1200, 1800));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets('guest can open materials browse from landing', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: _baseOverrides(),
-          child: const ImpactLoopApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _baseOverrides(),
+        child: const ImpactLoopApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      final router = ProviderScope.containerOf(
-        tester.element(find.byType(ImpactLoopApp)),
-      ).read(appRouterProvider);
+    final router = ProviderScope.containerOf(
+      tester.element(find.byType(ImpactLoopApp)),
+    ).read(appRouterProvider);
 
-      await tester.ensureVisible(find.text('Explore materials'));
-      await tester.tap(find.text('Explore materials').first);
-      await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Explore materials'));
+    await tester.tap(find.text('Explore materials').first);
+    await tester.pumpAndSettle();
 
-      expect(router.routeInformationProvider.value.uri.path, '/materials');
+    expect(router.routeInformationProvider.value.uri.path, '/materials');
+  });
 
-      router.go('/');
-      await tester.pumpAndSettle();
+  testWidgets('mobile hero keeps impact copy inside the clipped visual', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(402, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.ensureVisible(find.text('Mini Wooden Phone Stand'));
-      await tester.tap(find.text('Mini Wooden Phone Stand'));
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(
+      ProviderScope(overrides: _baseOverrides(), child: const ImpactLoopApp()),
+    );
+    await tester.pumpAndSettle();
 
-      expect(
-        GoRouter.of(
-          tester.element(find.text('Mini Wooden Phone Stand').first),
-        ).routeInformationProvider.value.uri.path,
-        '/learning/landing-project-1',
-      );
-    },
-  );
+    final visual = find.byType(HeroWorkshopVisual);
+    final impactHeading = find.text('Make an impact');
+
+    expect(visual, findsOneWidget);
+    expect(impactHeading, findsOneWidget);
+    expect(
+      tester.getTopLeft(impactHeading).dy,
+      greaterThanOrEqualTo(tester.getTopLeft(visual).dy),
+    );
+    expect(
+      tester.getBottomRight(impactHeading).dy,
+      lessThanOrEqualTo(tester.getBottomRight(visual).dy),
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('protected material action prompts login for guests', (
     tester,
@@ -369,7 +378,7 @@ void main() {
 
     expect(find.text('ابنِ مستقبلًا أفضل'), findsOneWidget);
     expect(find.text('مواد متاحة'), findsWidgets);
-    expect(find.text('مشاريع تعليمية منشورة'), findsOneWidget);
+    expect(find.text('مشاريع تعليمية منشورة'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/landing_colors.dart';
 import '../widgets/landing_feature_cards.dart';
-import '../widgets/landing_featured_projects.dart';
 import '../widgets/landing_footer.dart';
 import '../widgets/landing_hero_section.dart';
 import '../widgets/landing_nav_bar.dart';
@@ -44,7 +43,6 @@ class LandingPage extends StatelessWidget {
                         const SizedBox(height: AppSpacing.xxl),
                         const LandingFeatureCards(),
                         const SizedBox(height: AppSpacing.xxl),
-                        const LandingFeaturedProjects(),
                         const LandingFooter(),
                       ],
                     ),

@@ -25,6 +25,9 @@ import 'package:frontend/features/auth/data/auth_repository.dart';
 import 'package:frontend/features/auth/data/models/auth_tokens.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/auth/application/auth_navigation.dart';
+import 'package:frontend/features/driver_portal/application/driver_deliveries_provider.dart';
+import 'package:frontend/features/driver_portal/application/driver_profile_provider.dart';
+import 'package:frontend/features/driver_portal/data/models/driver_deliveries_list_result.dart';
 import 'package:frontend/features/supplier_portal/data/models/supplier_dashboard.dart';
 import 'package:frontend/features/supplier_portal/presentation/controllers/supplier_dashboard_providers.dart';
 import 'package:frontend/features/supplier_portal/presentation/controllers/supplier_avatar_providers.dart';
@@ -534,6 +537,82 @@ void main() {
 
     expect(router.routeInformationProvider.value.uri.path, '/home');
   });
+
+  testWidgets(
+    'driver login ignores a preserved learner tracking destination safely',
+    (tester) async {
+      tester.view.physicalSize = const Size(1400, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final tokenStorage = _FakeTokenStorage();
+      final accessTokenHolder = AccessTokenHolder();
+      final driver = _testUser(
+        roles: const ['DRIVER'],
+        activeRole: 'DRIVER',
+      );
+      final repository = AuthRepository(
+        api: _FakeAuthApi(meResult: driver, loginResult: driver),
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
+        sessionRefresher: _ConfigurableAuthSessionRefresher(
+          tokenStorage: tokenStorage,
+          accessTokenHolder: accessTokenHolder,
+          refreshError: DioException(
+            requestOptions: RequestOptions(path: '/api/auth/refresh'),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            _learningHubTestOverride,
+            ..._materialDiscoveryTestOverrides,
+            authRepositoryProvider.overrideWithValue(repository),
+            activeDriverDeliveriesProvider.overrideWith(
+              (ref) => Future.error(StateError('unused in routing test')),
+            ),
+            availableDriverDeliveriesProvider.overrideWith(
+              _FailingAvailableDriverDeliveriesNotifier.new,
+            ),
+            driverProfileProvider.overrideWith(
+              _FailingDriverProfileNotifier.new,
+            ),
+          ],
+          child: const ImpactLoopApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ImpactLoopApp)),
+      );
+      final router = container.read(appRouterProvider);
+      router.go(
+        '/login?from=${Uri.encodeQueryComponent('/learner/deliveries/delivery-1/track')}',
+      );
+      await tester.pumpAndSettle();
+
+      final fields = find.byType(TextFormField);
+      expect(fields, findsNWidgets(2));
+      await tester.enterText(fields.at(0), 'driver@example.com');
+      await tester.enterText(fields.at(1), 'password123');
+      final signIn = find.text('Sign in').last;
+      await tester.ensureVisible(signIn);
+      await tester.tap(signIn);
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        driverPortalRoute,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('authenticated users are redirected from /register to /home', (
     tester,
@@ -1156,10 +1235,30 @@ class _ConfigurableAuthSessionRefresher extends AuthSessionRefresher {
 }
 
 class _FakeAuthApi extends AuthApi {
-  _FakeAuthApi({this.meResult, this.logoutError}) : super(Dio());
+  _FakeAuthApi({this.meResult, this.loginResult, this.logoutError})
+    : super(Dio());
 
   final User? meResult;
+  final User? loginResult;
   final Object? logoutError;
+
+  @override
+  Future<({AuthTokens tokens, User user})> login({
+    required String email,
+    required String password,
+  }) async {
+    final user = loginResult;
+    if (user == null) {
+      return super.login(email: email, password: password);
+    }
+    return (
+      tokens: const AuthTokens(
+        accessToken: 'driver-access',
+        refreshToken: 'driver-refresh',
+      ),
+      user: user,
+    );
+  }
 
   @override
   Future<User> me() async {
@@ -1181,6 +1280,19 @@ class _FakeAuthApi extends AuthApi {
     required String token,
     required String newPassword,
   }) async {}
+}
+
+class _FailingAvailableDriverDeliveriesNotifier
+    extends AvailableDriverDeliveriesNotifier {
+  @override
+  Future<DriverDeliveriesListResult> build() =>
+      Future.error(StateError('unused in routing test'));
+}
+
+class _FailingDriverProfileNotifier extends DriverProfileNotifier {
+  @override
+  Future<DriverProfileState> build() =>
+      Future.error(StateError('unused in routing test'));
 }
 
 User _testUser({List<String> roles = const ['LEARNER'], String? activeRole}) {

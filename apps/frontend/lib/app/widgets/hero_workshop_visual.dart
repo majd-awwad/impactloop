@@ -26,52 +26,98 @@ class HeroWorkshopVisual extends StatelessWidget {
     final colors = LandingColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return ClipRRect(
-      borderRadius: AppRadius.xlAll,
-      child: AspectRatio(
-        aspectRatio: 4 / 5,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            _BackgroundImage(),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: isDark
-                      ? [
-                          colors.background.withValues(alpha: 0.22),
-                          colors.background.withValues(alpha: 0.12),
-                          colors.background.withValues(alpha: 0.72),
-                        ]
-                      : [
-                          colors.background.withValues(alpha: 0.08),
-                          colors.backgroundAlt.withValues(alpha: 0.12),
-                          colors.primary.withValues(alpha: 0.18),
-                        ],
-                  stops: const [0.0, 0.35, 1.0],
+    Widget buildBackground() {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          _BackgroundImage(),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: isDark
+                    ? [
+                        colors.background.withValues(alpha: 0.22),
+                        colors.background.withValues(alpha: 0.12),
+                        colors.background.withValues(alpha: 0.72),
+                      ]
+                    : [
+                        colors.background.withValues(alpha: 0.08),
+                        colors.backgroundAlt.withValues(alpha: 0.12),
+                        colors.primary.withValues(alpha: 0.18),
+                      ],
+                stops: const [0.0, 0.35, 1.0],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 520;
+
+        if (isNarrow) {
+          return ClipRRect(
+            borderRadius: AppRadius.xlAll,
+            child: Stack(
+              children: [
+                Positioned.fill(child: buildBackground()),
+                Padding(
+                  // On phones the card determines the visual's height, so
+                  // localized copy can grow without being clipped.
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.xxl + AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  child: _ImpactCard(
+                    reusedCount: reusedCount,
+                    publishedCount: publishedCount,
+                    availableCount: availableCount,
+                  ),
                 ),
-              ),
+                const PositionedDirectional(
+                  top: AppSpacing.lg,
+                  end: AppSpacing.lg,
+                  child: _ImpactBadge(),
+                ),
+              ],
             ),
-            PositionedDirectional(
-              top: AppSpacing.lg,
-              end: AppSpacing.lg,
-              child: const _ImpactBadge(),
+          );
+        }
+
+        return ClipRRect(
+          borderRadius: AppRadius.xlAll,
+          child: AspectRatio(
+            aspectRatio: 4 / 5,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                buildBackground(),
+                PositionedDirectional(
+                  top: AppSpacing.lg,
+                  end: AppSpacing.lg,
+                  child: const _ImpactBadge(),
+                ),
+                PositionedDirectional(
+                  start: AppSpacing.lg,
+                  end: AppSpacing.lg,
+                  bottom: AppSpacing.lg,
+                  child: _ImpactCard(
+                    reusedCount: reusedCount,
+                    publishedCount: publishedCount,
+                    availableCount: availableCount,
+                  ),
+                ),
+              ],
             ),
-            PositionedDirectional(
-              start: AppSpacing.lg,
-              end: AppSpacing.lg,
-              bottom: AppSpacing.lg,
-              child: _ImpactCard(
-                reusedCount: reusedCount,
-                publishedCount: publishedCount,
-                availableCount: availableCount,
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
