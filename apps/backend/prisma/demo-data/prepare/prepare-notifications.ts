@@ -208,7 +208,11 @@ export async function prepareNotificationDemo() {
   });
   if (!materialRequest) {
     const category = await prisma.category.findFirst({
-      where: { isActive: true, categoryType: { in: ['MATERIAL', 'BOTH'] } },
+      where: {
+        nameEn: 'Electronics & Components',
+        isActive: true,
+        categoryType: { in: ['MATERIAL', 'BOTH'] },
+      },
       select: { id: true },
     });
     if (category) {

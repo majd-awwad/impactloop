@@ -20,6 +20,7 @@
     "demo:prepare:learning-check": "tsx scripts/local-demo-prepare-learning-check.ts",
     "demo:prepare:supplier-operations": "tsx scripts/local-demo-prepare-supplier-operations.ts",
     "demo:prepare:driver-operations": "tsx scripts/local-demo-prepare-driver-operations.ts",
+    "demo:prepare:driver-jobs": "tsx scripts/local-demo-prepare-driver-available-jobs.ts",
     "demo:seed:project-budget": "tsx prisma/demo-data/seed-project-budget-demo.ts",
     "demo:seed:people": "tsx prisma/demo-data/seed-community-demo-people.ts",
     "demo:seed:materials": "tsx prisma/demo-data/materials/seed-community-demo-materials.ts",

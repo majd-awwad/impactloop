@@ -21,6 +21,7 @@ import { prepareAdminAuditDemo } from './prepare/prepare-admin-audit.js';
 import { prepareLearningCheckDemo } from './prepare/prepare-learning-check.js';
 import { prepareSupplierOperationsDemo } from './prepare/prepare-supplier-operations.js';
 import { prepareDriverOperationsDemo } from './prepare/prepare-driver-operations.js';
+import { prepareDriverAvailableJobsDemo } from './prepare/prepare-driver-available-jobs.js';
 
 const STAGES = [
   {
@@ -72,6 +73,11 @@ const STAGES = [
     id: 'driver-operations',
     label: 'Driver profile, grouped history, incident history',
     run: prepareDriverOperationsDemo,
+  },
+  {
+    id: 'driver-available-jobs',
+    label: 'Driver available jobs, distances, and grouped job',
+    run: prepareDriverAvailableJobsDemo,
   },
 ];
 
