@@ -2,7 +2,7 @@ import type { LearnerMaterialRequestStatus } from '../../generated/prisma/client
 
 export const MAX_OPEN_LEARNER_MATERIAL_REQUESTS = 10;
 export const DEFAULT_MATERIAL_REQUEST_TTL_DAYS = 30;
-/** Category-only score is 150; below that without category is weak. */
+/** Category-only evidence scores 150 and is still a weak match. */
 export const WEAK_MATCH_SCORE_THRESHOLD = 150;
 
 export const isTerminalRequestStatus = (
@@ -62,10 +62,4 @@ export const effectiveRequestStatus = (input: {
 
 export const isWeakMatchScore = (input: {
   rankingScore: number;
-  sameCategory: boolean;
-}): boolean => {
-  if (input.sameCategory) {
-    return false;
-  }
-  return input.rankingScore < WEAK_MATCH_SCORE_THRESHOLD;
-};
+}): boolean => input.rankingScore <= WEAK_MATCH_SCORE_THRESHOLD;

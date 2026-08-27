@@ -52,14 +52,58 @@ const assertOpenRequestForSupplier = (row: SupplierRequestRow) => {
   }
 };
 
-const buildRequestRankingComponent = (request: {
+const REQUEST_KEYWORD_STOP_TOKENS = new Set([
+  'board',
+  'boards',
+  'component',
+  'components',
+  'item',
+  'items',
+  'kit',
+  'kits',
+  'material',
+  'materials',
+  'module',
+  'modules',
+  'part',
+  'parts',
+  'sensor',
+  'sensors',
+]);
+
+const tokenizeRequestText = (value: string): string[] =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .split(/\s+/)
+    .filter((token) => token.length >= 3 || /\d/.test(token));
+
+const requestSearchKeywords = (request: {
+  requestedItemName: string;
+  description?: string | null;
+}): string[] => {
+  const nameTerms = tokenizeRequestText(request.requestedItemName).filter(
+    (token) => !REQUEST_KEYWORD_STOP_TOKENS.has(token),
+  );
+  // Model identifiers in the description (for example HC-SR04 or ESP32)
+  // are useful identity evidence; ordinary prose is intentionally excluded.
+  const descriptionModelTerms = tokenizeRequestText(
+    request.description ?? '',
+  ).filter((token) => /\d/.test(token));
+
+  return [...new Set([...nameTerms, ...descriptionModelTerms])];
+};
+
+export const buildRequestRankingComponent = (request: {
   categoryId: string;
   requestedItemName: string;
+  description?: string | null;
 }): BuildCandidateComponentInput => ({
   categoryId: request.categoryId,
   componentName: request.requestedItemName,
   materialType: '',
-  searchKeywords: [],
+  searchKeywords: requestSearchKeywords(request),
   alternativeKeywords: [],
   searchTerms: [request.requestedItemName],
 });
@@ -201,7 +245,6 @@ export const getSupplierCandidateMaterialsForRequest = async (
 
       const isWeakMatch = isWeakMatchScore({
         rankingScore: relevance,
-        sameCategory: material.categoryId === request.categoryId,
       });
 
       return {
@@ -289,7 +332,6 @@ export const suggestMaterialForRequest = async (
 
   const isWeakMatch = isWeakMatchScore({
     rankingScore: relevance,
-    sameCategory: material.categoryId === request.categoryId,
   });
 
   if (isWeakMatch && !input.confirmWeakMatch) {
