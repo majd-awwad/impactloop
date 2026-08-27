@@ -316,7 +316,7 @@ String? _resolveProtectedRoute(
 
   if (accessLevel == _RouteAccessLevel.learner &&
       !_userHasLearnerRole(authState)) {
-    return homeRoute;
+    return _incompatibleRouteFallback(authState);
   }
 
   if (accessLevel == _RouteAccessLevel.activeLearner) {
@@ -326,7 +326,7 @@ String? _resolveProtectedRoute(
 
   if (accessLevel == _RouteAccessLevel.driver &&
       !_userHasDriverRole(authState)) {
-    return homeRoute;
+    return _incompatibleRouteFallback(authState);
   }
 
   if (accessLevel == _RouteAccessLevel.admin && !_userHasAdminRole(authState)) {
@@ -334,6 +334,21 @@ String? _resolveProtectedRoute(
   }
 
   return null;
+}
+
+String _incompatibleRouteFallback(AuthState authState) {
+  final user = authState.user;
+  if (user == null) {
+    return homeRoute;
+  }
+
+  final activeRole = user.activeRole.trim().toUpperCase();
+  if ((activeRole == 'DRIVER' && userHasDriverRole(user)) ||
+      (activeRole == 'ADMIN' && userHasAdminRole(user))) {
+    return postAuthRouteForUser(user);
+  }
+
+  return homeRoute;
 }
 
 String? _resolveAuthCheckingRedirect(AuthState authState, GoRouterState state) {
@@ -445,6 +460,14 @@ String? _resolveActivePortalRedirect(AuthState authState, String path) {
       _isLearnerPortalHomePath(path) &&
       user.canSwitchToSupplier) {
     return supplierOverviewRoute;
+  }
+
+  final activeRole = user.activeRole.trim().toUpperCase();
+  final isActiveStaffPortal =
+      (user.isDriverMode && userHasDriverRole(user)) ||
+      (activeRole == 'ADMIN' && userHasAdminRole(user));
+  if (isActiveStaffPortal && _isLearnerPortalHomePath(path)) {
+    return portalRouteForActiveRole(user);
   }
 
   if (user.isLearnerMode &&

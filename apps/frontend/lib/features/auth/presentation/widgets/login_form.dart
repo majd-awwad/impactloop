@@ -85,21 +85,18 @@ class _LoginFormState extends ConsumerState<LoginForm> {
     setState(() => _isSubmitting = true);
 
     try {
-      final user = await ref
+      await ref
           .read(authControllerProvider.notifier)
           .login(
             email: _emailController.text.trim(),
             password: _passwordController.text,
           );
 
-      if (!mounted) {
-        return;
-      }
-
-      final from = GoRouterState.of(context).uri.queryParameters['from'];
-      context.go(
-        sanitizeRedirectTarget(from, fallback: postAuthRouteForUser(user)),
-      );
+      // Auth state changes refresh GoRouter synchronously. Let the router's
+      // redirect validate `from` against the newly authenticated account and
+      // perform the single navigation. Calling context.go here races that
+      // redirect while the login page is being unmounted.
+      return;
     } on ApiException catch (error) {
       if (!mounted) {
         return;

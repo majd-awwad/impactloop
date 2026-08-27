@@ -94,7 +94,7 @@ describe('auth registration', () => {
     assert.equal(session.user.emailVerifiedAt, null);
   });
 
-  test('duplicate email returns CONFLICT', async () => {
+  test('duplicate email returns a field-specific conflict', async () => {
     const email = testEmail('duplicate');
     const input = {
       displayName: 'Duplicate Registration Test',
@@ -120,8 +120,46 @@ describe('auth registration', () => {
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 409);
-        assert.equal(error.code, 'CONFLICT');
+        assert.equal(error.code, 'AUTH_EMAIL_ALREADY_REGISTERED');
         assert.equal(error.message, 'Email is already registered');
+        return true;
+      },
+    );
+  });
+
+  test('duplicate phone returns a field-specific conflict', async () => {
+    const phone = `+97059${Date.now().toString().slice(-7)}`;
+    const input = {
+      displayName: 'Duplicate Phone Registration Test',
+      password: 'TestPassword123!',
+      phone,
+      roles: ['LEARNER'] as const,
+      learnerProfile: {
+        learnerType: 'University student',
+        skillLevel: 'Beginner',
+        interests: ['Recycling'],
+      },
+    };
+
+    const session = await registerUser({
+      ...input,
+      email: testEmail('duplicate-phone-first'),
+      roles: [...input.roles],
+    });
+    ids.users.push(session.user.id);
+
+    await assert.rejects(
+      () =>
+        registerUser({
+          ...input,
+          email: testEmail('duplicate-phone-second'),
+          roles: [...input.roles],
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.equal(error.code, 'AUTH_PHONE_ALREADY_REGISTERED');
+        assert.equal(error.message, 'Phone number is already registered');
         return true;
       },
     );

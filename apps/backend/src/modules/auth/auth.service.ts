@@ -518,7 +518,7 @@ export const registerUser = async (
     throw new AppError(
       'Email is already registered',
       409,
-      COMMON_ERROR_CODES.conflict,
+      'AUTH_EMAIL_ALREADY_REGISTERED',
     );
   }
 
@@ -529,7 +529,7 @@ export const registerUser = async (
       throw new AppError(
         'Phone number is already registered',
         409,
-        COMMON_ERROR_CODES.conflict,
+        'AUTH_PHONE_ALREADY_REGISTERED',
       );
     }
   }

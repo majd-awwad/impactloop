@@ -72,6 +72,8 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
 
   String? _intentError;
   String? _formError;
+  String? _emailError;
+  String? _phoneError;
   String? _learnerTypeError;
   String? _skillLevelError;
   String? _supplierTypeError;
@@ -156,6 +158,8 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         _intentError = null;
       }
       _formError = null;
+      _emailError = null;
+      _phoneError = null;
       _learnerTypeError = null;
       _skillLevelError = null;
       _supplierTypeError = null;
@@ -167,6 +171,17 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
 
   void _applyServerError(ApiException error) {
     setState(() {
+      final conflictField = registrationAccountConflictField(error.code);
+      _emailError = switch (conflictField) {
+        RegistrationAccountConflictField.email =>
+          context.l10n.registerEmailAlreadyRegistered,
+        _ => firstFieldError(error, const ['email']),
+      };
+      _phoneError = switch (conflictField) {
+        RegistrationAccountConflictField.phone =>
+          context.l10n.registerPhoneAlreadyRegistered,
+        _ => firstFieldError(error, const ['phone']),
+      };
       _learnerTypeError = firstFieldError(error, const [
         'learnerProfile.learnerType',
         'learnerType',
@@ -181,11 +196,17 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
       _cityError = firstFieldError(error, const ['supplierProfile.pickupArea']);
       _formError = null;
 
-      if (_learnerTypeError == null &&
+      if (_emailError == null &&
+          _phoneError == null &&
+          _learnerTypeError == null &&
           _skillLevelError == null &&
           _supplierTypeError == null &&
           _cityError == null) {
         _formError = localizedApiErrorMessage(error, context.l10n);
+      }
+
+      if (_emailError != null || _phoneError != null) {
+        _stepIndex = _steps.indexOf(RegistrationWizardStep.account);
       }
     });
   }
@@ -956,6 +977,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
           autofillHints: const [AutofillHints.email],
+          errorText: _emailError,
           onChanged: (_) => _clearErrors(),
           validator: (value) {
             final trimmed = value?.trim() ?? '';
@@ -976,6 +998,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           keyboardType: TextInputType.phone,
           textInputAction: TextInputAction.next,
           autofillHints: const [AutofillHints.telephoneNumber],
+          errorText: _phoneError,
           onChanged: (_) => _clearErrors(),
         ),
         const AuthFieldGap(),

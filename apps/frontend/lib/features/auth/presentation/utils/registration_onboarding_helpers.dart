@@ -1,5 +1,19 @@
 import '../models/registration_intent.dart';
 
+enum RegistrationAccountConflictField { email, phone }
+
+RegistrationAccountConflictField? registrationAccountConflictField(
+  String? errorCode,
+) {
+  return switch (errorCode) {
+    'AUTH_EMAIL_ALREADY_REGISTERED' =>
+      RegistrationAccountConflictField.email,
+    'AUTH_PHONE_ALREADY_REGISTERED' =>
+      RegistrationAccountConflictField.phone,
+    _ => null,
+  };
+}
+
 const registrationInterestOptions = [
   'Art and design',
   'Assistive tools',

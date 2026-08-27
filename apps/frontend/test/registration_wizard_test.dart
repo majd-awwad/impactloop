@@ -4,6 +4,7 @@ import 'package:frontend/features/auth/data/models/register_request.dart';
 import 'package:frontend/features/auth/data/models/registration_draft.dart';
 import 'package:frontend/features/auth/presentation/models/registration_intent.dart';
 import 'package:frontend/features/auth/presentation/models/registration_wizard_step.dart';
+import 'package:frontend/features/auth/presentation/utils/registration_onboarding_helpers.dart';
 import 'package:frontend/features/profile/data/models/learner_interest_options.dart';
 
 void main() {
@@ -61,6 +62,18 @@ void main() {
   });
 
   group('registration UX defaults', () {
+    test('maps registration conflicts to the matching account field', () {
+      expect(
+        registrationAccountConflictField('AUTH_EMAIL_ALREADY_REGISTERED'),
+        RegistrationAccountConflictField.email,
+      );
+      expect(
+        registrationAccountConflictField('AUTH_PHONE_ALREADY_REGISTERED'),
+        RegistrationAccountConflictField.phone,
+      );
+      expect(registrationAccountConflictField('CONFLICT'), isNull);
+    });
+
     test('taxonomy fallback includes core learner interests', () {
       final labels = fallbackLearnerInterestOptions.labelByKey;
 
