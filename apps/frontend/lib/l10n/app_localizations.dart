@@ -18538,11 +18538,23 @@ abstract class AppLocalizations {
   /// **'Email address'**
   String get registerEmailAddressLabel;
 
+  /// No description provided for @registerEmailAlreadyRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'This email address is already registered. Sign in or use a different email.'**
+  String get registerEmailAlreadyRegistered;
+
   /// No description provided for @registerPhoneOptionalLabel.
   ///
   /// In en, this message translates to:
   /// **'Phone number (optional)'**
   String get registerPhoneOptionalLabel;
+
+  /// No description provided for @registerPhoneAlreadyRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'This phone number is already registered. Sign in or use a different number.'**
+  String get registerPhoneAlreadyRegistered;
 
   /// No description provided for @registerConfirmPasswordRequired.
   ///

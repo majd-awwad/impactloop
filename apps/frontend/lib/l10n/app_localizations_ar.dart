@@ -10928,7 +10928,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get registerEmailAddressLabel => 'عنوان البريد الإلكتروني';
 
   @override
+  String get registerEmailAlreadyRegistered =>
+      'هذا البريد الإلكتروني مسجّل مسبقًا. سجّل الدخول أو استخدم بريدًا آخر.';
+
+  @override
   String get registerPhoneOptionalLabel => 'رقم الهاتف (اختياري)';
+
+  @override
+  String get registerPhoneAlreadyRegistered =>
+      'رقم الهاتف هذا مسجّل مسبقًا. سجّل الدخول أو استخدم رقمًا آخر.';
 
   @override
   String get registerConfirmPasswordRequired => 'تأكيد كلمة المرور مطلوب';

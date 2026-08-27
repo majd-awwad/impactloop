@@ -10990,7 +10990,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registerEmailAddressLabel => 'Email address';
 
   @override
+  String get registerEmailAlreadyRegistered =>
+      'This email address is already registered. Sign in or use a different email.';
+
+  @override
   String get registerPhoneOptionalLabel => 'Phone number (optional)';
+
+  @override
+  String get registerPhoneAlreadyRegistered =>
+      'This phone number is already registered. Sign in or use a different number.';
 
   @override
   String get registerConfirmPasswordRequired => 'Confirm password is required';
